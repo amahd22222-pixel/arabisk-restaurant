@@ -1,0 +1,1 @@
+{"name":"arabisk-restaurant","private":false,"workspaces":["apps/*","packages/*"],"scripts":{"dev:web":"npm --workspace apps/web run dev","dev:admin":"npm --workspace apps/admin run dev","build":"npm run build --workspaces"},"engines":{"node":">=20"}}
