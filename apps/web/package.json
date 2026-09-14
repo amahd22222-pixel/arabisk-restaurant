@@ -1,1 +1,1 @@
-{"scripts":{"dev":"vite","build":"vite build","preview":"vite preview"},"devDependencies":{"@vitejs/plugin-react":"latest","vite":"latest","typescript":"latest","react":"latest","react-dom":"latest"},"dependencies":{}}
+{"name":"@arabisk/web","private":true,"type":"module","scripts":{"dev":"vite","build":"vite build","start":"node server.js"},"devDependencies":{"vite":"latest","typescript":"latest","@vitejs/plugin-react":"latest","react":"latest","react-dom":"latest"},"dependencies":{"cors":"latest","express":"latest"}}
