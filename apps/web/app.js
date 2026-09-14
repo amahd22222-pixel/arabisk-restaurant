@@ -1,1 +1,35 @@
-const items=[['Breakfast','فطور أرابيسك','Arabisk Breakfast',94],['Breakfast','فطور الحارة','AL Hara Breakfast',84],['Manakish','مناقيش زعتر','Zaatar Manakish',18],['Manakish','مناقيش جبنة','Cheese Manakish',22],['Cold Appetizers','حمص','Hummus',24],['Cold Appetizers','حمص بيروتي','Hummus BeirutI',26],['Hot Appetizers','بطاطا حارة','Spicy Potato',28],['Hot Appetizers','كبة مقلية','Fried Kibbeh',34],['Salads','تبولة','Tabboulah',34],['Salads','فتوش','Fattoush',34],['Pizza','بيتزا مارغريتا','Pizza Margherita',46],['Pizza','بيتزا بيبروني','Pizza Pepperoni',56],['Pasta','بيني ألفريدو','Penne Alfredo',56],['Pasta','سباجيتي بولونيز','Spaghetti Bolognese',52],['Main Course','كوردون بلو','Cordon Bleu',68],['Mixed Grill','كباب','Kabab',48],['Mixed Grill','شيش طاووق','Shish Tawook',56],['Desserts','كنافة','Kunafa',32],['Desserts','أم علي','UM Ali',34],['Juices','عصير برتقال','Orange Juice',26],['Mojitos','كلاسيك موهيتو','Classic Mojito',32],['Coffee','قهوة تركية','Turkish Coffee',20],['Coffee','كابتشينو','Cappuccino',26],['Tea','شاي أخضر','Green Tea',16],['Sheesha','تفاح ونعناع','Apple With Mint',65]];const grid=document.querySelector('#grid');const chips=document.querySelectorAll('.chips button');function render(filter='الكل'){grid.innerHTML=items.filter(x=>filter==='الكل'||x[0]===filter).map(x=>`<article class="item"><span class="cat">${x[2]}</span><div><h3>${x[1]}</h3><p>اختيار من قائمة ARABISK المميزة</p></div><div class="price">AED ${x[3]}</div></article>`).join('')}chips.forEach(b=>b.addEventListener('click',()=>{chips.forEach(x=>x.classList.remove('active'));b.classList.add('active');const map={'الكل':'الكل','الفطور':'Breakfast','المقبلات':'Cold Appetizers','البيتزا':'Pizza','المشاوي':'Mixed Grill','الحلويات':'Desserts','المشروبات':'Coffee'};render(map[b.textContent]||'الكل')}));render();
+const grid = document.querySelector('#grid');
+const chips = document.querySelectorAll('.chips button');
+const API = '/api/products';
+const categoryMap = { 'الكل':'', 'الفطور':'Breakfast', 'المقبلات':'Cold Appetizers', 'البيتزا':'Pizza', 'المشاوي':'Mixed Grill', 'الحلويات':'Desserts', 'المشروبات':'Coffee' };
+let selectedCategory = '';
+
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+
+async function loadProducts(category = selectedCategory) {
+  const response = await fetch(category ? `${API}?category=${encodeURIComponent(category)}` : API);
+  if (!response.ok) throw new Error('Unable to load menu');
+  return response.json();
+}
+
+function render(items) {
+  grid.innerHTML = items.map((item) => `<article class="item"><span class="cat">${escapeHtml(item.nameEn)}</span><div><h3>${escapeHtml(item.nameAr)}</h3><p>${escapeHtml(item.descriptionAr || 'اختيار من قائمة ARABISK المميزة')}</p></div><div class="price">AED ${Number(item.price).toFixed(0)}</div></article>`).join('') || '<p>لا توجد أصناف في هذا القسم.</p>';
+}
+
+async function refresh() {
+  try {
+    render(await loadProducts());
+  } catch (error) {
+    grid.innerHTML = `<p>تعذر تحميل المنيو حاليًا.</p>`;
+    console.error(error);
+  }
+}
+
+chips.forEach((button) => button.addEventListener('click', async () => {
+  chips.forEach((x) => x.classList.remove('active'));
+  button.classList.add('active');
+  selectedCategory = categoryMap[button.textContent] || '';
+  await refresh();
+}));
+
+refresh();
