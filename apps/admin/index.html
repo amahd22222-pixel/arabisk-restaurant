@@ -1,1 +1,75 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ARABISK — لوحة التحكم</title><link rel="stylesheet" href="./style.css"></head><body><aside><div class="logo">ARABISK<small>ADMIN</small></div><a class="active">نظرة عامة</a><a>الأصناف</a><a>الأقسام</a><a>الطلبات</a><a>العملاء</a><a>إعدادات الموقع</a><div class="user">أدمن المطعم<br><small>إدارة ARABISK</small></div></aside><main><header><div><span>لوحة التحكم</span><h1>نظرة عامة</h1></div><button>+ إضافة صنف</button></header><section class="stats"><article><span>إجمالي الأصناف</span><b>—</b></article><article><span>الأقسام</span><b>—</b></article><article><span>الطلبات اليوم</span><b>—</b></article><article><span>حالة الموقع</span><b class="ok">متصل</b></article></section><section class="panel"><div class="panelhead"><h2>هوية ARABISK</h2><span>النظام البصري</span></div><div class="palette"><i></i><i></i><i></i><i></i><div><strong>أسود + ذهبي + عاجي</strong><small>مستوحى من المنيو الأصلي</small></div></div><p>تم تجهيز لوحة التحكم لتستخدم نفس الهوية البصرية للموقع، مع دعم كامل للغة العربية واتجاه RTL.</p></section></main></body></html>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ARABISK — لوحة التحكم</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <aside>
+    <div class="logo">ARABISK<small>ADMIN</small></div>
+    <a class="active" href="#dashboard">نظرة عامة</a>
+    <a href="#products">الأصناف</a>
+    <a href="#categories">الأقسام</a>
+    <a href="#orders">الطلبات</a>
+    <a href="#customers">العملاء</a>
+    <a href="#settings">إعدادات الموقع</a>
+    <div class="user">أدمن المطعم<br><small>إدارة ARABISK</small></div>
+  </aside>
+
+  <main>
+    <header id="dashboard">
+      <div><span>لوحة التحكم</span><h1>إدارة ARABISK</h1></div>
+      <div class="header-actions">
+        <span id="connection" class="disconnected">جاري الاتصال…</span>
+        <button id="add-product">+ إضافة صنف</button>
+      </div>
+    </header>
+
+    <div id="error" class="error"></div>
+
+    <section class="stats">
+      <article><span>إجمالي الأصناف</span><b id="count-products">—</b></article>
+      <article><span>الأقسام</span><b id="count-categories">—</b></article>
+      <article><span>الأصناف المتاحة</span><b id="count-available">—</b></article>
+      <article><span>هوية الموقع</span><b class="ok">ARABISK</b></article>
+    </section>
+
+    <section class="panel" id="products">
+      <div class="panelhead">
+        <div><h2>الأصناف</h2><span>إضافة وتعديل وإخفاء وحذف</span></div>
+        <input id="search" placeholder="بحث عن صنف…" aria-label="بحث">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>الصنف</th><th>القسم</th><th>السعر</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="products-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="categories">
+      <div class="panelhead"><div><h2>الهوية البصرية</h2><span>مستوحاة من منيو ARABISK الأصلي</span></div></div>
+      <div class="palette"><i></i><i></i><i></i><i></i><div><strong>أسود + ذهبي + عاجي</strong><small>RTL • Cairo • Playfair Display</small></div></div>
+      <p>الواجهة ولوحة التحكم تستخدمان نفس اللغة البصرية مع اختلاف واضح في كثافة المعلومات لسهولة الإدارة.</p>
+    </section>
+  </main>
+
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><div><span>ARABISK MENU</span><h2 id="modal-title">إضافة صنف جديد</h2></div><button id="cancel" class="close">×</button></div>
+      <form id="product-form">
+        <label>اسم الصنف بالعربية<input id="name-ar" required></label>
+        <label>اسم الصنف بالإنجليزية<input id="name-en" required></label>
+        <label>القسم<select id="category" required></select></label>
+        <label>السعر (AED)<input id="price" type="number" min="0" step="0.5" required></label>
+        <label>الوصف بالعربية<textarea id="description-ar" rows="3"></textarea></label>
+        <label class="check"><input id="available" type="checkbox" checked> الصنف متاح للعرض</label>
+        <button class="submit" type="submit">حفظ التغييرات</button>
+      </form>
+    </div>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>
