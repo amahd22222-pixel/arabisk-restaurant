@@ -29,13 +29,10 @@ export function registerBannerVideoRoutes(app, { storageReady, presign, readJson
   const findVideo = (id) => videos.find((item) => item.bannerId === id);
   const publicVideo = (id) => {
     const item = findVideo(id);
-    return item
-      ? { bannerId:id, active:item.active !== false, videoUrl:item.videoKey && storageReady ? presign('GET', item.videoKey, 900) : '', mobileVideoUrl:item.mobileVideoKey && storageReady ? presign('GET', item.mobileVideoKey, 900) : '' }
-      : { bannerId:id, active:false, videoUrl:'', mobileVideoUrl:'' };
+    return item ? { bannerId:id, active:item.active !== false, videoUrl:item.videoKey && storageReady ? presign('GET', item.videoKey, 900) : '', mobileVideoUrl:item.mobileVideoKey && storageReady ? presign('GET', item.mobileVideoKey, 900) : '' } : { bannerId:id, active:false, videoUrl:'', mobileVideoUrl:'' };
   };
 
   app.get('/api/banners/:id/video', (req, res) => res.json(publicVideo(req.params.id)));
-
   app.patch('/api/banners/:id/video', async (req, res) => {
     const bannerId = cleanText(req.params.id, 40);
     const old = findVideo(bannerId);
@@ -56,14 +53,10 @@ export function registerBannerVideoRoutes(app, { storageReady, presign, readJson
       return res.json(publicVideo(bannerId));
     }
     const item = old || { bannerId, videoKey:'', mobileVideoKey:'', active:true };
-    item.videoKey = nextDesktop;
-    item.mobileVideoKey = nextMobile;
-    item.active = active;
+    item.videoKey = nextDesktop; item.mobileVideoKey = nextMobile; item.active = active;
     if (!old) videos.push(item);
-    persist();
-    return res.json(publicVideo(bannerId));
+    persist(); return res.json(publicVideo(bannerId));
   });
-
   app.post('/api/banners/:id/video/presign', (req, res) => {
     if (!storageReady) return res.status(503).json({ message:'Video storage is not configured on the web service.' });
     const bannerId = cleanText(req.params.id, 40);
@@ -74,33 +67,23 @@ export function registerBannerVideoRoutes(app, { storageReady, presign, readJson
     if (!fileName || !VIDEO_TYPES.has(contentType)) return res.status(400).json({ message:'Only MP4, WebM and MOV videos are supported.' });
     if (!Number.isFinite(size) || size < 1 || size > MAX_VIDEO_BYTES) return res.status(400).json({ message:'Maximum banner video size is 120 MB.' });
     const key = `banners/${bannerId}/video/${slot}/${crypto.randomUUID()}-${fileName}`;
-    try { return res.json({ key, uploadUrl:presign('PUT', key, 900), expiresIn:900 }); }
-    catch (error) { console.error(error); return res.status(503).json({ message:'Unable to prepare banner video upload.' }); }
+    try { return res.json({ key, uploadUrl:presign('PUT', key, 900), expiresIn:900 }); } catch (error) { console.error(error); return res.status(503).json({ message:'Unable to prepare banner video upload.' }); }
   });
-
   app.post('/api/banners/:id/video/delete-presign', (req, res) => {
     if (!storageReady) return res.status(503).json({ message:'Video storage is not configured on the web service.' });
     const item = findVideo(req.params.id);
     const slot = req.body?.slot === 'mobile' ? 'mobile' : 'desktop';
     const key = slot === 'mobile' ? item?.mobileVideoKey : item?.videoKey;
     if (!key) return res.json({ url:'', key:'' });
-    try { return res.json({ url:presign('DELETE', key, 900), key }); }
-    catch (error) { console.error(error); return res.status(503).json({ message:'Unable to prepare banner video deletion.' }); }
+    try { return res.json({ url:presign('DELETE', key, 900), key }); } catch (error) { console.error(error); return res.status(503).json({ message:'Unable to prepare banner video deletion.' }); }
   });
 
-  // ARABISK Studio: presentation-only video shows.
   const nextStudioId = () => {
-    const max = studio.reduce((highest, item) => {
-      const match = String(item.id || '').match(/^S(\d+)$/);
-      return Math.max(highest, match ? Number(match[1]) : 0);
-    }, 0);
+    const max = studio.reduce((highest, item) => { const match = String(item.id || '').match(/^S(\d+)$/); return Math.max(highest, match ? Number(match[1]) : 0); }, 0);
     return `S${String(max + 1).padStart(3, '0')}`;
   };
   const publicStudio = (item) => item ? {
-    id:item.id,
-    title:item.title || '',
-    active:item.active !== false,
-    sortOrder:Number(item.sortOrder) || 1,
+    id:item.id, title:item.title || '', active:item.active !== false, sortOrder:Number(item.sortOrder) || 1,
     desktopVideoUrl:item.desktopVideoKey && storageReady ? presign('GET', item.desktopVideoKey, 900) : '',
     mobileVideoUrl:item.mobileVideoKey && storageReady ? presign('GET', item.mobileVideoKey, 900) : ''
   } : null;
@@ -118,13 +101,8 @@ export function registerBannerVideoRoutes(app, { storageReady, presign, readJson
   });
   app.post('/api/studio/shows', (req, res) => {
     const b = req.body || {};
-    const item = {
-      id:nextStudioId(), title:cleanText(b.title,120), active:b.active !== undefined ? Boolean(b.active) : true,
-      sortOrder:Number.isFinite(Number(b.sortOrder)) ? Math.max(1, Number(b.sortOrder)) : studio.length + 1,
-      desktopVideoKey:'', mobileVideoKey:'', createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
-    };
-    studio.push(item); persistStudio();
-    return res.status(201).json(publicStudio(item));
+    const item = { id:nextStudioId(), title:cleanText(b.title,120), active:b.active !== undefined ? Boolean(b.active) : true, sortOrder:Number.isFinite(Number(b.sortOrder)) ? Math.max(1, Number(b.sortOrder)) : studio.length + 1, desktopVideoKey:'', mobileVideoKey:'', createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
+    studio.push(item); persistStudio(); return res.status(201).json(publicStudio(item));
   });
   app.patch('/api/studio/shows/:id', async (req, res) => {
     const item = getStudio(req.params.id);
@@ -162,8 +140,7 @@ export function registerBannerVideoRoutes(app, { storageReady, presign, readJson
     if (!fileName || !VIDEO_TYPES.has(contentType)) return res.status(400).json({ message:'Only MP4, WebM and MOV videos are supported.' });
     if (!Number.isFinite(size) || size < 1 || size > MAX_VIDEO_BYTES) return res.status(400).json({ message:'Maximum Studio video size is 120 MB.' });
     const key = `studio/${item.id}/${slot}/${crypto.randomUUID()}-${fileName}`;
-    try { return res.json({ key, uploadUrl:presign('PUT',key,900), expiresIn:900 }); }
-    catch(error) { console.error(error); return res.status(503).json({ message:'Unable to prepare Studio upload.' }); }
+    try { return res.json({ key, uploadUrl:presign('PUT',key,900), expiresIn:900 }); } catch(error) { console.error(error); return res.status(503).json({ message:'Unable to prepare Studio upload.' }); }
   });
   app.post('/api/studio/shows/:id/media/delete-presign', (req,res) => {
     if (!storageReady) return res.status(503).json({ message:'Video storage is not configured on the web service.' });
@@ -172,9 +149,11 @@ export function registerBannerVideoRoutes(app, { storageReady, presign, readJson
     const slot = req.body?.slot === 'mobile' ? 'mobile' : 'desktop';
     const key = slot === 'mobile' ? item.mobileVideoKey : item.desktopVideoKey;
     if (!key) return res.json({ url:'', key:'' });
-    try { return res.json({ url:presign('DELETE',key,900), key }); }
-    catch(error) { console.error(error); return res.status(503).json({ message:'Unable to prepare Studio deletion.' }); }
+    try { return res.json({ url:presign('DELETE',key,900), key }); } catch(error) { console.error(error); return res.status(503).json({ message:'Unable to prepare Studio deletion.' }); }
   });
 
-  return Promise.all([restoreBannerVideos(), restoreStudio()]);
+  return async () => {
+    await restoreBannerVideos();
+    await restoreStudio();
+  };
 }
