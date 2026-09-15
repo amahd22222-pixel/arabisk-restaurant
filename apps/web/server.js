@@ -8,7 +8,8 @@ const port = Number(process.env.PORT || 3000);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.join(__dirname, 'dist');
 
-app.use(cors());
+app.use(cors({ origin: true, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type'] }));
+app.options('*', cors());
 app.use(express.json({ limit: '1mb' }));
 
 const categories = [
@@ -30,6 +31,10 @@ const products = [
 ].map(([categoryId,nameAr,nameEn,price], index) => ({ id: `P${String(index + 1).padStart(3,'0')}`, categoryId, nameAr, nameEn, descriptionAr: '', descriptionEn: '', price, available: true, sortOrder: index + 1 }));
 
 const cleanText = (value, max = 180) => String(value ?? '').trim().slice(0, max);
+const nextProductId = () => {
+  const maxId = products.reduce((max, product) => Math.max(max, Number(String(product.id).replace(/^P/, '')) || 0), 0);
+  return `P${String(maxId + 1).padStart(3, '0')}`;
+};
 
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'arabisk-web' }));
 app.get('/api/categories', (_req, res) => res.json(categories));
@@ -54,8 +59,7 @@ app.post('/api/products', (req, res) => {
     return res.status(400).json({ message: 'categoryId, nameAr, nameEn and numeric price are required' });
   }
   if (!categories.some((c) => c.id === categoryId)) return res.status(400).json({ message: 'Unknown category' });
-  const id = `P${String(products.length + 1).padStart(3,'0')}`;
-  const product = { id, categoryId, nameAr: cleanText(nameAr), nameEn: cleanText(nameEn), descriptionAr: cleanText(descriptionAr), descriptionEn: cleanText(descriptionEn), price: Number(price), available: Boolean(available), sortOrder: products.length + 1 };
+  const product = { id: nextProductId(), categoryId, nameAr: cleanText(nameAr), nameEn: cleanText(nameEn), descriptionAr: cleanText(descriptionAr), descriptionEn: cleanText(descriptionEn), price: Number(price), available: Boolean(available), sortOrder: products.length + 1 };
   products.push(product);
   return res.status(201).json(product);
 });
@@ -89,5 +93,10 @@ app.delete('/api/products/:id', (req, res) => {
 
 app.use(express.static(dist));
 app.use((_req, res) => res.sendFile(path.join(dist, 'index.html')));
+app.use((error, _req, res, _next) => {
+  console.error('ARABISK web error:', error);
+  if (res.headersSent) return;
+  res.status(500).json({ message: 'Internal server error' });
+});
 
 app.listen(port, () => console.log(`ARABISK web listening on ${port}`));
