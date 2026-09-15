@@ -3,7 +3,7 @@
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ARABISK — لوحة التحكم</title><link rel="stylesheet" href="./style.css"></head>
 <body class="dashboard-page">
 <div id="app-shell">
-  <aside><div class="logo">ARABISK<small>ADMIN</small></div><a data-section="dashboard" class="active" href="#dashboard">نظرة عامة</a><a data-section="products" href="#products">الأصناف</a><a data-section="categories" href="#categories">الأقسام</a><a data-section="banners" href="#banners">البنرات</a><a data-section="reservations" href="#reservations">حجوزات الطاولات</a><a data-section="orders" href="#orders">الطلبات</a><a data-section="customers" href="#customers">العملاء</a><a data-section="settings" href="#settings">إعدادات الموقع</a><div class="user">أدمن المطعم<br><small>إدارة ARABISK</small></div></aside>
+  <aside><div class="logo">ARABISK<small>ADMIN</small></div><a data-section="dashboard" class="active" href="#dashboard">نظرة عامة</a><a data-section="products" href="#products">الأصناف</a><a data-section="categories" href="#categories">الأقسام</a><a data-section="studio" href="#studio">ARABISK Studio — العروض</a><a data-section="reservations" href="#reservations">حجوزات الطاولات</a><a data-section="orders" href="#orders">الطلبات</a><a data-section="customers" href="#customers">العملاء</a><a data-section="settings" href="#settings">إعدادات الموقع</a><div class="user">أدمن المطعم<br><small>إدارة ARABISK</small></div></aside>
   <main>
   <header id="dashboard"><div><span>لوحة التحكم</span><h1 id="page-title">إدارة ARABISK</h1></div><div class="header-actions"><span id="connection" class="disconnected">جارٍ الاتصال…</span><button id="logout" type="button" class="small-action">تسجيل الخروج</button><button id="add-product">+ إضافة صنف</button></div></header><div id="error" class="error"></div>
   <section class="stats" id="dashboard-stats"><article><span>إجمالي الأصناف</span><b id="count-products">—</b></article><article><span>الأقسام</span><b id="count-categories">—</b></article><article><span>الأصناف المتاحة</span><b id="count-available">—</b></article><article><span>حجوزات الطاولات</span><b id="count-reservations">—</b></article></section>
@@ -18,6 +18,6 @@
 <script>(function(){const key='ARABISK_LOGIN_SESSION';if(sessionStorage.getItem(key)!=='1'){window.location.replace('/login');return;}document.getElementById('logout').addEventListener('click',()=>{sessionStorage.removeItem(key);window.location.replace('/login');});})();</script>
 <script type="module" src="./app.js"></script>
 <script type="module" src="./category-manager.js"></script>
-<script type="module" src="./banner-manager-v2.js"></script>
+<script type="module" src="./studio-manager.js"></script>
 </body>
 </html>
