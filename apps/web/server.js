@@ -15,8 +15,21 @@ const MAX_VIDEO_BYTES = 120 * 1024 * 1024;
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 const STATE_KEY = 'data/arabisk-state.json';
 const MENU_VERSION = 2;
-
-const corsOptions = { origin: true, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type'] };
+const allowedCorsOrigins = new Set([
+  'https://arabiskadmin-production.up.railway.app',
+  'http://localhost:4174',
+  'http://127.0.0.1:4174',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+]);
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin || allowedCorsOrigins.has(origin)) return callback(null, true);
+    return callback(null, false);
+  },
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
+};
 app.disable('x-powered-by');
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
@@ -48,7 +61,7 @@ async function restoreState() {
   const saved = await readJson(STATE_KEY, null);
   if (!saved || typeof saved !== 'object') return;
   if (saved.menuVersion === MENU_VERSION && Array.isArray(saved.products) && saved.products.length) products.splice(0, products.length, ...saved.products);
-  if (Array.isArray(saved.orders)) orders.splice(0, saved.orders.length, ...saved.orders);
+  if (Array.isArray(saved.orders)) orders.splice(0, orders.length, ...saved.orders);
   if (Array.isArray(saved.customers)) customers.splice(0, customers.length, ...saved.customers);
   if (Array.isArray(saved.reservations)) reservations.splice(0, reservations.length, ...saved.reservations);
 }
