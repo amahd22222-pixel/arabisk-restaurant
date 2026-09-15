@@ -21,7 +21,7 @@ const signingKey = (date) => {
 };
 
 export function presign(method, key, expires = 900) {
-  if (!storageReady) throw new Error('Video storage is not configured');
+  if (!storageReady) throw new Error('Storage is not configured');
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
   const date = amzDate.slice(0, 8);
@@ -66,6 +66,18 @@ export async function writeJson(key, value) {
     return true;
   } catch (error) {
     console.error(`Storage write failed for ${key}:`, error);
+    return false;
+  }
+}
+
+export async function deleteObject(key) {
+  if (!storageReady || !key) return true;
+  try {
+    const response = await fetch(presign('DELETE', key, 900), { method: 'DELETE' });
+    if (!response.ok && response.status !== 404) throw new Error(`Storage delete returned ${response.status}`);
+    return true;
+  } catch (error) {
+    console.error(`Storage delete failed for ${key}:`, error);
     return false;
   }
 }
