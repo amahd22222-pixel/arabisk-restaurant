@@ -13,21 +13,49 @@ function ensureStyle(){
   const style=document.createElement('style');
   style.id='arabisk-studio-runtime-style';
   style.textContent=`
-    .arabisk-studio-display{width:100%;height:min(78vh,860px);min-height:320px;background:#000;overflow:hidden}
+    .arabisk-studio-display{position:relative;width:100%;height:min(78vh,860px);min-height:320px;background:#000;overflow:hidden}
     .arabisk-studio-display video{display:block;width:100%;height:100%;object-fit:cover;background:#000;cursor:pointer}
     .arabisk-studio-category{margin:0 0 34px;background:#000;overflow:hidden}
     .arabisk-studio-category .arabisk-studio-display{height:min(62vh,720px);min-height:260px}
+    .arabisk-studio-mute{position:absolute;right:18px;bottom:18px;z-index:5;width:46px;height:46px;border:1px solid rgba(255,255,255,.55);border-radius:999px;background:rgba(0,0,0,.62);color:#fff;display:grid;place-items:center;font-size:20px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:background .2s ease,transform .2s ease}
+    .arabisk-studio-mute:hover{background:rgba(0,0,0,.8);transform:scale(1.04)}
+    .arabisk-studio-mute:focus-visible{outline:2px solid #fff;outline-offset:2px}
+    @media(max-width:700px){.arabisk-studio-mute{right:12px;bottom:12px;width:42px;height:42px;font-size:18px}}
   `;
   document.head.appendChild(style);
 }
 
-function renderVideo(item,{category=false}={}){
+function bindMute(wrapper){
+  const video=wrapper.querySelector('video');
+  const button=wrapper.querySelector('.arabisk-studio-mute');
+  if(!video||!button)return;
+  const sync=()=>{
+    button.textContent=video.muted?'🔇':'🔊';
+    button.setAttribute('aria-label',video.muted?'تشغيل الصوت':'كتم الصوت');
+    button.title=video.muted?'تشغيل الصوت':'كتم الصوت';
+  };
+  button.addEventListener('click',(event)=>{
+    event.preventDefault();
+    event.stopPropagation();
+    video.muted=!video.muted;
+    if(!video.muted){video.volume=1;video.play().catch(()=>{});}
+    sync();
+  });
+  sync();
+}
+
+function renderVideo(item){
   const desktop=item.desktopVideoUrl||item.mobileVideoUrl;
   const mobile=item.mobileVideoUrl||desktop;
   if(!desktop)return '';
   ensureStyle();
-  const audioAttr=category?' data-studio-audio="1"':'';
-  return `<div class="arabisk-studio-display"><video autoplay muted loop playsinline preload="metadata" aria-label="ARABISK Studio"${audioAttr}><source media="(max-width:700px)" src="${esc(mobile)}"><source src="${esc(desktop)}"></video></div>`;
+  return `<div class="arabisk-studio-display"><video autoplay muted loop playsinline preload="metadata" aria-label="ARABISK Studio"><source media="(max-width:700px)" src="${esc(mobile)}"><source src="${esc(desktop)}"></video><button class="arabisk-studio-mute" type="button" aria-label="تشغيل الصوت" title="تشغيل الصوت">🔇</button></div>`;
+}
+
+function mountVideo(target,html){
+  target.innerHTML=html;
+  const wrapper=target.querySelector('.arabisk-studio-display');
+  if(wrapper)bindMute(wrapper);
 }
 
 function renderHome(items){
@@ -36,19 +64,7 @@ function renderHome(items){
   if(!items.length){home.replaceChildren();home.hidden=true;return;}
   home.hidden=false;
   home.className='';
-  home.innerHTML=renderVideo(items[0]);
-}
-
-function enableCategoryAudio(){
-  const video=document.querySelector('video[data-studio-audio="1"]');
-  if(!video)return;
-  const unmute=()=>{
-    video.muted=false;
-    video.volume=1;
-    video.play().catch(()=>{});
-    video.removeEventListener('click',unmute);
-  };
-  video.addEventListener('click',unmute,{once:true});
+  mountVideo(home,renderVideo(items[0]));
 }
 
 async function renderCategory(){
@@ -66,9 +82,10 @@ async function renderCategory(){
   const wrapper=document.createElement('div');
   wrapper.id='arabisk-studio-category';
   wrapper.className='arabisk-studio-category';
-  wrapper.innerHTML=renderVideo(items[0],{category:true});
+  wrapper.innerHTML=renderVideo(items[0]);
   categoryDetail.insertBefore(wrapper,categoryBanner);
-  enableCategoryAudio();
+  const studio=wrapper.querySelector('.arabisk-studio-display');
+  if(studio)bindMute(studio);
 }
 
 document.addEventListener('DOMContentLoaded',async()=>{
