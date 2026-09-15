@@ -4,6 +4,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { presign, storageReady, readJson, writeJson } from './storage.js';
+import { categories, products } from './menu-data.js';
+
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -11,29 +13,109 @@ const dist = path.join(__dirname, 'dist');
 const MAX_VIDEO_BYTES = 120 * 1024 * 1024;
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 const STATE_KEY = 'data/arabisk-state.json';
+const MENU_VERSION = 2;
+
 const corsOptions = { origin: true, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type'] };
-app.use(cors(corsOptions)); app.options(/.*/, cors(corsOptions)); app.use(express.json({ limit: '1mb' }));
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
+app.use(express.json({ limit: '1mb' }));
+
 const cleanText = (value, max = 180) => String(value ?? '').trim().slice(0, max);
 const cleanKey = (value) => String(value ?? '').trim().replace(/^\/+/, '').slice(0, 500);
 const cleanUrl = (value) => String(value ?? '').trim().slice(0, 1000);
-const categoryImages = {
-  Breakfast:'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=1000&q=85',Manakish:'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=1000&q=85','Cold Appetizers':'https://images.unsplash.com/photo-1577805947697-89e18249d767?auto=format&fit=crop&w=1000&q=85','Hot Appetizers':'https://images.unsplash.com/photo-1623653387945-2fd25214f8fc?auto=format&fit=crop&w=1000&q=85',Salads:'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1000&q=85',Soups:'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1000&q=85',Sandwich:'https://images.unsplash.com/photo-1521305916504-4a1121188589?auto=format&fit=crop&w=1000&q=85',Pizza:'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=1000&q=85',Pasta:'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=1000&q=85','Main Course':'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1000&q=85','Mixed Grill':'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1000&q=85','Mixed Taste':'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1000&q=85',Desserts:'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=1000&q=85','Cheese Cake':'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=1000&q=85','Arabisk Ice Cream':'https://images.unsplash.com/photo-1497032205916-ac775f0649ae?auto=format&fit=crop&w=1000&q=85','Cocktail & Refreshing Drinks':'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=1000&q=85','Energy Drinks':'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=1000&q=85',Juices:'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=1000&q=85',Mojitos:'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=1000&q=85','Milk Shakes':'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=1000&q=85',Tea:'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=1000&q=85',Coffee:'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1000&q=85',Latte:'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=1000&q=85','Soft Drinks':'https://images.unsplash.com/photo-1543253687-c4b3b9c1aa8d?auto=format&fit=crop&w=1000&q=85','Drinking Water':'https://images.unsplash.com/photo-1560023907-5f339617ea30?auto=format&fit=crop&w=1000&q=85',Sheesha:'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=1000&q=85'};
-const categories=[['Breakfast','الفطور','Breakfast'],['Manakish','المناقيش','Manakish'],['Cold Appetizers','المقبلات الباردة','Cold Appetizers'],['Hot Appetizers','المقبلات الساخنة','Hot Appetizers'],['Salads','السلطات','Salads'],['Soups','الشوربات','Soups'],['Sandwich','السندويتش','Sandwich'],['Pizza','البيتزا','Pizza'],['Pasta','الباستا','Pasta'],['Main Course','الأطباق الرئيسية','Main Course'],['Mixed Grill','المشاوي المشكلة','Mixed Grill'],['Mixed Taste','المذاق المشكل','Mixed Taste'],['Desserts','الحلويات','Desserts'],['Cheese Cake','تشيز كيك','Cheese Cake'],['Arabisk Ice Cream','آيس كريم أرابيسك','Arabisk Ice Cream'],['Cocktail & Refreshing Drinks','الكوكتيلات والمشروبات المنعشة','Cocktail & Refreshing Drinks'],['Energy Drinks','مشروبات الطاقة','Energy Drinks'],['Juices','العصائر','Juices'],['Mojitos','الموهيتو','Mojitos'],['Milk Shakes','ميلك شيك','Milk Shakes'],['Tea','الشاي','Tea'],['Coffee','القهوة','Coffee'],['Latte','اللاتيه','Latte'],['Soft Drinks','المشروبات الغازية','Soft Drinks'],['Drinking Water','المياه','Drinking Water'],['Sheesha','الشيشة','Sheesha']].map(([id,nameAr,nameEn],index)=>({id,nameAr,nameEn,imageUrl:categoryImages[id]||'',sortOrder:index+1,active:true}));
-const products=[['Breakfast','فطور أرابيسك','Arabisk Breakfast',94],['Breakfast','فطور الحارة','AL Hara Breakfast',84],['Manakish','مناقيش زعتر','Zaatar Manakish',18],['Manakish','مناقيش جبنة','Cheese Manakish',22],['Cold Appetizers','حمص','Hummus',24],['Cold Appetizers','حمص بيروتي','Hummus BeirutI',26],['Hot Appetizers','بطاطا حارة','Spicy Potato',28],['Hot Appetizers','كبة مقلية','Fried Kibbeh',34],['Salads','تبولة','Tabboulah',34],['Salads','فتوش','Fattoush',34],['Pizza','بيتزا مارغريتا','Pizza Margherita',46],['Pizza','بيتزا بيبروني','Pizza Pepperoni',56],['Pasta','بيني ألفريدو','Penne Alfredo',56],['Pasta','سباجيتي بولونيز','Spaghetti Bolognese',52],['Main Course','كوردون بلو','Cordon Bleu',68],['Mixed Grill','كباب','Kabab',48],['Mixed Grill','شيش طاووق','Shish Tawook',56],['Desserts','كنافة','Kunafa',32],['Desserts','أم علي','UM Ali',34],['Juices','عصير برتقال','Orange Juice',26],['Mojitos','كلاسيك موهيتو','Classic Mojito',32],['Coffee','قهوة تركية','Turkish Coffee',20],['Coffee','كابتشينو','Cappuccino',26],['Tea','شاي أخضر','Green Tea',16],['Sheesha','تفاح ونعناع','Apple With Mint',65]].map(([categoryId,nameAr,nameEn,price],index)=>({id:`P${String(index+1).padStart(3,'0')}`,categoryId,nameAr,nameEn,descriptionAr:'',descriptionEn:'',imageUrl:'',price,available:true,videoKey:'',sortOrder:index+1}));
-const orders=[];const customers=[];const reservations=[];
-const persistState=()=>writeJson(STATE_KEY,{products,reservations,orders,customers});
-const restoreState=async()=>{const saved=await readJson(STATE_KEY,null);if(!saved||typeof saved!=='object')return;for(const [target,key] of [[products,'products'],[reservations,'reservations'],[orders,'orders'],[customers,'customers']]){if(Array.isArray(saved[key])){target.splice(0,target.length,...saved[key]);}}};
-const nextProductId=()=>{const max=products.reduce((m,p)=>Math.max(m,Number(String(p.id).replace(/^P/,''))||0),0);return `P${String(max+1).padStart(3,'0')}`};
-const nextReservationId=()=>`R${String(reservations.length+1).padStart(4,'0')}`;
-const withVideoUrl=p=>({...p,videoUrl:p.videoKey&&storageReady?presign('GET',p.videoKey,900):''});
-app.get('/health',(_req,res)=>res.json({ok:true,service:'arabisk-web',storageReady,persistentStorage:storageReady}));app.get('/api/categories',(_req,res)=>res.json(categories));app.get('/api/orders',(_req,res)=>res.json(orders));app.get('/api/customers',(_req,res)=>res.json(customers));app.get('/api/reservations',(_req,res)=>res.json(reservations));
-app.post('/api/reservations',(req,res)=>{const b=req.body||{};const name=cleanText(b.name,80),phone=cleanText(b.phone,40),date=cleanText(b.date,20),time=cleanText(b.time,10),guests=Number(b.guests),notes=cleanText(b.notes,300);if(!name||!phone||!date||!time||!Number.isInteger(guests)||guests<1||guests>20)return res.status(400).json({message:'name, phone, date, time and guests are required'});const reservation={id:nextReservationId(),name,phone,date,time,guests,notes,status:'pending',createdAt:new Date().toISOString()};reservations.push(reservation);void persistState();return res.status(201).json(reservation)});
-app.patch('/api/reservations/:id',(req,res)=>{const r=reservations.find(x=>x.id===req.params.id);if(!r)return res.status(404).json({message:'Reservation not found'});if(req.body.status!==undefined&&!['pending','confirmed','cancelled'].includes(req.body.status))return res.status(400).json({message:'Invalid reservation status'});if(req.body.status!==undefined)r.status=req.body.status;if(req.body.notes!==undefined)r.notes=cleanText(req.body.notes,300);void persistState();return res.json(r)});
-app.post('/api/videos/presign',(req,res)=>{if(!storageReady)return res.status(503).json({message:'Video storage is not configured on the web service.'});const productId=cleanText(req.body?.productId,40),fileName=cleanText(req.body?.fileName,160).replace(/[^a-zA-Z0-9._-]/g,'-'),contentType=cleanText(req.body?.contentType,80).toLowerCase(),size=Number(req.body?.size);if(!products.some(p=>p.id===productId))return res.status(404).json({message:'Product not found'});if(!fileName||!VIDEO_TYPES.has(contentType))return res.status(400).json({message:'Only MP4, WebM and MOV videos are supported.'});if(!Number.isFinite(size)||size<1||size>MAX_VIDEO_BYTES)return res.status(400).json({message:'Maximum video size is 120 MB.'});const key=`products/${productId}/${crypto.randomUUID()}-${fileName}`;try{return res.json({key,uploadUrl:presign('PUT',key,900),expiresIn:900});}catch(error){console.error(error);return res.status(503).json({message:'Unable to prepare video upload.'})}});
-app.post('/api/videos/delete-presign',(req,res)=>{if(!storageReady)return res.status(503).json({message:'Video storage is not configured on the web service.'});const productId=cleanText(req.body?.productId,40),product=products.find(p=>p.id===productId);if(!product)return res.status(404).json({message:'Product not found'});if(!product.videoKey)return res.json({url:'',key:''});try{return res.json({url:presign('DELETE',product.videoKey,900),key:product.videoKey});}catch(error){console.error(error);return res.status(503).json({message:'Unable to prepare video deletion.'})}});
-app.get('/api/products',(req,res)=>{const category=cleanText(req.query.category,80),search=cleanText(req.query.search,80).toLowerCase();let result=category?products.filter(p=>p.categoryId===category):products;if(search)result=result.filter(p=>`${p.nameAr} ${p.nameEn}`.toLowerCase().includes(search));return res.json(result.map(withVideoUrl))});app.get('/api/products/:id',(req,res)=>{const p=products.find(x=>x.id===req.params.id);if(!p)return res.status(404).json({message:'Product not found'});return res.json(withVideoUrl(p))});
-app.post('/api/products',(req,res)=>{const {categoryId,nameAr,nameEn,descriptionAr='',descriptionEn='',imageUrl='',price,available=true,videoKey=''}=req.body||{};if(!categoryId||!nameAr||!nameEn||!Number.isFinite(Number(price)))return res.status(400).json({message:'categoryId, nameAr, nameEn and numeric price are required'});if(!categories.some(c=>c.id===categoryId))return res.status(400).json({message:'Unknown category'});const product={id:nextProductId(),categoryId,nameAr:cleanText(nameAr),nameEn:cleanText(nameEn),descriptionAr:cleanText(descriptionAr),descriptionEn:cleanText(descriptionEn),imageUrl:cleanUrl(imageUrl),price:Number(price),available:Boolean(available),videoKey:cleanKey(videoKey),sortOrder:products.length+1};products.push(product);void persistState();return res.status(201).json(withVideoUrl(product))});
-app.patch('/api/products/:id',(req,res)=>{const p=products.find(x=>x.id===req.params.id);if(!p)return res.status(404).json({message:'Product not found'});const b=req.body||{};if(b.categoryId!==undefined){if(!categories.some(c=>c.id===b.categoryId))return res.status(400).json({message:'Unknown category'});p.categoryId=b.categoryId}if(b.nameAr!==undefined)p.nameAr=cleanText(b.nameAr);if(b.nameEn!==undefined)p.nameEn=cleanText(b.nameEn);if(b.descriptionAr!==undefined)p.descriptionAr=cleanText(b.descriptionAr);if(b.descriptionEn!==undefined)p.descriptionEn=cleanText(b.descriptionEn);if(b.imageUrl!==undefined)p.imageUrl=cleanUrl(b.imageUrl);if(b.price!==undefined){if(!Number.isFinite(Number(b.price)))return res.status(400).json({message:'Price must be numeric'});p.price=Number(b.price)}if(b.available!==undefined)p.available=Boolean(b.available);if(b.videoKey!==undefined)p.videoKey=cleanKey(b.videoKey);void persistState();return res.json(withVideoUrl(p))});
-app.delete('/api/products/:id',(req,res)=>{const index=products.findIndex(p=>p.id===req.params.id);if(index===-1)return res.status(404).json({message:'Product not found'});const [removed]=products.splice(index,1);void persistState();return res.json({ok:true,removed})});
-app.use(express.static(dist));app.use((_req,res)=>res.sendFile(path.join(dist,'index.html')));app.use((error,_req,res,_next)=>{console.error('ARABISK web error:',error);if(!res.headersSent)res.status(500).json({message:'Internal server error'})});
-restoreState().then(()=>app.listen(port,()=>console.log(`ARABISK web listening on ${port} — persistent storage ${storageReady?'enabled':'disabled'}`))).catch(error=>{console.error('State restore failed:',error);app.listen(port,()=>console.log(`ARABISK web listening on ${port} — state restore failed`));});
+const withVideoUrl = (product) => ({ ...product, videoUrl: product.videoKey && storageReady ? presign('GET', product.videoKey, 900) : '' });
+
+const orders = [];
+const customers = [];
+const reservations = [];
+
+async function restoreState() {
+  if (!storageReady) return;
+  const saved = await readJson(STATE_KEY, null);
+  if (!saved || typeof saved !== 'object') return;
+  if (saved.menuVersion === MENU_VERSION && Array.isArray(saved.products) && saved.products.length) products.splice(0, products.length, ...saved.products);
+  if (Array.isArray(saved.orders)) orders.splice(0, orders.length, ...saved.orders);
+  if (Array.isArray(saved.customers)) customers.splice(0, customers.length, ...saved.customers);
+  if (Array.isArray(saved.reservations)) reservations.splice(0, reservations.length, ...saved.reservations);
+}
+
+const persistState = () => void writeJson(STATE_KEY, { menuVersion: MENU_VERSION, products, orders, customers, reservations });
+const nextProductId = () => { const max = products.reduce((highest, product) => Math.max(highest, Number(String(product.id).replace(/^P/, '')) || 0), 0); return `P${String(max + 1).padStart(3, '0')}`; };
+const nextReservationId = () => `R${String(reservations.length + 1).padStart(4, '0')}`;
+
+app.get('/health', (_req, res) => res.json({ ok: true, service: 'arabisk-web', storageReady, persistentStorage: storageReady, menuVersion: MENU_VERSION, productCount: products.length }));
+app.get('/api/categories', (_req, res) => res.json(categories));
+app.get('/api/orders', (_req, res) => res.json(orders));
+app.get('/api/customers', (_req, res) => res.json(customers));
+app.get('/api/reservations', (_req, res) => res.json(reservations));
+
+app.post('/api/reservations', (req, res) => {
+  const b = req.body || {};
+  const name = cleanText(b.name, 80), phone = cleanText(b.phone, 40), date = cleanText(b.date, 20), time = cleanText(b.time, 10), guests = Number(b.guests), notes = cleanText(b.notes, 300);
+  if (!name || !phone || !date || !time || !Number.isInteger(guests) || guests < 1 || guests > 20) return res.status(400).json({ message: 'name, phone, date, time and guests are required' });
+  const reservation = { id: nextReservationId(), name, phone, date, time, guests, notes, status: 'pending', createdAt: new Date().toISOString() };
+  reservations.push(reservation); persistState(); return res.status(201).json(reservation);
+});
+
+app.patch('/api/reservations/:id', (req, res) => {
+  const reservation = reservations.find((item) => item.id === req.params.id);
+  if (!reservation) return res.status(404).json({ message: 'Reservation not found' });
+  if (req.body?.status !== undefined && !['pending', 'confirmed', 'cancelled'].includes(req.body.status)) return res.status(400).json({ message: 'Invalid reservation status' });
+  if (req.body?.status !== undefined) reservation.status = req.body.status;
+  if (req.body?.notes !== undefined) reservation.notes = cleanText(req.body.notes, 300);
+  persistState(); return res.json(reservation);
+});
+
+app.post('/api/videos/presign', (req, res) => {
+  if (!storageReady) return res.status(503).json({ message: 'Video storage is not configured on the web service.' });
+  const productId = cleanText(req.body?.productId, 40), fileName = cleanText(req.body?.fileName, 160).replace(/[^a-zA-Z0-9._-]/g, '-'), contentType = cleanText(req.body?.contentType, 80).toLowerCase(), size = Number(req.body?.size);
+  if (!products.some((product) => product.id === productId)) return res.status(404).json({ message: 'Product not found' });
+  if (!fileName || !VIDEO_TYPES.has(contentType)) return res.status(400).json({ message: 'Only MP4, WebM and MOV videos are supported.' });
+  if (!Number.isFinite(size) || size < 1 || size > MAX_VIDEO_BYTES) return res.status(400).json({ message: 'Maximum video size is 120 MB.' });
+  const key = `products/${productId}/${crypto.randomUUID()}-${fileName}`;
+  try { return res.json({ key, uploadUrl: presign('PUT', key, 900), expiresIn: 900 }); } catch (error) { console.error(error); return res.status(503).json({ message: 'Unable to prepare video upload.' }); }
+});
+
+app.post('/api/videos/delete-presign', (req, res) => {
+  if (!storageReady) return res.status(503).json({ message: 'Video storage is not configured on the web service.' });
+  const productId = cleanText(req.body?.productId, 40), product = products.find((item) => item.id === productId);
+  if (!product) return res.status(404).json({ message: 'Product not found' });
+  if (!product.videoKey) return res.json({ url: '', key: '' });
+  try { return res.json({ url: presign('DELETE', product.videoKey, 900), key: product.videoKey }); } catch (error) { console.error(error); return res.status(503).json({ message: 'Unable to prepare video deletion.' }); }
+});
+
+app.get('/api/products', (req, res) => {
+  const category = cleanText(req.query.category, 80), search = cleanText(req.query.search, 80).toLowerCase();
+  let result = category ? products.filter((product) => product.categoryId === category) : products;
+  if (search) result = result.filter((product) => `${product.nameAr} ${product.nameEn}`.toLowerCase().includes(search));
+  return res.json(result.map(withVideoUrl));
+});
+app.get('/api/products/:id', (req, res) => { const product = products.find((item) => item.id === req.params.id); if (!product) return res.status(404).json({ message: 'Product not found' }); return res.json(withVideoUrl(product)); });
+
+app.post('/api/products', (req, res) => {
+  const { categoryId, nameAr, nameEn, descriptionAr = '', descriptionEn = '', imageUrl = '', price, available = true, videoKey = '' } = req.body || {};
+  if (!categoryId || !nameAr || !nameEn || !Number.isFinite(Number(price))) return res.status(400).json({ message: 'categoryId, nameAr, nameEn and numeric price are required' });
+  if (!categories.some((category) => category.id === categoryId)) return res.status(400).json({ message: 'Unknown category' });
+  const product = { id: nextProductId(), categoryId, nameAr: cleanText(nameAr), nameEn: cleanText(nameEn), descriptionAr: cleanText(descriptionAr), descriptionEn: cleanText(descriptionEn), imageUrl: cleanUrl(imageUrl), price: Number(price), available: Boolean(available), videoKey: cleanKey(videoKey), sortOrder: products.length + 1 };
+  products.push(product); persistState(); return res.status(201).json(withVideoUrl(product));
+});
+
+app.patch('/api/products/:id', (req, res) => {
+  const product = products.find((item) => item.id === req.params.id); if (!product) return res.status(404).json({ message: 'Product not found' });
+  const b = req.body || {};
+  if (b.categoryId !== undefined) { if (!categories.some((category) => category.id === b.categoryId)) return res.status(400).json({ message: 'Unknown category' }); product.categoryId = b.categoryId; }
+  if (b.nameAr !== undefined) product.nameAr = cleanText(b.nameAr); if (b.nameEn !== undefined) product.nameEn = cleanText(b.nameEn); if (b.descriptionAr !== undefined) product.descriptionAr = cleanText(b.descriptionAr); if (b.descriptionEn !== undefined) product.descriptionEn = cleanText(b.descriptionEn); if (b.imageUrl !== undefined) product.imageUrl = cleanUrl(b.imageUrl);
+  if (b.price !== undefined) { if (!Number.isFinite(Number(b.price))) return res.status(400).json({ message: 'Price must be numeric' }); product.price = Number(b.price); }
+  if (b.available !== undefined) product.available = Boolean(b.available); if (b.videoKey !== undefined) product.videoKey = cleanKey(b.videoKey);
+  persistState(); return res.json(withVideoUrl(product));
+});
+
+app.delete('/api/products/:id', (req, res) => { const index = products.findIndex((product) => product.id === req.params.id); if (index === -1) return res.status(404).json({ message: 'Product not found' }); const [removed] = products.splice(index, 1); persistState(); return res.json({ ok: true, removed }); });
+
+app.use(express.static(dist));
+app.use((_req, res) => res.sendFile(path.join(dist, 'index.html')));
+app.use((error, _req, res, _next) => { console.error('ARABISK web error:', error); if (!res.headersSent) res.status(500).json({ message: 'Internal server error' }); });
+
+await restoreState();
+if (storageReady) persistState();
+app.listen(port, () => console.log(`ARABISK web listening on ${port} — ${products.length} menu items`));
