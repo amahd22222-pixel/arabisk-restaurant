@@ -14,19 +14,20 @@ function ensureStyle(){
   style.id='arabisk-studio-runtime-style';
   style.textContent=`
     .arabisk-studio-display{width:100%;height:min(78vh,860px);min-height:320px;background:#000;overflow:hidden}
-    .arabisk-studio-display video{display:block;width:100%;height:100%;object-fit:cover;background:#000}
+    .arabisk-studio-display video{display:block;width:100%;height:100%;object-fit:cover;background:#000;cursor:pointer}
     .arabisk-studio-category{margin:0 0 34px;background:#000;overflow:hidden}
     .arabisk-studio-category .arabisk-studio-display{height:min(62vh,720px);min-height:260px}
   `;
   document.head.appendChild(style);
 }
 
-function renderVideo(item){
+function renderVideo(item,{category=false}={}){
   const desktop=item.desktopVideoUrl||item.mobileVideoUrl;
   const mobile=item.mobileVideoUrl||desktop;
   if(!desktop)return '';
   ensureStyle();
-  return `<div class="arabisk-studio-display"><video autoplay muted loop playsinline preload="metadata" aria-label="ARABISK Studio"><source media="(max-width:700px)" src="${esc(mobile)}"><source src="${esc(desktop)}"></video></div>`;
+  const audioAttr=category?' data-studio-audio="1"':'';
+  return `<div class="arabisk-studio-display"><video autoplay muted loop playsinline preload="metadata" aria-label="ARABISK Studio"${audioAttr}><source media="(max-width:700px)" src="${esc(mobile)}"><source src="${esc(desktop)}"></video></div>`;
 }
 
 function renderHome(items){
@@ -36,6 +37,18 @@ function renderHome(items){
   home.hidden=false;
   home.className='';
   home.innerHTML=renderVideo(items[0]);
+}
+
+function enableCategoryAudio(){
+  const video=document.querySelector('video[data-studio-audio="1"]');
+  if(!video)return;
+  const unmute=()=>{
+    video.muted=false;
+    video.volume=1;
+    video.play().catch(()=>{});
+    video.removeEventListener('click',unmute);
+  };
+  video.addEventListener('click',unmute,{once:true});
 }
 
 async function renderCategory(){
@@ -53,8 +66,9 @@ async function renderCategory(){
   const wrapper=document.createElement('div');
   wrapper.id='arabisk-studio-category';
   wrapper.className='arabisk-studio-category';
-  wrapper.innerHTML=renderVideo(items[0]);
+  wrapper.innerHTML=renderVideo(items[0],{category:true});
   categoryDetail.insertBefore(wrapper,categoryBanner);
+  enableCategoryAudio();
 }
 
 document.addEventListener('DOMContentLoaded',async()=>{
