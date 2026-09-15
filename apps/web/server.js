@@ -88,6 +88,6 @@ app.delete('/api/products/:id', (req, res) => {
 });
 
 app.use(express.static(dist));
-app.get('*', (_req, res) => res.sendFile(path.join(dist, 'index.html')));
+app.use((_req, res) => res.sendFile(path.join(dist, 'index.html')));
 
 app.listen(port, () => console.log(`ARABISK web listening on ${port}`));
