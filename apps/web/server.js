@@ -17,8 +17,16 @@ const STATE_KEY = 'data/arabisk-state.json';
 const MENU_VERSION = 2;
 
 const corsOptions = { origin: true, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type'] };
+app.disable('x-powered-by');
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  if (req.path === '/health' || req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 app.use(express.json({ limit: '1mb' }));
 
 const cleanText = (value, max = 180) => String(value ?? '').trim().slice(0, max);
@@ -57,7 +65,12 @@ app.get('/api/reservations', (_req, res) => res.json(reservations));
 app.post('/api/reservations', (req, res) => {
   const b = req.body || {};
   const name = cleanText(b.name, 80), phone = cleanText(b.phone, 40), date = cleanText(b.date, 20), time = cleanText(b.time, 10), guests = Number(b.guests), notes = cleanText(b.notes, 300);
+  const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const timeOk = /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
+  const today = new Date().toISOString().slice(0, 10);
   if (!name || !phone || !date || !time || !Number.isInteger(guests) || guests < 1 || guests > 20) return res.status(400).json({ message: 'name, phone, date, time and guests are required' });
+  if (!dateOk || date < today) return res.status(400).json({ message: 'Reservation date must be a valid date that is not in the past.' });
+  if (!timeOk) return res.status(400).json({ message: 'Reservation time must be in HH:MM format.' });
   const reservation = { id: nextReservationId(), name, phone, date, time, guests, notes, status: 'pending', createdAt: new Date().toISOString() };
   reservations.push(reservation); persistState(); return res.status(201).json(reservation);
 });
