@@ -8,8 +8,6 @@ const __dirname = path.dirname(__filename);
 const dist = path.join(__dirname, 'dist');
 const port = Number(process.env.PORT || 4174);
 const host = '0.0.0.0';
-const apiBase = String(process.env.ARABISK_API_BASE || 'https://web-production-d41a3.up.railway.app').replace(/\/$/, '');
-const adminToken = String(process.env.ARABISK_ADMIN_TOKEN || '');
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -47,43 +45,11 @@ function sendFile(res, filePath) {
   });
 }
 
-async function proxyApi(req, res) {
-  if (!adminToken) return res.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }).end(JSON.stringify({ message: 'Admin API proxy is not configured.' }));
-  const upstreamUrl = `${apiBase}${req.url.split('?')[0]}${req.url.includes('?') ? `?${req.url.split('?')[1]}` : ''}`;
-  const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
-  const body = Buffer.concat(chunks);
-  const headers = {
-    'X-Admin-Token': adminToken,
-    'Accept': req.headers.accept || 'application/json'
-  };
-  if (body.length) headers['Content-Type'] = req.headers['content-type'] || 'application/json';
-  try {
-    const upstream = await fetch(upstreamUrl, { method: req.method, headers, body: body.length ? body : undefined });
-    const payload = Buffer.from(await upstream.arrayBuffer());
-    const responseHeaders = {
-      'Content-Type': upstream.headers.get('content-type') || 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-      'X-Content-Type-Options': 'nosniff',
-      'Referrer-Policy': 'strict-origin-when-cross-origin',
-      'X-Frame-Options': 'SAMEORIGIN',
-      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
-    };
-    res.writeHead(upstream.status, responseHeaders);
-    return res.end(payload);
-  } catch (error) {
-    console.error('ARABISK admin proxy error:', error);
-    return res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }).end(JSON.stringify({ message: 'تعذر الاتصال بخدمة الموقع.' }));
-  }
-}
-
-const server = http.createServer(async (req, res) => {
+const server = http.createServer((req, res) => {
   if (req.url === '/health' || req.url?.startsWith('/health?')) {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'X-Frame-Options': 'SAMEORIGIN', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' });
-    return res.end(JSON.stringify({ ok: true, service: 'arabisk-admin', apiProxyConfigured: Boolean(adminToken && apiBase) }));
+    return res.end(JSON.stringify({ ok: true, service: 'arabisk-admin' }));
   }
-
-  if (req.url?.split('?')[0] === '/api' || req.url?.startsWith('/api/')) return proxyApi(req, res);
 
   const target = safePath(req.url);
   if (!target) return res.writeHead(400).end('Bad request');
@@ -95,5 +61,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, host, () => {
-  console.log(`ARABISK admin listening on ${host}:${port} — API proxy ${adminToken && apiBase ? 'ready' : 'NOT CONFIGURED'}`);
+  console.log(`ARABISK admin listening on ${host}:${port}`);
 });
