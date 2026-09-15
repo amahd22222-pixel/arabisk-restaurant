@@ -8,8 +8,13 @@ const port = Number(process.env.PORT || 3000);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.join(__dirname, 'dist');
 
-app.use(cors({ origin: true, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type'] }));
-app.options('*', cors());
+const corsOptions = {
+  origin: true,
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
+};
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 
 const categories = [
@@ -95,8 +100,7 @@ app.use(express.static(dist));
 app.use((_req, res) => res.sendFile(path.join(dist, 'index.html')));
 app.use((error, _req, res, _next) => {
   console.error('ARABISK web error:', error);
-  if (res.headersSent) return;
-  res.status(500).json({ message: 'Internal server error' });
+  if (!res.headersSent) res.status(500).json({ message: 'Internal server error' });
 });
 
 app.listen(port, () => console.log(`ARABISK web listening on ${port}`));
