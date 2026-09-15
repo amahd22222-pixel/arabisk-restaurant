@@ -1,5 +1,10 @@
 const $ = (selector) => document.querySelector(selector);
-const apiBase = () => (localStorage.getItem('ARABISK_API_BASE') || window.ARABISK_API_BASE || 'http://localhost:3000').replace(/\/$/, '');
+const apiBase = () => (
+  localStorage.getItem('ARABISK_API_BASE') ||
+  window.ARABISK_API_BASE ||
+  import.meta.env.VITE_API_BASE_URL ||
+  'https://web-production-d41a3.up.railway.app'
+).replace(/\/$/, '');
 let products = [];
 let categories = [];
 let editingId = null;
@@ -59,10 +64,11 @@ async function load() {
     renderProducts();
     $('#connection').textContent = 'متصل';
     $('#connection').className = 'connected';
+    $('#error').textContent = '';
   } catch (error) {
     $('#connection').textContent = 'غير متصل';
     $('#connection').className = 'disconnected';
-    $('#error').textContent = `${error.message}. يمكنك ضبط رابط الـAPI من إعدادات المتصفح.`;
+    $('#error').textContent = `${error.message}. يمكنك تخصيص رابط الـAPI عبر ARABISK_API_BASE أو VITE_API_BASE_URL.`;
   }
 }
 
