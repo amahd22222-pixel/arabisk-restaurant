@@ -22,6 +22,16 @@ const mimeTypes = {
   '.ico': 'image/x-icon'
 };
 
+function securityHeaders(extra = {}) {
+  return {
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    ...extra
+  };
+}
+
 function safePath(urlPath) {
   const clean = decodeURIComponent((urlPath || '/').split('?')[0]);
   const relative = clean.replace(/^\/+/, '');
@@ -31,24 +41,27 @@ function safePath(urlPath) {
 
 function sendFile(res, filePath) {
   fs.stat(filePath, (error, stats) => {
-    if (error || !stats.isFile()) return res.writeHead(404).end('Not found');
+    if (error || !stats.isFile()) return res.writeHead(404, securityHeaders()).end('Not found');
     const ext = path.extname(filePath).toLowerCase();
-    res.writeHead(200, {
+    res.writeHead(200, securityHeaders({
       'Content-Type': mimeTypes[ext] || 'application/octet-stream',
       'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable'
-    });
+    }));
     fs.createReadStream(filePath).pipe(res);
   });
 }
 
 const server = http.createServer((req, res) => {
   if (req.url === '/health' || req.url?.startsWith('/health?')) {
-    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.writeHead(200, securityHeaders({
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store'
+    }));
     return res.end(JSON.stringify({ ok: true, service: 'arabisk-admin' }));
   }
 
   const target = safePath(req.url);
-  if (!target) return res.writeHead(400).end('Bad request');
+  if (!target) return res.writeHead(400, securityHeaders()).end('Bad request');
 
   fs.stat(target, (error, stats) => {
     if (!error && stats.isFile()) return sendFile(res, target);
