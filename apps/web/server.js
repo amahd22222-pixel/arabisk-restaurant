@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { presign, storageReady, readJson, writeJson, deleteObject } from './storage.js';
 import { categories, products } from './menu-data.js';
 import { registerMediaRoutes } from './media-routes.js';
+import { registerCategoryRoutes } from './category-routes.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -92,11 +93,11 @@ async function restoreState() {
 }
 
 const persistState = () => void writeJson(STATE_KEY, { menuVersion: MENU_VERSION, products, orders, customers, reservations });
+const restoreCategories = registerCategoryRoutes(app, { categories, products, storageReady, presign, readJson, writeJson, deleteObject });
 const nextProductId = () => { const max = products.reduce((highest, product) => Math.max(highest, Number(String(product.id).replace(/^P/, '')) || 0), 0); return `P${String(max + 1).padStart(3, '0')}`; };
 const nextReservationId = () => `R${String(reservations.length + 1).padStart(4, '0')}`;
 
-app.get('/health', (_req, res) => res.json({ ok: true, service: 'arabisk-web', storageReady, persistentStorage: storageReady, menuVersion: MENU_VERSION, productCount: products.length }));
-app.get('/api/categories', (_req, res) => res.json(categories));
+app.get('/health', (_req, res) => res.json({ ok: true, service: 'arabisk-web', storageReady, persistentStorage: storageReady, menuVersion: MENU_VERSION, productCount: products.length, categoryCount: categories.length }));
 app.get('/api/orders', (_req, res) => res.json(orders));
 app.get('/api/customers', (_req, res) => res.json(customers));
 app.get('/api/reservations', (_req, res) => res.json(reservations));
@@ -186,5 +187,6 @@ app.use((_req, res) => res.sendFile(path.join(dist, 'index.html')));
 app.use((error, _req, res, _next) => { console.error('ARABISK web error:', error); if (!res.headersSent) res.status(500).json({ message: 'Internal server error' }); });
 
 await restoreState();
+await restoreCategories();
 if (storageReady) persistState();
-app.listen(port, () => console.log(`ARABISK web listening on ${port} — ${products.length} menu items`));
+app.listen(port, () => console.log(`ARABISK web listening on ${port} — ${products.length} menu items, ${categories.length} categories`));
