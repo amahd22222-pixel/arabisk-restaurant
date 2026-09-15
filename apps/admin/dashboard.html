@@ -8,7 +8,7 @@
   <header id="dashboard"><div><span>لوحة التحكم</span><h1 id="page-title">إدارة ARABISK</h1></div><div class="header-actions"><span id="connection" class="disconnected">جارٍ الاتصال…</span><button id="logout" type="button" class="small-action">تسجيل الخروج</button><button id="add-product">+ إضافة صنف</button></div></header><div id="error" class="error"></div>
   <section class="stats" id="dashboard-stats"><article><span>إجمالي الأصناف</span><b id="count-products">—</b></article><article><span>الأقسام</span><b id="count-categories">—</b></article><article><span>الأصناف المتاحة</span><b id="count-available">—</b></article><article><span>حجوزات الطاولات</span><b id="count-reservations">—</b></article></section>
   <section class="panel admin-section" id="products"><div class="panelhead"><div><h2>الأصناف</h2><span>إضافة وتعديل وإخفاء وحذف</span></div><input id="search" placeholder="بحث عن صنف…" aria-label="بحث"></div><div class="table-wrap"><table><thead><tr><th>الصنف</th><th>القسم</th><th>السعر</th><th>فيديو التحضير</th><th>الحالة</th><th></th></tr></thead><tbody id="products-body"></tbody></table></div></section>
-  <section class="panel admin-section" id="categories"><div class="panelhead"><div><h2>الأقسام</h2><span>الأقسام الحالية من قائمة ARABISK</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>القسم</th><th>English</th><th>الحالة</th></tr></thead><tbody id="categories-body"></tbody></table></div></section>
+  <section class="panel admin-section" id="categories"><div class="panelhead"><div><h2>الأقسام</h2><span>إضافة وتعديل وحذف وإدارة الصور والحالة</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>الصورة</th><th>القسم</th><th>English</th><th>الحالة</th><th></th></tr></thead><tbody id="categories-body"></tbody></table></div></section>
   <section class="panel admin-section" id="reservations"><div class="panelhead"><div><h2>حجوزات الطاولات</h2><span>إدارة طلبات الحجز الواردة من الموقع</span></div><button id="refresh-reservations" class="small-action">تحديث</button></div><div class="table-wrap"><table><thead><tr><th>العميل</th><th>التاريخ والوقت</th><th>الأشخاص</th><th>الهاتف</th><th>الحالة</th><th></th></tr></thead><tbody id="reservations-body"></tbody></table></div></section>
   <section class="panel admin-section" id="orders"><div class="panelhead"><div><h2>الطلبات</h2><span>طلبات الطعام الإلكترونية</span></div></div><div id="orders-state" class="empty">لا توجد طلبات مسجلة حاليًا.</div></section>
   <section class="panel admin-section" id="customers"><div class="panelhead"><div><h2>العملاء</h2><span>بيانات العملاء ستظهر هنا عند تفعيل الحسابات والطلبات</span></div></div><div id="customers-state" class="empty">لا توجد بيانات عملاء مسجلة حاليًا.</div></section>
@@ -30,5 +30,6 @@
 })();
 </script>
 <script type="module" src="./app.js"></script>
+<script type="module" src="./category-manager.js"></script>
 </body>
 </html>
