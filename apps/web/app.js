@@ -1,15 +1,36 @@
 const grid = document.querySelector('#grid');
 const chips = document.querySelectorAll('.chips button');
 const API = '/api/products';
-const categoryMap = { 'الكل':'', 'الفطور':'Breakfast', 'المقبلات':'Cold Appetizers', 'البيتزا':'Pizza', 'المشاوي':'Mixed Grill', 'الحلويات':'Desserts', 'المشروبات':'Coffee' };
-let selectedCategory = '';
+const categoryMap = {
+  'الكل': { type: 'all' },
+  'الفطور': { type: 'category', value: 'Breakfast' },
+  'المقبلات': { type: 'categories', value: ['Cold Appetizers', 'Hot Appetizers', 'Salads', 'Soups'] },
+  'البيتزا': { type: 'category', value: 'Pizza' },
+  'المشاوي': { type: 'categories', value: ['Mixed Grill', 'Main Course'] },
+  'الحلويات': { type: 'categories', value: ['Desserts', 'Cheese Cake', 'Arabisk Ice Cream'] },
+  'المشروبات': { type: 'categories', value: ['Cocktail & Refreshing Drinks', 'Energy Drinks', 'Juices', 'Mojitos', 'Milk Shakes', 'Tea', 'Coffee', 'Latte', 'Soft Drinks', 'Drinking Water'] }
+};
+let selectedFilter = { type: 'all' };
 
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 
-async function loadProducts(category = selectedCategory) {
-  const response = await fetch(category ? `${API}?category=${encodeURIComponent(category)}` : API);
+async function loadProducts(filter = selectedFilter) {
+  if (!filter || filter.type === 'all') {
+    const response = await fetch(API);
+    if (!response.ok) throw new Error('Unable to load menu');
+    return response.json();
+  }
+
+  if (filter.type === 'category') {
+    const response = await fetch(`${API}?category=${encodeURIComponent(filter.value)}`);
+    if (!response.ok) throw new Error('Unable to load menu');
+    return response.json();
+  }
+
+  const response = await fetch(API);
   if (!response.ok) throw new Error('Unable to load menu');
-  return response.json();
+  const items = await response.json();
+  return items.filter((item) => filter.value.includes(item.categoryId));
 }
 
 function render(items) {
@@ -28,7 +49,7 @@ async function refresh() {
 chips.forEach((button) => button.addEventListener('click', async () => {
   chips.forEach((x) => x.classList.remove('active'));
   button.classList.add('active');
-  selectedCategory = categoryMap[button.textContent] || '';
+  selectedFilter = categoryMap[button.textContent] || { type: 'all' };
   await refresh();
 }));
 
