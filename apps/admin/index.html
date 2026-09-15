@@ -9,50 +9,61 @@
 <body>
   <aside>
     <div class="logo">ARABISK<small>ADMIN</small></div>
-    <a class="active" href="#dashboard">نظرة عامة</a>
-    <a href="#products">الأصناف</a>
-    <a href="#categories">الأقسام</a>
-    <a href="#orders">الطلبات</a>
-    <a href="#customers">العملاء</a>
-    <a href="#settings">إعدادات الموقع</a>
+    <a data-section="dashboard" class="active" href="#dashboard">نظرة عامة</a>
+    <a data-section="products" href="#products">الأصناف</a>
+    <a data-section="categories" href="#categories">الأقسام</a>
+    <a data-section="orders" href="#orders">الطلبات</a>
+    <a data-section="customers" href="#customers">العملاء</a>
+    <a data-section="settings" href="#settings">إعدادات الموقع</a>
     <div class="user">أدمن المطعم<br><small>إدارة ARABISK</small></div>
   </aside>
 
   <main>
     <header id="dashboard">
-      <div><span>لوحة التحكم</span><h1>إدارة ARABISK</h1></div>
+      <div><span>لوحة التحكم</span><h1 id="page-title">إدارة ARABISK</h1></div>
       <div class="header-actions">
-        <span id="connection" class="disconnected">جاري الاتصال…</span>
+        <span id="connection" class="disconnected">جارٍ الاتصال…</span>
         <button id="add-product">+ إضافة صنف</button>
       </div>
     </header>
-
     <div id="error" class="error"></div>
 
-    <section class="stats">
+    <section class="stats" id="dashboard-stats">
       <article><span>إجمالي الأصناف</span><b id="count-products">—</b></article>
       <article><span>الأقسام</span><b id="count-categories">—</b></article>
       <article><span>الأصناف المتاحة</span><b id="count-available">—</b></article>
-      <article><span>هوية الموقع</span><b class="ok">ARABISK</b></article>
+      <article><span>الطلبات الحالية</span><b id="count-orders">—</b></article>
     </section>
 
-    <section class="panel" id="products">
-      <div class="panelhead">
-        <div><h2>الأصناف</h2><span>إضافة وتعديل وإخفاء وحذف</span></div>
-        <input id="search" placeholder="بحث عن صنف…" aria-label="بحث">
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>الصنف</th><th>القسم</th><th>السعر</th><th>الحالة</th><th></th></tr></thead>
-          <tbody id="products-body"></tbody>
-        </table>
-      </div>
+    <section class="panel admin-section" id="products">
+      <div class="panelhead"><div><h2>الأصناف</h2><span>إضافة وتعديل وإخفاء وحذف</span></div><input id="search" placeholder="بحث عن صنف…" aria-label="بحث"></div>
+      <div class="table-wrap"><table><thead><tr><th>الصنف</th><th>القسم</th><th>السعر</th><th>الحالة</th><th></th></tr></thead><tbody id="products-body"></tbody></table></div>
     </section>
 
-    <section class="panel" id="categories">
-      <div class="panelhead"><div><h2>الهوية البصرية</h2><span>مستوحاة من منيو ARABISK الأصلي</span></div></div>
-      <div class="palette"><i></i><i></i><i></i><i></i><div><strong>أسود + ذهبي + عاجي</strong><small>RTL • Cairo • Playfair Display</small></div></div>
-      <p>الواجهة ولوحة التحكم تستخدمان نفس اللغة البصرية مع اختلاف واضح في كثافة المعلومات لسهولة الإدارة.</p>
+    <section class="panel admin-section" id="categories">
+      <div class="panelhead"><div><h2>الأقسام</h2><span>الأقسام الحالية من قائمة ARABISK</span></div></div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>القسم</th><th>English</th><th>الحالة</th></tr></thead><tbody id="categories-body"></tbody></table></div>
+    </section>
+
+    <section class="panel admin-section" id="orders">
+      <div class="panelhead"><div><h2>الطلبات</h2><span>جاهز لاستقبال الطلبات عند تفعيل نظام الطلب</span></div></div>
+      <div id="orders-state" class="empty">لا توجد طلبات مسجلة حاليًا.</div>
+    </section>
+
+    <section class="panel admin-section" id="customers">
+      <div class="panelhead"><div><h2>العملاء</h2><span>بيانات العملاء ستظهر هنا عند تفعيل الطلبات والحسابات</span></div></div>
+      <div id="customers-state" class="empty">لا توجد بيانات عملاء مسجلة حاليًا.</div>
+    </section>
+
+    <section class="panel admin-section" id="settings">
+      <div class="panelhead"><div><h2>إعدادات الموقع</h2><span>إعدادات محلية للوحة التحكم</span></div></div>
+      <form id="settings-form">
+        <label>اسم المطعم<input id="site-name" value="ARABISK" required></label>
+        <label>رابط الـAPI<input id="api-base" placeholder="https://..." required></label>
+        <label>وصف مختصر<textarea id="site-description" rows="3">مطعم وكافيه بطابع عربي عصري.</textarea></label>
+        <button class="submit" type="submit">حفظ الإعدادات</button>
+      </form>
+      <div id="settings-message" class="success-message"></div>
     </section>
   </main>
 
