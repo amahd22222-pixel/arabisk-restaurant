@@ -1,5 +1,5 @@
 const API = 'https://web-production-d41a3.up.railway.app';
-const state = { shows: [], editing: null, media: null };
+const state = { shows: [], categories: [], editing: null, media: null };
 const q = (s, r = document) => r.querySelector(s);
 const esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]));
 
@@ -10,6 +10,21 @@ async function api(path, options = {}) {
   return data;
 }
 
+async function loadCategories() {
+  try {
+    const items = await api('/api/categories');
+    state.categories = Array.isArray(items) ? items.filter((c) => c && c.active !== false) : [];
+  } catch { state.categories = []; }
+}
+
+function placementLabel(show) {
+  if (show.placement === 'category') {
+    const category = state.categories.find((c) => c.id === show.categoryId);
+    return `قسم: ${category?.nameAr || category?.nameEn || show.categoryId || 'غير محدد'}`;
+  }
+  return 'الرئيسية';
+}
+
 function ensureStudioUi() {
   const main = q('main');
   if (!main || q('#studio')) return;
@@ -17,9 +32,9 @@ function ensureStudioUi() {
   section.id = 'studio';
   section.className = 'panel admin-section';
   section.innerHTML = `
-    <div class="panelhead"><div><h2>ARABISK Studio — العروض</h2><span>إدارة العروض المرئية فقط. لا يوجد أي نص أو زر فوق الفيديو في الموقع.</span></div><button id="studio-add" class="small-action" type="button">+ إضافة عرض</button></div>
+    <div class="panelhead"><div><h2>ARABISK Studio — العروض</h2><span>حدد مكان ظهور كل فيديو: الرئيسية أو قسم محدد مثل البيتزا.</span></div><button id="studio-add" class="small-action" type="button">+ إضافة عرض</button></div>
     <div class="banner-toolbar"><span id="studio-count" class="banner-count">—</span></div>
-    <div class="table-wrap"><table><thead><tr><th>المعاينة</th><th>اسم داخلي</th><th>سطح المكتب</th><th>الموبايل</th><th>الحالة</th><th>الترتيب</th><th></th></tr></thead><tbody id="studio-body"></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>المعاينة</th><th>اسم داخلي</th><th>مكان الظهور</th><th>سطح المكتب</th><th>الموبايل</th><th>الحالة</th><th>الترتيب</th><th></th></tr></thead><tbody id="studio-body"></tbody></table></div>
     <div id="studio-empty" class="empty" hidden>لا توجد عروض مضافة إلى Studio.</div>`;
   main.insertBefore(section, q('#settings') || null);
 
@@ -31,7 +46,16 @@ function ensureStudioUi() {
     <div class="modal-card banner-modal-card">
       <div class="modal-head"><div><span>ARABISK STUDIO</span><h2 id="studio-modal-title">إضافة عرض</h2></div><button id="studio-close" class="close" type="button">×</button></div>
       <form id="studio-form">
-        <label>اسم داخلي للعرض<input id="studio-title" maxlength="120" placeholder="مثال: عرض رمضان"></label>
+        <label>اسم داخلي للعرض<input id="studio-title" maxlength="120" placeholder="مثال: عرض البيتزا"></label>
+        <label>مكان ظهور العرض
+          <select id="studio-placement">
+            <option value="home">الرئيسية</option>
+            <option value="category">قسم محدد</option>
+          </select>
+        </label>
+        <label id="studio-category-wrap" hidden>اختر القسم
+          <select id="studio-category"></select>
+        </label>
         <div class="banner-grid two">
           <label>فيديو سطح المكتب<input id="studio-desktop" type="file" accept="video/mp4,video/webm,video/quicktime"><small>MP4 / WebM / MOV — حد أقصى 120MB.</small></label>
           <label>فيديو الموبايل<input id="studio-mobile" type="file" accept="video/mp4,video/webm,video/quicktime"><small>يمكن تركه فارغًا لاستخدام فيديو سطح المكتب.</small></label>
@@ -48,7 +72,14 @@ function ensureStudioUi() {
   q('#studio-add').addEventListener('click', () => openEditor());
   q('#studio-close').addEventListener('click', closeEditor);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeEditor(); });
+  q('#studio-placement').addEventListener('change', syncPlacement);
   q('#studio-form').addEventListener('submit', saveEditor);
+}
+
+function syncPlacement() {
+  const isCategory = q('#studio-placement').value === 'category';
+  q('#studio-category-wrap').hidden = !isCategory;
+  q('#studio-category').innerHTML = state.categories.map((c) => `<option value="${esc(c.id)}">${esc(c.nameAr || c.nameEn)} — ${esc(c.nameEn || '')}</option>`).join('');
 }
 
 async function getShow(id) { return api(`/api/studio/shows/${encodeURIComponent(id)}`); }
@@ -79,7 +110,10 @@ function openEditor(show = null) {
   q('#studio-active').checked = show?.active !== false;
   q('#studio-desktop').value = '';
   q('#studio-mobile').value = '';
-  q('#studio-existing').textContent = show ? `سطح المكتب: ${show.desktopVideoUrl ? 'موجود' : 'غير مضاف'} — الموبايل: ${show.mobileVideoUrl ? 'موجود' : 'غير مضاف'}` : 'لا توجد وسائط محفوظة حاليًا.';
+  q('#studio-placement').value = show?.placement === 'category' ? 'category' : 'home';
+  syncPlacement();
+  q('#studio-category').value = show?.categoryId || state.categories[0]?.id || '';
+  q('#studio-existing').textContent = show ? `${placementLabel(show)} — سطح المكتب: ${show.desktopVideoUrl ? 'موجود' : 'غير مضاف'} — الموبايل: ${show.mobileVideoUrl ? 'موجود' : 'سطح المكتب'}` : 'الرئيسية — لا توجد وسائط محفوظة حاليًا.';
   q('#studio-modal').classList.add('show');
   q('#studio-modal').setAttribute('aria-hidden','false');
 }
@@ -101,16 +135,20 @@ async function saveEditor(e) {
     const title = q('#studio-title').value.trim();
     const active = q('#studio-active').checked;
     const sortOrder = Math.max(1, Number(q('#studio-order').value) || 1);
+    const placement = q('#studio-placement').value === 'category' ? 'category' : 'home';
+    const categoryId = placement === 'category' ? q('#studio-category').value : '';
+    if (placement === 'category' && !categoryId) throw new Error('اختر القسم الذي سيظهر فيه العرض');
     let id = current?.id;
+    const placementPatch = { title, active, sortOrder, placement, categoryId };
     if (!id) {
-      const created = await api('/api/studio/shows', { method:'POST', body:JSON.stringify({ title, active, sortOrder }) });
+      const created = await api('/api/studio/shows', { method:'POST', body:JSON.stringify(placementPatch) });
       id = created.id;
     } else {
-      await api(`/api/studio/shows/${encodeURIComponent(id)}`, { method:'PATCH', body:JSON.stringify({ title, active, sortOrder }) });
+      await api(`/api/studio/shows/${encodeURIComponent(id)}`, { method:'PATCH', body:JSON.stringify(placementPatch) });
     }
     const desktop = q('#studio-desktop').files[0];
     const mobile = q('#studio-mobile').files[0];
-    const patch = { active, title, sortOrder };
+    const patch = { ...placementPatch };
     if (desktop) { patch.desktopVideoKey = await upload(desktop, id, 'desktop'); bar.style.width='45%'; }
     if (mobile) { patch.mobileVideoKey = await upload(mobile, id, 'mobile'); bar.style.width='65%'; }
     if (desktop && current?.desktopVideoKey) await deleteOld(id, 'desktop');
@@ -128,7 +166,7 @@ async function saveEditor(e) {
 
 function render() {
   const rows = state.shows.slice().sort((a,b) => Number(a.sortOrder||0)-Number(b.sortOrder||0));
-  q('#studio-body').innerHTML = rows.map((s) => `<tr><td><div class="banner-thumb">${s.desktopVideoUrl || s.mobileVideoUrl ? `<video muted playsinline preload="metadata" src="${esc(s.desktopVideoUrl || s.mobileVideoUrl)}"></video>` : '<span>STUDIO</span>'}</div></td><td><strong>${esc(s.title || s.id)}</strong></td><td><span class="status ${s.desktopVideoUrl?'on':'off'}">${s.desktopVideoUrl?'موجود':'غير مضاف'}</span></td><td><span class="status ${s.mobileVideoUrl?'on':'off'}">${s.mobileVideoUrl?'موجود':'سطح المكتب'}</span></td><td><button class="status ${s.active?'on':'off'}" data-studio-toggle="${s.id}" type="button">${s.active?'فعال':'متوقف'}</button></td><td><input class="banner-order-inline" data-studio-order="${s.id}" type="number" min="1" value="${Number(s.sortOrder||1)}"></td><td class="actions"><button type="button" data-studio-edit="${s.id}">تعديل</button><button type="button" class="danger" data-studio-delete="${s.id}">حذف</button></td></tr>`).join('');
+  q('#studio-body').innerHTML = rows.map((s) => `<tr><td><div class="banner-thumb">${s.desktopVideoUrl || s.mobileVideoUrl ? `<video muted playsinline preload="metadata" src="${esc(s.desktopVideoUrl || s.mobileVideoUrl)}"></video>` : '<span>STUDIO</span>'}</div></td><td><strong>${esc(s.title || s.id)}</strong></td><td>${escapePlacement(s)}</td><td><span class="status ${s.desktopVideoUrl?'on':'off'}">${s.desktopVideoUrl?'موجود':'غير مضاف'}</span></td><td><span class="status ${s.mobileVideoUrl?'on':'off'}">${s.mobileVideoUrl?'موجود':'سطح المكتب'}</span></td><td><button class="status ${s.active?'on':'off'}" data-studio-toggle="${s.id}" type="button">${s.active?'فعال':'متوقف'}</button></td><td><input class="banner-order-inline" data-studio-order="${s.id}" type="number" min="1" value="${Number(s.sortOrder||1)}"></td><td class="actions"><button type="button" data-studio-edit="${s.id}">تعديل</button><button type="button" class="danger" data-studio-delete="${s.id}">حذف</button></td></tr>`).join('');
   q('#studio-empty').hidden = rows.length > 0;
   q('#studio-count').textContent = `${rows.length} عرض`;
   rows.forEach((s) => {
@@ -139,8 +177,10 @@ function render() {
   });
 }
 
+function escapePlacement(show) { return `<span class="banner-placement">${esc(placementLabel(show))}</span>`; }
+
 async function load() {
-  try { state.shows = await api('/api/studio/shows'); render(); } catch (error) { q('#studio-body').innerHTML = `<tr><td colspan="7" class="empty">تعذر تحميل Studio: ${esc(error.message)}</td></tr>`; }
+  try { state.shows = await api('/api/studio/shows'); render(); } catch (error) { q('#studio-body').innerHTML = `<tr><td colspan="8" class="empty">تعذر تحميل Studio: ${esc(error.message)}</td></tr>`; }
 }
 
-document.addEventListener('DOMContentLoaded', () => { ensureStudioUi(); load(); });
+document.addEventListener('DOMContentLoaded', async () => { ensureStudioUi(); await loadCategories(); syncPlacement(); await load(); });
