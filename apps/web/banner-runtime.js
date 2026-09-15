@@ -1,5 +1,5 @@
 const API = window.__ARABISK_API_BASE__ || 'https://web-production-d41a3.up.railway.app';
-const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[char]));
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>'\"]/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','\"':'&quot;'}[char]));
 const langIsEnglish = () => document.documentElement.lang.toLowerCase().startsWith('en');
 
 async function fetchBanners(placement) {
@@ -11,11 +11,30 @@ async function fetchBanners(placement) {
   } catch { return []; }
 }
 
+async function fetchBannerVideos(items) {
+  const results = new Map();
+  await Promise.all(items.map(async (item) => {
+    try {
+      const response = await fetch(`${API}/api/banners/${encodeURIComponent(item.id)}/video`, { cache: 'no-store' });
+      if (response.ok) results.set(item.id, await response.json());
+    } catch {}
+  }));
+  return results;
+}
+
 function pick(item, ar, en) {
   return langIsEnglish() ? (item[en] || item[ar] || '') : (item[ar] || item[en] || '');
 }
 
-function renderHomeHero(items) {
+function mediaMarkup(item, video) {
+  const image = item.imageUrl || item.mobileImageUrl || '';
+  if (video?.active && video.videoUrl) {
+    return `<video class="managed-banner-video" autoplay muted loop playsinline preload="metadata" poster="${escapeHtml(image)}"><source src="${escapeHtml(video.videoUrl)}"></video>`;
+  }
+  return `<div class="managed-banner-image" style="background-image:linear-gradient(90deg,rgba(7,7,7,.78),rgba(7,7,7,.25) 58%,rgba(7,7,7,.06)),url(${JSON.stringify(image)})"></div>`;
+}
+
+function renderHomeHero(items, videos) {
   const hero = document.querySelector('#home.hero');
   if (!hero || !items.length) return;
   let index = 0;
@@ -28,9 +47,8 @@ function renderHomeHero(items) {
     const title = pick(item,'titleAr','titleEn');
     const subtitle = pick(item,'subtitleAr','subtitleEn');
     const button = pick(item,'buttonTextAr','buttonTextEn');
-    const image = item.imageUrl || item.mobileImageUrl || '';
     const href = item.link || '#menu';
-    stage.innerHTML = `<div class="managed-banner-slide"><div class="managed-banner-image" style="background-image:linear-gradient(90deg,rgba(7,7,7,.78),rgba(7,7,7,.25) 58%,rgba(7,7,7,.06)),url(${JSON.stringify(image)})"></div><div class="managed-banner-copy"><p class="eyebrow">ARABISK</p><h1>${escapeHtml(title)}</h1>${subtitle ? `<p class="lead">${escapeHtml(subtitle)}</p>` : ''}${button ? `<a class="gold-btn" href="${escapeHtml(href)}">${escapeHtml(button)}</a>` : ''}</div></div>`;
+    stage.innerHTML = `<div class="managed-banner-slide">${mediaMarkup(item, videos.get(item.id))}<div class="managed-banner-copy"><p class="eyebrow">ARABISK</p><h1>${escapeHtml(title)}</h1>${subtitle ? `<p class="lead">${escapeHtml(subtitle)}</p>` : ''}${button ? `<a class="gold-btn" href="${escapeHtml(href)}">${escapeHtml(button)}</a>` : ''}</div></div>`;
     dots.innerHTML = items.map((_, dotIndex) => `<button type="button" class="managed-banner-dot ${dotIndex===index?'active':''}" data-index="${dotIndex}" aria-label="Banner ${dotIndex+1}"></button>`).join('');
     dots.querySelectorAll('button').forEach((buttonEl) => buttonEl.addEventListener('click', () => { index = Number(buttonEl.dataset.index); render(); restart(); }));
   };
@@ -44,27 +62,27 @@ function renderHomeHero(items) {
   restart();
 }
 
-function injectPromo(placement, selector, className) {
-  return fetchBanners(placement).then((items) => {
-    if (!items.length) return;
-    const anchor = document.querySelector(selector);
-    if (!anchor || document.querySelector(`.${className}`)) return;
-    const item = items[0];
-    const title = pick(item,'titleAr','titleEn');
-    const subtitle = pick(item,'subtitleAr','subtitleEn');
-    const button = pick(item,'buttonTextAr','buttonTextEn');
-    const href = item.link || '#menu';
-    const image = item.imageUrl || item.mobileImageUrl || '';
-    const card = document.createElement('section');
-    card.className = className;
-    card.innerHTML = `<div class="managed-promo-image" style="background-image:linear-gradient(90deg,rgba(0,0,0,.72),rgba(0,0,0,.25)),url(${JSON.stringify(image)})"></div><div class="managed-promo-copy"><p class="eyebrow">ARABISK</p><h2>${escapeHtml(title)}</h2>${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}${button ? `<a class="gold-btn" href="${escapeHtml(href)}">${escapeHtml(button)}</a>` : ''}</div>`;
-    anchor.insertAdjacentElement('beforebegin', card);
-  });
+async function injectPromo(placement, selector, className) {
+  const items = await fetchBanners(placement);
+  if (!items.length) return;
+  const anchor = document.querySelector(selector);
+  if (!anchor || document.querySelector(`.${className}`)) return;
+  const videos = await fetchBannerVideos(items);
+  const item = items[0];
+  const title = pick(item,'titleAr','titleEn');
+  const subtitle = pick(item,'subtitleAr','subtitleEn');
+  const button = pick(item,'buttonTextAr','buttonTextEn');
+  const href = item.link || '#menu';
+  const card = document.createElement('section');
+  card.className = className;
+  card.innerHTML = `${mediaMarkup(item, videos.get(item.id))}<div class="managed-promo-copy"><p class="eyebrow">ARABISK</p><h2>${escapeHtml(title)}</h2>${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ''}${button ? `<a class="gold-btn" href="${escapeHtml(href)}">${escapeHtml(button)}</a>` : ''}</div>`;
+  anchor.insertAdjacentElement('beforebegin', card);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
   const hero = await fetchBanners('home-hero');
-  renderHomeHero(hero);
+  const heroVideos = await fetchBannerVideos(hero);
+  renderHomeHero(hero, heroVideos);
   await injectPromo('home-promo', '#menu', 'managed-home-promo');
   await injectPromo('menu-top', '#menu-heading', 'managed-menu-promo');
   await injectPromo('footer-promo', 'footer', 'managed-footer-promo');
