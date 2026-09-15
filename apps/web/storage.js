@@ -41,3 +41,31 @@ export function presign(method, key, expires = 900) {
   query.set('X-Amz-Signature', hmac(signingKey(date), stringToSign, 'hex'));
   return `${endpoint}${uri(key)}?${query.toString()}`;
 }
+
+export async function readJson(key, fallback = null) {
+  if (!storageReady) return fallback;
+  try {
+    const response = await fetch(presign('GET', key, 900));
+    if (!response.ok) return fallback;
+    return await response.json();
+  } catch (error) {
+    console.error(`Storage read failed for ${key}:`, error);
+    return fallback;
+  }
+}
+
+export async function writeJson(key, value) {
+  if (!storageReady) return false;
+  try {
+    const response = await fetch(presign('PUT', key, 900), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify(value)
+    });
+    if (!response.ok) throw new Error(`Storage write returned ${response.status}`);
+    return true;
+  } catch (error) {
+    console.error(`Storage write failed for ${key}:`, error);
+    return false;
+  }
+}
