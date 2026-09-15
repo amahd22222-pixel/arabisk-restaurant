@@ -4,10 +4,10 @@ const langIsEnglish = () => document.documentElement.lang.toLowerCase().startsWi
 
 async function fetchBanners(placement) {
   try {
-    const response = await fetch(`${API}/api/banners?placement=${encodeURIComponent(placement)}`, { cache: 'no-store' });
+    const response = await fetch(`${API}/api/banners?placement=${encodeURIComponent(placement)}`, { cache:'no-store' });
     if (!response.ok) return [];
     const items = await response.json();
-    return Array.isArray(items) ? items.filter((item) => item.active).sort((a,b) => Number(a.sortOrder||0)-Number(b.sortOrder||0)) : [];
+    return Array.isArray(items) ? items.filter((item) => item.active).sort((a,b)=>Number(a.sortOrder||0)-Number(b.sortOrder||0)) : [];
   } catch { return []; }
 }
 
@@ -15,23 +15,25 @@ async function fetchBannerVideos(items) {
   const results = new Map();
   await Promise.all(items.map(async (item) => {
     try {
-      const response = await fetch(`${API}/api/banners/${encodeURIComponent(item.id)}/video`, { cache: 'no-store' });
+      const response = await fetch(`${API}/api/banners/${encodeURIComponent(item.id)}/video`, { cache:'no-store' });
       if (response.ok) results.set(item.id, await response.json());
     } catch {}
   }));
   return results;
 }
 
-function pick(item, ar, en) {
-  return langIsEnglish() ? (item[en] || item[ar] || '') : (item[ar] || item[en] || '');
-}
+function pick(item, ar, en) { return langIsEnglish() ? (item[en] || item[ar] || '') : (item[ar] || item[en] || ''); }
 
 function mediaMarkup(item, video) {
-  const image = item.imageUrl || item.mobileImageUrl || '';
-  if (video?.active && video.videoUrl) {
-    return `<video class="managed-banner-video" autoplay muted loop playsinline preload="metadata" poster="${escapeHtml(image)}"><source src="${escapeHtml(video.videoUrl)}"></video>`;
+  const desktopImage = item.imageUrl || '';
+  const mobileImage = item.mobileImageUrl || desktopImage;
+  if (video?.active && (video.videoUrl || video.mobileVideoUrl)) {
+    const desktopVideo = video.videoUrl || video.mobileVideoUrl;
+    const mobileVideo = video.mobileVideoUrl || desktopVideo;
+    return `<video class="managed-banner-video" autoplay muted loop playsinline preload="metadata" poster="${escapeHtml(desktopImage)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"><source media="(max-width: 700px)" src="${escapeHtml(mobileVideo)}"><source src="${escapeHtml(desktopVideo)}"></video>`;
   }
-  return `<div class="managed-banner-image" style="background-image:linear-gradient(90deg,rgba(7,7,7,.78),rgba(7,7,7,.25) 58%,rgba(7,7,7,.06)),url(${JSON.stringify(image)})"></div>`;
+  if (!desktopImage && !mobileImage) return '<div class="managed-banner-image" style="background:linear-gradient(90deg,rgba(7,7,7,.78),rgba(7,7,7,.25) 58%,rgba(7,7,7,.06))"></div>';
+  return `<picture class="managed-banner-image" style="position:absolute;inset:0;display:block"><source media="(max-width: 700px)" srcset="${escapeHtml(mobileImage)}"><img src="${escapeHtml(desktopImage || mobileImage)}" alt="" style="width:100%;height:100%;display:block;object-fit:cover"><span style="position:absolute;inset:0;display:block;background:linear-gradient(90deg,rgba(7,7,7,.78),rgba(7,7,7,.25) 58%,rgba(7,7,7,.06))"></span></picture>`;
 }
 
 function renderHomeHero(items, videos) {
