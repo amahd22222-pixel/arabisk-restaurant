@@ -12,8 +12,8 @@ const categoryMap = {
   'المشروبات': { type: 'categories', value: ['Cocktail & Refreshing Drinks', 'Energy Drinks', 'Juices', 'Mojitos', 'Milk Shakes', 'Tea', 'Coffee', 'Latte', 'Soft Drinks', 'Drinking Water', 'Sheesha'] }
 };
 const translations = {
-  ar: { home:'الرئيسية', menu:'المنيو', about:'عن المطعم', contact:'تواصل معنا', eyebrow:'RESTAURANT & CAFE', hero1:'مذاق عربي', hero2:'بروح عصرية', lead:'تجربة ضيافة عربية تجمع بين الأطباق الأصيلة والأجواء الراقية.', explore:'استكشف المنيو', heroCard:'Authentic<br/>Arabic Taste', ourMenu:'OUR MENU', menuTitle:'قائمة الطعام', menuLead:'مختارات من أطباقنا ومشروباتنا المميزة', experience:'THE ARABISK EXPERIENCE', aboutTitle:'أكثر من مجرد وجبة', aboutLead:'هوية عربية دافئة، تفاصيل فاخرة، وأطباق صُممت لتُشارك وتُستمتع بها.', copyright:'© 2026 ARABISK. All rights reserved.', searchLabel:'بحث', searchPlaceholder:'ابحث في المنيو…' },
-  en: { home:'Home', menu:'Menu', about:'About Us', contact:'Contact', eyebrow:'RESTAURANT & CAFE', hero1:'Authentic Arabic', hero2:'with a Modern Spirit', lead:'An Arabic hospitality experience blending authentic dishes with an elegant atmosphere.', explore:'Explore the Menu', heroCard:'Authentic<br/>Arabic Taste', ourMenu:'OUR MENU', menuTitle:'Our Menu', menuLead:'A selection of our signature dishes and drinks', experience:'THE ARABISK EXPERIENCE', aboutTitle:'More Than a Meal', aboutLead:'A warm Arabic identity, refined details, and dishes designed to be shared and enjoyed.', copyright:'© 2026 ARABISK. All rights reserved.', searchLabel:'Search', searchPlaceholder:'Search the menu…' }
+  ar: { home:'الرئيسية', menu:'المنيو', reservationNav:'حجز طاولة', about:'عن المطعم', contact:'تواصل معنا', eyebrow:'RESTAURANT & CAFE', hero1:'مذاق عربي', hero2:'بروح عصرية', lead:'تجربة ضيافة عربية تجمع بين الأطباق الأصيلة والأجواء الراقية.', explore:'استكشف المنيو', bookTable:'احجز طاولتك', heroCard:'Authentic<br/>Arabic Taste', ourMenu:'OUR MENU', menuTitle:'قائمة الطعام', menuLead:'مختارات من أطباقنا ومشروباتنا المميزة', experience:'THE ARABISK EXPERIENCE', aboutTitle:'أكثر من مجرد وجبة', aboutLead:'هوية عربية دافئة، تفاصيل فاخرة، وأطباق صُممت لتُشارك وتُستمتع بها.', copyright:'© 2026 ARABISK. All rights reserved.', searchLabel:'بحث', searchPlaceholder:'ابحث في المنيو…', reservationEyebrow:'TABLE RESERVATION', reservationTitle:'احجز طاولتك', reservationLead:'اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.', nameLabel:'الاسم', phoneLabel:'رقم الهاتف', dateLabel:'التاريخ', timeLabel:'الوقت', guestsLabel:'عدد الأشخاص', notesLabel:'ملاحظات', notesPlaceholder:'مثلاً: طاولة داخلية، مناسبة خاصة…', confirmBooking:'إرسال طلب الحجز', bookingSuccess:'تم استلام طلب الحجز بنجاح. سنتواصل معك لتأكيد الموعد.', bookingError:'تعذر إرسال طلب الحجز حاليًا. حاول مرة أخرى.' },
+  en: { home:'Home', menu:'Menu', reservationNav:'Book a Table', about:'About Us', contact:'Contact', eyebrow:'RESTAURANT & CAFE', hero1:'Authentic Arabic', hero2:'with a Modern Spirit', lead:'An Arabic hospitality experience blending authentic dishes with an elegant atmosphere.', explore:'Explore the Menu', bookTable:'Book a Table', heroCard:'Authentic<br/>Arabic Taste', ourMenu:'OUR MENU', menuTitle:'Our Menu', menuLead:'A selection of our signature dishes and drinks', experience:'THE ARABISK EXPERIENCE', aboutTitle:'More Than a Meal', aboutLead:'A warm Arabic identity, refined details, and dishes designed to be shared and enjoyed.', copyright:'© 2026 ARABISK. All rights reserved.', searchLabel:'Search', searchPlaceholder:'Search the menu…', reservationEyebrow:'TABLE RESERVATION', reservationTitle:'Book a Table', reservationLead:'Choose your date, time and party size and we will contact you to confirm.', nameLabel:'Name', phoneLabel:'Phone', dateLabel:'Date', timeLabel:'Time', guestsLabel:'Guests', notesLabel:'Notes', notesPlaceholder:'For example: indoor table, special occasion…', confirmBooking:'Send Reservation Request', bookingSuccess:'Your reservation request was received. We will contact you to confirm.', bookingError:'Unable to submit the reservation right now. Please try again.' }
 };
 const chipLabels = { ar: ['الكل','الفطور','المقبلات','البيتزا','المشاوي','الحلويات','المشروبات'], en: ['All','Breakfast','Appetizers','Pizza','Grill','Desserts','Drinks'] };
 let selectedFilter = { type: 'all' };
@@ -22,13 +22,16 @@ let allLoadedItems = [];
 
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 
-async function loadProducts(filter = selectedFilter) {
+async function loadProducts() {
   const response = await fetch(API);
   if (!response.ok) throw new Error('Unable to load menu');
-  const items = await response.json();
-  if (!filter || filter.type === 'all') return items;
-  if (filter.type === 'category') return items.filter((item) => item.categoryId === filter.value);
-  return items.filter((item) => filter.value.includes(item.categoryId));
+  return response.json();
+}
+
+function activeCategoryItems() {
+  if (selectedFilter.type === 'all') return allLoadedItems;
+  if (selectedFilter.type === 'category') return allLoadedItems.filter((item) => item.categoryId === selectedFilter.value);
+  return allLoadedItems.filter((item) => selectedFilter.value.includes(item.categoryId));
 }
 
 function render(items) {
@@ -53,30 +56,56 @@ function applyLanguage() {
   document.querySelector('#lang-toggle').textContent = language === 'ar' ? 'EN' : 'ع';
   document.querySelector('#lang-toggle').setAttribute('aria-label', language === 'ar' ? 'Switch to English' : 'التبديل إلى العربية');
   chips.forEach((button, index) => { button.textContent = chipLabels[language][index]; });
-  render(allLoadedItems);
+  render(activeCategoryItems());
 }
 
 async function refresh() {
   try {
     grid.innerHTML = '<div class="menu-loading" aria-hidden="true"></div><div class="menu-loading" aria-hidden="true"></div><div class="menu-loading" aria-hidden="true"></div>';
     allLoadedItems = await loadProducts();
-    const categoryItems = selectedFilter.type === 'all' ? allLoadedItems : selectedFilter.type === 'category' ? allLoadedItems.filter((item) => item.categoryId === selectedFilter.value) : allLoadedItems.filter((item) => selectedFilter.value.includes(item.categoryId));
-    render(categoryItems);
+    render(activeCategoryItems());
   } catch (error) {
     grid.innerHTML = `<p>${language === 'en' ? 'Unable to load the menu right now.' : 'تعذر تحميل المنيو حاليًا.'}</p>`;
     console.error(error);
   }
 }
 
-chips.forEach((button, index) => button.addEventListener('click', async () => {
+chips.forEach((button, index) => button.addEventListener('click', () => {
   chips.forEach((x) => x.classList.remove('active'));
   button.classList.add('active');
   const originalLabel = ['الكل','الفطور','المقبلات','البيتزا','المشاوي','الحلويات','المشروبات'][index];
   selectedFilter = categoryMap[originalLabel] || { type: 'all' };
-  await refresh();
+  render(activeCategoryItems());
 }));
-
-searchInput.addEventListener('input', () => refresh());
+searchInput.addEventListener('input', () => render(activeCategoryItems()));
 document.querySelector('#lang-toggle').addEventListener('click', () => { language = language === 'ar' ? 'en' : 'ar'; localStorage.setItem('ARABISK_LANG', language); applyLanguage(); });
+
+const reservationForm = document.querySelector('#reservation-form');
+const reservationMessage = document.querySelector('#reservation-message');
+const reservationDate = document.querySelector('#reservation-date');
+const today = new Date();
+const localToday = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+reservationDate.min = localToday;
+reservationForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  reservationMessage.textContent = '';
+  const submit = reservationForm.querySelector('button[type="submit"]');
+  submit.disabled = true;
+  try {
+    const response = await fetch('/api/reservations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: document.querySelector('#reservation-name').value, phone: document.querySelector('#reservation-phone').value, date: reservationDate.value, time: document.querySelector('#reservation-time').value, guests: Number(document.querySelector('#reservation-guests').value), notes: document.querySelector('#reservation-notes').value }) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Reservation failed');
+    reservationMessage.textContent = translations[language].bookingSuccess;
+    reservationForm.reset();
+    document.querySelector('#reservation-guests').value = '2';
+    reservationDate.min = localToday;
+  } catch (error) {
+    reservationMessage.textContent = translations[language].bookingError;
+    console.error(error);
+  } finally {
+    submit.disabled = false;
+  }
+});
+
 applyLanguage();
 refresh();
