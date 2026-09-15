@@ -1,8 +1,8 @@
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
 
-export function registerMediaRoutes(app, { products, storageReady, presign, adminOnly }) {
-  app.post('/api/images/presign', adminOnly, (req, res) => {
+export function registerMediaRoutes(app, { products, storageReady, presign }) {
+  app.post('/api/images/presign', (req, res) => {
     if (!storageReady) return res.status(503).json({ message: 'Image storage is not configured on the web service.' });
     const productId = String(req.body?.productId || '').trim();
     const fileName = String(req.body?.fileName || '').trim().slice(0, 160).replace(/[^a-zA-Z0-9._-]/g, '-');
@@ -18,7 +18,7 @@ export function registerMediaRoutes(app, { products, storageReady, presign, admi
     catch (error) { console.error(error); return res.status(503).json({ message: 'Unable to prepare image upload.' }); }
   });
 
-  app.post('/api/images/delete-presign', adminOnly, (req, res) => {
+  app.post('/api/images/delete-presign', (req, res) => {
     if (!storageReady) return res.status(503).json({ message: 'Image storage is not configured on the web service.' });
     const productId = String(req.body?.productId || '').trim();
     const product = products.find((item) => item.id === productId);
