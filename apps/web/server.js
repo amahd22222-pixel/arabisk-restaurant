@@ -15,9 +15,8 @@ const MAX_VIDEO_BYTES = 120 * 1024 * 1024;
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 const STATE_KEY = 'data/arabisk-state.json';
 const MENU_VERSION = 2;
-const ADMIN_TOKEN = String(process.env.ARABISK_ADMIN_TOKEN || '').trim();
 
-const corsOptions = { origin: true, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'X-Admin-Token'] };
+const corsOptions = { origin: true, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type'] };
 app.disable('x-powered-by');
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
@@ -44,31 +43,12 @@ const orders = [];
 const customers = [];
 const reservations = [];
 
-function isPublicApi(req) {
-  if (!req.path.startsWith('/api/')) return true;
-  if (req.method === 'OPTIONS') return true;
-  if (req.method === 'GET' && (req.path === '/api/categories' || req.path === '/api/products' || /^\/api\/products\/[^/]+$/.test(req.path))) return true;
-  if (req.method === 'POST' && req.path === '/api/reservations') return true;
-  return false;
-}
-
-function requireAdmin(req, res, next) {
-  if (isPublicApi(req)) return next();
-  if (!ADMIN_TOKEN) return res.status(503).json({ message: 'Admin API is not configured.' });
-  const supplied = String(req.get('x-admin-token') || '').trim();
-  const valid = supplied.length === ADMIN_TOKEN.length && crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(ADMIN_TOKEN));
-  if (!valid) return res.status(401).json({ message: 'Admin authorization required.' });
-  next();
-}
-
-app.use('/api', requireAdmin);
-
 async function restoreState() {
   if (!storageReady) return;
   const saved = await readJson(STATE_KEY, null);
   if (!saved || typeof saved !== 'object') return;
   if (saved.menuVersion === MENU_VERSION && Array.isArray(saved.products) && saved.products.length) products.splice(0, products.length, ...saved.products);
-  if (Array.isArray(saved.orders)) orders.splice(0, orders.length, ...saved.orders);
+  if (Array.isArray(saved.orders)) orders.splice(0, saved.orders.length, ...saved.orders);
   if (Array.isArray(saved.customers)) customers.splice(0, customers.length, ...saved.customers);
   if (Array.isArray(saved.reservations)) reservations.splice(0, reservations.length, ...saved.reservations);
 }
