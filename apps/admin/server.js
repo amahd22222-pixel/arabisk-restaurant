@@ -74,27 +74,39 @@ function sendFile(res, filePath) {
   });
 }
 
+function redirect(res, location) {
+  res.writeHead(302, { Location: location, 'Cache-Control': 'no-store' });
+  res.end();
+}
+
 const server = http.createServer((req, res) => {
-  if (req.method === 'POST' && req.url === '/auth/check') {
+  const requestPath = (req.url || '/').split('?')[0];
+
+  if (req.method === 'POST' && requestPath === '/auth/check') {
     if (!credentialsMatch(req)) return unauthorized(res);
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
     return res.end(JSON.stringify({ ok: true }));
   }
 
-  if (req.url === '/health' || req.url?.startsWith('/health?')) {
+  if (requestPath === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'X-Frame-Options': 'SAMEORIGIN', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' });
     return res.end(JSON.stringify({ ok: true, service: 'arabisk-admin', authenticationConfigured: Boolean(adminUsername && adminPassword) }));
   }
+
+  if (requestPath === '/' || requestPath === '/login' || requestPath === '/login/') return sendFile(res, path.join(dist, 'login.html'));
+  if (requestPath === '/dashboard' || requestPath === '/dashboard/') return sendFile(res, path.join(dist, 'dashboard.html'));
+  if (requestPath === '/index.html' || requestPath === '/login.html') return redirect(res, '/login');
+  if (requestPath === '/dashboard.html') return redirect(res, '/dashboard');
 
   const target = safePath(req.url);
   if (!target) return res.writeHead(400).end('Bad request');
 
   fs.stat(target, (error, stats) => {
     if (!error && stats.isFile()) return sendFile(res, target);
-    return sendFile(res, path.join(dist, 'index.html'));
+    return res.writeHead(404).end('Not found');
   });
 });
 
 server.listen(port, host, () => {
-  console.log(`ARABISK admin listening on ${host}:${port} — login page enabled`);
+  console.log(`ARABISK admin listening on ${host}:${port} — standalone login enabled`);
 });
