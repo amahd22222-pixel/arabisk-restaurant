@@ -14,7 +14,35 @@ const corsOptions = { origin: true, methods: ['GET', 'POST', 'PATCH', 'DELETE', 
 app.use(cors(corsOptions)); app.options(/.*/, cors(corsOptions)); app.use(express.json({ limit: '1mb' }));
 const cleanText = (value, max = 180) => String(value ?? '').trim().slice(0, max);
 const cleanKey = (value) => String(value ?? '').trim().replace(/^\/+/, '').slice(0, 500);
-const categories = [['Breakfast','الفطور','Breakfast'],['Manakish','المناقيش','Manakish'],['Cold Appetizers','المقبلات الباردة','Cold Appetizers'],['Hot Appetizers','المقبلات الساخنة','Hot Appetizers'],['Salads','السلطات','Salads'],['Soups','الشوربات','Soups'],['Sandwich','السندويتش','Sandwich'],['Pizza','البيتزا','Pizza'],['Pasta','الباستا','Pasta'],['Main Course','الأطباق الرئيسية','Main Course'],['Mixed Grill','المشاوي المشكلة','Mixed Grill'],['Mixed Taste','المذاق المشكل','Mixed Taste'],['Desserts','الحلويات','Desserts'],['Cheese Cake','تشيز كيك','Cheese Cake'],['Arabisk Ice Cream','آيس كريم أرابيسك','Arabisk Ice Cream'],['Cocktail & Refreshing Drinks','الكوكتيلات والمشروبات المنعشة','Cocktail & Refreshing Drinks'],['Energy Drinks','مشروبات الطاقة','Energy Drinks'],['Juices','العصائر','Juices'],['Mojitos','الموهيتو','Mojitos'],['Milk Shakes','ميلك شيك','Milk Shakes'],['Tea','الشاي','Tea'],['Coffee','القهوة','Coffee'],['Latte','اللاتيه','Latte'],['Soft Drinks','المشروبات الغازية','Soft Drinks'],['Drinking Water','المياه','Drinking Water'],['Sheesha','الشيشة','Sheesha']].map(([id,nameAr,nameEn], index) => ({ id, nameAr, nameEn, sortOrder: index + 1, active: true }));
+const categoryImages = {
+  Breakfast: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=1000&q=85',
+  Manakish: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=1000&q=85',
+  'Cold Appetizers': 'https://images.unsplash.com/photo-1577805947697-89e18249d767?auto=format&fit=crop&w=1000&q=85',
+  'Hot Appetizers': 'https://images.unsplash.com/photo-1623653387945-2fd25214f8fc?auto=format&fit=crop&w=1000&q=85',
+  Salads: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1000&q=85',
+  Soups: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1000&q=85',
+  Sandwich: 'https://images.unsplash.com/photo-1521305916504-4a1121188589?auto=format&fit=crop&w=1000&q=85',
+  Pizza: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=1000&q=85',
+  Pasta: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=1000&q=85',
+  'Main Course': 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1000&q=85',
+  'Mixed Grill': 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=1000&q=85',
+  'Mixed Taste': 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1000&q=85',
+  Desserts: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=1000&q=85',
+  'Cheese Cake': 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=1000&q=85',
+  'Arabisk Ice Cream': 'https://images.unsplash.com/photo-1497032205916-ac775f0649ae?auto=format&fit=crop&w=1000&q=85',
+  'Cocktail & Refreshing Drinks': 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=1000&q=85',
+  'Energy Drinks': 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=1000&q=85',
+  Juices: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=1000&q=85',
+  Mojitos: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=1000&q=85',
+  'Milk Shakes': 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=1000&q=85',
+  Tea: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=1000&q=85',
+  Coffee: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1000&q=85',
+  Latte: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=1000&q=85',
+  'Soft Drinks': 'https://images.unsplash.com/photo-1543253687-c4b3b9c1aa8d?auto=format&fit=crop&w=1000&q=85',
+  'Drinking Water': 'https://images.unsplash.com/photo-1560023907-5f339617ea30?auto=format&fit=crop&w=1000&q=85',
+  Sheesha: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=1000&q=85'
+};
+const categories = [['Breakfast','الفطور','Breakfast'],['Manakish','المناقيش','Manakish'],['Cold Appetizers','المقبلات الباردة','Cold Appetizers'],['Hot Appetizers','المقبلات الساخنة','Hot Appetizers'],['Salads','السلطات','Salads'],['Soups','الشوربات','Soups'],['Sandwich','السندويتش','Sandwich'],['Pizza','البيتزا','Pizza'],['Pasta','الباستا','Pasta'],['Main Course','الأطباق الرئيسية','Main Course'],['Mixed Grill','المشاوي المشكلة','Mixed Grill'],['Mixed Taste','المذاق المشكل','Mixed Taste'],['Desserts','الحلويات','Desserts'],['Cheese Cake','تشيز كيك','Cheese Cake'],['Arabisk Ice Cream','آيس كريم أرابيسك','Arabisk Ice Cream'],['Cocktail & Refreshing Drinks','الكوكتيلات والمشروبات المنعشة','Cocktail & Refreshing Drinks'],['Energy Drinks','مشروبات الطاقة','Energy Drinks'],['Juices','العصائر','Juices'],['Mojitos','الموهيتو','Mojitos'],['Milk Shakes','ميلك شيك','Milk Shakes'],['Tea','الشاي','Tea'],['Coffee','القهوة','Coffee'],['Latte','اللاتيه','Latte'],['Soft Drinks','المشروبات الغازية','Soft Drinks'],['Drinking Water','المياه','Drinking Water'],['Sheesha','الشيشة','Sheesha']].map(([id,nameAr,nameEn], index) => ({ id, nameAr, nameEn, imageUrl: categoryImages[id] || '', sortOrder: index + 1, active: true }));
 const products = [['Breakfast','فطور أرابيسك','Arabisk Breakfast',94],['Breakfast','فطور الحارة','AL Hara Breakfast',84],['Manakish','مناقيش زعتر','Zaatar Manakish',18],['Manakish','مناقيش جبنة','Cheese Manakish',22],['Cold Appetizers','حمص','Hummus',24],['Cold Appetizers','حمص بيروتي','Hummus BeirutI',26],['Hot Appetizers','بطاطا حارة','Spicy Potato',28],['Hot Appetizers','كبة مقلية','Fried Kibbeh',34],['Salads','تبولة','Tabboulah',34],['Salads','فتوش','Fattoush',34],['Pizza','بيتزا مارغريتا','Pizza Margherita',46],['Pizza','بيتزا بيبروني','Pizza Pepperoni',56],['Pasta','بيني ألفريدو','Penne Alfredo',56],['Pasta','سباجيتي بولونيز','Spaghetti Bolognese',52],['Main Course','كوردون بلو','Cordon Bleu',68],['Mixed Grill','كباب','Kabab',48],['Mixed Grill','شيش طاووق','Shish Tawook',56],['Desserts','كنافة','Kunafa',32],['Desserts','أم علي','UM Ali',34],['Juices','عصير برتقال','Orange Juice',26],['Mojitos','كلاسيك موهيتو','Classic Mojito',32],['Coffee','قهوة تركية','Turkish Coffee',20],['Coffee','كابتشينو','Cappuccino',26],['Tea','شاي أخضر','Green Tea',16],['Sheesha','تفاح ونعناع','Apple With Mint',65]].map(([categoryId,nameAr,nameEn,price], index) => ({ id:`P${String(index+1).padStart(3,'0')}`, categoryId, nameAr, nameEn, descriptionAr:'', descriptionEn:'', price, available:true, videoKey:'', sortOrder:index+1 }));
 const orders=[]; const customers=[]; const reservations=[];
 const nextProductId=()=>{const maxId=products.reduce((max,p)=>Math.max(max,Number(String(p.id).replace(/^P/,''))||0),0);return `P${String(maxId+1).padStart(3,'0')}`;};
