@@ -22,7 +22,7 @@ export function registerBannerVideoRoutes(app, { storageReady, presign, readJson
     bannerId: item.bannerId,
     active: item.active !== false,
     videoUrl: item.videoKey && storageReady ? presign('GET', item.videoKey, 900) : ''
-  }) : ({ bannerId: id, active: false, videoUrl: '' });
+  }) : ({ bannerId: '', active: false, videoUrl: '' });
 
   app.get('/api/banners/:id/video', (req, res) => {
     const item = findVideo(req.params.id);
@@ -43,10 +43,11 @@ export function registerBannerVideoRoutes(app, { storageReady, presign, readJson
       return res.json({ bannerId, active: false, videoUrl: '' });
     }
     const item = old || { bannerId, videoKey: '', active: true };
+    const oldKey = item.videoKey;
     item.videoKey = nextKey;
     item.active = active;
     if (!old) videos.push(item);
-    else if (old.videoKey && old.videoKey !== nextKey && storageReady) void deleteObject(old.videoKey);
+    else if (oldKey && oldKey !== nextKey && storageReady) void deleteObject(oldKey);
     persist();
     return res.json(publicVideo(item));
   });
