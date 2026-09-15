@@ -8,6 +8,8 @@ const __dirname = path.dirname(__filename);
 const dist = path.join(__dirname, 'dist');
 const port = Number(process.env.PORT || 4174);
 const host = '0.0.0.0';
+const adminUsername = String(process.env.ARABISK_ADMIN_USERNAME || '').trim();
+const adminPassword = String(process.env.ARABISK_ADMIN_PASSWORD || '');
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -21,6 +23,32 @@ const mimeTypes = {
   '.webp': 'image/webp',
   '.ico': 'image/x-icon'
 };
+
+function unauthorized(res) {
+  res.writeHead(401, {
+    'WWW-Authenticate': 'Basic realm="ARABISK Admin"',
+    'Cache-Control': 'no-store',
+    'Content-Type': 'text/plain; charset=utf-8',
+    'X-Content-Type-Options': 'nosniff'
+  });
+  res.end('Authentication required');
+}
+
+function isAuthorized(req) {
+  if (!adminUsername || !adminPassword) return false;
+  const header = req.headers.authorization || '';
+  if (!header.startsWith('Basic ')) return false;
+  try {
+    const decoded = Buffer.from(header.slice(6), 'base64').toString('utf8');
+    const separator = decoded.indexOf(':');
+    if (separator < 0) return false;
+    const username = decoded.slice(0, separator);
+    const password = decoded.slice(separator + 1);
+    return username === adminUsername && password === adminPassword;
+  } catch {
+    return false;
+  }
+}
 
 function safePath(urlPath) {
   const clean = decodeURIComponent((urlPath || '/').split('?')[0]);
@@ -48,8 +76,10 @@ function sendFile(res, filePath) {
 const server = http.createServer((req, res) => {
   if (req.url === '/health' || req.url?.startsWith('/health?')) {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'X-Frame-Options': 'SAMEORIGIN', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' });
-    return res.end(JSON.stringify({ ok: true, service: 'arabisk-admin' }));
+    return res.end(JSON.stringify({ ok: true, service: 'arabisk-admin', authenticationConfigured: Boolean(adminUsername && adminPassword) }));
   }
+
+  if (!isAuthorized(req)) return unauthorized(res);
 
   const target = safePath(req.url);
   if (!target) return res.writeHead(400).end('Bad request');
@@ -61,5 +91,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(port, host, () => {
-  console.log(`ARABISK admin listening on ${host}:${port}`);
+  console.log(`ARABISK admin listening on ${host}:${port} — basic authentication ${adminUsername && adminPassword ? 'enabled' : 'NOT CONFIGURED'}`);
 });
