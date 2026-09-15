@@ -19,12 +19,21 @@ const categories = [
 
 const products = [
   ['Breakfast','فطور أرابيسك','Arabisk Breakfast',94],['Breakfast','فطور الحارة','AL Hara Breakfast',84],['Manakish','مناقيش زعتر','Zaatar Manakish',18],['Manakish','مناقيش جبنة','Cheese Manakish',22],['Cold Appetizers','حمص','Hummus',24],['Cold Appetizers','حمص بيروتي','Hummus BeirutI',26],['Hot Appetizers','بطاطا حارة','Spicy Potato',28],['Hot Appetizers','كبة مقلية','Fried Kibbeh',34],['Salads','تبولة','Tabboulah',34],['Salads','فتوش','Fattoush',34],['Pizza','بيتزا مارغريتا','Pizza Margherita',46],['Pizza','بيتزا بيبروني','Pizza Pepperoni',56],['Pasta','بيني ألفريدو','Penne Alfredo',56],['Pasta','سباجيتي بولونيز','Spaghetti Bolognese',52],['Main Course','كوردون بلو','Cordon Bleu',68],['Mixed Grill','كباب','Kabab',48],['Mixed Grill','شيش طاووق','Shish Tawook',56],['Desserts','كنافة','Kunafa',32],['Desserts','أم علي','UM Ali',34],['Juices','عصير برتقال','Orange Juice',26],['Mojitos','كلاسيك موهيتو','Classic Mojito',32],['Coffee','قهوة تركية','Turkish Coffee',20],['Coffee','كابتشينو','Cappuccino',26],['Tea','شاي أخضر','Green Tea',16],['Sheesha','تفاح ونعناع','Apple With Mint',65]
-].map(([categoryId,nameAr,nameEn,price], index) => ({ id: `P${String(index + 1).padStart(3,'0')}`, categoryId, nameAr, nameEn, descriptionAr: '', descriptionEn: '', price, available: true, sortOrder: index + 1 }));
+].map(([categoryId,nameAr,nameEn,price], index) => ({ id: `P${String(index + 1).padStart(3,'0')}`, categoryId, nameAr, nameEn, descriptionAr: '', descriptionEn: '', price, available: true, videoUrl: '', sortOrder: index + 1 }));
 
 const orders = [];
 const customers = [];
 const reservations = [];
 const cleanText = (value, max = 180) => String(value ?? '').trim().slice(0, max);
+const cleanUrl = (value) => {
+  const url = String(value ?? '').trim().slice(0, 1000);
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
+    return parsed.href;
+  } catch { return ''; }
+};
 const nextProductId = () => {
   const maxId = products.reduce((max, product) => Math.max(max, Number(String(product.id).replace(/^P/, '')) || 0), 0);
   return `P${String(maxId + 1).padStart(3, '0')}`;
@@ -44,9 +53,7 @@ app.post('/api/reservations', (req, res) => {
   const time = cleanText(body.time, 10);
   const guests = Number(body.guests);
   const notes = cleanText(body.notes, 300);
-  if (!name || !phone || !date || !time || !Number.isInteger(guests) || guests < 1 || guests > 20) {
-    return res.status(400).json({ message: 'name, phone, date, time and guests are required' });
-  }
+  if (!name || !phone || !date || !time || !Number.isInteger(guests) || guests < 1 || guests > 20) return res.status(400).json({ message: 'name, phone, date, time and guests are required' });
   const reservation = { id: nextReservationId(), name, phone, date, time, guests, notes, status: 'pending', createdAt: new Date().toISOString() };
   reservations.push(reservation);
   return res.status(201).json(reservation);
@@ -72,10 +79,11 @@ app.get('/api/products/:id', (req, res) => {
   return res.json(product);
 });
 app.post('/api/products', (req, res) => {
-  const { categoryId, nameAr, nameEn, descriptionAr = '', descriptionEn = '', price, available = true } = req.body || {};
+  const { categoryId, nameAr, nameEn, descriptionAr = '', descriptionEn = '', price, available = true, videoUrl = '' } = req.body || {};
   if (!categoryId || !nameAr || !nameEn || !Number.isFinite(Number(price))) return res.status(400).json({ message: 'categoryId, nameAr, nameEn and numeric price are required' });
   if (!categories.some((c) => c.id === categoryId)) return res.status(400).json({ message: 'Unknown category' });
-  const product = { id: nextProductId(), categoryId, nameAr: cleanText(nameAr), nameEn: cleanText(nameEn), descriptionAr: cleanText(descriptionAr), descriptionEn: cleanText(descriptionEn), price: Number(price), available: Boolean(available), sortOrder: products.length + 1 };
+  if (videoUrl && !cleanUrl(videoUrl)) return res.status(400).json({ message: 'videoUrl must be a valid http(s) URL' });
+  const product = { id: nextProductId(), categoryId, nameAr: cleanText(nameAr), nameEn: cleanText(nameEn), descriptionAr: cleanText(descriptionAr), descriptionEn: cleanText(descriptionEn), price: Number(price), available: Boolean(available), videoUrl: cleanUrl(videoUrl), sortOrder: products.length + 1 };
   products.push(product);
   return res.status(201).json(product);
 });
@@ -90,6 +98,7 @@ app.patch('/api/products/:id', (req, res) => {
   if (body.descriptionEn !== undefined) product.descriptionEn = cleanText(body.descriptionEn);
   if (body.price !== undefined) { if (!Number.isFinite(Number(body.price))) return res.status(400).json({ message: 'Price must be numeric' }); product.price = Number(body.price); }
   if (body.available !== undefined) product.available = Boolean(body.available);
+  if (body.videoUrl !== undefined) { if (body.videoUrl && !cleanUrl(body.videoUrl)) return res.status(400).json({ message: 'videoUrl must be a valid http(s) URL' }); product.videoUrl = cleanUrl(body.videoUrl); }
   return res.json(product);
 });
 app.delete('/api/products/:id', (req, res) => {
