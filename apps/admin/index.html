@@ -33,29 +33,29 @@
 <script>
 (function(){
   const key='ARABISK_LOGIN_SESSION';
-  const screen=document.getElementById('login-screen'), app=document.getElementById('app-shell');
-  function showLogin(){screen.hidden=false;app.hidden=true;document.getElementById('login-username')?.focus();}
-  function showApp(){screen.hidden=true;app.hidden=false;}
-  async function bootApp(){if(window.__ARABISK_APP_BOOTED)return;window.__ARABISK_APP_BOOTED=true;await import('./app.js');}
-  if(sessionStorage.getItem(key)==='1'){showApp();bootApp();} else showLogin();
-  document.getElementById('login-form').addEventListener('submit',async function(e){
+  const screen=document.getElementById('login-screen');
+  const app=document.getElementById('app-shell');
+  const showLogin=()=>{screen.hidden=false;app.hidden=true;document.body.classList.add('login-page');document.getElementById('login-username')?.focus();};
+  const showApp=()=>{screen.hidden=true;app.hidden=false;document.body.classList.remove('login-page');};
+  if(sessionStorage.getItem(key)==='1') showApp(); else showLogin();
+  document.getElementById('login-form').addEventListener('submit',async(e)=>{
     e.preventDefault();
     const u=document.getElementById('login-username').value.trim();
     const p=document.getElementById('login-password').value;
     const error=document.getElementById('login-error');
-    error.textContent='جارٍ التحقق…';
+    const button=e.currentTarget.querySelector('button[type="submit"]');
+    button.disabled=true;error.textContent='جارٍ التحقق…';
     try{
       const encoded=btoa(unescape(encodeURIComponent(`${u}:${p}`)));
       const response=await fetch('/auth/check',{method:'POST',headers:{Authorization:`Basic ${encoded}`},cache:'no-store'});
       if(!response.ok) throw new Error(response.status===401?'اسم المستخدم أو كلمة المرور غير صحيحة.':'تعذر التحقق من بيانات الدخول.');
       sessionStorage.setItem(key,'1');
-      error.textContent='';
       document.getElementById('login-password').value='';
       showApp();
-      await bootApp();
-    }catch(err){error.textContent=err.message;}
+    }catch(err){sessionStorage.removeItem(key);error.textContent=err.message;}finally{button.disabled=false;}
   });
   document.getElementById('logout').addEventListener('click',()=>{sessionStorage.removeItem(key);location.hash='dashboard';showLogin();});
 })();
 </script>
+<script type="module" src="./app.js"></script>
 </body></html>
