@@ -32,10 +32,17 @@ function renderStudio(items) {
   const home = document.querySelector('#home');
   const menu = document.querySelector('#menu');
   if (!home || !menu) return;
-  home.classList.add('managed-studio-hidden');
+
   document.querySelectorAll('.managed-banner-hero,.managed-home-promo,.managed-menu-promo,.managed-footer-promo').forEach((el) => el.remove());
   document.querySelector('#arabisk-studio-display')?.remove();
-  if (!items.length) return;
+
+  // Keep the normal homepage hero visible until an actual Studio العرض is configured.
+  if (!items.length) {
+    home.classList.remove('managed-studio-hidden');
+    return;
+  }
+
+  home.classList.add('managed-studio-hidden');
 
   const display = document.createElement('section');
   display.id = 'arabisk-studio-display';
