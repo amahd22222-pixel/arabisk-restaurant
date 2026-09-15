@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { presign, storageReady, readJson, writeJson } from './storage.js';
 import { categories, products } from './menu-data.js';
+import { registerMediaRoutes } from './media-routes.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -23,7 +24,11 @@ app.use(express.json({ limit: '1mb' }));
 const cleanText = (value, max = 180) => String(value ?? '').trim().slice(0, max);
 const cleanKey = (value) => String(value ?? '').trim().replace(/^\/+/, '').slice(0, 500);
 const cleanUrl = (value) => String(value ?? '').trim().slice(0, 1000);
-const withVideoUrl = (product) => ({ ...product, videoUrl: product.videoKey && storageReady ? presign('GET', product.videoKey, 900) : '' });
+const withMediaUrls = (product) => ({
+  ...product,
+  imageUrl: product.imageKey && storageReady ? presign('GET', product.imageKey, 900) : (product.imageUrl || ''),
+  videoUrl: product.videoKey && storageReady ? presign('GET', product.videoKey, 900) : ''
+});
 
 const orders = [];
 const customers = [];
@@ -66,6 +71,8 @@ app.patch('/api/reservations/:id', (req, res) => {
   persistState(); return res.json(reservation);
 });
 
+registerMediaRoutes(app, { products, storageReady, presign });
+
 app.post('/api/videos/presign', (req, res) => {
   if (!storageReady) return res.status(503).json({ message: 'Video storage is not configured on the web service.' });
   const productId = cleanText(req.body?.productId, 40), fileName = cleanText(req.body?.fileName, 160).replace(/[^a-zA-Z0-9._-]/g, '-'), contentType = cleanText(req.body?.contentType, 80).toLowerCase(), size = Number(req.body?.size);
@@ -88,26 +95,26 @@ app.get('/api/products', (req, res) => {
   const category = cleanText(req.query.category, 80), search = cleanText(req.query.search, 80).toLowerCase();
   let result = category ? products.filter((product) => product.categoryId === category) : products;
   if (search) result = result.filter((product) => `${product.nameAr} ${product.nameEn}`.toLowerCase().includes(search));
-  return res.json(result.map(withVideoUrl));
+  return res.json(result.map(withMediaUrls));
 });
-app.get('/api/products/:id', (req, res) => { const product = products.find((item) => item.id === req.params.id); if (!product) return res.status(404).json({ message: 'Product not found' }); return res.json(withVideoUrl(product)); });
+app.get('/api/products/:id', (req, res) => { const product = products.find((item) => item.id === req.params.id); if (!product) return res.status(404).json({ message: 'Product not found' }); return res.json(withMediaUrls(product)); });
 
 app.post('/api/products', (req, res) => {
-  const { categoryId, nameAr, nameEn, descriptionAr = '', descriptionEn = '', imageUrl = '', price, available = true, videoKey = '' } = req.body || {};
+  const { categoryId, nameAr, nameEn, descriptionAr = '', descriptionEn = '', imageUrl = '', imageKey = '', price, available = true, videoKey = '' } = req.body || {};
   if (!categoryId || !nameAr || !nameEn || !Number.isFinite(Number(price))) return res.status(400).json({ message: 'categoryId, nameAr, nameEn and numeric price are required' });
   if (!categories.some((category) => category.id === categoryId)) return res.status(400).json({ message: 'Unknown category' });
-  const product = { id: nextProductId(), categoryId, nameAr: cleanText(nameAr), nameEn: cleanText(nameEn), descriptionAr: cleanText(descriptionAr), descriptionEn: cleanText(descriptionEn), imageUrl: cleanUrl(imageUrl), price: Number(price), available: Boolean(available), videoKey: cleanKey(videoKey), sortOrder: products.length + 1 };
-  products.push(product); persistState(); return res.status(201).json(withVideoUrl(product));
+  const product = { id: nextProductId(), categoryId, nameAr: cleanText(nameAr), nameEn: cleanText(nameEn), descriptionAr: cleanText(descriptionAr), descriptionEn: cleanText(descriptionEn), imageUrl: cleanUrl(imageUrl), imageKey: cleanKey(imageKey), price: Number(price), available: Boolean(available), videoKey: cleanKey(videoKey), sortOrder: products.length + 1 };
+  products.push(product); persistState(); return res.status(201).json(withMediaUrls(product));
 });
 
 app.patch('/api/products/:id', (req, res) => {
   const product = products.find((item) => item.id === req.params.id); if (!product) return res.status(404).json({ message: 'Product not found' });
   const b = req.body || {};
   if (b.categoryId !== undefined) { if (!categories.some((category) => category.id === b.categoryId)) return res.status(400).json({ message: 'Unknown category' }); product.categoryId = b.categoryId; }
-  if (b.nameAr !== undefined) product.nameAr = cleanText(b.nameAr); if (b.nameEn !== undefined) product.nameEn = cleanText(b.nameEn); if (b.descriptionAr !== undefined) product.descriptionAr = cleanText(b.descriptionAr); if (b.descriptionEn !== undefined) product.descriptionEn = cleanText(b.descriptionEn); if (b.imageUrl !== undefined) product.imageUrl = cleanUrl(b.imageUrl);
+  if (b.nameAr !== undefined) product.nameAr = cleanText(b.nameAr); if (b.nameEn !== undefined) product.nameEn = cleanText(b.nameEn); if (b.descriptionAr !== undefined) product.descriptionAr = cleanText(b.descriptionAr); if (b.descriptionEn !== undefined) product.descriptionEn = cleanText(b.descriptionEn); if (b.imageUrl !== undefined) product.imageUrl = cleanUrl(b.imageUrl); if (b.imageKey !== undefined) product.imageKey = cleanKey(b.imageKey);
   if (b.price !== undefined) { if (!Number.isFinite(Number(b.price))) return res.status(400).json({ message: 'Price must be numeric' }); product.price = Number(b.price); }
   if (b.available !== undefined) product.available = Boolean(b.available); if (b.videoKey !== undefined) product.videoKey = cleanKey(b.videoKey);
-  persistState(); return res.json(withVideoUrl(product));
+  persistState(); return res.json(withMediaUrls(product));
 });
 
 app.delete('/api/products/:id', (req, res) => { const index = products.findIndex((product) => product.id === req.params.id); if (index === -1) return res.status(404).json({ message: 'Product not found' }); const [removed] = products.splice(index, 1); persistState(); return res.json({ ok: true, removed }); });
