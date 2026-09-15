@@ -36,12 +36,26 @@
   const screen=document.getElementById('login-screen'), app=document.getElementById('app-shell');
   function showLogin(){screen.hidden=false;app.hidden=true;document.getElementById('login-username')?.focus();}
   function showApp(){screen.hidden=true;app.hidden=false;}
-  if(sessionStorage.getItem(key)==='1') showApp(); else showLogin();
-  document.getElementById('login-form').addEventListener('submit',function(e){e.preventDefault();const u=document.getElementById('login-username').value.trim();const p=document.getElementById('login-password').value;const error=document.getElementById('login-error');error.textContent='جارٍ التحقق…';fetch('/health',{cache:'no-store'}).then(r=>{if(!r.ok) throw new Error('تعذر الاتصال بخادم لوحة التحكم.'); return r.json();}).then(()=>{sessionStorage.setItem(key,'1');showApp();window.dispatchEvent(new Event('ARABISK_LOGIN_SUCCESS'));}).catch(err=>{error.textContent=err.message;});
+  async function bootApp(){if(window.__ARABISK_APP_BOOTED)return;window.__ARABISK_APP_BOOTED=true;await import('./app.js');}
+  if(sessionStorage.getItem(key)==='1'){showApp();bootApp();} else showLogin();
+  document.getElementById('login-form').addEventListener('submit',async function(e){
+    e.preventDefault();
+    const u=document.getElementById('login-username').value.trim();
+    const p=document.getElementById('login-password').value;
+    const error=document.getElementById('login-error');
+    error.textContent='جارٍ التحقق…';
+    try{
+      const encoded=btoa(unescape(encodeURIComponent(`${u}:${p}`)));
+      const response=await fetch('/auth/check',{method:'POST',headers:{Authorization:`Basic ${encoded}`},cache:'no-store'});
+      if(!response.ok) throw new Error(response.status===401?'اسم المستخدم أو كلمة المرور غير صحيحة.':'تعذر التحقق من بيانات الدخول.');
+      sessionStorage.setItem(key,'1');
+      error.textContent='';
+      document.getElementById('login-password').value='';
+      showApp();
+      await bootApp();
+    }catch(err){error.textContent=err.message;}
   });
   document.getElementById('logout').addEventListener('click',()=>{sessionStorage.removeItem(key);location.hash='dashboard';showLogin();});
-  window.addEventListener('ARABISK_LOGIN_SUCCESS',()=>{ if(!window.__ARABISK_APP_BOOTED){ window.__ARABISK_APP_BOOTED=true; import('./app.js'); } });
-  if(sessionStorage.getItem(key)==='1'){ window.__ARABISK_APP_BOOTED=true; import('./app.js'); }
 })();
 </script>
 </body></html>
