@@ -19,9 +19,35 @@ function injectStudioStyles() {
   document.head.appendChild(style);
 }
 
-async function loadStudio() {
+async function loadCategories() {
   try {
-    const response = await fetch(`${API}/api/studio/shows?active=true`, { cache:'no-store' });
+    const response = await fetch('/api/categories', { cache:'no-store' });
+    if (!response.ok) return [];
+    const items = await response.json();
+    return Array.isArray(items) ? items : [];
+  } catch { return []; }
+}
+
+function slug(value) {
+  return String(value ?? '').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+
+function currentPlacement(categories) {
+  const path = location.pathname.replace(/\/$/,'');
+  if (!path || path === '') return { placement:'home', categoryId:'' };
+  const match = path.match(/^\/menu\/([^/]+)/);
+  if (!match) return { placement:'home', categoryId:'' };
+  const key = decodeURIComponent(match[1]);
+  const category = categories.find((c) => slug(c.id) === key || slug(c.nameEn) === key || slug(c.nameAr) === key);
+  return category ? { placement:'category', categoryId:category.id } : { placement:'home', categoryId:'' };
+}
+
+async function loadStudio(categories) {
+  try {
+    const target = currentPlacement(categories);
+    const params = new URLSearchParams({ active:'true', placement:target.placement });
+    if (target.categoryId) params.set('categoryId', target.categoryId);
+    const response = await fetch(`${API}/api/studio/shows?${params.toString()}`, { cache:'no-store' });
     if (!response.ok) return [];
     const items = await response.json();
     return Array.isArray(items) ? items : [];
@@ -36,13 +62,9 @@ function renderStudio(items) {
   document.querySelectorAll('.managed-banner-hero,.managed-home-promo,.managed-menu-promo,.managed-footer-promo').forEach((el) => el.remove());
   document.querySelector('#arabisk-studio-display')?.remove();
 
-  // Keep the normal homepage hero visible until an actual Studio العرض is configured.
-  if (!items.length) {
-    home.classList.remove('managed-studio-hidden');
-    return;
-  }
-
-  home.classList.add('managed-studio-hidden');
+  const hasStudio = Boolean(items.length);
+  home.classList.toggle('managed-studio-hidden', hasStudio);
+  if (!hasStudio) return;
 
   const display = document.createElement('section');
   display.id = 'arabisk-studio-display';
@@ -83,7 +105,6 @@ function renderStudio(items) {
       syncAudioButton();
     }
   });
-
   video.addEventListener('volumechange', syncAudioButton);
   syncAudioButton();
   menu.parentNode.insertBefore(display, menu);
@@ -91,6 +112,7 @@ function renderStudio(items) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   injectStudioStyles();
-  const items = await loadStudio();
+  const categories = await loadCategories();
+  const items = await loadStudio(categories);
   renderStudio(items);
 });
