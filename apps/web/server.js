@@ -3,7 +3,7 @@ import cors from 'cors';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { presign, storageReady, readJson, writeJson } from './storage.js';
+import { presign, storageReady, readJson, writeJson, deleteObject } from './storage.js';
 import { categories, products } from './menu-data.js';
 import { registerMediaRoutes } from './media-routes.js';
 
@@ -110,14 +110,24 @@ app.post('/api/products', (req, res) => {
 app.patch('/api/products/:id', (req, res) => {
   const product = products.find((item) => item.id === req.params.id); if (!product) return res.status(404).json({ message: 'Product not found' });
   const b = req.body || {};
+  const oldImageKey = product.imageKey;
+  const oldVideoKey = product.videoKey;
   if (b.categoryId !== undefined) { if (!categories.some((category) => category.id === b.categoryId)) return res.status(400).json({ message: 'Unknown category' }); product.categoryId = b.categoryId; }
   if (b.nameAr !== undefined) product.nameAr = cleanText(b.nameAr); if (b.nameEn !== undefined) product.nameEn = cleanText(b.nameEn); if (b.descriptionAr !== undefined) product.descriptionAr = cleanText(b.descriptionAr); if (b.descriptionEn !== undefined) product.descriptionEn = cleanText(b.descriptionEn); if (b.imageUrl !== undefined) product.imageUrl = cleanUrl(b.imageUrl); if (b.imageKey !== undefined) product.imageKey = cleanKey(b.imageKey);
   if (b.price !== undefined) { if (!Number.isFinite(Number(b.price))) return res.status(400).json({ message: 'Price must be numeric' }); product.price = Number(b.price); }
   if (b.available !== undefined) product.available = Boolean(b.available); if (b.videoKey !== undefined) product.videoKey = cleanKey(b.videoKey);
+  if (storageReady && b.imageKey !== undefined && oldImageKey && oldImageKey !== product.imageKey) void deleteObject(oldImageKey);
+  if (storageReady && b.videoKey !== undefined && oldVideoKey && oldVideoKey !== product.videoKey) void deleteObject(oldVideoKey);
   persistState(); return res.json(withMediaUrls(product));
 });
 
-app.delete('/api/products/:id', (req, res) => { const index = products.findIndex((product) => product.id === req.params.id); if (index === -1) return res.status(404).json({ message: 'Product not found' }); const [removed] = products.splice(index, 1); persistState(); return res.json({ ok: true, removed }); });
+app.delete('/api/products/:id', (req, res) => {
+  const index = products.findIndex((product) => product.id === req.params.id);
+  if (index === -1) return res.status(404).json({ message: 'Product not found' });
+  const [removed] = products.splice(index, 1);
+  if (storageReady) { if (removed.imageKey) void deleteObject(removed.imageKey); if (removed.videoKey) void deleteObject(removed.videoKey); }
+  persistState(); return res.json({ ok: true, removed });
+});
 
 app.use(express.static(dist));
 app.use((_req, res) => res.sendFile(path.join(dist, 'index.html')));
