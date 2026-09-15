@@ -23,16 +23,42 @@ const products = [
 
 const orders = [];
 const customers = [];
+const reservations = [];
 const cleanText = (value, max = 180) => String(value ?? '').trim().slice(0, max);
 const nextProductId = () => {
   const maxId = products.reduce((max, product) => Math.max(max, Number(String(product.id).replace(/^P/, '')) || 0), 0);
   return `P${String(maxId + 1).padStart(3, '0')}`;
 };
+const nextReservationId = () => `R${String(reservations.length + 1).padStart(4, '0')}`;
 
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'arabisk-web' }));
 app.get('/api/categories', (_req, res) => res.json(categories));
 app.get('/api/orders', (_req, res) => res.json(orders));
 app.get('/api/customers', (_req, res) => res.json(customers));
+app.get('/api/reservations', (_req, res) => res.json(reservations));
+app.post('/api/reservations', (req, res) => {
+  const body = req.body || {};
+  const name = cleanText(body.name, 80);
+  const phone = cleanText(body.phone, 40);
+  const date = cleanText(body.date, 20);
+  const time = cleanText(body.time, 10);
+  const guests = Number(body.guests);
+  const notes = cleanText(body.notes, 300);
+  if (!name || !phone || !date || !time || !Number.isInteger(guests) || guests < 1 || guests > 20) {
+    return res.status(400).json({ message: 'name, phone, date, time and guests are required' });
+  }
+  const reservation = { id: nextReservationId(), name, phone, date, time, guests, notes, status: 'pending', createdAt: new Date().toISOString() };
+  reservations.push(reservation);
+  return res.status(201).json(reservation);
+});
+app.patch('/api/reservations/:id', (req, res) => {
+  const reservation = reservations.find((item) => item.id === req.params.id);
+  if (!reservation) return res.status(404).json({ message: 'Reservation not found' });
+  if (req.body.status !== undefined && !['pending', 'confirmed', 'cancelled'].includes(req.body.status)) return res.status(400).json({ message: 'Invalid reservation status' });
+  if (req.body.status !== undefined) reservation.status = req.body.status;
+  if (req.body.notes !== undefined) reservation.notes = cleanText(req.body.notes, 300);
+  return res.json(reservation);
+});
 app.get('/api/products', (req, res) => {
   const category = cleanText(req.query.category, 80);
   const search = cleanText(req.query.search, 80).toLowerCase();
