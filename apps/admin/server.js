@@ -12,16 +12,9 @@ const adminUsername = String(process.env.ARABISK_ADMIN_USERNAME || '').trim();
 const adminPassword = String(process.env.ARABISK_ADMIN_PASSWORD || '');
 
 const mimeTypes = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.ico': 'image/x-icon'
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon'
 };
 
 function parseBasicAuthorization(header) {
@@ -31,9 +24,7 @@ function parseBasicAuthorization(header) {
     const separator = decoded.indexOf(':');
     if (separator < 0) return null;
     return { username: decoded.slice(0, separator), password: decoded.slice(separator + 1) };
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function credentialsMatch(req) {
@@ -42,12 +33,7 @@ function credentialsMatch(req) {
 }
 
 function unauthorized(res) {
-  res.writeHead(401, {
-    'WWW-Authenticate': 'Basic realm="ARABISK Admin"',
-    'Cache-Control': 'no-store',
-    'Content-Type': 'text/plain; charset=utf-8',
-    'X-Content-Type-Options': 'nosniff'
-  });
+  res.writeHead(401, {'WWW-Authenticate':'Basic realm="ARABISK Admin"','Cache-Control':'no-store','Content-Type':'text/plain; charset=utf-8','X-Content-Type-Options':'nosniff'});
   res.end('Authentication required');
 }
 
@@ -65,10 +51,8 @@ function sendFile(res, filePath) {
     res.writeHead(200, {
       'Content-Type': mimeTypes[ext] || 'application/octet-stream',
       'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable',
-      'X-Content-Type-Options': 'nosniff',
-      'Referrer-Policy': 'strict-origin-when-cross-origin',
-      'X-Frame-Options': 'SAMEORIGIN',
-      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
+      'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'X-Frame-Options': 'SAMEORIGIN', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
     });
     fs.createReadStream(filePath).pipe(res);
   });
@@ -84,12 +68,12 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'POST' && requestPath === '/auth/check') {
     if (!credentialsMatch(req)) return unauthorized(res);
-    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+    res.writeHead(200, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
     return res.end(JSON.stringify({ ok: true }));
   }
 
   if (requestPath === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin', 'X-Frame-Options': 'SAMEORIGIN', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' });
+    res.writeHead(200, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','X-Frame-Options':'SAMEORIGIN','Permissions-Policy':'camera=(), microphone=(), geolocation=()'});
     return res.end(JSON.stringify({ ok: true, service: 'arabisk-admin', authenticationConfigured: Boolean(adminUsername && adminPassword) }));
   }
 
@@ -100,13 +84,10 @@ const server = http.createServer((req, res) => {
 
   const target = safePath(req.url);
   if (!target) return res.writeHead(400).end('Bad request');
-
   fs.stat(target, (error, stats) => {
     if (!error && stats.isFile()) return sendFile(res, target);
     return res.writeHead(404).end('Not found');
   });
 });
 
-server.listen(port, host, () => {
-  console.log(`ARABISK admin listening on ${host}:${port} — standalone login enabled`);
-});
+server.listen(port, host, () => console.log(`ARABISK admin listening on ${host}:${port} — standalone login enabled`));
