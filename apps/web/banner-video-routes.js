@@ -82,8 +82,17 @@ export function registerBannerVideoRoutes(app, { storageReady, presign, readJson
     const max = studio.reduce((highest, item) => { const match = String(item.id || '').match(/^S(\d+)$/); return Math.max(highest, match ? Number(match[1]) : 0); }, 0);
     return `S${String(max + 1).padStart(3, '0')}`;
   };
+  const normalizePlacement = (body = {}) => {
+    const placement = body.placement === 'category' ? 'category' : 'home';
+    return { placement, categoryId: placement === 'category' ? cleanText(body.categoryId, 120) : '' };
+  };
   const publicStudio = (item) => item ? {
-    id:item.id, title:item.title || '', active:item.active !== false, sortOrder:Number(item.sortOrder) || 1,
+    id:item.id,
+    title:item.title || '',
+    active:item.active !== false,
+    sortOrder:Number(item.sortOrder) || 1,
+    placement:item.placement === 'category' ? 'category' : 'home',
+    categoryId:item.categoryId || '',
     desktopVideoUrl:item.desktopVideoKey && storageReady ? presign('GET', item.desktopVideoKey, 900) : '',
     mobileVideoUrl:item.mobileVideoKey && storageReady ? presign('GET', item.mobileVideoKey, 900) : ''
   } : null;
@@ -91,7 +100,14 @@ export function registerBannerVideoRoutes(app, { storageReady, presign, readJson
 
   app.get('/api/studio/shows', (req, res) => {
     const onlyActive = String(req.query?.active ?? 'false') === 'true';
-    const items = studio.filter((item) => !onlyActive || item.active !== false).slice().sort((a,b) => Number(a.sortOrder||0) - Number(b.sortOrder||0));
+    const requestedPlacement = req.query?.placement === 'category' ? 'category' : (req.query?.placement === 'home' ? 'home' : '');
+    const requestedCategoryId = cleanText(req.query?.categoryId, 120);
+    const items = studio.filter((item) => {
+      if (onlyActive && item.active === false) return false;
+      if (requestedPlacement && (item.placement || 'home') !== requestedPlacement) return false;
+      if (requestedPlacement === 'category' && requestedCategoryId && item.categoryId !== requestedCategoryId) return false;
+      return true;
+    }).slice().sort((a,b) => Number(a.sortOrder||0) - Number(b.sortOrder||0));
     return res.json(items.map(publicStudio));
   });
   app.get('/api/studio/shows/:id', (req, res) => {
@@ -101,7 +117,8 @@ export function registerBannerVideoRoutes(app, { storageReady, presign, readJson
   });
   app.post('/api/studio/shows', (req, res) => {
     const b = req.body || {};
-    const item = { id:nextStudioId(), title:cleanText(b.title,120), active:b.active !== undefined ? Boolean(b.active) : true, sortOrder:Number.isFinite(Number(b.sortOrder)) ? Math.max(1, Number(b.sortOrder)) : studio.length + 1, desktopVideoKey:'', mobileVideoKey:'', createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
+    const { placement, categoryId } = normalizePlacement(b);
+    const item = { id:nextStudioId(), title:cleanText(b.title,120), active:b.active !== undefined ? Boolean(b.active) : true, sortOrder:Number.isFinite(Number(b.sortOrder)) ? Math.max(1, Number(b.sortOrder)) : studio.length + 1, placement, categoryId, desktopVideoKey:'', mobileVideoKey:'', createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
     studio.push(item); persistStudio(); return res.status(201).json(publicStudio(item));
   });
   app.patch('/api/studio/shows/:id', async (req, res) => {
@@ -115,6 +132,11 @@ export function registerBannerVideoRoutes(app, { storageReady, presign, readJson
     if (b.title !== undefined) item.title = cleanText(b.title,120);
     if (b.active !== undefined) item.active = Boolean(b.active);
     if (b.sortOrder !== undefined && Number.isFinite(Number(b.sortOrder))) item.sortOrder = Math.max(1, Number(b.sortOrder));
+    if (b.placement !== undefined || b.categoryId !== undefined) {
+      const nextPlacement = b.placement === 'category' ? 'category' : 'home';
+      item.placement = nextPlacement;
+      item.categoryId = nextPlacement === 'category' ? cleanText(b.categoryId,120) : '';
+    }
     if (hasDesktop && item.desktopVideoKey && item.desktopVideoKey !== nextDesktop && storageReady) await deleteObject(item.desktopVideoKey);
     if (hasMobile && item.mobileVideoKey && item.mobileVideoKey !== nextMobile && storageReady) await deleteObject(item.mobileVideoKey);
     item.desktopVideoKey = nextDesktop; item.mobileVideoKey = nextMobile; item.updatedAt = new Date().toISOString();
@@ -126,7 +148,6 @@ export function registerBannerVideoRoutes(app, { storageReady, presign, readJson
     const [item] = studio.splice(index,1);
     if (storageReady && item.desktopVideoKey) await deleteObject(item.desktopVideoKey);
     if (storageReady && item.mobileVideoKey) await deleteObject(item.mobileVideoKey);
-    studio.forEach((entry,idx) => { entry.sortOrder = idx + 1; });
     persistStudio(); return res.json({ ok:true, removed:item });
   });
   app.post('/api/studio/shows/:id/media/presign', (req,res) => {
