@@ -6,7 +6,6 @@ import { fileURLToPath } from 'node:url';
 import { presign, storageReady, readJson, writeJson, deleteObject } from './storage.js';
 import { categories, products } from './menu-data.js';
 import { registerMediaRoutes } from './media-routes.js';
-import { requireAdmin } from './security.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -17,7 +16,7 @@ const VIDEO_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 const STATE_KEY = 'data/arabisk-state.json';
 const MENU_VERSION = 2;
 
-const corsOptions = { origin: true, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'X-Arabisk-Admin-Secret'] };
+const corsOptions = { origin: true, methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type'] };
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
@@ -51,9 +50,9 @@ const nextReservationId = () => `R${String(reservations.length + 1).padStart(4, 
 
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'arabisk-web', storageReady, persistentStorage: storageReady, menuVersion: MENU_VERSION, productCount: products.length }));
 app.get('/api/categories', (_req, res) => res.json(categories));
-app.get('/api/orders', requireAdmin, (_req, res) => res.json(orders));
-app.get('/api/customers', requireAdmin, (_req, res) => res.json(customers));
-app.get('/api/reservations', requireAdmin, (_req, res) => res.json(reservations));
+app.get('/api/orders', (_req, res) => res.json(orders));
+app.get('/api/customers', (_req, res) => res.json(customers));
+app.get('/api/reservations', (_req, res) => res.json(reservations));
 
 app.post('/api/reservations', (req, res) => {
   const b = req.body || {};
@@ -63,7 +62,7 @@ app.post('/api/reservations', (req, res) => {
   reservations.push(reservation); persistState(); return res.status(201).json(reservation);
 });
 
-app.patch('/api/reservations/:id', requireAdmin, (req, res) => {
+app.patch('/api/reservations/:id', (req, res) => {
   const reservation = reservations.find((item) => item.id === req.params.id);
   if (!reservation) return res.status(404).json({ message: 'Reservation not found' });
   if (req.body?.status !== undefined && !['pending', 'confirmed', 'cancelled'].includes(req.body.status)) return res.status(400).json({ message: 'Invalid reservation status' });
@@ -72,9 +71,9 @@ app.patch('/api/reservations/:id', requireAdmin, (req, res) => {
   persistState(); return res.json(reservation);
 });
 
-registerMediaRoutes(app, { products, storageReady, presign, adminOnly: requireAdmin });
+registerMediaRoutes(app, { products, storageReady, presign });
 
-app.post('/api/videos/presign', requireAdmin, (req, res) => {
+app.post('/api/videos/presign', (req, res) => {
   if (!storageReady) return res.status(503).json({ message: 'Video storage is not configured on the web service.' });
   const productId = cleanText(req.body?.productId, 40), fileName = cleanText(req.body?.fileName, 160).replace(/[^a-zA-Z0-9._-]/g, '-'), contentType = cleanText(req.body?.contentType, 80).toLowerCase(), size = Number(req.body?.size);
   if (!products.some((product) => product.id === productId)) return res.status(404).json({ message: 'Product not found' });
@@ -84,7 +83,7 @@ app.post('/api/videos/presign', requireAdmin, (req, res) => {
   try { return res.json({ key, uploadUrl: presign('PUT', key, 900), expiresIn: 900 }); } catch (error) { console.error(error); return res.status(503).json({ message: 'Unable to prepare video upload.' }); }
 });
 
-app.post('/api/videos/delete-presign', requireAdmin, (req, res) => {
+app.post('/api/videos/delete-presign', (req, res) => {
   if (!storageReady) return res.status(503).json({ message: 'Video storage is not configured on the web service.' });
   const productId = cleanText(req.body?.productId, 40), product = products.find((item) => item.id === productId);
   if (!product) return res.status(404).json({ message: 'Product not found' });
@@ -100,7 +99,7 @@ app.get('/api/products', (req, res) => {
 });
 app.get('/api/products/:id', (req, res) => { const product = products.find((item) => item.id === req.params.id); if (!product) return res.status(404).json({ message: 'Product not found' }); return res.json(withMediaUrls(product)); });
 
-app.post('/api/products', requireAdmin, (req, res) => {
+app.post('/api/products', (req, res) => {
   const { categoryId, nameAr, nameEn, descriptionAr = '', descriptionEn = '', imageUrl = '', imageKey = '', price, available = true, videoKey = '' } = req.body || {};
   if (!categoryId || !nameAr || !nameEn || !Number.isFinite(Number(price))) return res.status(400).json({ message: 'categoryId, nameAr, nameEn and numeric price are required' });
   if (!categories.some((category) => category.id === categoryId)) return res.status(400).json({ message: 'Unknown category' });
@@ -108,7 +107,7 @@ app.post('/api/products', requireAdmin, (req, res) => {
   products.push(product); persistState(); return res.status(201).json(withMediaUrls(product));
 });
 
-app.patch('/api/products/:id', requireAdmin, (req, res) => {
+app.patch('/api/products/:id', (req, res) => {
   const product = products.find((item) => item.id === req.params.id); if (!product) return res.status(404).json({ message: 'Product not found' });
   const b = req.body || {};
   const oldImageKey = product.imageKey;
@@ -122,7 +121,7 @@ app.patch('/api/products/:id', requireAdmin, (req, res) => {
   persistState(); return res.json(withMediaUrls(product));
 });
 
-app.delete('/api/products/:id', requireAdmin, (req, res) => {
+app.delete('/api/products/:id', (req, res) => {
   const index = products.findIndex((product) => product.id === req.params.id);
   if (index === -1) return res.status(404).json({ message: 'Product not found' });
   const [removed] = products.splice(index, 1);
