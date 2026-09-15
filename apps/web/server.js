@@ -56,6 +56,31 @@ const orders = [];
 const customers = [];
 const reservations = [];
 
+const reservationRate = new Map();
+const RESERVATION_RATE_WINDOW_MS = 10 * 60 * 1000;
+const RESERVATION_RATE_LIMIT = 8;
+const getClientKey = (req) => String(req.ip || req.headers['x-forwarded-for'] || 'unknown').split(',')[0].trim().slice(0, 120) || 'unknown';
+const reservationRateLimit = (req, res, next) => {
+  const now = Date.now();
+  const key = getClientKey(req);
+  const previous = reservationRate.get(key);
+  if (!previous || now - previous.startedAt >= RESERVATION_RATE_WINDOW_MS) {
+    reservationRate.set(key, { startedAt: now, count: 1 });
+    return next();
+  }
+  if (previous.count >= RESERVATION_RATE_LIMIT) {
+    const retryAfter = Math.max(1, Math.ceil((RESERVATION_RATE_WINDOW_MS - (now - previous.startedAt)) / 1000));
+    res.setHeader('Retry-After', String(retryAfter));
+    return res.status(429).json({ message: 'Too many reservation requests. Please try again later.' });
+  }
+  previous.count += 1;
+  return next();
+};
+setInterval(() => {
+  const cutoff = Date.now() - RESERVATION_RATE_WINDOW_MS * 2;
+  for (const [key, entry] of reservationRate) if (entry.startedAt < cutoff) reservationRate.delete(key);
+}, RESERVATION_RATE_WINDOW_MS).unref();
+
 async function restoreState() {
   if (!storageReady) return;
   const saved = await readJson(STATE_KEY, null);
@@ -76,7 +101,7 @@ app.get('/api/orders', (_req, res) => res.json(orders));
 app.get('/api/customers', (_req, res) => res.json(customers));
 app.get('/api/reservations', (_req, res) => res.json(reservations));
 
-app.post('/api/reservations', (req, res) => {
+app.post('/api/reservations', reservationRateLimit, (req, res) => {
   const b = req.body || {};
   const name = cleanText(b.name, 80), phone = cleanText(b.phone, 40), date = cleanText(b.date, 20), time = cleanText(b.time, 10), guests = Number(b.guests), notes = cleanText(b.notes, 300);
   const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(date);
