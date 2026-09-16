@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="ARABISK — أقسام المنيو"><title>ARABISK — استكشف المنيو</title><link rel="stylesheet" href="/style.css">
+<style>
+.menu-page{min-height:calc(100vh - 82px);padding:80px 8vw 110px;background:var(--paper)}
+.menu-page-head{text-align:center;max-width:760px;margin:0 auto}
+.menu-page-head h1{font-family:'Playfair Display',serif;font-size:clamp(44px,6vw,72px);font-weight:500;margin:0 0 12px}
+.menu-page-head p:last-child{color:var(--muted);margin:0;line-height:1.9}
+.menu-page .category-grid{margin-top:48px}
+@media(max-width:800px){.menu-page{padding:60px 20px 80px}}
+</style>
+</head>
+<body>
+<header class="nav"><div class="brand">ARABISK<span>RESTAURANT & CAFE</span></div><nav><a href="/">الرئيسية</a><a href="/menu">استكشف المنيو</a><a href="/reservation">حجز طاولة</a><a href="/#about">عن المطعم</a><a href="/#contact">تواصل معنا</a></nav><a class="lang" href="/menu" aria-label="العربية">AR</a></header>
+<main class="menu-page">
+  <div class="menu-page-head"><p class="eyebrow">OUR MENU</p><h1>أقسام المنيو</h1><p>اختر القسم الذي تريد استكشافه. كل قسم يفتح في صفحة مستقلة.</p></div>
+  <div id="category-view" class="category-grid" aria-live="polite"></div>
+</main>
+<footer id="contact"><strong>ARABISK</strong><span>Restaurant & Cafe</span><small>© 2026 ARABISK. All rights reserved.</small></footer>
+<script type="module" src="/menu-page.js"></script>
+</body>
+</html>
