@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const standaloneAssetNames = new Set(['cart.js', 'smart-menu.js', 'product-details-client.js']);
+const standaloneAssetNames = new Set(['cart.js', 'smart-menu.js', 'product-details-client.js', 'product-page.js']);
 const slug = value => String(value ?? '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
 function standaloneMenuPages() {
@@ -13,7 +13,7 @@ function standaloneMenuPages() {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const pathname = decodeURIComponent((req.url || '/').split('?')[0]);
-        const match = pathname.match(/^\/menu\/[^/]+(?:\/[^/]+)?\/(cart|smart-menu|product-details-client)\.js$/);
+        const match = pathname.match(/^\/menu\/[^/]+(?:\/[^/]+)?\/(cart|smart-menu|product-details-client|product-page)\.js$/);
         if (!match) return next();
         const fileName = `${match[1]}.js`;
         if (!standaloneAssetNames.has(fileName)) return next();
@@ -22,7 +22,7 @@ function standaloneMenuPages() {
           const content = fs.readFileSync(filePath, 'utf8');
           res.statusCode = 200;
           res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
-          res.setHeader('Cache-Control', 'no-store');
+          res.setHeader('Cache-Control', 'no-store, max-age=0');
           res.end(content);
         } catch (error) {
           next(error);
@@ -43,6 +43,7 @@ function standaloneMenuPages() {
           const html = fs.readFileSync(filePath, 'utf8');
           res.statusCode = 200;
           res.setHeader('Content-Type', 'text/html; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store, max-age=0');
           res.end(html);
         } catch (error) {
           next(error);
