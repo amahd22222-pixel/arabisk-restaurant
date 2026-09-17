@@ -9,14 +9,19 @@ function constantTimeMatch(provided, expected) {
   return crypto.timingSafeEqual(providedBuffer, expectedBuffer);
 }
 
+export function isAdminApiKeyValid(req) {
+  if (!configuredKey) return process.env.NODE_ENV !== 'production';
+  const providedKey = String(req.headers['x-arabisk-admin-key'] || '').trim();
+  return constantTimeMatch(providedKey, configuredKey);
+}
+
 export function requireAdminApiKey(req, res, next) {
   if (!configuredKey) {
     if (process.env.NODE_ENV !== 'production') return next();
     return res.status(503).json({ message: 'Admin API authentication is not configured.' });
   }
 
-  const providedKey = String(req.headers['x-arabisk-admin-key'] || '').trim();
-  if (!constantTimeMatch(providedKey, configuredKey)) {
+  if (!isAdminApiKeyValid(req)) {
     return res.status(403).json({ message: 'Admin authorization required.' });
   }
 
