@@ -52,7 +52,7 @@ function smartSnapshot(){
     if(order.status==='cancelled') continue;
     const created=Date.parse(order.createdAt||'');
     if(!Number.isFinite(created)||created<cutoff) continue;
-    for(const item of Array.isArray(order.items)?order.items:[]) sales.set(item.productId,(sales.get(item.productId)||0)+Number(item.quantity||0);
+    for(const item of Array.isArray(order.items)?order.items:[]) sales.set(item.productId,(sales.get(item.productId)||0)+Number(item.quantity||0));
   }
   const popularIds=new Set([...sales.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6).map(([id])=>id));
   return {sales,popularIds};
