@@ -7,48 +7,56 @@
   <link rel="stylesheet" href="./style.css">
 </head>
 <body class="login-page">
-  <main class="login-shell">
-    <section class="login-card" aria-labelledby="login-title">
-      <div class="login-brand">ARABISK<small>ADMIN</small></div>
-      <div class="login-kicker">لوحة التحكم</div>
-      <h1 id="login-title">تسجيل الدخول</h1>
-      <p>أدخل بيانات حساب أدمن المطعم للوصول إلى لوحة التحكم.</p>
-      <form id="login-form" class="login-form">
-        <label>اسم المستخدم<input id="login-username" name="username" autocomplete="username" required></label>
-        <label>كلمة المرور<input id="login-password" name="password" type="password" autocomplete="current-password" required></label>
-        <div id="login-error" class="login-error" role="alert"></div>
-        <button class="submit" type="submit">دخول إلى لوحة التحكم</button>
-      </form>
-    </section>
-  </main>
+<div id="login-screen" class="login-shell">
+  <div class="login-card">
+    <div class="login-brand">ARABISK<small>ADMIN</small></div>
+    <div class="login-kicker">لوحة التحكم</div>
+    <h1>تسجيل الدخول</h1>
+    <p>أدخل بيانات حساب أدمن المطعم للوصول إلى لوحة التحكم.</p>
+    <form id="login-form" class="login-form">
+      <label>اسم المستخدم<input id="login-username" name="username" autocomplete="username" required></label>
+      <label>كلمة المرور<input id="login-password" name="password" type="password" autocomplete="current-password" required></label>
+      <div id="login-error" class="login-error" role="alert" aria-live="polite"></div>
+      <button class="submit" type="submit">دخول إلى لوحة التحكم</button>
+    </form>
+  </div>
+</div>
 <script>
-(function(){
-  const key='ARABISK_LOGIN_SESSION';
-  if(sessionStorage.getItem(key)==='1'){
+(() => {
+  const sessionKey = 'ARABISK_LOGIN_SESSION';
+  const form = document.getElementById('login-form');
+  const error = document.getElementById('login-error');
+  const button = form.querySelector('button[type="submit"]');
+
+  if (sessionStorage.getItem(sessionKey) === '1') {
     window.location.replace('/dashboard');
     return;
   }
-  const form=document.getElementById('login-form');
-  const error=document.getElementById('login-error');
-  const button=form.querySelector('button[type="submit"]');
-  form.addEventListener('submit',async(e)=>{
-    e.preventDefault();
-    const u=document.getElementById('login-username').value.trim();
-    const p=document.getElementById('login-password').value;
-    button.disabled=true;
-    error.textContent='جارٍ التحقق…';
-    try{
-      const encoded=btoa(unescape(encodeURIComponent(`${u}:${p}`)));
-      const response=await fetch('/auth/check',{method:'POST',headers:{Authorization:`Basic ${encoded}`},cache:'no-store'});
-      if(!response.ok) throw new Error(response.status===401?'اسم المستخدم أو كلمة المرور غير صحيحة.':'تعذر التحقق من بيانات الدخول.');
-      sessionStorage.setItem(key,'1');
-      document.getElementById('login-password').value='';
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    button.disabled = true;
+    error.textContent = 'جارٍ التحقق…';
+
+    try {
+      const encoded = btoa(unescape(encodeURIComponent(`${username}:${password}`)));
+      const response = await fetch('/auth/check', {
+        method: 'POST',
+        headers: { Authorization: `Basic ${encoded}` },
+        cache: 'no-store'
+      });
+      if (!response.ok) {
+        throw new Error(response.status === 401 ? 'اسم المستخدم أو كلمة المرور غير صحيحة.' : 'تعذر التحقق من بيانات الدخول.');
+      }
+      sessionStorage.setItem(sessionKey, '1');
       window.location.replace('/dashboard');
-    }catch(err){
-      sessionStorage.removeItem(key);
-      error.textContent=err.message;
-    }finally{
-      button.disabled=false;
+    } catch (loginError) {
+      sessionStorage.removeItem(sessionKey);
+      error.textContent = loginError.message;
+    } finally {
+      button.disabled = false;
     }
   });
 })();
