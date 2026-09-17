@@ -1,6 +1,7 @@
 const categoryManager = (() => {
   const $ = (selector) => document.querySelector(selector);
-  const api = (path, options = {}) => fetch(`${(localStorage.getItem('ARABISK_API_BASE') || 'https://web-production-d41a3.up.railway.app').replace(/\/$/, '')}${path}`, {
+  const apiBase = () => (localStorage.getItem('ARABISK_API_BASE') || (import.meta.env.DEV ? 'http://localhost:3000' : '/proxy')).replace(/\/$/, '');
+  const api = (path, options = {}) => fetch(`${apiBase()}${path}`, {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options
   }).then(async (response) => {
     const data = await response.json().catch(() => ({}));
