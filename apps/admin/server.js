@@ -11,6 +11,8 @@ const port = Number(process.env.PORT || 4174);
 const host = '0.0.0.0';
 const adminUsername = String(process.env.ARABISK_ADMIN_USERNAME || '').trim();
 const adminPassword = String(process.env.ARABISK_ADMIN_PASSWORD || '');
+const adminApiKey = String(process.env.ARABISK_ADMIN_API_KEY || '').trim();
+const webApiBase = String(process.env.ARABISK_WEB_API_URL || 'https://web-production-d41a3.up.railway.app').trim().replace(/\/$/, '');
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const sessions = new Map();
 
@@ -114,6 +116,56 @@ function redirect(res, location) {
   res.end();
 }
 
+async function proxyApiRequest(req, res) {
+  if (!adminApiKey) {
+    res.writeHead(503, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'});
+    return res.end(JSON.stringify({ message: 'Admin API proxy is not configured.' }));
+  }
+  if (!webApiBase) {
+    res.writeHead(503, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'});
+    return res.end(JSON.stringify({ message: 'Web API URL is not configured.' }));
+  }
+
+  const incoming = new URL(req.url || '/proxy', `http://${req.headers.host || 'localhost'}`);
+  const upstreamPath = incoming.pathname.replace(/^\/proxy/, '') || '/';
+  if (!upstreamPath.startsWith('/api/')) {
+    res.writeHead(404, {'Cache-Control':'no-store'});
+    return res.end('Not found');
+  }
+
+  const upstreamUrl = new URL(`${upstreamPath}${incoming.search}`, `${webApiBase}/`).toString();
+  const headers = {
+    Accept: 'application/json',
+    'X-Arabisk-Admin-Key': adminApiKey
+  };
+  if (req.headers['content-type']) headers['Content-Type'] = req.headers['content-type'];
+
+  let body;
+  if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') {
+    try { body = JSON.stringify(await parseBody(req)); }
+    catch {
+      res.writeHead(400, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'});
+      return res.end(JSON.stringify({ message: 'Invalid JSON request.' }));
+    }
+  }
+
+  try {
+    const upstream = await fetch(upstreamUrl, { method: req.method, headers, body });
+    const responseBody = await upstream.text();
+    const responseHeaders = {
+      'Content-Type': upstream.headers.get('content-type') || 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff'
+    };
+    res.writeHead(upstream.status, responseHeaders);
+    return res.end(responseBody);
+  } catch (error) {
+    console.error('ARABISK admin proxy error:', error);
+    res.writeHead(502, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'});
+    return res.end(JSON.stringify({ message: 'Unable to reach the web API.' }));
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   const requestPath = (req.url || '/').split('?')[0];
 
@@ -145,9 +197,15 @@ const server = http.createServer(async (req, res) => {
     return res.end(JSON.stringify({ ok: true, username: session.session.username }));
   }
 
+  if (requestPath === '/proxy' || requestPath.startsWith('/proxy/')) {
+    if (req.method === 'OPTIONS') { res.writeHead(204, {'Cache-Control':'no-store'}); return res.end(); }
+    if (!getSession(req)) return unauthorized(res, 'Authentication required');
+    return proxyApiRequest(req, res);
+  }
+
   if (requestPath === '/health') {
     res.writeHead(200, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','X-Frame-Options':'SAMEORIGIN','Permissions-Policy':'camera=(), microphone=(), geolocation=()'});
-    return res.end(JSON.stringify({ ok: true, service: 'arabisk-admin', authenticationConfigured: Boolean(adminUsername && adminPassword), activeSessions: sessions.size }));
+    return res.end(JSON.stringify({ ok: true, service: 'arabisk-admin', authenticationConfigured: Boolean(adminUsername && adminPassword), apiProxyConfigured: Boolean(adminApiKey && webApiBase), activeSessions: sessions.size }));
   }
 
   if (requestPath === '/' || requestPath === '/login' || requestPath === '/login/') return sendFile(res, path.join(dist, 'login.html'));
@@ -167,4 +225,4 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
-server.listen(port, host, () => console.log(`ARABISK admin listening on ${host}:${port} — session authentication enabled`));
+server.listen(port, host, () => console.log(`ARABISK admin listening on ${host}:${port} — session authentication and server-side API proxy enabled`));
