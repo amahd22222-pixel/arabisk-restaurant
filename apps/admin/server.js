@@ -14,7 +14,10 @@ const adminPassword = String(process.env.ARABISK_ADMIN_PASSWORD || '');
 const adminApiKey = String(process.env.ARABISK_ADMIN_API_KEY || '').trim();
 const webApiBase = String(process.env.ARABISK_WEB_API_URL || 'https://web-production-d41a3.up.railway.app').trim().replace(/\/$/, '');
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+const AUTH_RATE_WINDOW_MS = 10 * 60 * 1000;
+const AUTH_RATE_LIMIT = 6;
 const sessions = new Map();
+const authRate = new Map();
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -25,8 +28,34 @@ const mimeTypes = {
 function parseCookies(header = '') {
   return Object.fromEntries(header.split(';').map((part) => part.trim()).filter(Boolean).map((part) => {
     const separator = part.indexOf('=');
-    return separator < 0 ? [part, ''] : [part.slice(0, separator), decodeURIComponent(part.slice(separator + 1))];
+    if (separator < 0) return [part, ''];
+    const name = part.slice(0, separator);
+    const rawValue = part.slice(separator + 1);
+    try { return [name, decodeURIComponent(rawValue)]; } catch { return [name, rawValue]; }
   }));
+}
+
+function getClientKey(req) {
+  return String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim().slice(0, 120) || 'unknown';
+}
+
+function consumeAuthAttempt(req, res) {
+  const now = Date.now();
+  const key = getClientKey(req);
+  const previous = authRate.get(key);
+  if (!previous || now - previous.startedAt >= AUTH_RATE_WINDOW_MS) {
+    authRate.set(key, { startedAt: now, count: 1 });
+    return false;
+  }
+  if (previous.count >= AUTH_RATE_LIMIT) {
+    const retryAfter = Math.max(1, Math.ceil((AUTH_RATE_WINDOW_MS - (now - previous.startedAt)) / 1000));
+    res.setHeader('Retry-After', String(retryAfter));
+    res.writeHead(429, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8','X-Content-Type-Options':'nosniff'});
+    res.end(JSON.stringify({ ok: false, message: 'Too many login attempts. Please try again later.', retryAfter }));
+    return true;
+  }
+  previous.count += 1;
+  return false;
 }
 
 function isSecureRequest(req) {
@@ -66,6 +95,7 @@ function clearSession(res, req) {
 function cleanupSessions() {
   const now = Date.now();
   for (const [token, session] of sessions) if (session.expiresAt <= now) sessions.delete(token);
+  for (const [key, entry] of authRate) if (now - entry.startedAt >= AUTH_RATE_WINDOW_MS) authRate.delete(key);
 }
 setInterval(cleanupSessions, 15 * 60 * 1000).unref();
 
@@ -91,7 +121,8 @@ function unauthorized(res, message = 'Authentication required') {
 }
 
 function safePath(urlPath) {
-  const clean = decodeURIComponent((urlPath || '/').split('?')[0]);
+  let clean;
+  try { clean = decodeURIComponent((urlPath || '/').split('?')[0]); } catch { return null; }
   const relative = clean.replace(/^\/+/, '');
   const target = path.resolve(dist, relative);
   return target.startsWith(path.resolve(dist)) ? target : null;
@@ -170,11 +201,13 @@ const server = http.createServer(async (req, res) => {
   const requestPath = (req.url || '/').split('?')[0];
 
   if (req.method === 'POST' && requestPath === '/auth/check') {
+    if (consumeAuthAttempt(req, res)) return;
     try {
       const body = await parseBody(req);
       const username = String(body.username || '').trim();
       const password = String(body.password || '');
       if (!credentialsMatch(username, password)) return unauthorized(res, 'Invalid credentials');
+      authRate.delete(getClientKey(req));
       createSession(res, req, username);
       res.writeHead(200, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
       return res.end(JSON.stringify({ ok: true }));
