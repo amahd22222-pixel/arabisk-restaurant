@@ -23,15 +23,13 @@
 </div>
 <script>
 (() => {
-  const sessionKey = 'ARABISK_LOGIN_SESSION';
   const form = document.getElementById('login-form');
   const error = document.getElementById('login-error');
   const button = form.querySelector('button[type="submit"]');
 
-  if (sessionStorage.getItem(sessionKey) === '1') {
-    window.location.replace('/dashboard');
-    return;
-  }
+  fetch('/auth/session', { cache: 'no-store' })
+    .then((response) => { if (response.ok) window.location.replace('/dashboard'); })
+    .catch(() => {});
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -41,19 +39,16 @@
     error.textContent = 'جارٍ التحقق…';
 
     try {
-      const encoded = btoa(unescape(encodeURIComponent(`${username}:${password}`)));
       const response = await fetch('/auth/check', {
         method: 'POST',
-        headers: { Authorization: `Basic ${encoded}` },
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
         cache: 'no-store'
       });
-      if (!response.ok) {
-        throw new Error(response.status === 401 ? 'اسم المستخدم أو كلمة المرور غير صحيحة.' : 'تعذر التحقق من بيانات الدخول.');
-      }
-      sessionStorage.setItem(sessionKey, '1');
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(response.status === 401 ? 'اسم المستخدم أو كلمة المرور غير صحيحة.' : (data.message || 'تعذر التحقق من بيانات الدخول.'));
       window.location.replace('/dashboard');
     } catch (loginError) {
-      sessionStorage.removeItem(sessionKey);
       error.textContent = loginError.message;
     } finally {
       button.disabled = false;
