@@ -11,16 +11,31 @@ const productKey = pathParts[3] || '';
 let current = null;
 let quantity = 1;
 
-const api = async url => {
-  const response = await fetch(url, { cache: 'no-store' });
-  const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.message || `HTTP ${response.status}`);
-  return data;
+const api = async (url, options = {}) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Number(options.timeout || 8000));
+  try {
+    const requestOptions = { ...options, cache: 'no-store', signal: controller.signal };
+    delete requestOptions.timeout;
+    const response = await fetch(url, requestOptions);
+    const data = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(data?.message || `HTTP ${response.status}`);
+    return data;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error(`Request timed out: ${url}`);
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 };
 
 async function ensureCartRuntime() {
   if (window.ARABISK_CART) return true;
-  try { await import('./cart.js'); } catch (error) { console.error('ARABISK cart runtime:', error); }
+  try {
+    await import('./cart.js');
+  } catch (error) {
+    console.error('ARABISK cart runtime:', error);
+  }
   return Boolean(window.ARABISK_CART);
 }
 
@@ -96,8 +111,20 @@ function renderRelated(category, items, product) {
 function showError(error) {
   console.error('ARABISK product page:', error);
   loading.classList.add('error');
-  loading.textContent = 'تعذر تحميل المنتج حاليًا. جرّب تحديث الصفحة أو العودة إلى القسم.';
+  loading.textContent = 'تعذر تحميل المنتج حاليًا. تحقق من الاتصال ثم أعد المحاولة.';
   root.hidden = true;
+}
+
+function findCategory(categories) {
+  const route = String(categoryKey || '').toLowerCase();
+  return categories.find(item => [item.id, item.nameEn, item.nameAr].some(value => slug(value) === route || String(value ?? '').toLowerCase() === route));
+}
+
+function findProduct(products, requestedCategoryId) {
+  const route = String(productKey || '').toLowerCase();
+  const sameCategory = requestedCategoryId ? products.filter(item => item.categoryId === requestedCategoryId) : products;
+  return sameCategory.find(item => [item.nameEn, item.nameAr, item.id].some(value => slug(value) === route || String(value ?? '').toLowerCase() === route))
+    || products.find(item => [item.nameEn, item.nameAr, item.id].some(value => slug(value) === route || String(value ?? '').toLowerCase() === route));
 }
 
 async function load() {
@@ -111,8 +138,8 @@ async function load() {
 
     if (!Array.isArray(categories) || !Array.isArray(products)) throw new Error('Invalid menu response');
 
-    let category = categories.find(item => slug(item.id) === categoryKey);
-    let product = products.find(item => slug(item.nameEn || item.nameAr) === productKey || slug(item.id) === productKey);
+    let category = findCategory(categories);
+    let product = findProduct(products, category?.id);
 
     if (!product && /^P\d+$/i.test(productKey)) {
       product = await api(`/api/products/${encodeURIComponent(productKey.toUpperCase())}`);
@@ -123,10 +150,6 @@ async function load() {
 
     category = category || categories.find(item => item.id === product.categoryId);
     if (!category) throw new Error(`category not found: ${categoryKey}`);
-
-    if (product.categoryId !== category.id) {
-      category = categories.find(item => item.id === product.categoryId) || category;
-    }
 
     const items = products.filter(item => item.categoryId === product.categoryId && item.available !== false);
 
