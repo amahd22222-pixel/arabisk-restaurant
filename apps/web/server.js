@@ -62,9 +62,8 @@ app.delete('/api/products/:id',(req,res)=>{const index=products.findIndex(produc
 
 // Standalone customer menu pages.
 app.get('/menu',(req,res)=>res.sendFile(path.join(__dirname,'menu.html')));
-app.get(/^\/menu\/[^/]+$/,(_req,res)=>res.sendFile(path.join(__dirname,'category-page.html')));
-// Product detail routes remain handled by the existing client app.
-app.get(/^\/menu\/[^/]+\/[^/]+$/,(req,res)=>res.sendFile(path.join(dist,'index.html')));
+app.get(/^\/menu\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'category-page.html')));
+app.get(/^\/menu\/[^/]+\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'product-page.html')));
 
 app.use(express.static(dist));app.use((_req,res)=>res.sendFile(path.join(dist,'index.html')));app.use((error,_req,res,_next)=>{console.error('ARABISK web error:',error);if(!res.headersSent)res.status(500).json({message:'Internal server error'});});
 await restoreState();await restoreCategories();await restoreStudio();if(storageReady)persistState();app.listen(port,()=>console.log(`ARABISK web listening on ${port} — ${products.length} menu items, ${categories.length} categories`));
