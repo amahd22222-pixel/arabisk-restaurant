@@ -45,9 +45,9 @@ const nextProductId=()=>{const max=products.reduce((highest,product)=>Math.max(h
 const nextReservationId=()=>`R${String(reservations.length+1).padStart(4,'0')}`;
 
 app.get('/health',(_req,res)=>res.json({ok:true,service:'arabisk-web',storageReady,persistentStorage:storageReady,menuVersion:MENU_VERSION,productCount:products.length,categoryCount:categories.length}));
-app.get('/api/orders',(_req,res)=>res.json(orders));
-app.get('/api/customers',(_req,res)=>res.json(customers));
-app.get('/api/reservations',(_req,res)=>res.json(reservations));
+app.get('/api/orders',requireAdminApiKey,(_req,res)=>res.json(orders));
+app.get('/api/customers',requireAdminApiKey,(_req,res)=>res.json(customers));
+app.get('/api/reservations',requireAdminApiKey,(_req,res)=>res.json(reservations));
 app.post('/api/reservations',reservationRateLimit,(req,res)=>{const b=req.body||{};const name=cleanText(b.name,80),phone=cleanText(b.phone,40),date=cleanText(b.date,20),time=cleanText(b.time,10),guests=Number(b.guests),notes=cleanText(b.notes,300);const dateOk=/^\d{4}-\d{2}-\d{2}$/.test(date);const timeOk=/^([01]\d|2[0-3]):[0-5]\d$/.test(time);const today=new Date().toISOString().slice(0,10);if(!name||!phone||!date||!time||!Number.isInteger(guests)||guests<1||guests>20)return res.status(400).json({message:'name, phone, date, time and guests are required'});if(!dateOk||date<today)return res.status(400).json({message:'Reservation date must be a valid date that is not in the past.'});if(!timeOk)return res.status(400).json({message:'Reservation time must be in HH:MM format.'});const reservation={id:nextReservationId(),name,phone,date,time,guests,notes,status:'pending',createdAt:new Date().toISOString()};reservations.push(reservation);persistState();return res.status(201).json(reservation);});
 app.patch('/api/reservations/:id',requireAdminApiKey,(req,res)=>{const reservation=reservations.find(item=>item.id===req.params.id);if(!reservation)return res.status(404).json({message:'Reservation not found'});if(req.body?.status!==undefined&&!['pending','confirmed','cancelled'].includes(req.body.status))return res.status(400).json({message:'Invalid reservation status'});if(req.body?.status!==undefined)reservation.status=req.body.status;if(req.body?.notes!==undefined)reservation.notes=cleanText(req.body.notes,300);persistState();return res.json(reservation);});
 
