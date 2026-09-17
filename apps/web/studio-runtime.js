@@ -1,4 +1,4 @@
-const API = '/api/studio/shows?active=true&placement=home';
+const API = '/api/studio/shows?active=true';
 
 const esc = (value) => String(value ?? '').replace(/[&<>\"']/g, (char) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
