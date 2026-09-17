@@ -39,7 +39,7 @@ setInterval(()=>{const cutoff=Date.now()-RESERVATION_RATE_WINDOW_MS*2; for(const
 
 async function restoreState(){ if(!storageReady) return; const saved=await readJson(STATE_KEY,null); if(!saved||typeof saved!=='object') return; if(saved.menuVersion===MENU_VERSION&&Array.isArray(saved.products)&&saved.products.length) products.splice(0,products.length,...saved.products); if(Array.isArray(saved.orders)) orders.splice(0,orders.length,...saved.orders); if(Array.isArray(saved.customers)) customers.splice(0,customers.length,...saved.customers); if(Array.isArray(saved.reservations)) reservations.splice(0,reservations.length,...saved.reservations); }
 const persistState=()=>void writeJson(STATE_KEY,{menuVersion:MENU_VERSION,products,orders,customers,reservations});
-const restoreCategories=registerCategoryRoutes(app,{categories,products,storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey});
+const restoreCategories=registerCategoryRoutes(app,{categories,products,storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey,isAdminApiKeyValid});
 const restoreStudio=registerStudioRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey});
 const nextProductId=()=>{const max=products.reduce((highest,product)=>Math.max(highest,Number(String(product.id).replace(/^P/,''))||0),0);return `P${String(max+1).padStart(3,'0')}`;};
 const nextReservationId=()=>`R${String(reservations.length+1).padStart(4,'0')}`;
