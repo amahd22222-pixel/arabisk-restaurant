@@ -7,6 +7,7 @@ const STATUS_VALUES=new Set(['draft','published','closed','archived']);
 const cleanText=(value,max=240)=>String(value??'').trim().slice(0,max);
 const cleanUrl=(value)=>String(value??'').trim().slice(0,1000);
 const slugify=(value)=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,90);
+export const experiences=[];
 const publicExperience=(item,storageReady,presign)=>({...item,coverImageUrl:item.coverImageKey&&storageReady?presign('GET',item.coverImageKey,900):(item.coverImageUrl||'')});
 
 export function registerExperienceRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey,isAdminApiKeyValid}){
