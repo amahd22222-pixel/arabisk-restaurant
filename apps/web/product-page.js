@@ -10,6 +10,8 @@
 
   const loading = document.querySelector('#loading');
   const root = document.querySelector('#product');
+  const MENU_CACHE_KEY = 'arabisk-menu-cache-v1';
+  const MENU_CACHE_TTL = 30000;
   const feedback = document.querySelector('#feedback');
   let current = null;
   let quantity = 1;
@@ -22,6 +24,32 @@
     loading.classList.toggle('error', message !== 'جاري تحميل المنتج…');
   }
 
+  function readMenuCache() {
+    try {
+      const value = JSON.parse(sessionStorage.getItem(MENU_CACHE_KEY) || 'null');
+      return value && value.savedAt && Date.now() - value.savedAt < MENU_CACHE_TTL &&
+        Array.isArray(value.categories) && Array.isArray(value.products) ? value : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeMenuCache(categories, products) {
+    try {
+      sessionStorage.setItem(MENU_CACHE_KEY, JSON.stringify({savedAt: Date.now(), categories, products}));
+    } catch {}
+  }
+
+  async function loadMenuData() {
+    const cached = readMenuCache();
+    if (cached) return {categories: cached.categories, products: cached.products};
+    const [categories, products] = await Promise.all([
+      fetchJson('/api/categories', 9000),
+      fetchJson('/api/products', 9000)
+    ]);
+    writeMenuCache(categories, products);
+    return {categories, products};
+  }
   async function fetchJson(url, timeoutMs = 9000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -142,11 +170,6 @@
     renderGallery(product);
     renderRelated(category, allProducts, product);
 
-    let details = {};
-    try { details = await fetchJson(`/api/product-details/${encodeURIComponent(product.id)}`, 5000); } catch (error) { console.warn('[ARABISK product details]', error.message); }
-    current = {...product, ...(details && typeof details === 'object' ? details : {})};
-    renderDetails(current);
-
     document.querySelector('#minus').onclick = () => setQuantity(-1);
     document.querySelector('#plus').onclick = () => setQuantity(1);
     document.querySelector('#add').onclick = async () => {
@@ -170,15 +193,20 @@
     if (loading) loading.hidden = true;
     if (root) root.hidden = false;
     void loadCartRuntime();
+
+    try {
+      const details = await fetchJson(`/api/product-details/${encodeURIComponent(product.id)}`, 5000);
+      current = {...current, ...(details && typeof details === 'object' ? details : {})};
+      renderDetails(current);
+    } catch (error) {
+      console.warn('[ARABISK product details]', error.message);
+    }
   }
 
   async function load() {
     try {
       if (!categoryKey || !productKey) throw new Error('مسار المنتج غير صالح.');
-      const [categories, products] = await Promise.all([
-        fetchJson('/api/categories', 9000),
-        fetchJson('/api/products', 9000)
-      ]);
+      const {categories, products} = await loadMenuData();
       if (!Array.isArray(categories) || !Array.isArray(products)) throw new Error('استجابة المنيو غير صالحة.');
 
       const category = categories.find(item => slug(item.id) === slug(categoryKey) || String(item.id).toLowerCase() === String(categoryKey).toLowerCase());
