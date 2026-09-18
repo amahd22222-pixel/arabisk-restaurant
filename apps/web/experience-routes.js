@@ -10,11 +10,10 @@ const slugify=(value)=>String(value??'').normalize('NFKD').replace(/[\u0300-\u03
 const publicExperience=(item,storageReady,presign)=>({...item,coverImageUrl:item.coverImageKey&&storageReady?presign('GET',item.coverImageKey,900):(item.coverImageUrl||'')});
 
 export function registerExperienceRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey,isAdminApiKeyValid}){
-  const experiences=[];
+  
   const restore=async()=>{if(!storageReady)return;const saved=await readJson(EXPERIENCE_STATE_KEY,null);if(Array.isArray(saved))experiences.splice(0,experiences.length,...saved);};
   const persist=()=>void writeJson(EXPERIENCE_STATE_KEY,experiences);
   const nextId=()=> 'E'+crypto.randomUUID().slice(0,8).toUpperCase();
-  const findPublished=(slug)=>experiences.find(item=>item.slug===String(slug||'').toLowerCase()&&item.status==='published');
 
   app.get('/api/experiences',(req,res)=>{
     const admin=isAdminApiKeyValid(req);
