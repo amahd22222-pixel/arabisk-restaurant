@@ -2,7 +2,7 @@ const $ = (selector) => document.querySelector(selector);
 
 const translations = {
   ar: {
-    home: 'الرئيسية', menu: 'استكشف المنيو', reservationNav: 'حجز طاولة', about: 'عن المطعم', contact: 'تواصل معنا',
+    home: 'الرئيسية', menu: 'استكشف المنيو', events: 'الفعاليات', reservationNav: 'حجز طاولة', about: 'عن المطعم', contact: 'تواصل معنا',
     exploreMenu: 'استكشف المنيو', reserveHome: 'احجز طاولتك',
     reservationEyebrow: 'TABLE RESERVATION', reservationTitle: 'احجز طاولتك',
     reservationLead: 'اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.',
@@ -15,7 +15,7 @@ const translations = {
     copyright: '© 2026 ARABISK. All rights reserved.'
   },
   en: {
-    home: 'Home', menu: 'Explore Menu', reservationNav: 'Book a Table', about: 'About Us', contact: 'Contact Us',
+    home: 'Home', menu: 'Explore Menu', events: 'Experiences', reservationNav: 'Book a Table', about: 'About Us', contact: 'Contact Us',
     exploreMenu: 'Explore Menu', reserveHome: 'Book Your Table',
     reservationEyebrow: 'TABLE RESERVATION', reservationTitle: 'Book Your Table',
     reservationLead: 'Choose the date, time and number of guests. We will contact you to confirm your reservation.',
