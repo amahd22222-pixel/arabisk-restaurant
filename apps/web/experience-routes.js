@@ -59,7 +59,7 @@ export function registerExperienceRoutes(app,{storageReady,presign,readJson,writ
     if(b.status!==undefined){if(!STATUS_VALUES.has(b.status))return res.status(400).json({message:'Invalid experience status'});item.status=b.status;}
     if(b.featured!==undefined)item.featured=Boolean(b.featured);
     if(b.bookingEnabled!==undefined)item.bookingEnabled=Boolean(b.bookingEnabled);
-    if(b.coverImageUrl!==undefined)item.coverImageUrl=cleanUrl(b.coverImageUrl);
+    if(b.coverImageUrl!==undefined){item.coverImageUrl=cleanUrl(b.coverImageUrl);if(item.coverImageUrl&&item.coverImageKey){const oldKey=item.coverImageKey;item.coverImageKey='';if(storageReady&&oldKey)void deleteObject(oldKey);}}
     if(b.coverImageKey!==undefined){const oldKey=item.coverImageKey||'';item.coverImageKey=cleanText(b.coverImageKey,500);if(storageReady&&oldKey&&oldKey!==item.coverImageKey)void deleteObject(oldKey);}
     item.updatedAt=new Date().toISOString();persist();return res.json(publicExperience(item,storageReady,presign));
   });
