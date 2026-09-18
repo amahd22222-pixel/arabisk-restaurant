@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const standaloneAssetNames = new Set(['cart.js', 'smart-menu.js', 'product-page.js']);
+const standaloneAssetNames = new Set(['cart.js', 'smart-menu.js', 'product-page.js', 'events.js', 'event-detail.js']);
 const slug = value => String(value ?? '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
 function standaloneMenuPages() {
@@ -13,7 +13,7 @@ function standaloneMenuPages() {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const pathname = decodeURIComponent((req.url || '/').split('?')[0]);
-        const assetMatch = pathname.match(/^\/menu\/[^/]+(?:\/[^/]+)?\/(cart|smart-menu|product-page)\.js$/);
+        const assetMatch = pathname.match(/^\/menu\/[^/]+(?:\/[^/]+)?\/(cart|smart-menu|product-page)\.js$|^\/(events|event-detail)\.js$/);
         if (assetMatch) {
           const fileName = `${assetMatch[1]}.js`;
           try {
@@ -30,6 +30,8 @@ function standaloneMenuPages() {
         }
 
         const routes = [
+          { pattern: /^\/events\/?$/, file: 'events.html' },
+          { pattern: /^\/events\/[^/]+\/?$/, file: 'event-page.html' },
           { pattern: /^\/menu\/?$/, file: 'menu.html' },
           { pattern: /^\/menu\/[^/]+\/?$/, file: 'category-page.html' },
           { pattern: /^\/menu\/[^/]+\/[^/]+\/?$/, file: 'product-page.html' }
