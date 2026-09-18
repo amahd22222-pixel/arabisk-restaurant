@@ -59,7 +59,7 @@ export function registerExperienceRoutes(app,{storageReady,presign,readJson,writ
     if(b.featured!==undefined)item.featured=Boolean(b.featured);
     if(b.bookingEnabled!==undefined)item.bookingEnabled=Boolean(b.bookingEnabled);
     if(b.coverImageUrl!==undefined)item.coverImageUrl=cleanUrl(b.coverImageUrl);
-    if(b.coverImageKey!==undefined)item.coverImageKey=cleanText(b.coverImageKey,500);
+    if(b.coverImageKey!==undefined){const oldKey=item.coverImageKey||'';item.coverImageKey=cleanText(b.coverImageKey,500);if(storageReady&&oldKey&&oldKey!==item.coverImageKey)void deleteObject(oldKey);}
     item.updatedAt=new Date().toISOString();persist();return res.json(publicExperience(item,storageReady,presign));
   });
 
