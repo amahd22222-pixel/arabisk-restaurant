@@ -54,6 +54,8 @@ function localToday() {
   return new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
+async function applyReservationEventContext() { const badge=$('#reservation-event'); if(!badge || location.pathname.replace(/\/$/,'') !== '/reservation') return; const slug=new URLSearchParams(location.search).get('event'); if(!slug){badge.hidden=true;return} try{const response=await fetch('/api/experiences/'+encodeURIComponent(slug),{cache:'no-store'});if(!response.ok)throw new Error();const event=await response.json();badge.textContent='الحجز لهذه التجربة: '+(event.titleAr||event.titleEn);badge.hidden=false;const notes=$('#reservation-notes');if(notes&&!notes.value)notes.value='حجز فعالية: '+(event.titleAr||event.titleEn);}catch{badge.hidden=true} }
+
 function showPage() {
   const reservation = $('#reservation');
   const home = $('#home');
@@ -69,6 +71,7 @@ function showPage() {
   reservation.hidden = !isReservation;
   document.body.classList.toggle('reservation-route', isReservation);
   applyLanguage();
+  void applyReservationEventContext();
 
   if (isReservation) {
     const date = $('#reservation-date');
