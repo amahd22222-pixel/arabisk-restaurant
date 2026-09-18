@@ -101,7 +101,8 @@ async function submitReservation(event) {
         date: date?.value || '',
         time: $('#reservation-time')?.value || '',
         guests: Number($('#reservation-guests')?.value || 0),
-        notes: $('#reservation-notes')?.value || ''
+        notes: $('#reservation-notes')?.value || '',
+        eventSlug: new URLSearchParams(location.search).get('event') || ''
       })
     });
 
