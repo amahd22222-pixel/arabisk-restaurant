@@ -60,25 +60,6 @@ function standaloneMenuPages() {
       // Keep root copies available for top-level /menu pages and direct requests.
       copyAssets(outDir);
 
-      // Category assets support /menu/<category>/... routes.
-      const categoryIds = ['Breakfast','Manakish','Cold Appetizers','Hot Appetizers','Salads','Soups','Sandwich','Pizza','Pasta','Main Course','Mixed Grill','Mixed Taste','Desserts','Cheese Cake','Arabisk Ice Cream','Cocktail & Refreshing Drinks','Energy Drinks','Juices','Mojitos','Milk Shakes','Tea','Coffee','Latte','Soft Drinks','Drinking Water','Sheesha'];
-      for (const categoryId of categoryIds) copyAssets(path.join(outDir, 'menu', slug(categoryId)));
-
-      // Product pages use relative ./<asset>.js URLs. Create the same assets
-      // beside every known product route so production does not fall through
-      // to index.html with a misleading HTTP 200 response.
-      const source = fs.readFileSync(path.join(root, 'menu-data.js'), 'utf8');
-      const categoryBlock = /'([^']+)'\s*:\s*\[([\s\S]*?)\](?=,\n\s*'[^']+'\s*:|\n\};)/g;
-      let categoryMatch;
-      while ((categoryMatch = categoryBlock.exec(source))) {
-        const categoryId = categoryMatch[1];
-        const block = categoryMatch[2];
-        const productName = /\['[^']*'\s*,\s*'([^']+)'\s*,/g;
-        let productMatch;
-        while ((productMatch = productName.exec(block))) {
-          copyAssets(path.join(outDir, 'menu', slug(categoryId), slug(productMatch[1])));
-        }
-      }
     }
   };
 }
