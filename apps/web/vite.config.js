@@ -13,9 +13,10 @@ function standaloneMenuPages() {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const pathname = decodeURIComponent((req.url || '/').split('?')[0]);
-        const assetMatch = pathname.match(/^\/menu\/[^/]+(?:\/[^/]+)?\/(cart|smart-menu|product-page)\.js$|^\/(events|event-detail)\.js$/);
-        if (assetMatch) {
-          const fileName = `${assetMatch[1]}.js`;
+        const assetMatch = pathname.match(/^\/menu\/[^/]+(?:\/[^/]+)?\/(cart|smart-menu|product-page)\.js$/);
+        const rootAssetMatch = pathname.match(/^\/(events|event-detail)\.js$/);
+        if (assetMatch || rootAssetMatch) {
+          const fileName = `${assetMatch?.[1] || rootAssetMatch?.[1]}.js`;
           try {
             const filePath = path.join(root, fileName);
             const content = fs.readFileSync(filePath, 'utf8');
