@@ -5,6 +5,26 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&
 const readJson=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value??fallback}catch{return fallback}};
 const writeJson=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value))}catch{}};
 const readCart=()=>window.ARABISK_CART?.getItems?.()||[];
+async function hydrateCartView(){
+  const currentItems=readCart();
+  const incomplete=currentItems.filter(item=>!item.hydrated&&(!item.nameAr||item.nameAr===item.id||Number(item.price)<=0));
+  if(!incomplete.length)return currentItems;
+  try{
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),7000);
+    try{
+      const response=await fetch('/api/products',{cache:'no-store',signal:controller.signal});
+      const products=await response.json().catch(()=>[]);
+      if(!response.ok||!Array.isArray(products))return currentItems;
+      const hydrated=currentItems.map(item=>{
+        const product=products.find(row=>String(row.id)===String(item.id));
+        return product?{...product,qty:item.qty}:item;
+      });
+      window.ARABISK_CART?.setItems?.(hydrated);
+      return readCart();
+    }finally{clearTimeout(timer)}
+  }catch{return currentItems}
+}
 const readCheckout=()=>{const value=readJson(CHECKOUT_KEY,{});return value&&typeof value==='object'?value:{}};
 const saveCheckout=value=>writeJson(CHECKOUT_KEY,{orderType:['dine_in','pickup'].includes(value?.orderType)?value.orderType:'dine_in',tableNumber:String(value?.tableNumber||'').trim().slice(0,30),name:String(value?.name||'').trim().slice(0,80),phone:String(value?.phone||'').trim().slice(0,40)});
 const saveLastOrder=(data,{orderType='dine_in',tableNumber='',name='',phone='' }={})=>{if(!data?.id)return;writeJson(LAST_ORDER_KEY,{id:String(data.id),orderType:orderType==='pickup'?'pickup':'dine_in',tableNumber:String(tableNumber||'').trim().slice(0,30),name:String(name||'').trim().slice(0,80),phone:String(phone||'').trim().slice(0,40),total:Number(data.total||0),status:String(data.status||'pending'),updatedAt:data.updatedAt||new Date().toISOString()})};
@@ -98,7 +118,7 @@ async function submitOrder(event){
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);let response;
     try{response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});}finally{clearTimeout(timer);}
     const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر إرسال الطلب.');
-    saveLastOrder(data,{orderType,tableNumber,name,phone});window.ARABISK_CART?.clear?.();cart=readCart();document.querySelector('#cart-form').reset();syncCheckoutFields();render();void (window.ARABISK_CART?.ready?.()||Promise.resolve()).then(()=>{cart=readCart();render();});status.textContent='';showSuccess(data);
+    saveLastOrder(data,{orderType,tableNumber,name,phone});window.ARABISK_CART?.clear?.();cart=readCart();document.querySelector('#cart-form').reset();syncCheckoutFields();render();void (window.ARABISK_CART?.ready?.()||Promise.resolve()).then(()=>hydrateCartView()).then(()=>{cart=readCart();render();});status.textContent='';showSuccess(data);
   }catch(e){status.textContent=e.name==='AbortError'?'انتهت مهلة الاتصال.':(e.message||'تعذر إرسال الطلب.');}finally{submit.disabled=false;}
 }
 document.querySelector('#cart-clear').addEventListener('click',function(){if(!cart.length)return;if(window.confirm('هل تريد إفراغ السلة؟')){cart=[];window.ARABISK_CART?.clear?.();cart=readCart();render();}});
