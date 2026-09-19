@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const standaloneAssetNames = new Set(['cart.js', 'smart-menu.js', 'product-page.js', 'events.js', 'event-detail.js']);
+const standaloneAssetNames = new Set(['cart.js', 'smart-menu.js', 'product-page.js', 'events.js', 'event-detail.js', 'style.css']);
 const slug = value => String(value ?? '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
 function standaloneMenuPages() {
