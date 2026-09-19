@@ -25,9 +25,9 @@ function syncOrderTypeUI(){
   const tableWrap=document.querySelector('#cart-table-wrap');const table=document.querySelector('#cart-table');
   const pickup=document.querySelector('#cart-pickup-fields');const name=document.querySelector('#cart-name');const phone=document.querySelector('#cart-phone');
   const note=document.querySelector('#cart-context-note');
-  if(tableWrap) tableWrap.hidden=!dineIn;
+  if(tableWrap){if(dineIn){tableWrap.removeAttribute('hidden');}else{tableWrap.setAttribute('hidden','');}}
   if(table) table.required=dineIn;
-  if(pickup) pickup.hidden=dineIn;
+  if(pickup){if(dineIn){pickup.setAttribute('hidden','');}else{pickup.removeAttribute('hidden');pickup.style.display='grid';}}
   if(name) name.required=!dineIn;
   if(phone) phone.required=!dineIn;
   if(note) note.textContent=dineIn?'لطلب داخل المطعم أدخل رقم الطاولة. لا نحتاج إلى اسم أو رقم هاتف.':'لاستلام طلبك من المطعم أدخل الاسم ورقم الهاتف، ولا تحتاج إلى رقم طاولة.';
