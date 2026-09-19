@@ -140,7 +140,7 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
     <div class="cart-heading-copy">
       <p class="cart-eyebrow">ARABISK ORDER</p>
       <h1 class="cart-title">سلة طلبك</h1>
-      <p class="cart-lead">راجع أطباقك، عدّل الكميات، ثم أكمل بيانات الطلب عندما تكون جاهزًا.</p>
+      <p class="cart-lead">راجع أطباقك، عدّل الكميات، ثم أدخل رقم طاولتك وملاحظاتك لإرسال الطلب مباشرة إلى فريق المطعم.</p>
     </div>
     <a class="cart-back" href="/menu">← العودة إلى استكشف المنيو</a>
   </section>
@@ -156,20 +156,17 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
       <div class="cart-summary-row"><span>عدد الأصناف</span><strong id="cart-summary-count">0</strong></div>
       <div class="cart-summary-row total"><span>الإجمالي</span><strong id="cart-summary-total">AED 0</strong></div>
       <div id="cart-form-wrap">
-        <h3 class="cart-form-title">بيانات الطلب</h3>
+        <h3 class="cart-form-title">بيانات الطلب داخل المطعم</h3>
         <form id="cart-form" class="cart-form">
-          <label>الاسم<input id="cart-name" maxlength="80" autocomplete="name" required></label>
-          <label>رقم الهاتف<input id="cart-phone" maxlength="40" inputmode="tel" autocomplete="tel" required></label>
-          <label>طريقة الطلب<select id="cart-type"><option value="dine_in">داخل المطعم</option><option value="pickup">استلام من المطعم</option></select></label>
-          <label id="cart-table-wrap" class="cart-table-wrap">رقم الطاولة<input id="cart-table" maxlength="30" inputmode="text" placeholder="مثال: 12"><small>اختياري — يساعد فريق المطعم على توصيل الطلب إلى طاولتك.</small></label>
-          <label>ملاحظات الطلب<textarea id="cart-notes" maxlength="300" placeholder="مثلاً: بدون بصل، حساسية، ملاحظة خاصة…"></textarea></label>
+          <label id="cart-table-wrap" class="cart-table-wrap">رقم الطاولة<input id="cart-table" maxlength="30" inputmode="numeric" pattern="[0-9٠-٩]{1,4}" placeholder="مثال: 12" required><small>أدخل رقم الطاولة الموجودة أمامك في المطعم.</small></label>
+          <label>ملاحظات الطلب<textarea id="cart-notes" maxlength="300" placeholder="مثلاً: بدون بصل، درجة الاستواء، إضافة صوص…"></textarea></label>
           <button id="cart-submit" class="cart-submit" type="submit">تأكيد وإرسال الطلب</button>
           <p id="cart-form-status" class="cart-form-status" role="status" aria-live="polite"></p>
         </form>
         <div class="cart-trust">
-          <div><i>✓</i><span>السعر النهائي يُراجع عند إرسال الطلب.</span></div>
+          <div><i>✓</i><span>سيصل الطلب إلى فريق المطعم مع رقم طاولتك.</span></div>
           <div><i>⌂</i><span>يمكنك تعديل أو حذف الأصناف قبل الإرسال.</span></div>
-          <div><i>◷</i><span>يمكنك متابعة حالة الطلب بعد الإرسال.</span></div>
+          <div><i>◷</i><span>يمكنك متابعة حالة الطلب برقم الطلب والطاولة.</span></div>
         </div>
       </div>
       <div id="cart-empty-summary" hidden><a class="cart-primary" href="/menu">استكشف المنيو</a></div>
@@ -193,7 +190,7 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
 <div id="cart-track" class="cart-track" role="dialog" aria-modal="true">
   <div class="cart-modal">
     <div class="cart-track-head"><div><p class="cart-modal-eyebrow">ARABISK TRACKING</p><h3 id="track-title">متابعة الطلب</h3></div><button id="track-close" class="cart-close" type="button" aria-label="إغلاق">×</button></div>
-    <form id="track-form" class="cart-track-form"><label>رقم الطلب<input id="track-id" maxlength="20" placeholder="مثال: O00012" required></label><label>رقم الهاتف<input id="track-phone" maxlength="40" inputmode="tel" required></label><button type="submit">تحديث حالة الطلب</button><p id="track-error" class="cart-track-error"></p></form>
+    <form id="track-form" class="cart-track-form"><label>رقم الطلب<input id="track-id" maxlength="20" placeholder="مثال: O00012" required></label><label>رقم الطاولة<input id="track-table" maxlength="30" inputmode="numeric" placeholder="مثال: 12" required></label><button type="submit">تحديث حالة الطلب</button><p id="track-error" class="cart-track-error"></p></form>
     <div id="track-status" class="cart-track-status"><strong>حالة الطلب</strong><span>أدخل بيانات الطلب لعرض الحالة الحالية.</span></div>
     <small id="track-updated" class="cart-track-updated"></small><div id="track-timeline" class="cart-track-timeline"></div><div id="track-items" class="cart-track-items"></div>
     <div class="cart-track-foot"><strong id="track-total">الإجمالي AED 0</strong><button id="track-refresh" class="cart-track-refresh" type="button">تحديث الآن</button></div>
