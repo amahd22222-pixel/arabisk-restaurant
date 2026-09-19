@@ -64,17 +64,38 @@ function ensureStyles(){
       .cart-page-mode .ac-line-end{width:100%;grid-template-columns:1fr auto;justify-items:start;align-items:center}
       .cart-page-mode .ac-line-end>strong{grid-column:2;grid-row:1}
       .cart-page-mode .ac-qty{grid-column:1;grid-row:1}
-    }`;
+    }
+    #ac-add-toast{position:fixed;right:22px;bottom:22px;display:flex;align-items:center;gap:14px;max-width:min(430px,calc(100vw - 44px));padding:12px 14px;border:1px solid rgba(184,148,85,.35);border-radius:16px;background:rgba(17,17,17,.96);color:#fff;box-shadow:0 16px 40px rgba(0,0,0,.22);font-family:Cairo,sans-serif;font-size:12px;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .22s ease,transform .22s ease;z-index:140}
+    #ac-add-toast.show{opacity:1;transform:translateY(0);pointer-events:auto}
+    #ac-add-toast a{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;padding:7px 11px;border-radius:999px;background:#b89455;color:#111;text-decoration:none;font-weight:800}
+    @media(max-width:560px){#ac-add-toast{right:14px;left:14px;bottom:14px;max-width:none;justify-content:space-between}}`;
   document.head.appendChild(pageStyle);
 }
 
+let toastTimer=null;
+function showAddToast(item,quantity){
+  let toast=document.querySelector('#ac-add-toast');
+  if(!toast){
+    toast=document.createElement('div');
+    toast.id='ac-add-toast';
+    toast.setAttribute('role','status');
+    toast.setAttribute('aria-live','polite');
+    toast.innerHTML='<span class="ac-add-toast-text"></span><a href="/cart">عرض السلة</a>';
+    document.body.appendChild(toast);
+  }
+  const text=toast.querySelector('.ac-add-toast-text');
+  if(text)text.textContent=`تمت إضافة ${quantity>1?quantity+' × ':''}${String(item?.nameAr||item?.nameEn||'الصنف')} إلى طلبك`;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>toast.classList.remove('show'),4200);
+}
 function syncOrderTypeUI(){const type=document.querySelector('#ac-type');const wrap=document.querySelector('#ac-table-wrap');const table=document.querySelector('#ac-table');if(!type||!wrap||!table)return;const dineIn=type.value==='dine_in';wrap.hidden=!dineIn;if(!dineIn)table.value='';}
 function render(){const badge=document.querySelector('#arabisk-cart-count');if(badge){badge.textContent=String(count());badge.hidden=count()===0}const lines=document.querySelector('#arabisk-cart-lines');if(lines){lines.innerHTML=cart.length?cart.map(item=>`<div class="ac-line"><div class="ac-line-main">${item.imageUrl?`<img src="${esc(item.imageUrl)}" alt="" loading="lazy">`:''}<div><strong>${esc(item.nameAr)}</strong><small>AED ${Number(item.price).toFixed(0)} × ${Number(item.qty)}</small></div></div><div class="ac-line-end"><strong>AED ${(Number(item.price)*Number(item.qty)).toFixed(0)}</strong><div class="ac-qty"><button type="button" data-dec="${esc(item.id)}">−</button><span>${Number(item.qty)}</span><button type="button" data-inc="${esc(item.id)}">+</button></div></div></div>`).join(''):'<div class="ac-empty"><strong>السلة فارغة حاليًا</strong><br>أضف أطباقك المفضلة من المنيو.</div>'}const totalEl=document.querySelector('#arabisk-cart-total');if(totalEl)totalEl.textContent=`AED ${total().toFixed(0)}`;const summary=document.querySelector('#ac-summary-count');if(summary)summary.textContent=`${count()} ${count()===1?'صنف':'أصناف'}`;const checkout=document.querySelector('#arabisk-checkout');if(checkout)checkout.hidden=!cart.length;const clearButton=document.querySelector('#ac-clear');if(clearButton)clearButton.hidden=!cart.length;const last=readLastOrder();const track=document.querySelector('#ac-track-last');if(track){track.hidden=!last;track.textContent=last?`متابعة ${last.id}`:'متابعة آخر طلب'}}
 function openCart(){if(location.pathname!=='/cart'){window.location.assign('/cart');return}const panel=document.querySelector('#arabisk-cart');if(!panel)return;panel.classList.add('show');fillCheckout();render()}
 function closeCart(){document.querySelector('#arabisk-cart')?.classList.remove('show')}
 function openSuccess(){document.querySelector('#ac-success')?.classList.add('show')}
 function closeSuccess(){document.querySelector('#ac-success')?.classList.remove('show')}
-function add(item,quantity=1){if(!item?.id)return;const id=String(item.id);const qty=Math.max(1,Math.min(20,Number(quantity)||1));const found=cart.find(entry=>entry.id===id);if(found)found.qty=Math.min(20,found.qty+qty);else cart.push({id,nameAr:String(item.nameAr||item.nameEn||''),price:Math.max(0,Number(item.price)||0),imageUrl:String(item.imageUrl||''),qty});saveCart(cart);render();openCart()}
+function add(item,quantity=1){if(!item?.id)return;const id=String(item.id);const qty=Math.max(1,Math.min(20,Number(quantity)||1));const found=cart.find(entry=>entry.id===id);if(found)found.qty=Math.min(20,found.qty+qty);else cart.push({id,nameAr:String(item.nameAr||item.nameEn||''),price:Math.max(0,Number(item.price)||0),imageUrl:String(item.imageUrl||''),qty});saveCart(cart);render();showAddToast(item,qty)}
 function setQty(id,quantity){const item=cart.find(entry=>entry.id===id);if(!item)return;if(quantity<=0)cart=cart.filter(entry=>entry.id!==id);else item.qty=Math.max(1,Math.min(20,Number(quantity)||1));saveCart(cart);render()}
 function clearCart(){cart=[];saveCart(cart);render()}
 function fillCheckout(){const saved=readCheckout();const name=document.querySelector('#ac-name');const phone=document.querySelector('#ac-phone');const type=document.querySelector('#ac-type');const table=document.querySelector('#ac-table');if(name)name.value=saved.name||'';if(phone)phone.value=saved.phone||'';if(type)type.value=saved.orderType||'dine_in';if(table)table.value=saved.tableNumber||'';syncOrderTypeUI()}
