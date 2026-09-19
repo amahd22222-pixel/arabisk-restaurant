@@ -118,7 +118,7 @@ async function submitOrder(event){
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);let response;
     try{response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});}finally{clearTimeout(timer);}
     const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر إرسال الطلب.');
-    saveLastOrder(data,{orderType,tableNumber,name,phone});window.ARABISK_CART?.clear?.();cart=readCart();document.querySelector('#cart-form').reset();syncCheckoutFields();render();void (window.ARABISK_CART?.ready?.()||Promise.resolve()).then(()=>hydrateCartView()).then(()=>{cart=readCart();render();});status.textContent='';showSuccess(data);
+    saveLastOrder(data,{orderType,tableNumber,name,phone});window.ARABISK_CART?.clear?.();cart=readCart();document.querySelector('#cart-form').reset();syncCheckoutFields();render();void (window.ARABISK_CART?.ready?.()||Promise.resolve()).then(()=>hydrateCartView()).then(()=>{cart=readCart();render();});void (window.ARABISK_CART?.ready?.()||Promise.resolve()).then(()=>hydrateCartView()).then(()=>{cart=readCart();render();});status.textContent='';showSuccess(data);
   }catch(e){status.textContent=e.name==='AbortError'?'انتهت مهلة الاتصال.':(e.message||'تعذر إرسال الطلب.');}finally{submit.disabled=false;}
 }
 document.querySelector('#cart-clear').addEventListener('click',function(){if(!cart.length)return;if(window.confirm('هل تريد إفراغ السلة؟')){cart=[];window.ARABISK_CART?.clear?.();cart=readCart();render();}});
@@ -134,7 +134,7 @@ document.querySelector('#success-track').addEventListener('click',function(){con
 document.querySelector('#track-form').addEventListener('submit',function(event){event.preventDefault();void fetchTracking(true);});
 document.querySelector('#track-refresh').addEventListener('click',function(){void fetchTracking(true);});
 window.addEventListener('arabisk-cart-updated',()=>{cart=readCart();render();});
-window.addEventListener('storage',event=>{if(event.key==='arabisk-cart-v1'){cart=readCart();render();}});
+window.addEventListener('storage',event=>{if(event.key==='arabisk-cart-v4'||event.key==='arabisk-cart-v3'||event.key==='arabisk-cart-v2'||event.key==='arabisk-cart-v1'){cart=readCart();render();}});
 document.querySelector('#track-close').addEventListener('click',closeTracking);
 document.querySelector('#cart-success').addEventListener('click',function(event){if(event.target.id==='cart-success')closeModal('#cart-success');});
 document.addEventListener('keydown',function(event){if(event.key==='Escape'){closeModal('#cart-success');closeTracking();}});
