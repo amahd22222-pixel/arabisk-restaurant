@@ -1,18 +1,22 @@
-const CART_KEY='arabisk-cart-v2';
-const LEGACY_CART_KEY='arabisk-cart-v1';
+const CART_KEY='arabisk-cart-v3';
+const LEGACY_KEYS=['arabisk-cart-v2','arabisk-cart-v1'];
+const COOKIE_KEY='arabisk_cart_v1';
 const CART_EVENT='arabisk-cart-updated';
 
 const normalizeItem=item=>{
   if(!item||item.id==null)return null;
-  const price=Number(item.price),qty=Number(item.qty);
-  if(!Number.isFinite(price)||price<0||!Number.isFinite(qty)||qty<=0)return null;
+  const qty=Number(item.qty);
+  if(!Number.isFinite(qty)||qty<=0)return null;
+  const rawPrice=Number(item.price);
+  const hasPrice=Number.isFinite(rawPrice)&&rawPrice>=0;
   return {
     id:String(item.id),
-    nameAr:String(item.nameAr||item.nameEn||item.name||'صنف'),
+    nameAr:String(item.nameAr||item.nameEn||item.name||item.id||'صنف'),
     nameEn:String(item.nameEn||''),
-    price,
+    price:hasPrice?rawPrice:0,
     imageUrl:String(item.imageUrl||item.image||''),
-    qty:Math.min(20,Math.max(1,Math.round(qty)))
+    qty:Math.min(20,Math.max(1,Math.round(qty))),
+    hydrated:hasPrice
   };
 };
 
@@ -21,47 +25,76 @@ const normalizeItems=value=>{
   return items.map(normalizeItem).filter(Boolean);
 };
 
-const readStore=(storage,key)=>{
+const readStored=(storage,key)=>{
   try{
     const raw=storage.getItem(key);
     if(!raw)return null;
     const parsed=JSON.parse(raw);
-    return {
-      updatedAt:Number(parsed?.updatedAt)||0,
-      items:normalizeItems(parsed)
-    };
+    return {updatedAt:Number(parsed?.updatedAt)||0,items:normalizeItems(parsed)};
   }catch{return null}
+};
+
+const readCookie=()=>{
+  try{
+    const match=document.cookie.split('; ').find(row=>row.startsWith(COOKIE_KEY+'='));
+    if(!match)return null;
+    const encoded=match.slice(COOKIE_KEY.length+1);
+    const decoded=decodeURIComponent(encoded);
+    const parsed=JSON.parse(decoded);
+    return {updatedAt:Number(parsed?.updatedAt)||0,items:normalizeItems(parsed.items||parsed)};
+  }catch{return null}
+};
+
+const readLegacy=()=>{
+  const candidates=[];
+  for(const key of LEGACY_KEYS){
+    try{const value=readStored(localStorage,key);if(value)candidates.push(value)}catch{}
+    try{const value=readStored(sessionStorage,key);if(value)candidates.push(value)}catch{}
+  }
+  if(!candidates.length)return null;
+  candidates.sort((a,b)=>b.items.length-a.items.length||b.updatedAt-a.updatedAt);
+  return candidates[0];
 };
 
 const readCart=()=>{
   const candidates=[];
-  try{const value=readStore(localStorage,CART_KEY);if(value)candidates.push(value)}catch{}
-  try{const value=readStore(sessionStorage,CART_KEY);if(value)candidates.push(value)}catch{}
+  try{const value=readStored(localStorage,CART_KEY);if(value)candidates.push(value)}catch{}
+  try{const value=readStored(sessionStorage,CART_KEY);if(value)candidates.push(value)}catch{}
+  const cookie=readCookie();
+  if(cookie)candidates.push(cookie);
   if(candidates.length){
     candidates.sort((a,b)=>b.updatedAt-a.updatedAt);
     return candidates[0].items;
   }
+  const legacy=readLegacy();
+  return legacy?legacy.items:[];
+};
 
-  const legacy=[];
-  try{const value=readStore(localStorage,LEGACY_CART_KEY);if(value)legacy.push(value)}catch{}
-  try{const value=readStore(sessionStorage,LEGACY_CART_KEY);if(value)legacy.push(value)}catch{}
-  if(!legacy.length)return [];
-  legacy.sort((a,b)=>b.items.length-a.items.length||b.updatedAt-a.updatedAt);
-  return legacy[0].items;
+const writeCookie=items=>{
+  try{
+    const compact={version:1,updatedAt:Date.now(),items:items.map(item=>({id:String(item.id),qty:Number(item.qty)||1}))};
+    const encoded=encodeURIComponent(JSON.stringify(compact));
+    if(encoded.length>3800)return false;
+    document.cookie=COOKIE_KEY+'='+encoded+'; Path=/; Max-Age=2592000; SameSite=Lax';
+    return document.cookie.includes(COOKIE_KEY+'=');
+  }catch{return false}
 };
 
 const saveCart=items=>{
   const normalized=normalizeItems(items);
-  const payload=JSON.stringify({version:2,updatedAt:Date.now(),items:normalized});
+  const payload=JSON.stringify({version:3,updatedAt:Date.now(),items:normalized});
   let persisted=false;
   try{localStorage.setItem(CART_KEY,payload);persisted=true}catch{}
   try{sessionStorage.setItem(CART_KEY,payload);persisted=true}catch{}
+  const cookiePersisted=writeCookie(normalized);
+  persisted=persisted||cookiePersisted;
   window.dispatchEvent(new CustomEvent(CART_EVENT,{detail:{items:normalized,persisted}}));
   return normalized;
 };
 
 let cart=readCart();
 let toastTimer=null;
+let hydrationPromise=null;
 
 function ensureStyles(){
   if(document.querySelector('#arabisk-cart-core-style'))return;
@@ -106,13 +139,40 @@ function showToast(item,qty){
   toastTimer=setTimeout(()=>toast.classList.remove('show'),3800);
 }
 
+async function hydrateCart(){
+  const source=readCart();
+  if(!source.length||source.every(item=>item.hydrated))return source;
+  try{
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),7000);
+    try{
+      const response=await fetch('/api/products',{cache:'no-store',signal:controller.signal});
+      const products=await response.json().catch(()=>[]);
+      if(!response.ok||!Array.isArray(products))return source;
+      const hydrated=source.map(item=>{
+        const product=products.find(row=>String(row.id)===String(item.id));
+        return product?normalizeItem({...product,qty:item.qty}):item;
+      });
+      cart=saveCart(hydrated);
+      renderBadge();
+      return cart;
+    }finally{clearTimeout(timer);}
+  }catch{return source}
+}
+
+function ready(){
+  if(hydrationPromise)return hydrationPromise;
+  hydrationPromise=hydrateCart().finally(()=>{hydrationPromise=null});
+  return hydrationPromise;
+}
+
 function add(item,quantity=1){
   const normalized=normalizeItem({...item,qty:1});
   if(!normalized)return false;
   const qty=Math.max(1,Math.min(20,Math.round(Number(quantity)||1)));
   cart=readCart();
   const found=cart.find(row=>row.id===normalized.id);
-  if(found)found.qty=Math.min(20,found.qty+qty);
+  if(found)found.qty=Math.min(20,Number(found.qty||0)+qty);
   else cart.push({...normalized,qty});
   cart=saveCart(cart);
   renderBadge();
@@ -140,28 +200,21 @@ function clear(){
 
 function open(){window.location.assign('/cart')}
 function render(){cart=readCart();renderBadge();return cart}
+function mount(){ensureFloatingCart();render();void ready()}
 
-function mount(){ensureFloatingCart();render()}
+window.ARABISK_CART={
+  add,
+  open,
+  render,
+  clear,
+  ready,
+  getItems:()=>readCart(),
+  setItems:items=>{cart=saveCart(Array.isArray(items)?items:[]);renderBadge();return cart},
+  setQuantity
+};
+window.ARABISK_CART_READY=ready();
 
-window.ARABISK_CART={add,open,render,clear,getItems:()=>readCart(),setItems:items=>{cart=saveCart(Array.isArray(items)?items:[]);renderBadge();return cart},setQuantity};
-window.ARABISK_CART_READY=Promise.resolve(window.ARABISK_CART);
-
-window.addEventListener(CART_EVENT,()=>{
-  cart=readCart();
-  renderBadge();
-});
-
-window.addEventListener('storage',event=>{
-  if(event.key===CART_KEY||event.key===LEGACY_CART_KEY){
-    cart=readCart();
-    renderBadge();
-  }
-});
-
-window.addEventListener('pageshow',()=>{
-  cart=readCart();
-  renderBadge();
-});
-
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});
-else mount();
+window.addEventListener(CART_EVENT,()=>{cart=readCart();renderBadge()});
+window.addEventListener('storage',event=>{if(event.key===CART_KEY||LEGACY_KEYS.includes(event.key)){cart=readCart();renderBadge()}});
+window.addEventListener('pageshow',()=>{cart=readCart();renderBadge();void ready()});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
