@@ -1,4 +1,4 @@
-const CART_KEY='arabisk-cart-v3';
+const CART_KEY='arabisk-cart-v4';
 const LEGACY_KEYS=['arabisk-cart-v2','arabisk-cart-v1'];
 const COOKIE_KEY='arabisk_cart_v1';
 const CART_EVENT='arabisk-cart-updated';
@@ -57,15 +57,15 @@ const readLegacy=()=>{
 };
 
 const readCart=()=>{
-  const candidates=[];
-  try{const value=readStored(localStorage,CART_KEY);if(value)candidates.push(value)}catch{}
-  try{const value=readStored(sessionStorage,CART_KEY);if(value)candidates.push(value)}catch{}
-  const cookie=readCookie();
-  if(cookie)candidates.push(cookie);
-  if(candidates.length){
-    candidates.sort((a,b)=>b.updatedAt-a.updatedAt);
-    return candidates[0].items;
+  const primary=[];
+  try{const value=readStored(localStorage,CART_KEY);if(value)primary.push(value)}catch{}
+  try{const value=readStored(sessionStorage,CART_KEY);if(value)primary.push(value)}catch{}
+  if(primary.length){
+    primary.sort((a,b)=>b.updatedAt-a.updatedAt);
+    return primary[0].items;
   }
+  const cookie=readCookie();
+  if(cookie)return cookie.items;
   const legacy=readLegacy();
   return legacy?legacy.items:[];
 };
