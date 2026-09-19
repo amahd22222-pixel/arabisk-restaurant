@@ -11,6 +11,8 @@ const isValidDateTime=value=>Number.isFinite(Date.parse(String(value||'')));
 const cleanText=(value,max=240)=>String(value??'').trim().slice(0,max);
 const cleanUrl=(value)=>String(value??'').trim().slice(0,1000);
 const slugify=(value)=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,90);
+const hasMedia=(url,key)=>Boolean(cleanUrl(url)||cleanText(key,500));
+const mediaConflict=(imageUrl,imageKey,videoUrl,videoKey)=>hasMedia(imageUrl,imageKey)&&hasMedia(videoUrl,videoKey);
 export const experiences=[];
 const publicExperience=(item,storageReady,presign)=>({...item,coverImageUrl:item.coverImageKey&&storageReady?presign('GET',item.coverImageKey,900):(item.coverImageUrl||''),videoUrl:item.videoKey&&storageReady?presign('GET',item.videoKey,900):(item.videoUrl||'')});
 
@@ -46,7 +48,9 @@ export function registerExperienceRoutes(app,{storageReady,presign,readJson,writ
     if(!baseSlug)return res.status(400).json({message:'A valid slug is required'});
     let slug=baseSlug,suffix=2;while(experiences.some(item=>item.slug===slug))slug=baseSlug+'-'+suffix++;
     const type=TYPE_VALUES.has(b.type)?b.type:'event';
-    const item={id:nextId(),slug,titleAr,titleEn,eyebrow:cleanText(b.eyebrow||'ARABISK EXPERIENCES',80),type,descriptionAr:cleanText(b.descriptionAr,1200),descriptionEn:cleanText(b.descriptionEn,1200),startsAt,endsAt,location:cleanText(b.location,180),capacity:Math.max(0,Math.min(5000,Number(b.capacity)||0)),price:Math.max(0,Number(b.price)||0),status,featured:Boolean(b.featured),bookingEnabled:b.bookingEnabled===undefined?true:Boolean(b.bookingEnabled),coverImageUrl:cleanUrl(b.coverImageUrl),coverImageKey:cleanText(b.coverImageKey,500),videoUrl:cleanUrl(b.videoUrl),videoKey:cleanText(b.videoKey,500),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+    const coverImageUrl=cleanUrl(b.coverImageUrl),coverImageKey=cleanText(b.coverImageKey,500),videoUrl=cleanUrl(b.videoUrl),videoKey=cleanText(b.videoKey,500);
+    if(mediaConflict(coverImageUrl,coverImageKey,videoUrl,videoKey))return res.status(400).json({message:'اختر صورة أو فيديو للفعالية، وليس الاثنين معًا.'});
+    const item={id:nextId(),slug,titleAr,titleEn,eyebrow:cleanText(b.eyebrow||'ARABISK EXPERIENCES',80),type,descriptionAr:cleanText(b.descriptionAr,1200),descriptionEn:cleanText(b.descriptionEn,1200),startsAt,endsAt,location:cleanText(b.location,180),capacity:Math.max(0,Math.min(5000,Number(b.capacity)||0)),price:Math.max(0,Number(b.price)||0),status,featured:Boolean(b.featured),bookingEnabled:b.bookingEnabled===undefined?true:Boolean(b.bookingEnabled),coverImageUrl,coverImageKey,videoUrl,videoKey,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
     experiences.push(item);persist();return res.status(201).json(publicExperience(item,storageReady,presign));
   });
 
@@ -59,6 +63,15 @@ export function registerExperienceRoutes(app,{storageReady,presign,readJson,writ
     if(nextEnds&&!isValidDateTime(nextEnds))return res.status(400).json({message:'endsAt must be a valid date and time.'});
     if(nextEnds&&Date.parse(nextEnds)<=Date.parse(nextStarts))return res.status(400).json({message:'endsAt must be later than startsAt.'});
     if(b.type!==undefined&&!TYPE_VALUES.has(b.type))return res.status(400).json({message:'Invalid experience type'});
+    const nextCoverImageUrl=b.coverImageUrl!==undefined?cleanUrl(b.coverImageUrl):item.coverImageUrl;
+    const nextCoverImageKey=b.coverImageKey!==undefined?cleanText(b.coverImageKey,500):item.coverImageKey;
+    const nextVideoUrl=b.videoUrl!==undefined?cleanUrl(b.videoUrl):item.videoUrl;
+    const nextVideoKey=b.videoKey!==undefined?cleanText(b.videoKey,500):item.videoKey;
+    const normalizedImageUrl=b.coverImageUrl!==undefined&&nextCoverImageUrl?'':nextCoverImageUrl;
+    const normalizedImageKey=b.coverImageKey!==undefined&&nextCoverImageKey?nextCoverImageKey:nextCoverImageKey;
+    const normalizedVideoUrl=b.videoUrl!==undefined&&nextVideoUrl?'':nextVideoUrl;
+    const normalizedVideoKey=b.videoKey!==undefined&&nextVideoKey?nextVideoKey:nextVideoKey;
+    if(mediaConflict(normalizedImageUrl,normalizedImageKey,normalizedVideoUrl,normalizedVideoKey))return res.status(400).json({message:'اختر صورة أو فيديو للفعالية، وليس الاثنين معًا.'});
     if(b.titleAr!==undefined)item.titleAr=cleanText(b.titleAr,120);
     if(b.titleEn!==undefined)item.titleEn=cleanText(b.titleEn,140);
     if(b.slug!==undefined){const next=slugify(b.slug);if(!next)return res.status(400).json({message:'Invalid slug'});if(experiences.some(entry=>entry.id!==item.id&&entry.slug===next))return res.status(409).json({message:'Slug already exists'});item.slug=next;}
