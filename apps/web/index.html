@@ -7,10 +7,25 @@
 <title>ARABISK — Restaurant & Cafe</title>
 <link rel="stylesheet" href="./style.css">
 <style>
-.home-actions{display:flex;justify-content:center;gap:14px;padding:18px 20px 70px;background:var(--cream)}
-.home-actions a{display:inline-flex;align-items:center;justify-content:center;min-width:220px;padding:15px 26px;border-radius:999px;text-decoration:none;font-weight:800;border:1px solid var(--ink);color:var(--ink);background:var(--paper);transition:.2s ease}
-.home-actions a:hover{transform:translateY(-2px);background:var(--ink);color:#fff}
-@media(max-width:800px){.home-actions{flex-direction:column;padding:14px 20px 50px}.home-actions a{width:100%;min-width:0}}
+.home-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;max-width:1180px;margin:0 auto;padding:30px 24px 76px;background:var(--cream)}
+.home-action-card{position:relative;display:flex;min-height:190px;overflow:hidden;align-items:flex-end;padding:28px 26px;border:1px solid rgba(23,19,15,.11);border-radius:24px;text-decoration:none;color:var(--ink);background:linear-gradient(145deg,#fffdf9,#efe7db);box-shadow:0 16px 40px rgba(33,24,15,.08);transition:transform .28s ease,box-shadow .28s ease,border-color .28s ease}
+.home-action-card::before{content:"";position:absolute;inset:auto -24px -46px auto;width:150px;height:150px;border-radius:50%;background:rgba(184,148,85,.11);transition:transform .3s ease,background .3s ease}
+.home-action-card::after{content:"";position:absolute;top:18px;left:18px;width:70px;height:70px;border:1px solid rgba(184,148,85,.25);border-radius:50%}
+.home-action-card:hover{transform:translateY(-7px);box-shadow:0 24px 52px rgba(33,24,15,.13);border-color:rgba(184,148,85,.5)}
+.home-action-card:hover::before{transform:scale(1.25);background:rgba(184,148,85,.18)}
+.home-action-content{position:relative;z-index:2;display:grid;gap:8px;max-width:85%}
+.home-action-kicker{margin:0;color:var(--gold);font-size:10px;font-weight:800;letter-spacing:3px}
+.home-action-title{margin:0;font:500 30px/1.1 "Playfair Display",serif}
+.home-action-copy{margin:0;color:var(--muted);font-size:12px;line-height:1.9}
+.home-action-arrow{display:inline-flex;align-items:center;gap:8px;margin-top:5px;font-size:12px;font-weight:800}
+.home-action-arrow span{font-size:18px;transition:transform .25s ease}
+.home-action-card:hover .home-action-arrow span{transform:translateX(-5px)}
+.home-action-card.events{background:linear-gradient(145deg,#17130f,#2d251b);color:#fff}
+.home-action-card.events .home-action-kicker{color:var(--gold2)}
+.home-action-card.events .home-action-copy{color:#d9d0c5}
+.home-action-card.reserve{background:linear-gradient(145deg,#efe4d3,#fffaf2)}
+@media(max-width:900px){.home-actions{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.home-actions{grid-template-columns:1fr;padding:18px 16px 56px}.home-action-card{min-height:160px;padding:24px 22px}.home-action-title{font-size:27px}}
 </style>
 </head>
 <body>
@@ -30,10 +45,31 @@
 <main>
   <section id="home" class="hero"></section>
 
-  <section id="home-actions" class="home-actions">
-    <a href="/menu" data-i18n="exploreMenu">استكشف المنيو</a>
-    <a href="/events" data-i18n="eventsHome">اكتشف الفعاليات</a>
-    <a href="/reservation" data-i18n="reserveHome">احجز طاولتك</a>
+  <section id="home-actions" class="home-actions" aria-label="أهم خدمات ARABISK">
+    <a href="/menu" class="home-action-card" data-i18n-aria="exploreMenu">
+      <div class="home-action-content">
+        <p class="home-action-kicker">ARABISK MENU</p>
+        <h2 class="home-action-title" data-i18n="exploreMenu">استكشف المنيو</h2>
+        <p class="home-action-copy">اكتشف الأصناف المختارة والنكهات التي صُممت لتجعل كل زيارة مختلفة.</p>
+        <span class="home-action-arrow">اكتشف الآن <span>←</span></span>
+      </div>
+    </a>
+    <a href="/events" class="home-action-card events" data-i18n-aria="eventsHome">
+      <div class="home-action-content">
+        <p class="home-action-kicker">ARABISK EXPERIENCES</p>
+        <h2 class="home-action-title" data-i18n="eventsHome">اكتشف الفعاليات</h2>
+        <p class="home-action-copy">ليالي موسيقية وتجارب خاصة وفعاليات تمنح زيارتك طابعًا لا يُنسى.</p>
+        <span class="home-action-arrow">شاهد الفعاليات <span>←</span></span>
+      </div>
+    </a>
+    <a href="/reservation" class="home-action-card reserve" data-i18n-aria="reserveHome">
+      <div class="home-action-content">
+        <p class="home-action-kicker">TABLE RESERVATION</p>
+        <h2 class="home-action-title" data-i18n="reserveHome">احجز طاولتك</h2>
+        <p class="home-action-copy">اختر الموعد وعدد الأشخاص ودع ARABISK يستعد لاستقبالك.</p>
+        <span class="home-action-arrow">احجز الآن <span>←</span></span>
+      </div>
+    </a>
   </section>
 
   <section id="reservation" class="reservation" hidden>
