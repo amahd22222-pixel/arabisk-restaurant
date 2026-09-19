@@ -15,7 +15,6 @@
   const feedback = document.querySelector('#feedback');
   let current = null;
   let quantity = 1;
-  let cartPromise = null;
 
   function setLoading(message) {
     if (!loading) return;
@@ -61,21 +60,6 @@
     } finally {
       clearTimeout(timer);
     }
-  }
-
-  function loadCartRuntime() {
-    if (window.ARABISK_CART) return Promise.resolve(true);
-    if (cartPromise) return cartPromise;
-    cartPromise = new Promise(resolve => {
-      const script = document.createElement('script');
-      script.src = `/cart.js?v=20260920.6`;
-      script.defer = true;
-      script.onload = () => resolve(Boolean(window.ARABISK_CART));
-      script.onerror = () => resolve(false);
-      document.head.appendChild(script);
-      setTimeout(() => resolve(Boolean(window.ARABISK_CART)), 5000);
-    });
-    return cartPromise;
   }
 
   function setQuantity(delta) {
@@ -173,8 +157,7 @@
     document.querySelector('#minus').onclick = () => setQuantity(-1);
     document.querySelector('#plus').onclick = () => setQuantity(1);
     document.querySelector('#add').onclick = async () => {
-      const ready = await loadCartRuntime();
-      if (!ready || !window.ARABISK_CART?.add) {
+      if (!window.ARABISK_CART?.add) {
         feedback.textContent = 'تعذر فتح السلة حاليًا. حاول إعادة تحميل الصفحة.';
         return;
       }
@@ -193,8 +176,6 @@
     };
     if (loading) loading.hidden = true;
     if (root) root.hidden = false;
-    void loadCartRuntime();
-
     try {
       const details = await fetchJson(`/api/product-details/${encodeURIComponent(product.id)}`, 5000);
       current = {...current, ...(details && typeof details === 'object' ? details : {})};
