@@ -1,7 +1,7 @@
 const CART_KEY='arabisk-cart-v4';
-const LEGACY_KEYS=['arabisk-cart-v2','arabisk-cart-v1'];
-const COOKIE_KEY='arabisk_cart_v1';
+const COOKIE_KEY='arabisk_cart_v4';
 const CART_EVENT='arabisk-cart-updated';
+const cleanupLegacyCart=()=>{for(const key of ['arabisk-cart-v1','arabisk-cart-v2','arabisk-cart-v3']){try{localStorage.removeItem(key)}catch{}try{sessionStorage.removeItem(key)}catch{}}for(const key of ['arabisk_cart_v1','arabisk_cart_v2','arabisk_cart_v3']){try{document.cookie=key+'=; Path=/; Max-Age=0; SameSite=Lax'}catch{}}};
 
 const normalizeItem=item=>{
   if(!item||item.id==null)return null;
@@ -45,32 +45,17 @@ const readCookie=()=>{
   }catch{return null}
 };
 
-const readLegacy=()=>{
-  const candidates=[];
-  for(const key of LEGACY_KEYS){
-    try{const value=readStored(localStorage,key);if(value)candidates.push(value)}catch{}
-    try{const value=readStored(sessionStorage,key);if(value)candidates.push(value)}catch{}
-  }
-  if(!candidates.length)return null;
-  candidates.sort((a,b)=>b.items.length-a.items.length||b.updatedAt-a.updatedAt);
-  return candidates[0];
-};
-
 const readCart=()=>{
-  const primary=[];
-  try{const value=readStored(localStorage,CART_KEY);if(value)primary.push(value)}catch{}
-  try{const value=readStored(sessionStorage,CART_KEY);if(value)primary.push(value)}catch{}
-  if(primary.length){
-    primary.sort((a,b)=>b.updatedAt-a.updatedAt);
-    return primary[0].items;
+  const candidates=[];
+  try{const value=readStored(localStorage,CART_KEY);if(value)candidates.push(value)}catch{}
+  try{const value=readStored(sessionStorage,CART_KEY);if(value)candidates.push(value)}catch{}
+  if(candidates.length){
+    candidates.sort((a,b)=>b.updatedAt-a.updatedAt);
+    return candidates[0].items;
   }
   const cookie=readCookie();
-  if(cookie)return cookie.items;
-  const legacy=readLegacy();
-  return legacy?legacy.items:[];
-};
-
-const writeCookie=items=>{
+  return cookie?cookie.items:[];
+};const writeCookie=items=>{
   try{
     const compact={version:1,updatedAt:Date.now(),items:items.map(item=>({id:String(item.id),qty:Number(item.qty)||1}))};
     const encoded=encodeURIComponent(JSON.stringify(compact));
@@ -82,7 +67,7 @@ const writeCookie=items=>{
 
 const saveCart=items=>{
   const normalized=normalizeItems(items);
-  const payload=JSON.stringify({version:3,updatedAt:Date.now(),items:normalized});
+  const payload=JSON.stringify({version:4,updatedAt:Date.now(),items:normalized});
   let persisted=false;
   try{localStorage.setItem(CART_KEY,payload);persisted=true}catch{}
   try{sessionStorage.setItem(CART_KEY,payload);persisted=true}catch{}
@@ -200,7 +185,7 @@ function clear(){
 
 function open(){window.location.assign('/cart')}
 function render(){cart=readCart();renderBadge();return cart}
-function mount(){ensureFloatingCart();render();void ready()}
+function mount(){cleanupLegacyCart();ensureFloatingCart();render();void ready()}
 
 window.ARABISK_CART={
   add,
@@ -215,6 +200,6 @@ window.ARABISK_CART={
 window.ARABISK_CART_READY=ready();
 
 window.addEventListener(CART_EVENT,()=>{cart=readCart();renderBadge()});
-window.addEventListener('storage',event=>{if(event.key===CART_KEY||LEGACY_KEYS.includes(event.key)){cart=readCart();renderBadge()}});
+window.addEventListener('storage',event=>{if(event.key===CART_KEY){cart=readCart();renderBadge()}});
 window.addEventListener('pageshow',()=>{cart=readCart();renderBadge();void ready()});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
