@@ -20,7 +20,7 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
 .cart-card{border:1px solid var(--cart-line);border-radius:24px;background:var(--cart-paper);box-shadow:0 14px 36px rgba(41,29,16,.06)}
 .cart-items-card{overflow:hidden}
 .cart-card-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:20px 22px;border-bottom:1px solid var(--cart-line)}
-.cart-card-head h2{margin:0;font-size:17px}
+.cart-card-head h2{margin:0;font-size:17px}.cart-card-head>div:first-child{display:grid;gap:5px}.cart-head-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.cart-head-btn{border:1px solid var(--cart-line);border-radius:999px;background:#fff;color:var(--cart-ink);padding:8px 12px;font:inherit;font-size:10px;font-weight:700;cursor:pointer}.cart-head-btn:hover{border-color:var(--cart-gold)}.cart-head-btn.danger{color:var(--cart-danger)}
 .cart-count{color:var(--cart-muted);font-size:11px}
 .cart-items{display:grid}
 .cart-item{display:grid;grid-template-columns:92px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid #eee7dc}
@@ -98,7 +98,7 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
 .cart-track-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px}
 .cart-track-refresh{border:1px solid var(--cart-line);border-radius:999px;background:#fff;padding:8px 12px;font:inherit;font-size:10px;cursor:pointer}
 @media(max-width:900px){.cart-layout{grid-template-columns:1fr}.cart-summary{position:static}.cart-heading{align-items:flex-start;flex-direction:column}}
-@media(max-width:620px){.cart-main{padding:30px 14px 60px}.cart-heading{padding-bottom:22px}.cart-title{font-size:45px}.cart-back{width:100%;justify-content:center}.cart-item{grid-template-columns:72px minmax(0,1fr);gap:12px;padding:15px}.cart-item-image{width:72px;height:72px}.cart-item-actions{grid-column:1/-1;justify-content:space-between;padding-top:5px}.cart-card-head,.cart-summary{padding:17px}.cart-modal{padding:22px 17px}.cart-modal-actions{grid-template-columns:1fr}}
+@media(max-width:620px){.cart-main{padding:30px 14px 60px}.cart-heading{padding-bottom:22px}.cart-title{font-size:45px}.cart-back{width:100%;justify-content:center}.cart-item{grid-template-columns:72px minmax(0,1fr);gap:12px;padding:15px}.cart-item-image{width:72px;height:72px}.cart-item-actions{grid-column:1/-1;justify-content:space-between;padding-top:5px}.cart-card-head,.cart-summary{padding:17px}.cart-card-head{align-items:flex-start}.cart-head-actions{justify-content:flex-start}.cart-modal{padding:22px 17px}.cart-modal-actions{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -127,7 +127,7 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
 
   <section class="cart-layout" aria-label="السلة وإتمام الطلب">
     <article class="cart-card cart-items-card">
-      <div class="cart-card-head"><h2>الأصناف المختارة</h2><span id="cart-count-label" class="cart-count">لا توجد أصناف</span></div>
+      <div class="cart-card-head"><div><h2>الأصناف المختارة</h2><span id="cart-count-label" class="cart-count">لا توجد أصناف</span></div><div class="cart-head-actions"><button id="cart-track-last" class="cart-head-btn" type="button" hidden>متابعة آخر طلب</button><button id="cart-clear" class="cart-head-btn danger" type="button" hidden>إفراغ السلة</button></div></div>
       <div id="cart-items" class="cart-items"></div>
     </article>
     <aside id="cart-summary" class="cart-card cart-summary">
