@@ -1,7 +1,11 @@
 const CART_KEY='arabisk-cart-v1';
 const CART_EVENT='arabisk-cart-updated';
 
-const readJson=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value??fallback}catch{return fallback}};
+const readJson=(key,fallback)=>{
+  try{const value=JSON.parse(localStorage.getItem(key)||'null');if(value!==null)return value}catch{}
+  try{const value=JSON.parse(sessionStorage.getItem(key)||'null');if(value!==null)return value}catch{}
+  return fallback;
+};
 const normalizeItem=item=>{
   if(!item||item.id==null)return null;
   const price=Number(item.price),qty=Number(item.qty);
@@ -14,7 +18,13 @@ const readCart=()=>{
 };
 const saveCart=items=>{
   const normalized=items.map(normalizeItem).filter(Boolean);
-  try{localStorage.setItem(CART_KEY,JSON.stringify(normalized));window.dispatchEvent(new CustomEvent(CART_EVENT,{detail:{items:normalized}}));}catch{}
+  const serialized=JSON.stringify(normalized);
+  let persisted=false;
+  try{localStorage.setItem(CART_KEY,serialized);persisted=true}catch{}
+  if(!persisted){
+    try{sessionStorage.setItem(CART_KEY,serialized);persisted=true}catch{}
+  }
+  window.dispatchEvent(new CustomEvent(CART_EVENT,{detail:{items:normalized,persisted}}));
   return normalized;
 };
 const setItems=items=>{cart=saveCart(Array.isArray(items)?items:[]);renderBadge();return cart};
@@ -67,4 +77,5 @@ function mount(){ensureFloatingCart();render()}
 window.ARABISK_CART={add,open,render,clear,getItems:()=>readCart(),setItems,setQuantity};
 window.addEventListener(CART_EVENT,()=>{cart=readCart();renderBadge()});
 window.addEventListener('storage',event=>{if(event.key===CART_KEY){cart=readCart();renderBadge()}});
+window.addEventListener('pageshow',()=>{cart=readCart();renderBadge()});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
