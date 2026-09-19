@@ -98,9 +98,7 @@ async function submitOrder(event){
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);let response;
     try{response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});}finally{clearTimeout(timer);}
     const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر إرسال الطلب.');
-    saveLastOrder(data,{orderType,tableNumber,name,phone});window.ARABISK_CART?.clear?.();cart=readCart();document.querySelector('#cart-form').reset();window.addEventListener('arabisk-cart-updated',()=>{cart=readCart();render();});
-window.addEventListener('storage',event=>{if(event.key==='arabisk-cart-v1'){cart=readCart();render();}});
-syncCheckoutFields();render();status.textContent='';showSuccess(data);
+    saveLastOrder(data,{orderType,tableNumber,name,phone});window.ARABISK_CART?.clear?.();cart=readCart();document.querySelector('#cart-form').reset();syncCheckoutFields();render();status.textContent='';showSuccess(data);
   }catch(e){status.textContent=e.name==='AbortError'?'انتهت مهلة الاتصال.':(e.message||'تعذر إرسال الطلب.');}finally{submit.disabled=false;}
 }
 document.querySelector('#cart-clear').addEventListener('click',function(){if(!cart.length)return;if(window.confirm('هل تريد إفراغ السلة؟')){cart=[];window.ARABISK_CART?.clear?.();cart=readCart();render();}});
@@ -115,6 +113,8 @@ document.querySelector('#track-phone').addEventListener('input',function(){});
 document.querySelector('#success-track').addEventListener('click',function(){const id=document.querySelector('#success-order-id').textContent;closeModal('#cart-success');openTracking(id);});
 document.querySelector('#track-form').addEventListener('submit',function(event){event.preventDefault();void fetchTracking(true);});
 document.querySelector('#track-refresh').addEventListener('click',function(){void fetchTracking(true);});
+window.addEventListener('arabisk-cart-updated',()=>{cart=readCart();render();});
+window.addEventListener('storage',event=>{if(event.key==='arabisk-cart-v1'){cart=readCart();render();}});
 document.querySelector('#track-close').addEventListener('click',closeTracking);
 document.querySelector('#cart-success').addEventListener('click',function(event){if(event.target.id==='cart-success')closeModal('#cart-success');});
 document.addEventListener('keydown',function(event){if(event.key==='Escape'){closeModal('#cart-success');closeTracking();}});
