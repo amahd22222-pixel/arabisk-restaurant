@@ -134,7 +134,7 @@ document.querySelector('#success-track').addEventListener('click',function(){con
 document.querySelector('#track-form').addEventListener('submit',function(event){event.preventDefault();void fetchTracking(true);});
 document.querySelector('#track-refresh').addEventListener('click',function(){void fetchTracking(true);});
 window.addEventListener('arabisk-cart-updated',()=>{cart=readCart();render();});
-window.addEventListener('storage',event=>{if(event.key==='arabisk-cart-v4'||event.key==='arabisk-cart-v3'||event.key==='arabisk-cart-v2'||event.key==='arabisk-cart-v1'){cart=readCart();render();}});
+window.addEventListener('storage',event=>{if(event.key==='arabisk-cart-v4'){cart=readCart();render();}});
 document.querySelector('#track-close').addEventListener('click',closeTracking);
 document.querySelector('#cart-success').addEventListener('click',function(event){if(event.target.id==='cart-success')closeModal('#cart-success');});
 document.addEventListener('keydown',function(event){if(event.key==='Escape'){closeModal('#cart-success');closeTracking();}});
