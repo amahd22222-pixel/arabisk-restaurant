@@ -185,7 +185,7 @@ function clear(){
 
 function open(){window.location.assign('/cart')}
 function render(){cart=readCart();renderBadge();return cart}
-function mount(){cleanupLegacyCart();ensureFloatingCart();render();void ready()}
+function mount(){cleanupLegacyCart();ensureFloatingCart();render()}
 
 window.ARABISK_CART={
   add,
