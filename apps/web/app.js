@@ -3,7 +3,7 @@ const $ = (selector) => document.querySelector(selector);
 const translations = {
   ar: {
     home: 'الرئيسية', menu: 'استكشف المنيو', events: 'الفعاليات', reservationNav: 'حجز طاولة', about: 'عن المطعم', contact: 'تواصل معنا',
-    exploreMenu: 'استكشف المنيو', reserveHome: 'احجز طاولتك',
+    exploreMenu: 'استكشف المنيو', eventsHome: 'اكتشف الفعاليات', reserveHome: 'احجز طاولتك',
     reservationEyebrow: 'TABLE RESERVATION', reservationTitle: 'احجز طاولتك',
     reservationLead: 'اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.',
     nameLabel: 'الاسم', phoneLabel: 'رقم الهاتف', dateLabel: 'التاريخ', timeLabel: 'الوقت', guestsLabel: 'عدد الأشخاص',
@@ -16,7 +16,7 @@ const translations = {
   },
   en: {
     home: 'Home', menu: 'Explore Menu', events: 'Experiences', reservationNav: 'Book a Table', about: 'About Us', contact: 'Contact Us',
-    exploreMenu: 'Explore Menu', reserveHome: 'Book Your Table',
+    exploreMenu: 'Explore Menu', eventsHome: 'Discover Experiences', reserveHome: 'Book Your Table',
     reservationEyebrow: 'TABLE RESERVATION', reservationTitle: 'Book Your Table',
     reservationLead: 'Choose the date, time and number of guests. We will contact you to confirm your reservation.',
     nameLabel: 'Name', phoneLabel: 'Phone Number', dateLabel: 'Date', timeLabel: 'Time', guestsLabel: 'Guests',
