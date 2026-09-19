@@ -44,8 +44,9 @@ export function registerExperienceRoutes(app,{storageReady,presign,readJson,writ
     const endsAt=cleanText(b.endsAt,40);
     if(endsAt&&!isValidDateTime(endsAt))return res.status(400).json({message:'endsAt must be a valid date and time.'});
     if(endsAt&&Date.parse(endsAt)<=Date.parse(startsAt))return res.status(400).json({message:'endsAt must be later than startsAt.'});
-    const baseSlug=slugify(b.slug||titleEn||titleAr);
-    if(!baseSlug)return res.status(400).json({message:'A valid slug is required'});
+    const requestedSlug=slugify(b.slug);
+    const fallbackSlug='experience-'+crypto.randomUUID().slice(0,8).toLowerCase();
+    const baseSlug=requestedSlug||fallbackSlug;
     let slug=baseSlug,suffix=2;while(experiences.some(item=>item.slug===slug))slug=baseSlug+'-'+suffix++;
     const type=TYPE_VALUES.has(b.type)?b.type:'event';
     const coverImageUrl=cleanUrl(b.coverImageUrl),coverImageKey=cleanText(b.coverImageKey,500),videoUrl=cleanUrl(b.videoUrl),videoKey=cleanText(b.videoKey,500);
