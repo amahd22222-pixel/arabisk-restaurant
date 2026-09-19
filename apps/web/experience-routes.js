@@ -3,6 +3,8 @@ import crypto from 'node:crypto';
 const EXPERIENCE_STATE_KEY='data/arabisk-experiences.json';
 const IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
 const MAX_IMAGE_BYTES=15*1024*1024;
+const MAX_VIDEO_BYTES=120*1024*1024;
+const VIDEO_TYPES=new Set(['video/mp4','video/webm','video/quicktime']);
 const STATUS_VALUES=new Set(['draft','published','closed','archived']);
 const TYPE_VALUES=new Set(['event','music','chef','family','private','seasonal']);
 const isValidDateTime=value=>Number.isFinite(Date.parse(String(value||'')));
@@ -10,7 +12,7 @@ const cleanText=(value,max=240)=>String(value??'').trim().slice(0,max);
 const cleanUrl=(value)=>String(value??'').trim().slice(0,1000);
 const slugify=(value)=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,90);
 export const experiences=[];
-const publicExperience=(item,storageReady,presign)=>({...item,coverImageUrl:item.coverImageKey&&storageReady?presign('GET',item.coverImageKey,900):(item.coverImageUrl||'')});
+const publicExperience=(item,storageReady,presign)=>({...item,coverImageUrl:item.coverImageKey&&storageReady?presign('GET',item.coverImageKey,900):(item.coverImageUrl||''),videoUrl:item.videoKey&&storageReady?presign('GET',item.videoKey,900):(item.videoUrl||'')});
 
 export function registerExperienceRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey,isAdminApiKeyValid}){
   
@@ -44,7 +46,7 @@ export function registerExperienceRoutes(app,{storageReady,presign,readJson,writ
     if(!baseSlug)return res.status(400).json({message:'A valid slug is required'});
     let slug=baseSlug,suffix=2;while(experiences.some(item=>item.slug===slug))slug=baseSlug+'-'+suffix++;
     const type=TYPE_VALUES.has(b.type)?b.type:'event';
-    const item={id:nextId(),slug,titleAr,titleEn,eyebrow:cleanText(b.eyebrow||'ARABISK EXPERIENCES',80),type,descriptionAr:cleanText(b.descriptionAr,1200),descriptionEn:cleanText(b.descriptionEn,1200),startsAt,endsAt,location:cleanText(b.location,180),capacity:Math.max(0,Math.min(5000,Number(b.capacity)||0)),price:Math.max(0,Number(b.price)||0),status,featured:Boolean(b.featured),bookingEnabled:b.bookingEnabled===undefined?true:Boolean(b.bookingEnabled),coverImageUrl:cleanUrl(b.coverImageUrl),coverImageKey:cleanText(b.coverImageKey,500),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+    const item={id:nextId(),slug,titleAr,titleEn,eyebrow:cleanText(b.eyebrow||'ARABISK EXPERIENCES',80),type,descriptionAr:cleanText(b.descriptionAr,1200),descriptionEn:cleanText(b.descriptionEn,1200),startsAt,endsAt,location:cleanText(b.location,180),capacity:Math.max(0,Math.min(5000,Number(b.capacity)||0)),price:Math.max(0,Number(b.price)||0),status,featured:Boolean(b.featured),bookingEnabled:b.bookingEnabled===undefined?true:Boolean(b.bookingEnabled),coverImageUrl:cleanUrl(b.coverImageUrl),coverImageKey:cleanText(b.coverImageKey,500),videoUrl:cleanUrl(b.videoUrl),videoKey:cleanText(b.videoKey,500),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
     experiences.push(item);persist();return res.status(201).json(publicExperience(item,storageReady,presign));
   });
 
@@ -74,12 +76,14 @@ export function registerExperienceRoutes(app,{storageReady,presign,readJson,writ
     if(b.bookingEnabled!==undefined)item.bookingEnabled=Boolean(b.bookingEnabled);
     if(b.coverImageUrl!==undefined){item.coverImageUrl=cleanUrl(b.coverImageUrl);if(item.coverImageUrl&&item.coverImageKey){const oldKey=item.coverImageKey;item.coverImageKey='';if(storageReady&&oldKey)void deleteObject(oldKey);}}
     if(b.coverImageKey!==undefined){const oldKey=item.coverImageKey||'';item.coverImageKey=cleanText(b.coverImageKey,500);if(storageReady&&oldKey&&oldKey!==item.coverImageKey)void deleteObject(oldKey);}
+    if(b.videoUrl!==undefined){const nextUrl=cleanUrl(b.videoUrl);item.videoUrl=nextUrl;if(nextUrl&&item.videoKey){const oldKey=item.videoKey;item.videoKey='';if(storageReady)void deleteObject(oldKey);}}
+    if(b.videoKey!==undefined){const oldKey=item.videoKey||'';item.videoKey=cleanText(b.videoKey,500);if(storageReady&&oldKey&&oldKey!==item.videoKey)void deleteObject(oldKey);}
     item.updatedAt=new Date().toISOString();persist();return res.json(publicExperience(item,storageReady,presign));
   });
 
   app.delete('/api/experiences/:id',requireAdminApiKey,(req,res)=>{
     const index=experiences.findIndex(entry=>entry.id===req.params.id);if(index<0)return res.status(404).json({message:'Experience not found'});
-    const removed=experiences.splice(index,1)[0];if(storageReady&&removed.coverImageKey)void deleteObject(removed.coverImageKey);persist();return res.json({ok:true,removed});
+    const removed=experiences.splice(index,1)[0];if(storageReady){if(removed.coverImageKey)void deleteObject(removed.coverImageKey);if(removed.videoKey)void deleteObject(removed.videoKey);}persist();return res.json({ok:true,removed});
   });
 
   app.post('/api/experiences/images/presign',requireAdminApiKey,(req,res)=>{
@@ -90,6 +94,23 @@ export function registerExperienceRoutes(app,{storageReady,presign,readJson,writ
     if(!Number.isFinite(size)||size<1||size>MAX_IMAGE_BYTES)return res.status(400).json({message:'Maximum experience image size is 15 MB.'});
     const targetId=experienceId||('new-'+crypto.randomUUID()),key='experiences/'+targetId+'/'+crypto.randomUUID()+'-'+fileName;
     try{return res.json({key,uploadUrl:presign('PUT',key,900),expiresIn:900});}catch(error){console.error(error);return res.status(503).json({message:'Unable to prepare experience image upload.'});}
+  });
+
+  app.post('/api/experiences/videos/presign',requireAdminApiKey,(req,res)=>{
+    if(!storageReady)return res.status(503).json({message:'Video storage is not configured on the web service.'});
+    const experienceId=cleanText(req.body?.experienceId,40),fileName=cleanText(req.body?.fileName,160).replace(/[^a-zA-Z0-9._-]/g,'-'),contentType=cleanText(req.body?.contentType,80).toLowerCase(),size=Number(req.body?.size);
+    if(!experienceId||!experiences.some(item=>item.id===experienceId))return res.status(404).json({message:'Experience not found'});
+    if(!fileName||!VIDEO_TYPES.has(contentType))return res.status(400).json({message:'Only MP4, WebM and MOV videos are supported.'});
+    if(!Number.isFinite(size)||size<1||size>MAX_VIDEO_BYTES)return res.status(400).json({message:'Maximum experience video size is 120 MB.'});
+    const key='experiences/'+experienceId+'/videos/'+crypto.randomUUID()+'-'+fileName;
+    try{return res.json({key,uploadUrl:presign('PUT',key,900),expiresIn:900});}catch(error){console.error(error);return res.status(503).json({message:'Unable to prepare experience video upload.'});}
+  });
+
+  app.post('/api/experiences/videos/delete-presign',requireAdminApiKey,(req,res)=>{
+    if(!storageReady)return res.status(503).json({message:'Video storage is not configured on the web service.'});
+    const item=experiences.find(entry=>entry.id===cleanText(req.body?.experienceId,40));if(!item)return res.status(404).json({message:'Experience not found'});
+    if(!item.videoKey)return res.json({url:'',key:''});
+    try{return res.json({url:presign('DELETE',item.videoKey,900),key:item.videoKey});}catch(error){console.error(error);return res.status(503).json({message:'Unable to prepare experience video deletion.'});}
   });
 
   app.post('/api/experiences/images/delete-presign',requireAdminApiKey,(req,res)=>{
