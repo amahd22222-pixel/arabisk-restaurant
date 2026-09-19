@@ -68,7 +68,7 @@
     if (cartPromise) return cartPromise;
     cartPromise = new Promise(resolve => {
       const script = document.createElement('script');
-      script.src = `/cart.js?v=20260920.3`;
+      script.src = `/cart.js?v=20260920.4`;
       script.defer = true;
       script.onload = () => resolve(Boolean(window.ARABISK_CART));
       script.onerror = () => resolve(false);
