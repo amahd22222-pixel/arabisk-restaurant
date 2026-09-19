@@ -69,13 +69,13 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
 .cart-summary-row.total{margin-top:7px;padding-top:16px;border-top:1px solid var(--cart-line);color:var(--cart-ink)}
 .cart-summary-row.total strong{color:var(--cart-gold);font:600 27px/1 'Playfair Display',serif}
 .cart-form{display:grid;gap:11px;margin-top:18px}
-.cart-form-title{margin:8px 0 3px;font-size:14px}
+.cart-form-title{margin:8px 0 3px;font-size:14px}.cart-order-type{display:grid;gap:8px}.cart-order-type label{font-size:11px}.cart-order-type select{width:100%;border:1px solid var(--cart-line);border-radius:12px;background:#fff;padding:11px 12px;font:inherit;font-size:12px;outline:0}.cart-order-type select:focus{border-color:var(--cart-gold)}.cart-context-note{margin:0;color:var(--cart-muted);font-size:10px;line-height:1.7}
 .cart-form label{display:grid;gap:6px;color:#5f584f;font-size:11px}
 .cart-form input,.cart-form select,.cart-form textarea{width:100%;border:1px solid var(--cart-line);border-radius:12px;background:#fff;padding:11px 12px;font:inherit;font-size:12px;outline:0}
 .cart-form input:focus,.cart-form select:focus,.cart-form textarea:focus{border-color:var(--cart-gold)}
 .cart-form textarea{resize:vertical;min-height:78px}
 .cart-form small{color:var(--cart-muted);font-size:10px;line-height:1.7}
-.cart-table-wrap{display:grid}
+.cart-table-wrap{display:grid}.cart-pickup-fields{display:grid;gap:11px}
 .cart-submit{width:100%;min-height:50px;border:0;border-radius:999px;background:#111;color:#fff;font:inherit;font-weight:800;cursor:pointer}
 .cart-submit:disabled{opacity:.55;cursor:wait}
 .cart-form-status{min-height:18px;margin:0;color:var(--cart-danger);font-size:11px;line-height:1.6}
@@ -156,9 +156,21 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
       <div class="cart-summary-row"><span>عدد الأصناف</span><strong id="cart-summary-count">0</strong></div>
       <div class="cart-summary-row total"><span>الإجمالي</span><strong id="cart-summary-total">AED 0</strong></div>
       <div id="cart-form-wrap">
-        <h3 class="cart-form-title">بيانات الطلب داخل المطعم</h3>
+        <h3 class="cart-form-title">بيانات الطلب</h3>
         <form id="cart-form" class="cart-form">
-          <label id="cart-table-wrap" class="cart-table-wrap">رقم الطاولة<input id="cart-table" maxlength="30" inputmode="numeric" pattern="[0-9٠-٩]{1,4}" placeholder="مثال: 12" required><small>أدخل رقم الطاولة الموجودة أمامك في المطعم.</small></label>
+          <div class="cart-order-type">
+            <label for="cart-order-type">نوع الطلب</label>
+            <select id="cart-order-type">
+              <option value="dine_in">داخل المطعم</option>
+              <option value="pickup">استلام من المطعم</option>
+            </select>
+            <p id="cart-context-note" class="cart-context-note">لطلب داخل المطعم أدخل رقم الطاولة. لا نحتاج إلى اسم أو رقم هاتف.</p>
+          </div>
+          <label id="cart-table-wrap" class="cart-table-wrap">رقم الطاولة<input id="cart-table" maxlength="30" inputmode="numeric" pattern="[0-9٠-٩]{1,4}" placeholder="مثال: 12"><small>أدخل رقم الطاولة الموجودة أمامك في المطعم.</small></label>
+          <div id="cart-pickup-fields" hidden>
+            <label>الاسم<input id="cart-name" maxlength="80" autocomplete="name"></label>
+            <label>رقم الهاتف<input id="cart-phone" maxlength="40" inputmode="tel" autocomplete="tel"></label>
+          </div>
           <label>ملاحظات الطلب<textarea id="cart-notes" maxlength="300" placeholder="مثلاً: بدون بصل، درجة الاستواء، إضافة صوص…"></textarea></label>
           <button id="cart-submit" class="cart-submit" type="submit">تأكيد وإرسال الطلب</button>
           <p id="cart-form-status" class="cart-form-status" role="status" aria-live="polite"></p>
@@ -190,7 +202,7 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
 <div id="cart-track" class="cart-track" role="dialog" aria-modal="true">
   <div class="cart-modal">
     <div class="cart-track-head"><div><p class="cart-modal-eyebrow">ARABISK TRACKING</p><h3 id="track-title">متابعة الطلب</h3></div><button id="track-close" class="cart-close" type="button" aria-label="إغلاق">×</button></div>
-    <form id="track-form" class="cart-track-form"><label>رقم الطلب<input id="track-id" maxlength="20" placeholder="مثال: O00012" required></label><label>رقم الطاولة<input id="track-table" maxlength="30" inputmode="numeric" placeholder="مثال: 12" required></label><button type="submit">تحديث حالة الطلب</button><p id="track-error" class="cart-track-error"></p></form>
+    <form id="track-form" class="cart-track-form"><label>رقم الطلب<input id="track-id" maxlength="20" placeholder="مثال: O00012" required></label><label>نوع الطلب<select id="track-type"><option value="dine_in">داخل المطعم</option><option value="pickup">استلام من المطعم</option></select></label><label id="track-table-wrap">رقم الطاولة<input id="track-table" maxlength="30" inputmode="numeric" placeholder="مثال: 12"></label><label id="track-phone-wrap" hidden>رقم الهاتف<input id="track-phone" maxlength="40" inputmode="tel" autocomplete="tel"></label><button type="submit">تحديث حالة الطلب</button><p id="track-error" class="cart-track-error"></p></form>
     <div id="track-status" class="cart-track-status"><strong>حالة الطلب</strong><span>أدخل بيانات الطلب لعرض الحالة الحالية.</span></div>
     <small id="track-updated" class="cart-track-updated"></small><div id="track-timeline" class="cart-track-timeline"></div><div id="track-items" class="cart-track-items"></div>
     <div class="cart-track-foot"><strong id="track-total">الإجمالي AED 0</strong><button id="track-refresh" class="cart-track-refresh" type="button">تحديث الآن</button></div>
