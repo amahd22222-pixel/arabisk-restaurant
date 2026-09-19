@@ -178,7 +178,8 @@
         feedback.textContent = 'تعذر فتح السلة حاليًا. حاول إعادة تحميل الصفحة.';
         return;
       }
-      window.ARABISK_CART.add(current, quantity);
+      await (window.ARABISK_CART.ready?.() || Promise.resolve());
+      if (!window.ARABISK_CART.add(current, quantity)) throw new Error('cart add rejected');
       feedback.textContent = `تمت إضافة ${quantity} × ${current.nameAr || current.nameEn} إلى طلبك.`;
       quantity = 1;
       document.querySelector('#quantity').textContent = '1';
