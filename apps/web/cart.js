@@ -17,6 +17,8 @@ const saveCart=items=>{
   try{localStorage.setItem(CART_KEY,JSON.stringify(normalized));window.dispatchEvent(new CustomEvent(CART_EVENT,{detail:{items:normalized}}));}catch{}
   return normalized;
 };
+const setItems=items=>{cart=saveCart(Array.isArray(items)?items:[]);renderBadge();return cart};
+
 
 let cart=readCart();
 let toastTimer=null;
@@ -49,11 +51,20 @@ function add(item,quantity=1){
   if(found)found.qty=Math.min(20,found.qty+qty);else cart.push({...normalized,qty});
   cart=saveCart(cart);renderBadge();showToast(normalized,qty);return true;
 }
+function setQuantity(id,next){
+  const key=String(id??'');
+  if(!key)return false;
+  const item=cart.find(row=>row.id===key);
+  if(!item)return false;
+  if(Number(next)<=0)cart=cart.filter(row=>row.id!==key);
+  else item.qty=Math.min(20,Math.max(1,Math.round(Number(next)||1)));
+  cart=saveCart(cart);renderBadge();return true;
+}
 function clear(){cart=[];saveCart([]);renderBadge()}
 function open(){window.location.assign('/cart')}
 function render(){cart=readCart();renderBadge();return cart}
 function mount(){ensureFloatingCart();render()}
-window.ARABISK_CART={add,open,render,clear,getItems:()=>readCart()};
+window.ARABISK_CART={add,open,render,clear,getItems:()=>readCart(),setItems,setQuantity};
 window.addEventListener(CART_EVENT,()=>{cart=readCart();renderBadge()});
 window.addEventListener('storage',event=>{if(event.key===CART_KEY){cart=readCart();renderBadge()}});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
