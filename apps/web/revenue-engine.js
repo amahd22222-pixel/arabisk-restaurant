@@ -382,6 +382,16 @@ export function registerRevenueRoutes(app, {
         actionReference: definition.key,
         actionRequiresConsent: true,
         actionSendable: false,
+        actionMetrics: (() => {
+          const actions = campaigns.filter(item => item.type === 'segment_action' && item.reference === definition.key);
+          return {
+            drafts: actions.length,
+            executed: actions.filter(item => item.status === 'executed').length,
+            converted: actions.filter(item => item.status === 'converted').length,
+            ignored: actions.filter(item => item.status === 'ignored').length,
+            measuredRevenue: Math.round(actions.reduce((sum, item) => sum + number(item.resultRevenue), 0) * 100) / 100
+          };
+        })(),
         members: members.slice(0, 100)
       };
     });
