@@ -295,6 +295,17 @@ async function loadRevenue(){
 
     const campaigns=data.campaigns||{};
     revenueCampaignsData=campaigns.recent||[];
+    const outcomeLearning=campaigns.outcomeLearning||{};
+    const learningSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
+    learningSet('#learning-sources',outcomeLearning.sourcesMeasured||0);
+    learningSet('#learning-outcomes',outcomeLearning.outcomesMeasured||0);
+    learningSet('#learning-converted',outcomeLearning.converted||0);
+    learningSet('#learning-revenue',revMoney(outcomeLearning.measuredRevenue||0));
+    const learningNote=document.querySelector('#outcome-learning-note');if(learningNote)learningNote.textContent=outcomeLearning.note||'التعلم مبني على النتائج المسجلة يدويًا.';
+    const learningBody=document.querySelector('#outcome-learning-body');
+    if(learningBody){
+      learningBody.innerHTML=(outcomeLearning.rows||[]).map(row=>'<tr><td><strong>'+revEsc(row.label)+'</strong><small>'+revEsc(row.sourceType)+' / '+revEsc(row.sourceKey)+'</small></td><td>'+Number(row.total||0)+'</td><td>'+Number(row.converted||0)+'</td><td>'+Number(row.conversionRate||0).toFixed(1)+'%</td><td>'+revMoney(row.measuredRevenue||0)+'</td><td><strong>'+revEsc(row.topReason||'غير مصنف')+'</strong><small>'+revEsc(row.learningAction||'استمر في القياس.')+'</small></td></tr>').join('')||'<tr><td colspan="6" class="empty">لا توجد نتائج كافية لاستخراج تعلّم من المصادر بعد.</td></tr>';
+    }
     const outcomeInsights=campaigns.outcomeInsights||{};
     const outcomeSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
     outcomeSet('#outcome-total',outcomeInsights.totalRecorded||0);
