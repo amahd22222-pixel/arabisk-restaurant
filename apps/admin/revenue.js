@@ -150,8 +150,8 @@ async function loadRevenue(){
     workloadSet('#workload-unassigned',workload.counts?.unassigned);
     workloadSet('#workload-overdue',workload.counts?.overdue);
     workloadSet('#workload-owners',workload.counts?.owners);
-    const workloadRows=workload||{};
-    document.querySelector('#task-workload-owner-body').innerHTML=(workloadRows.length?workloadRows:workloadRows.ownersList||[]).map(row=>'<tr><td><strong>'+revEsc(row.owner)+'</strong></td><td>'+Number(row.open||0)+'</td><td>'+Number(row.inProgress||0)+'</td><td>'+Number(row.dueSoon||0)+'</td><td>'+Number(row.overdue||0)+'</td><td>'+Number(row.escalated||0)+'</td><td class="price">'+revMoney(row.potentialValue)+'</td></tr>').join('')||'<tr><td colspan="7" class="empty">لا توجد مهام مفتوحة حاليًا.</td></tr>';
+    const workloadRows=workload.rows||[];
+    document.querySelector('#task-workload-owner-body').innerHTML=workloadRows.map(row=>'<tr><td><strong>'+revEsc(row.owner)+'</strong></td><td>'+Number(row.open||0)+'</td><td>'+Number(row.inProgress||0)+'</td><td>'+Number(row.dueSoon||0)+'</td><td>'+Number(row.overdue||0)+'</td><td>'+Number(row.escalated||0)+'</td><td class="price">'+revMoney(row.potentialValue)+'</td></tr>').join('')||'<tr><td colspan="7" class="empty">لا توجد مهام مفتوحة حاليًا.</td></tr>';
 
     const briefing=data.dailyBriefing||{};
     const bset=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
