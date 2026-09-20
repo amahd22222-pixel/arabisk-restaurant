@@ -687,6 +687,34 @@ export function registerRevenueRoutes(app, {
       .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
       .slice(0, 30)
       .map(item => ({ ...item, task: taskWorkflow(item, now) }));
+    const dayKey = iso => {
+      const parsed = Date.parse(iso || '');
+      if (!Number.isFinite(parsed)) return '';
+      return new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Dubai', year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date(parsed));
+    };
+    const todayKey = dayKey(new Date(now).toISOString());
+    const taskItems = campaigns
+      .filter(item => item.status === 'draft' || dayKey(item.completedAt) === todayKey)
+      .sort((a,b) => {
+        const aTime = Date.parse(a.dueAt || a.completedAt || a.createdAt || '') || Number.MAX_SAFE_INTEGER;
+        const bTime = Date.parse(b.dueAt || b.completedAt || b.createdAt || '') || Number.MAX_SAFE_INTEGER;
+        return aTime - bTime;
+      })
+      .map(item => ({ ...item, task: taskWorkflow(item, now) }));
+    const taskBoard = {
+      generatedAt: new Date(now).toISOString(),
+      date: todayKey,
+      overdue: taskItems.filter(item => item.status === 'draft' && item.task.overdue),
+      inProgress: taskItems.filter(item => item.status === 'draft' && !item.task.overdue && item.task.key === 'in_progress'),
+      today: taskItems.filter(item => item.status === 'draft' && !item.task.overdue && item.task.key !== 'in_progress' && dayKey(item.dueAt) === todayKey),
+      doneToday: taskItems.filter(item => item.status !== 'draft' && dayKey(item.completedAt || item.updatedAt) === todayKey)
+    };
+    taskBoard.counts = {
+      overdue: taskBoard.overdue.length,
+      inProgress: taskBoard.inProgress.length,
+      today: taskBoard.today.length,
+      doneToday: taskBoard.doneToday.length
+    };
     return {
       counts: {
         drafts: campaigns.filter(item => item.status === 'draft').length,
@@ -702,7 +730,8 @@ export function registerRevenueRoutes(app, {
         escalatedTasks: taskRows.filter(item => item.key === 'escalated').length,
         unassignedTasks: taskRows.filter(item => item.key === 'unassigned').length
       },
-      recent
+      recent,
+      taskBoard
     };
   }
 
