@@ -75,16 +75,17 @@ async function loadRevenue(){
     document.querySelector('#revenue-reservation-body').innerHTML=upcoming.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name)}</strong><small dir="ltr">${revEsc(row.phone)}</small></td><td>${revEsc(row.date)}<small>${revEsc(row.time)}</small></td><td>${Number(row.guests||0)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد حجوزات خلال 48 ساعة.</td></tr>';
     const campaigns=data.campaigns||{};
     setMetric('#rev-drafts',campaigns.counts?.drafts);setMetric('#rev-executed',campaigns.counts?.executed);setMetric('#rev-converted',campaigns.counts?.converted);setMetric('#rev-attributed-orders',campaigns.counts?.attributedOrders);
-    setMetric('#rev-open-tasks',campaigns.counts?.openTasks);setMetric('#rev-in-progress-tasks',campaigns.counts?.inProgressTasks);setMetric('#rev-overdue-tasks',campaigns.counts?.overdueTasks);
+    setMetric('#rev-open-tasks',campaigns.counts?.openTasks);setMetric('#rev-in-progress-tasks',campaigns.counts?.inProgressTasks);setMetric('#rev-overdue-tasks',campaigns.counts?.overdueTasks);setMetric('#rev-escalated-tasks',campaigns.counts?.escalatedTasks);
     const measured=document.querySelector('#rev-measured-revenue');if(measured)measured.textContent=revMoney(campaigns.counts?.measuredRevenue);
-    const taskLabels={unassigned:'غير مسندة',assigned:'مسندة',in_progress:'قيد التنفيذ',overdue:'متأخرة',done:'مكتملة'};
+    const taskLabels={unassigned:'غير مسندة',assigned:'مسندة',in_progress:'قيد التنفيذ',overdue:'متأخرة',escalated:'تصعيد مطلوب',done:'مكتملة'};
     const campaignRows=campaigns.recent||[];
     document.querySelector('#revenue-campaigns-body').innerHTML=campaignRows.map(row=>{
       const task=row.task||{};
       const dueAt=task.dueAt||row.dueAt||'';
       const dueText=dueAt?new Date(dueAt).toLocaleString('ar-AE',{dateStyle:'short',timeStyle:'short'}):'بدون موعد';
+      const overdueText=task.overdueHours>0?' — متأخرة '+Number(task.overdueHours)+'س':' ';
       const taskKey=task.key||row.workflowStatus||'unassigned';
-      const taskClass=taskKey==='overdue'?'overdue':taskKey;
+      const taskClass=taskKey;
       const taskLabel=taskLabels[taskKey]||taskKey;
       const owner=task.owner||row.owner||'غير محدد';
       const actionButtons=row.status==='draft' ? '<button class="small-action" data-campaign-task data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(task.owner||row.owner||'')+'" data-due-at="'+revEsc(dueAt)+'" type="button">'+(taskKey==='unassigned'?'تعيين + SLA':'تعديل المهمة')+'</button>'+(taskKey==='assigned' ? '<button class="small-action" data-campaign-start data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(owner==='غير محدد'?'':owner)+'" data-due-at="'+revEsc(dueAt)+'" type="button">بدء التنفيذ</button>' : '') : '';
