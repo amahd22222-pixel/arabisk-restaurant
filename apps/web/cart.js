@@ -167,7 +167,7 @@ function add(item,quantity=1){
   cart=saveCart(cart);
   renderBadge();
   showToast(normalized,qty);
-  track('add_to_cart',{productId:normalized.id,cartValue:cartValue(cart)});
+  track('add_to_cart',{productId:normalized.id,cartValue:cartValue(cart),cartItems:cart.map(item=>({productId:item.id,quantity:Number(item.qty)||1}))});
   return true;
 }
 
