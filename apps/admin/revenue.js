@@ -21,6 +21,18 @@ async function loadRevenue(){
     set('#rev-abandoned',data.counts?.abandonedCarts);set('#rev-inactive',data.counts?.inactiveCustomers);set('#rev-reservations',data.counts?.upcomingReservations);set('#rev-actions-count',data.counts?.topActions);
     const potential=document.querySelector('#rev-potential');if(potential)potential.textContent=revMoney(data.potentialAbandonedRevenue);
 
+    const forecast=data.forecast||{};
+    const forecastSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
+    forecastSet('#forecast-actual-14',revMoney(forecast.actual?.revenue14));
+    forecastSet('#forecast-daily',revMoney(forecast.runRate?.blendedDaily));
+    forecastSet('#forecast-7',revMoney(forecast.next7Days));
+    forecastSet('#forecast-30',revMoney(forecast.next30Days));
+    forecastSet('#forecast-trend',forecast.trendLabel||'—');
+    forecastSet('#forecast-trend-rate',forecast.trendRate===null||forecast.trendRate===undefined?'':`${Number(forecast.trendRate).toFixed(1)}%`);
+    forecastSet('#forecast-orders',`الطلبات: ${Number(forecast.actual?.orders14||0)} خلال 14 يومًا / ${Number(forecast.actual?.orders30||0)} خلال 30 يومًا`);
+    forecastSet('#forecast-opportunity',`الفرص المفتوحة: ${revMoney(forecast.openOpportunityValue)} — لا تدخل التوقع الأساسي.`);
+    forecastSet('#forecast-note',forecast.note||'تقدير تشغيلي من البيانات المسجلة.');
+
     const intelligence=data.intelligence||{};
     const intelSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
     intelSet('#intel-potential',revMoney(intelligence.totals?.potentialAbandonedRevenue));
