@@ -317,6 +317,17 @@ async function loadRevenue(){
     const blockerBody=document.querySelector('#revenue-blocker-analytics-body');
     if(blockerBody)blockerBody.innerHTML=(blockerAnalytics.rows||[]).map(row=>'<tr><td><strong>'+revEsc(row.label)+'</strong><small>'+revEsc(row.type)+'</small></td><td>'+Number(row.occurrences||0)+'</td><td>'+Number(row.open||0)+'</td><td>'+Number(row.resolved||0)+'</td><td>'+Number(row.averageDurationHours||0).toFixed(1)+'س</td><td class="price">'+revMoney(row.potentialValue||0)+'</td></tr>').join('')||'<tr><td colspan="6" class="empty">لا توجد بيانات حجب مسجلة بعد.</td></tr>';
     const blockerNote=document.querySelector('#revenue-blocker-analytics-note');if(blockerNote)blockerNote.textContent=blockerAnalytics.note||'تحليل العوائق مبني على سجل الحجب.';
+    const valueRealization=data.valueRealization||{};
+    const valueSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
+    valueSet('#value-realization-tasks',valueRealization.measurableTasks||0);
+    valueSet('#value-realization-converted',valueRealization.convertedTasks||0);
+    valueSet('#value-realization-potential',revMoney(valueRealization.potentialValue||0));
+    valueSet('#value-realization-captured',revMoney(valueRealization.capturedPotentialValue||0));
+    valueSet('#value-realization-gap',revMoney(valueRealization.unrealizedPotentialValue||0));
+    valueSet('#value-realization-rate',valueRealization.realizationRate===null||valueRealization.realizationRate===undefined?'—':Number(valueRealization.realizationRate).toFixed(1)+'%');
+    const valueNote=document.querySelector('#value-realization-note');if(valueNote)valueNote.textContent=valueRealization.note||'معدل تحقق القيمة مقياس تشغيلي للقيمة المسجلة.';
+    const valueBody=document.querySelector('#revenue-value-realization-body');
+    if(valueBody)valueBody.innerHTML=(valueRealization.rows||[]).map(row=>'<tr><td><strong>'+revEsc(row.label)+'</strong><small>'+revEsc(row.sourceType)+' / '+revEsc(row.sourceKey)+'</small></td><td>'+Number(row.tasks||0)+'</td><td>'+Number(row.converted||0)+'</td><td class="price">'+revMoney(row.potentialValue||0)+'</td><td class="price">'+revMoney(row.capturedPotentialValue||0)+'</td><td class="price">'+revMoney(row.measuredRevenue||0)+'</td><td class="price">'+revMoney(row.unrealizedPotentialValue||0)+'</td><td>'+((row.realizationRate===null||row.realizationRate===undefined)?'—':Number(row.realizationRate).toFixed(1)+'%')+'</td></tr>').join('')||'<tr><td colspan="8" class="empty">لا توجد مهام مغلقة بقيمة فرصة مسجلة حتى الآن.</td></tr>';
     const riskExposure=data.riskExposure||{};
     const riskSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
     riskSet('#risk-high-count',riskExposure.highRiskCount||0);
