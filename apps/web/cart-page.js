@@ -117,7 +117,8 @@ async function submitOrder(event){
   if(orderType==='pickup'&&(name.length<2||phone.length<5)){status.textContent='يرجى إدخال الاسم ورقم الهاتف للاستلام.';return;}
   persistCheckout();submit.disabled=true;status.textContent='جاري إرسال الطلب…';
   try{
-    const payload={orderType,tableNumber:orderType==='dine_in'?tableNumber:'',name:orderType==='pickup'?name:'',phone:orderType==='pickup'?phone:'',notes,items:cart.map(item=>({productId:item.id,quantity:item.qty}))};
+    const sessionId=window.ARABISK_ANALYTICS?.getSessionId?.()||'';window.ARABISK_ANALYTICS?.track?.('checkout_started',{cartValue:total(),metadata:{orderType}});
+    const payload={orderType,tableNumber:orderType==='dine_in'?tableNumber:'',name:orderType==='pickup'?name:'',phone:orderType==='pickup'?phone:'',notes,sessionId,items:cart.map(item=>({productId:item.id,quantity:item.qty}))};
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);let response;
     try{response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});}finally{clearTimeout(timer);}
     const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر إرسال الطلب.');

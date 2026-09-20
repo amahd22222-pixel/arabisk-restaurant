@@ -4,6 +4,10 @@
 const CART_KEY='arabisk-cart-v4';
 const COOKIE_KEY='arabisk_cart_v4';
 const CART_EVENT='arabisk-cart-updated';
+const SESSION_KEY='arabisk-session-v1';
+const getSessionId=()=>{try{let id=localStorage.getItem(SESSION_KEY);if(!id){id=(crypto.randomUUID?.()||('s-'+Date.now()+'-'+Math.random().toString(36).slice(2)));localStorage.setItem(SESSION_KEY,id)}return id}catch{return 'session-'+Date.now()}};
+const track=(eventName,data={})=>{try{fetch('/api/events',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({eventName,sessionId:getSessionId(),...data})}).catch(()=>{})}catch{}};
+const cartValue=items=>items.reduce((sum,item)=>sum+(Number(item.price)||0)*(Number(item.qty)||0),0);
 const cleanupLegacyCart=()=>{for(const key of ['arabisk-cart-v1','arabisk-cart-v2','arabisk-cart-v3']){try{localStorage.removeItem(key)}catch{}try{sessionStorage.removeItem(key)}catch{}}for(const key of ['arabisk_cart_v1','arabisk_cart_v2','arabisk_cart_v3']){try{document.cookie=key+'=; Path=/; Max-Age=0; SameSite=Lax'}catch{}}};
 
 const normalizeItem=item=>{
@@ -163,6 +167,7 @@ function add(item,quantity=1){
   cart=saveCart(cart);
   renderBadge();
   showToast(normalized,qty);
+  track('add_to_cart',{productId:normalized.id,cartValue:cartValue(cart)});
   return true;
 }
 
@@ -186,8 +191,9 @@ function clear(){
 
 function open(){window.location.assign('/cart')}
 function render(){cart=readCart();renderBadge();return cart}
-function mount(){cleanupLegacyCart();ensureFloatingCart();render()}
+function mount(){cleanupLegacyCart();ensureFloatingCart();render();if(location.pathname==='/menu'||location.pathname.startsWith('/menu/'))track('menu_view')}
 
+window.ARABISK_ANALYTICS={track,getSessionId};
 window.ARABISK_CART={
   add,
   open,
