@@ -16,6 +16,14 @@ async function loadRevenue(){
     set('#rev-abandoned',data.counts?.abandonedCarts);set('#rev-inactive',data.counts?.inactiveCustomers);set('#rev-reservations',data.counts?.upcomingReservations);set('#rev-actions-count',data.counts?.topActions);
     const potential=document.querySelector('#rev-potential');if(potential)potential.textContent=revMoney(data.potentialAbandonedRevenue);
 
+    const measurement=data.measurement||{};
+    const setMetric=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
+    setMetric('#rev-intent-sessions',measurement.intentSessions);
+    setMetric('#rev-intent-conversions',measurement.intentConversions);
+    setMetric('#rev-intent-rate',`${Number(measurement.intentConversionRate||0).toFixed(1)}%`);
+    const attributed=document.querySelector('#rev-intent-revenue');if(attributed)attributed.textContent=revMoney(measurement.attributedIntentRevenue);
+    const note=document.querySelector('#rev-attribution-note');if(note)note.textContent=measurement.attributionNote||'قياس ارتباطي فقط، وليس إثباتًا سببيًا.';
+
     const actions=data.topActions||[];
     document.querySelector('#revenue-actions-body').innerHTML=actions.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)}</td><td><strong>${revEsc(row.title)}</strong><small>${revEsc(row.reason)}</small></td><td>${revEsc(row.recommendedAction)}</td><td class="price">${row.potentialValue?revMoney(row.potentialValue):'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد إجراءات مقترحة حاليًا.</td></tr>';
 
