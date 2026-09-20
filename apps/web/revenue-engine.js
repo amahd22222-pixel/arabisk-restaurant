@@ -818,17 +818,20 @@ export function registerRevenueRoutes(app, {
       if (Number.isFinite(dueAt) && dueAt >= now && dueAt <= now + 4 * 3600000) current.dueSoon += 1;
       workloadMap.set(owner, current);
     }
-    const taskWorkload = [...workloadMap.values()]
+    const taskWorkloadRows = [...workloadMap.values()]
       .map(row => ({
         ...row,
         potentialValue: Math.round(row.potentialValue * 100) / 100
       }))
       .sort((a,b) => b.open - a.open || b.overdue - a.overdue || b.potentialValue - a.potentialValue);
-    taskWorkload.counts = {
-      owners: taskWorkload.filter(row => row.owner !== 'غير مسند').length,
-      open: workloadRows.length,
-      unassigned: workloadRows.filter(row => !row.owner).length,
-      overdue: workloadRows.filter(row => row.task.overdue).length
+    const taskWorkload = {
+      rows: taskWorkloadRows,
+      counts: {
+        owners: taskWorkloadRows.filter(row => row.owner !== 'غير مسند').length,
+        open: workloadRows.length,
+        unassigned: workloadRows.filter(row => !row.owner).length,
+        overdue: workloadRows.filter(row => row.task.overdue).length
+      }
     };
 
     const dailyBriefing = {
