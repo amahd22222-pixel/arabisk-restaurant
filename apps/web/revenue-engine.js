@@ -75,6 +75,23 @@ const taskWorkflow = (campaign, now = Date.now()) => {
     };
   }
   const state = clean(campaign.workflowStatus, 30);
+  if (state === 'blocked') {
+    return {
+      key:'blocked',
+      label:'محجوبة',
+      overdue:false,
+      escalated:false,
+      overdueHours:0,
+      dueHoursRemaining,
+      blockerReason: clean(campaign.blockerReason, 240) || 'يوجد عائق تشغيلي يحتاج معالجة.',
+      blockedAt: clean(campaign.blockedAt, 40),
+      resolvedAt: clean(campaign.resolvedAt, 40),
+      riskKey:'high',
+      riskLabel:'مخاطرة عالية',
+      riskScore:85,
+      nextAction:'حل العائق المسجل، ثم أعد المهمة إلى مسندة أو قيد التنفيذ.'
+    };
+  }
   if (state === 'in_progress') return {
     key:'in_progress',
     label:'قيد التنفيذ',
@@ -454,6 +471,20 @@ export function registerRevenueRoutes(app, {
       .map(item => ({ campaign:item, task:taskWorkflow(item, now) }))
       .filter(item => item.task.overdue);
 
+    const blockedTaskRows = campaigns
+      .filter(item => item.status === 'draft')
+      .map(item => ({ campaign:item, task:taskWorkflow(item, now) }))
+      .filter(item => item.task.key === 'blocked');
+    if (blockedTaskRows.length > 0) {
+      alerts.push({
+        severity:'high',
+        key:'blocked_revenue_tasks',
+        title:'مهام إيرادات محجوبة',
+        detail: blockedTaskRows.length + ' مهمة متوقفة بسبب عائق تشغيلي مسجل.',
+        action:'راجع سبب العائق، عالجه، ثم أعد المهمة إلى مسار التنفيذ.'
+      });
+    }
+
     if (overdueTaskRows.length > 0) {
       const escalatedCount = overdueTaskRows.filter(item => item.task.escalated).length;
       alerts.push({
@@ -605,6 +636,9 @@ export function registerRevenueRoutes(app, {
       startedAt: '',
       completedAt: '',
       taskNotes: '',
+      blockerReason: '',
+      blockedAt: '',
+      resolvedAt: '',
       activityLog: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -673,14 +707,16 @@ export function registerRevenueRoutes(app, {
     const campaign = campaigns.find(item => item.id === clean(id, 40));
     if (!campaign || campaign.status !== 'draft') return null;
     const requestedStatus = clean(input.workflowStatus, 30);
-    if (!new Set(['unassigned', 'assigned', 'in_progress']).has(requestedStatus)) return null;
+    if (!new Set(['unassigned', 'assigned', 'in_progress', 'blocked']).has(requestedStatus)) return null;
     const owner = clean(input.owner, 80);
     const dueAt = clean(input.dueAt, 40);
+    const blockerReason = clean(input.blockerReason, 240);
     const actor = clean(input.actor, 80);
     if (dueAt && !Number.isFinite(Date.parse(dueAt))) return null;
     const previousOwner = clean(campaign.owner, 80);
     const previousDueAt = clean(campaign.dueAt, 40);
     const previousStatus = clean(campaign.workflowStatus, 30);
+    if (requestedStatus === 'blocked' && !(blockerReason || campaign.blockerReason)) return null;
     const now = new Date().toISOString();
     campaign.owner = owner;
     campaign.dueAt = dueAt;
@@ -688,18 +724,34 @@ export function registerRevenueRoutes(app, {
     campaign.taskNotes = clean(input.notes, 400);
     campaign.assignedAt = requestedStatus === 'unassigned' ? '' : (campaign.assignedAt || now);
     campaign.startedAt = requestedStatus === 'in_progress' ? (campaign.startedAt || now) : campaign.startedAt || '';
+    if (requestedStatus === 'blocked') {
+      campaign.blockerReason = blockerReason || clean(campaign.blockerReason, 240);
+      campaign.blockedAt = previousStatus === 'blocked' && campaign.blockedAt ? campaign.blockedAt : now;
+      campaign.resolvedAt = '';
+    } else if (previousStatus === 'blocked') {
+      campaign.resolvedAt = now;
+      campaign.blockerReason = '';
+      campaign.blockedAt = '';
+    } else {
+      campaign.blockerReason = blockerReason || '';
+    }
     campaign.updatedAt = now;
-    const activityType = requestedStatus === 'in_progress' && previousStatus !== 'in_progress'
-      ? 'started'
-      : previousOwner !== owner
-        ? 'assigned'
-        : previousDueAt !== dueAt
-          ? 'sla_updated'
-          : 'task_updated';
+    const activityType = requestedStatus === 'blocked' && previousStatus !== 'blocked'
+      ? 'blocked'
+      : previousStatus === 'blocked' && requestedStatus !== 'blocked'
+        ? 'unblocked'
+        : requestedStatus === 'in_progress' && previousStatus !== 'in_progress'
+          ? 'started'
+          : previousOwner !== owner
+            ? 'assigned'
+            : previousDueAt !== dueAt
+              ? 'sla_updated'
+              : 'task_updated';
     appendCampaignActivity(campaign, activityType, {
       owner,
       dueAt,
       workflowStatus: requestedStatus,
+      blockerReason: campaign.blockerReason || '',
       previousOwner,
       previousDueAt,
       previousStatus
@@ -707,7 +759,6 @@ export function registerRevenueRoutes(app, {
     void persistRevenue();
     return { ...campaign, task: taskWorkflow(campaign) };
   }
-
   function customerSegments() {
     const now = Date.now();
     const rows = customers.map(customer => {
@@ -838,12 +889,14 @@ export function registerRevenueRoutes(app, {
     const taskBoard = {
       generatedAt: new Date(now).toISOString(),
       date: todayKey,
+      blocked: taskItems.filter(item => item.status === 'draft' && item.task.key === 'blocked'),
       overdue: taskItems.filter(item => item.status === 'draft' && item.task.overdue),
       inProgress: taskItems.filter(item => item.status === 'draft' && !item.task.overdue && item.task.key === 'in_progress'),
       today: taskItems.filter(item => item.status === 'draft' && !item.task.overdue && item.task.key !== 'in_progress' && dayKey(item.dueAt) === todayKey),
       doneToday: taskItems.filter(item => item.status !== 'draft' && dayKey(item.completedAt || item.updatedAt) === todayKey)
     };
     taskBoard.counts = {
+      blocked: taskBoard.blocked.length,
       overdue: taskBoard.overdue.length,
       inProgress: taskBoard.inProgress.length,
       today: taskBoard.today.length,
@@ -859,7 +912,10 @@ export function registerRevenueRoutes(app, {
       const hoursToDue = Number.isFinite(dueAt) ? (dueAt - now) / 3600000 : null;
       let urgency = 0;
       let reason = '';
-      if (row.task.key === 'escalated') {
+      if (row.task.key === 'blocked') {
+        urgency = 950;
+        reason = 'المهمة محجوبة بسبب عائق تشغيلي.';
+      } else if (row.task.key === 'escalated') {
         urgency = 1000;
         reason = 'تجاوز الـSLA بأكثر من 24 ساعة.';
       } else if (row.task.key === 'overdue') {
@@ -886,9 +942,11 @@ export function registerRevenueRoutes(app, {
           potentialValue: number(row.potentialValue),
           urgency,
           reason,
-          recommendedAction: row.task.key === 'escalated' || row.task.key === 'overdue'
-            ? 'راجع المسؤول وحدّث الحالة أو سجّل النتيجة فورًا.'
-            : !row.owner
+          recommendedAction: row.task.key === 'blocked'
+            ? 'حل العائق المسجل ثم أعد المهمة إلى مسندة أو قيد التنفيذ.'
+            : row.task.key === 'escalated' || row.task.key === 'overdue'
+              ? 'راجع المسؤول وحدّث الحالة أو سجّل النتيجة فورًا.'
+              : !row.owner
               ? 'عيّن مسؤولًا وحدد SLA واضحًا قبل ترك المهمة.'
               : hoursToDue !== null && hoursToDue <= 4
                 ? 'ابدأ التنفيذ الآن لتقليل خطر تجاوز الـSLA.'
@@ -902,9 +960,10 @@ export function registerRevenueRoutes(app, {
     const workloadMap = new Map();
     for (const row of workloadRows) {
       const owner = clean(row.owner, 80) || 'غير مسند';
-      const current = workloadMap.get(owner) || { owner, open:0, overdue:0, escalated:0, inProgress:0, dueSoon:0, potentialValue:0 };
+      const current = workloadMap.get(owner) || { owner, open:0, blocked:0, overdue:0, escalated:0, inProgress:0, dueSoon:0, potentialValue:0 };
       current.open += 1;
       current.potentialValue += Math.max(0, number(row.potentialValue));
+      if (row.task.key === 'blocked') current.blocked += 1;
       if (row.task.key === 'overdue') current.overdue += 1;
       if (row.task.key === 'escalated') { current.overdue += 1; current.escalated += 1; }
       if (row.task.key === 'in_progress') current.inProgress += 1;
@@ -924,12 +983,13 @@ export function registerRevenueRoutes(app, {
         owners: taskWorkloadRows.filter(row => row.owner !== 'غير مسند').length,
         open: workloadRows.length,
         unassigned: workloadRows.filter(row => !row.owner).length,
+        blocked: workloadRows.filter(row => row.task.key === 'blocked').length,
         overdue: workloadRows.filter(row => row.task.overdue).length
       }
     };
 
     const routingOwners = taskWorkloadRows
-      .filter(row => row.owner !== 'غير مسند')
+      .filter(row => row.owner !== 'غير مسند' && row.blocked === 0)
       .map(row => ({
         owner: row.owner,
         loadScore: row.open + (row.inProgress * 1.5) + (row.overdue * 4) + (row.escalated * 6) + (row.dueSoon * 2),
@@ -937,6 +997,7 @@ export function registerRevenueRoutes(app, {
         inProgress: row.inProgress,
         overdue: row.overdue,
         escalated: row.escalated,
+        blocked: row.blocked,
         dueSoon: row.dueSoon
       }))
       .sort((a,b) => a.loadScore - b.loadScore || a.open - b.open || a.overdue - b.overdue || a.owner.localeCompare(b.owner, 'ar'));
@@ -968,6 +1029,7 @@ export function registerRevenueRoutes(app, {
       availableOwners: routingOwners.map(row => ({
         owner: row.owner,
         open: row.open,
+        blocked: row.blocked,
         inProgress: row.inProgress,
         overdue: row.overdue,
         escalated: row.escalated,
@@ -976,6 +1038,7 @@ export function registerRevenueRoutes(app, {
       })),
       recommendations: routingRecommendations,
       unassignedCount: workloadRows.filter(item => !item.owner).length,
+      blockedCount: workloadRows.filter(item => item.task.key === 'blocked').length,
       note: routingOwners.length
         ? 'الاقتراحات مرتبة باستخدام عبء العمل الحالي فقط؛ لا يتم نقل أو تعيين أي مهمة تلقائيًا.'
         : 'لا يوجد مسؤول نشط معروف من المهام الحالية لتوليد اقتراح توزيع.'
@@ -1206,7 +1269,8 @@ export function registerRevenueRoutes(app, {
         inProgressTasks: taskRows.filter(item => item.key === 'in_progress').length,
         overdueTasks: taskRows.filter(item => item.key === 'overdue' || item.key === 'escalated').length,
         escalatedTasks: taskRows.filter(item => item.key === 'escalated').length,
-        unassignedTasks: taskRows.filter(item => item.key === 'unassigned').length
+        unassignedTasks: taskRows.filter(item => item.key === 'unassigned').length,
+        blockedTasks: taskRows.filter(item => item.key === 'blocked').length
       },
       recent,
       taskBoard,
