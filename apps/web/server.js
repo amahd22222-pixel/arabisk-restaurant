@@ -72,7 +72,12 @@ function smartMeta(product,snapshot){
 const withMediaUrls=(product,snapshot=smartSnapshot())=>({...product,imageUrl:product.imageKey&&storageReady?presign('GET',product.imageKey,900):(product.imageUrl||''),videoUrl:product.videoKey&&storageReady?presign('GET',product.videoKey,900):'',smart:smartMeta(product,snapshot)});
 
 async function restoreState(){ if(!storageReady) return; const saved=await readJson(STATE_KEY,null); if(!saved||typeof saved!=='object') return; if(saved.menuVersion===MENU_VERSION&&Array.isArray(saved.products)&&saved.products.length) products.splice(0,products.length,...saved.products); if(Array.isArray(saved.orders)) orders.splice(0,orders.length,...saved.orders); if(Array.isArray(saved.customers)) customers.splice(0,customers.length,...saved.customers); if(Array.isArray(saved.reservations)) reservations.splice(0,reservations.length,...saved.reservations); }
-const persistState=()=>void writeJson(STATE_KEY,{menuVersion:MENU_VERSION,products,orders,customers,reservations});
+let persistQueue=Promise.resolve();
+const persistState=()=>{
+  const snapshot=structuredClone({menuVersion:MENU_VERSION,products,orders,customers,reservations});
+  persistQueue=persistQueue.catch(()=>{}).then(()=>writeJson(STATE_KEY,snapshot));
+  return persistQueue;
+};
 const restoreCategories=registerCategoryRoutes(app,{categories,products,storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey,isAdminApiKeyValid});
 const restoreStudio=registerStudioRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey});
 const restoreExperiences=registerExperienceRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey,isAdminApiKeyValid});

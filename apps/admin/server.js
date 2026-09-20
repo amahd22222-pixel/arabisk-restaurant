@@ -123,9 +123,10 @@ function unauthorized(res, message = 'Authentication required') {
 function safePath(urlPath) {
   let clean;
   try { clean = decodeURIComponent((urlPath || '/').split('?')[0]); } catch { return null; }
+  const root = path.resolve(dist);
   const relative = clean.replace(/^\/+/, '');
-  const target = path.resolve(dist, relative);
-  return target.startsWith(path.resolve(dist)) ? target : null;
+  const target = path.resolve(root, relative);
+  return target === root || target.startsWith(root + path.sep) ? target : null;
 }
 
 function sendFile(res, filePath) {
