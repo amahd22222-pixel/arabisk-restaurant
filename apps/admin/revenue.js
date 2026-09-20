@@ -5,6 +5,35 @@ const revPriority=(key,label)=>`<span class="rev-priority ${revEsc(key)}">${revE
 let revenueTaskBoardData={};
 const taskBoardLabel={overdue:'متأخرة',escalated:'تصعيد مطلوب',in_progress:'قيد التنفيذ',today:'اليوم',doneToday:'أُنجزت اليوم'};
 const taskBoardTime=iso=>iso?new Date(iso).toLocaleString('ar-AE',{dateStyle:'short',timeStyle:'short'}):'بدون موعد';
+function renderRevenueActivityPanel(data){
+  const panel=document.querySelector('#revenue-activity-panel');
+  const title=document.querySelector('#revenue-activity-title');
+  const body=document.querySelector('#revenue-activity-body');
+  if(!panel||!title||!body)return;
+  title.textContent=data?.title||'سجل نشاط المهمة';
+  const items=Array.isArray(data?.activityLog)?data.activityLog:[];
+  const labels={
+    created:'تم إنشاء المهمة',
+    assigned:'تم تعيين المسؤول',
+    started:'بدأ التنفيذ',
+    sla_updated:'تم تحديث الـSLA',
+    task_updated:'تم تحديث المهمة',
+    outcome_recorded:'تم تسجيل النتيجة'
+  };
+  const detailText=item=>{
+    const d=item.details||{};
+    const parts=[];
+    if(d.owner)parts.push('المسؤول: '+d.owner);
+    if(d.dueAt)parts.push('الاستحقاق: '+taskBoardTime(d.dueAt));
+    if(d.outcome)parts.push('النتيجة: '+d.outcome);
+    if(d.revenue&&Number(d.revenue)>0)parts.push('الإيراد: '+revMoney(d.revenue));
+    if(d.orderId)parts.push('الطلب: '+d.orderId);
+    if(d.previousOwner&&d.previousOwner!==d.owner)parts.push('السابق: '+d.previousOwner);
+    return parts.join(' — ')||'تغيير تشغيلي مسجل.';
+  };
+  body.innerHTML=items.map(item=>'<article class="activity-item"><div class="activity-dot"></div><div><strong>'+revEsc(labels[item.type]||item.type)+'</strong><small>'+revEsc(item.actor||'لوحة الإيرادات')+' — '+revEsc(taskBoardTime(item.createdAt))+'</small><p>'+revEsc(detailText(item))+'</p></div></article>').join('')||'<div class="empty">لا يوجد سجل نشاط محفوظ لهذه المهمة حتى الآن.</div>';
+  panel.hidden=false;
+}
 function renderRevenueTaskBoard(){
   const board=revenueTaskBoardData||{};
   const ownerFilter=document.querySelector('#revenue-task-owner-filter');
@@ -27,11 +56,11 @@ function renderRevenueTaskBoard(){
       const owner=row.owner||'غير محدد';
       const due=taskBoardTime(row.dueAt);
       const late=task.overdueHours>0?' — تأخير '+Number(task.overdueHours)+'س':'';
-      const controls=row.status==='draft'
+      const controls=(row.status==='draft'
         ? (task.key==='unassigned'
           ? '<button class="small-action task-board-assign" data-task-action="assign" data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(row.owner||'')+'">تعيين</button>'
           : '<button class="small-action task-board-start" data-task-action="start" data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(row.owner||'')+'" data-due-at="'+revEsc(row.dueAt||'')+'">بدء التنفيذ</button><button class="small-action task-board-complete" data-task-action="complete" data-id="'+revEsc(row.id)+'">تسجيل النتيجة</button>')
-        : '<span class="status on">مغلقة</span>';
+        : '<span class="status on">مغلقة</span>')+'<button class="small-action task-board-history" data-task-action="history" data-id="'+revEsc(row.id)+'">سجل النشاط</button>';
       return '<article class="task-card '+revEsc(task.key||key)+'"><div class="task-card-top"><strong>'+revEsc(row.title)+'</strong><span>'+revEsc(task.label||taskBoardLabel[key]||key)+'</span></div><p>'+revEsc(row.message||row.executionNote||'مهمة تشغيلية في مركز الإيرادات.')+'</p><small>المسؤول: '+revEsc(owner)+'</small><small>الاستحقاق: '+revEsc(due+late)+'</small><div class="task-card-actions">'+controls+'</div></article>';
     }).join('')||'<div class="empty task-empty">لا توجد مهام في هذا القسم.</div>';
     const countNode=document.querySelector('#task-board-'+(key==='inProgress'?'inprogress':key==='doneToday'?'done':key)+'-count');
@@ -145,6 +174,13 @@ document.querySelector('#revenue-task-board')?.addEventListener('click',async ev
   const id=button.dataset.id;
   button.disabled=true;
   try{
+    if(action==='history'){
+      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/activity',{cache:'no-store'});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.message||'تعذر تحميل سجل النشاط.');
+      renderRevenueActivityPanel(data);
+      return;
+    }
     if(action==='assign'){
       const owner=prompt('اكتب اسم المسؤول أو الدور:',button.dataset.owner||'');
       if(owner===null)return;
@@ -178,6 +214,7 @@ document.querySelector('#revenue-task-board')?.addEventListener('click',async ev
     await loadRevenue();
   }catch(error){alert(error.message)}finally{button.disabled=false;}
 });
+document.querySelector('#revenue-activity-close')?.addEventListener('click',()=>{const panel=document.querySelector('#revenue-activity-panel');if(panel)panel.hidden=true;});
 document.querySelector('#revenue-task-owner-filter')?.addEventListener('change',renderRevenueTaskBoard);
 document.querySelector('#revenue-task-status-filter')?.addEventListener('change',renderRevenueTaskBoard);
 document.querySelector('#revenue-refresh')?.addEventListener('click',()=>void loadRevenue());
