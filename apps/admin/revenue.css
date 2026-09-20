@@ -28,6 +28,7 @@
 .revenue-value-realization{margin-top:18px}.value-realization-head,.value-realization-kpis{display:flex;gap:12px;align-items:stretch;flex-wrap:wrap}.value-realization-head{justify-content:space-between;margin-bottom:12px}.value-realization-head h3{margin:0}.value-realization-head span{color:var(--muted,#777);font-size:13px}.value-realization-kpis article{flex:1 1 150px;padding:14px;border:1px solid var(--line,#e6e6e6);border-radius:12px;background:var(--surface,#fff)}.value-realization-kpis article span{display:block;font-size:12px;color:var(--muted,#777);margin-bottom:6px}.value-realization-kpis article b{font-size:20px}.revenue-value-realization .table-wrap{margin-top:14px}.revenue-value-realization table{min-width:980px}
 @media (max-width:1100px){.value-realization-kpis article{flex-basis:30%}}
 
+#revenue .revenue-alerts,
 /* Internal revenue operations are kept active in the system but hidden from the admin-facing revenue view. */
 #revenue .revenue-funnel,
 #revenue .revenue-forecast,
