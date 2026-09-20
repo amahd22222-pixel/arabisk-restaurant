@@ -524,6 +524,22 @@ document.querySelector('#revenue-campaigns-body')?.addEventListener('click',asyn
     }catch(error){alert(error.message)}finally{taskButton.disabled=false;}
     return;
   }
+  const blockButton=event.target.closest('[data-campaign-block]');
+  if(blockButton){
+    const reason=prompt('اكتب سبب العائق التشغيلي:','');
+    if(reason===null)return;
+    if(!reason.trim()){alert('يجب تسجيل سبب العائق.');return;}
+    blockButton.disabled=true;
+    try{
+      const row=revenueTaskById(blockButton.dataset.id)||{};
+      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(blockButton.dataset.id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:'blocked',blockerReason:reason.trim(),notes:row.taskNotes||''})});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.message||'تعذر حجب المهمة.');
+      await loadRevenue();
+    }catch(error){alert(error.message)}finally{blockButton.disabled=false;}
+    return;
+  }
+
   const startButton=event.target.closest('[data-campaign-start]');
   if(startButton){
     startButton.disabled=true;
