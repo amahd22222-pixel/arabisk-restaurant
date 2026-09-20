@@ -242,7 +242,7 @@ async function loadRevenue(){
     const leakRate=document.querySelector('#rev-leak-rate');if(leakRate)leakRate.textContent=health.biggestLeak?.lossRate!==null&&health.biggestLeak?.lossRate!==undefined?`${Number(health.biggestLeak.lossRate).toFixed(1)}% تسريب`:'';
     const set=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
     set('#rev-menu',f.menuViews);set('#rev-item',f.itemViews);set('#rev-cart',f.addToCart);set('#rev-checkout',f.checkoutStarted);set('#rev-orders',f.completedOrders);
-    set('#rev-abandoned',data.counts?.abandonedCarts);set('#rev-inactive',data.counts?.inactiveCustomers);set('#rev-returning',data.counts?.returnCustomers);set('#rev-reservations',data.counts?.upcomingReservations);set('#rev-actions-count',data.counts?.topActions);
+    set('#rev-abandoned',data.counts?.abandonedCarts);set('#rev-inactive',data.counts?.inactiveCustomers);set('#rev-returning',data.counts?.returnCustomers);set('#rev-product-interest',data.counts?.productInterest);set('#rev-reservations',data.counts?.upcomingReservations);set('#rev-actions-count',data.counts?.topActions);
     const potential=document.querySelector('#rev-potential');if(potential)potential.textContent=revMoney(data.potentialAbandonedRevenue);
 
     const alerts=data.alerts||{};
@@ -293,6 +293,10 @@ async function loadRevenue(){
 
     const inactive=data.opportunities?.inactiveCustomers||[];
     document.querySelector('#revenue-inactive-body').innerHTML=inactive.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name||'عميل')}</strong><small dir="ltr">${revEsc(row.phone||'')}</small></td><td>${Number(row.orderCount||0)}</td><td>${Number(row.daysSinceLastOrder||0)} يوم</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد فرص إعادة تنشيط حاليًا.</td></tr>';
+
+    const productInterest=data.opportunities?.productInterest||[];
+    const productInterestBody=document.querySelector('#revenue-product-interest-body');
+    if(productInterestBody)productInterestBody.innerHTML=productInterest.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name||row.productId)}</strong><small>${revEsc(row.productId)}</small></td><td>${Number(row.views||0)}</td><td>${Number(row.adds||0)}</td><td>${Number(row.addRate||0).toFixed(1)}%</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد منتجات عليها فجوة اهتمام مؤهلة حاليًا.</td></tr>';
 
     const upcoming=data.opportunities?.upcomingReservations||[];
     document.querySelector('#revenue-reservation-body').innerHTML=upcoming.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name)}</strong><small dir="ltr">${revEsc(row.phone)}</small></td><td>${revEsc(row.date)}<small>${revEsc(row.time)}</small></td><td>${Number(row.guests||0)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد حجوزات خلال 48 ساعة.</td></tr>';
