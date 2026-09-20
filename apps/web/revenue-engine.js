@@ -56,24 +56,6 @@ const taskWorkflow = (campaign, now = Date.now()) => {
   }
   const dueAt = Date.parse(campaign.dueAt || '');
   const dueHoursRemaining = Number.isFinite(dueAt) ? Math.round(((dueAt - now) / 3600000) * 10) / 10 : null;
-  if (Number.isFinite(dueAt) && dueAt < now) {
-    const overdueHours = Math.max(0, Math.floor((now - dueAt) / 3600000));
-    const escalated = overdueHours >= 24;
-    return {
-      key: escalated ? 'escalated' : 'overdue',
-      label: escalated ? 'تصعيد مطلوب' : 'متأخرة',
-      overdue:true,
-      escalated,
-      overdueHours,
-      dueHoursRemaining,
-      riskKey:'high',
-      riskLabel:'مخاطرة عالية',
-      riskScore:escalated ? 100 : 90,
-      nextAction: escalated
-        ? 'راجع المسؤول فورًا، حدّث الحالة وسجّل الإجراء المتخذ.'
-        : 'حدّث الـSLA أو ابدأ التنفيذ وسجّل النتيجة.'
-    };
-  }
   const state = clean(campaign.workflowStatus, 30);
   if (state === 'blocked') {
     return {
@@ -90,6 +72,24 @@ const taskWorkflow = (campaign, now = Date.now()) => {
       riskLabel:'مخاطرة عالية',
       riskScore:85,
       nextAction:'حل العائق المسجل، ثم أعد المهمة إلى مسندة أو قيد التنفيذ.'
+    };
+  }
+  if (Number.isFinite(dueAt) && dueAt < now) {
+    const overdueHours = Math.max(0, Math.floor((now - dueAt) / 3600000));
+    const escalated = overdueHours >= 24;
+    return {
+      key: escalated ? 'escalated' : 'overdue',
+      label: escalated ? 'تصعيد مطلوب' : 'متأخرة',
+      overdue:true,
+      escalated,
+      overdueHours,
+      dueHoursRemaining,
+      riskKey:'high',
+      riskLabel:'مخاطرة عالية',
+      riskScore:escalated ? 100 : 90,
+      nextAction: escalated
+        ? 'راجع المسؤول فورًا، حدّث الحالة وسجّل الإجراء المتخذ.'
+        : 'حدّث الـSLA أو ابدأ التنفيذ وسجّل النتيجة.'
     };
   }
   if (state === 'in_progress') return {
@@ -892,7 +892,7 @@ export function registerRevenueRoutes(app, {
       blocked: taskItems.filter(item => item.status === 'draft' && item.task.key === 'blocked'),
       overdue: taskItems.filter(item => item.status === 'draft' && item.task.overdue),
       inProgress: taskItems.filter(item => item.status === 'draft' && !item.task.overdue && item.task.key === 'in_progress'),
-      today: taskItems.filter(item => item.status === 'draft' && !item.task.overdue && item.task.key !== 'in_progress' && dayKey(item.dueAt) === todayKey),
+      today: taskItems.filter(item => item.status === 'draft' && !item.task.overdue && item.task.key !== 'in_progress' && item.task.key !== 'blocked' && dayKey(item.dueAt) === todayKey),
       doneToday: taskItems.filter(item => item.status !== 'draft' && dayKey(item.completedAt || item.updatedAt) === todayKey)
     };
     taskBoard.counts = {
@@ -989,7 +989,7 @@ export function registerRevenueRoutes(app, {
     };
 
     const routingOwners = taskWorkloadRows
-      .filter(row => row.owner !== 'غير مسند' && row.blocked === 0)
+      .filter(row => row.owner !== 'غير مسند')
       .map(row => ({
         owner: row.owner,
         loadScore: row.open + (row.inProgress * 1.5) + (row.overdue * 4) + (row.escalated * 6) + (row.dueSoon * 2),
