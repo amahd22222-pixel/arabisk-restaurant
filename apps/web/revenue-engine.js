@@ -1648,6 +1648,7 @@ export function registerRevenueRoutes(app, {
       ok: true,
       reused: Boolean(result.reused),
       campaignId: campaign.id,
+      recoveryToken: campaign.recoveryToken,
       recoveryPath: campaign.recoveryPath,
       recoveryExpiresAt: campaign.recoveryExpiresAt,
       cartValue: campaign.potentialValue
