@@ -465,6 +465,18 @@ export function registerRevenueRoutes(app, {
     };
   }
 
+  function appendCampaignActivity(campaign, type, details = {}, actor = 'لوحة الإيرادات') {
+    if (!Array.isArray(campaign.activityLog)) campaign.activityLog = [];
+    campaign.activityLog.push({
+      id: crypto.randomUUID(),
+      type: clean(type, 40),
+      actor: clean(actor, 80) || 'لوحة الإيرادات',
+      details: Object.fromEntries(Object.entries(details || {}).slice(0, 10).map(([key, value]) => [clean(key, 40), clean(value, 180)])),
+      createdAt: new Date().toISOString()
+    });
+    if (campaign.activityLog.length > 50) campaign.activityLog.splice(0, campaign.activityLog.length - 50);
+  }
+
   function createCampaignDraft(input = {}) {
     const type = clean(input.type, 40);
     const reference = clean(input.reference, 120);
@@ -515,9 +527,11 @@ export function registerRevenueRoutes(app, {
       startedAt: '',
       completedAt: '',
       taskNotes: '',
+      activityLog: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+    appendCampaignActivity(draft, 'created', { title: draft.title, sourceType: draft.sourceType, sourceKey: draft.sourceKey });
     campaigns.push(draft);
     if (campaigns.length > MAX_CAMPAIGNS) campaigns.splice(0, campaigns.length - MAX_CAMPAIGNS);
     void persistRevenue();
@@ -532,6 +546,7 @@ export function registerRevenueRoutes(app, {
     const orderId = clean(input.orderId, 30);
     const linkedOrder = orderId ? orders.find(order => order.id === orderId) : null;
     const manualRevenue = Math.max(0, number(input.revenue));
+    const actor = clean(input.actor, 80);
     campaign.status = outcome;
     campaign.workflowStatus = 'done';
     campaign.completedAt = new Date().toISOString();
@@ -550,6 +565,12 @@ export function registerRevenueRoutes(app, {
         }
       : null;
     campaign.updatedAt = new Date().toISOString();
+    appendCampaignActivity(campaign, 'outcome_recorded', {
+      outcome,
+      revenue: campaign.resultRevenue,
+      orderId,
+      matchedOrder: campaign.attribution?.matchedOrder ? 'yes' : 'no'
+    }, actor);
     void persistRevenue();
     return campaign;
   }
@@ -561,7 +582,11 @@ export function registerRevenueRoutes(app, {
     if (!new Set(['unassigned', 'assigned', 'in_progress']).has(requestedStatus)) return null;
     const owner = clean(input.owner, 80);
     const dueAt = clean(input.dueAt, 40);
+    const actor = clean(input.actor, 80);
     if (dueAt && !Number.isFinite(Date.parse(dueAt))) return null;
+    const previousOwner = clean(campaign.owner, 80);
+    const previousDueAt = clean(campaign.dueAt, 40);
+    const previousStatus = clean(campaign.workflowStatus, 30);
     const now = new Date().toISOString();
     campaign.owner = owner;
     campaign.dueAt = dueAt;
@@ -570,6 +595,21 @@ export function registerRevenueRoutes(app, {
     campaign.assignedAt = requestedStatus === 'unassigned' ? '' : (campaign.assignedAt || now);
     campaign.startedAt = requestedStatus === 'in_progress' ? (campaign.startedAt || now) : campaign.startedAt || '';
     campaign.updatedAt = now;
+    const activityType = requestedStatus === 'in_progress' && previousStatus !== 'in_progress'
+      ? 'started'
+      : previousOwner !== owner
+        ? 'assigned'
+        : previousDueAt !== dueAt
+          ? 'sla_updated'
+          : 'task_updated';
+    appendCampaignActivity(campaign, activityType, {
+      owner,
+      dueAt,
+      workflowStatus: requestedStatus,
+      previousOwner,
+      previousDueAt,
+      previousStatus
+    }, actor);
     void persistRevenue();
     return { ...campaign, task: taskWorkflow(campaign) };
   }
@@ -751,6 +791,16 @@ export function registerRevenueRoutes(app, {
     const updated = updateCampaignTask(req.params.id, req.body || {});
     if (!updated) return res.status(400).json({ message: 'Invalid campaign task.' });
     return res.json(updated);
+  });
+
+  app.get('/api/revenue/campaigns/:id/activity', requireAdminApiKey, (req, res) => {
+    const campaign = campaigns.find(item => item.id === clean(req.params.id, 40));
+    if (!campaign) return res.status(404).json({ message: 'Campaign not found.' });
+    return res.json({
+      id: campaign.id,
+      title: campaign.title,
+      activityLog: Array.isArray(campaign.activityLog) ? campaign.activityLog.slice().reverse() : []
+    });
   });
 
   app.post('/api/events', (req, res) => {
