@@ -95,6 +95,23 @@ export function registerRevenueRoutes(app, {
       completedOrders: uniqueSessions(recent, 'order_completed')
     };
 
+    const funnelPairs = [
+      ['menu_view', 'item_view', 'المنيو → المنتج'],
+      ['item_view', 'add_to_cart', 'المنتج → السلة'],
+      ['add_to_cart', 'checkout_started', 'السلة → الدفع'],
+      ['checkout_started', 'order_completed', 'الدفع → الطلب']
+    ];
+    const funnelRates = funnelPairs.map(([from,to,label]) => {
+      const fromCount = uniqueSessions(recent, from);
+      const toCount = uniqueSessions(recent, to);
+      const rate = fromCount ? Math.round((Math.min(100, (toCount / fromCount) * 100)) * 10) / 10 : null;
+      return { from, to, label, fromCount, toCount, rate, lossRate: rate === null ? null : Math.round((100 - rate) * 10) / 10 };
+    });
+    const measuredRates = funnelRates.filter(item => item.rate !== null);
+    const healthScore = measuredRates.length ? Math.round(measuredRates.reduce((sum, item) => sum + item.rate, 0) / measuredRates.length) : 0;
+    const biggestLeak = [...funnelRates].filter(item => item.lossRate !== null).sort((a,b) => b.lossRate - a.lossRate)[0] || null;
+    const healthLabel = healthScore >= 70 ? 'قوي' : healthScore >= 40 ? 'متوسط' : measuredRates.length ? 'يحتاج متابعة' : 'بانتظار البيانات';
+
     const bySession = new Map();
     for (const row of recent) {
       if (!row.sessionId) continue;
@@ -251,6 +268,7 @@ export function registerRevenueRoutes(app, {
       },
       potentialAbandonedRevenue: abandoned.reduce((sum, item) => sum + number(item.cartValue), 0),
       campaigns: campaignSummary(),
+      health: { score: healthScore, label: healthLabel, biggestLeak, funnelRates },
 
       measurement: {
         intentSessions,
