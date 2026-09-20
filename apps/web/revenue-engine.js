@@ -158,7 +158,8 @@ export function registerRevenueRoutes(app, {
   requireAdminApiKey,
   customers,
   reservations,
-  orders = []
+  orders = [],
+  products = []
 }) {
   const events = [];
   const campaigns = [];
@@ -314,6 +315,35 @@ export function registerRevenueRoutes(app, {
       .sort((a, b) => b.priorityScore - a.priorityScore || b.daysSinceLastOrder - a.daysSinceLastOrder)
       .slice(0, 50);
 
+    const productInterest = [...new Set(recent.map(row => row.productId).filter(Boolean))]
+      .map(productId => {
+        const views = new Set(recent.filter(row => row.eventName === 'item_view' && row.productId === productId).map(row => row.sessionId || row.id)).size;
+        const adds = new Set(recent.filter(row => row.eventName === 'add_to_cart' && row.productId === productId).map(row => row.sessionId || row.id)).size;
+        if (views < 5) return null;
+        const addRate = views ? Math.round((adds / views) * 1000) / 10 : 0;
+        if (addRate >= 35) return null;
+        const gapRate = Math.max(0, 100 - addRate);
+        const score = clamp(40 + Math.min(35, Math.round(gapRate * 0.35)) + Math.min(25, Math.round(views / 2)));
+        const p = priority(score);
+        const product = products.find(item => item.id === productId) || {};
+        return {
+          productId,
+          name: clean(product.nameAr || product.nameEn || productId, 100),
+          views,
+          adds,
+          addRate,
+          priorityScore: score,
+          priority: p.label,
+          priorityKey: p.key,
+          reason: \`المنتج شوهد \${views} مرة في جلسات مختلفة، لكن الإضافة للسلة حدثت في \${adds} جلسات فقط.\`,
+          recommendedAction: 'راجع السعر والصورة والوصف وطريقة تقديم المنتج، ثم قِس التفاعل مرة أخرى.',
+          potentialValue: 0
+        };
+      })
+      .filter(Boolean)
+      .sort((a,b) => b.priorityScore - a.priorityScore || b.views - a.views)
+      .slice(0, 50);
+
     const returnCustomers = customers
       .map(customer => {
         const customerOrders = orders
@@ -412,6 +442,11 @@ export function registerRevenueRoutes(app, {
         type: 'abandoned_cart', priorityScore: item.priorityScore, priority: item.priority, priorityKey: item.priorityKey,
         title: `سلة متروكة بقيمة ${Math.round(number(item.cartValue))} AED`, reason: item.reason,
         recommendedAction: item.recommendedAction, potentialValue: item.potentialValue, reference: item.sessionId
+      })),
+      ...productInterest.map(item => ({
+        type: 'product_interest', priorityScore: item.priorityScore, priority: item.priority, priorityKey: item.priorityKey,
+        title: \`اهتمام غير مكتمل: \${clean(item.name || item.productId, 70)}\`, reason: item.reason,
+        recommendedAction: item.recommendedAction, potentialValue: item.potentialValue, reference: item.productId
       })),
       ...returnCustomers.map(item => ({
         type: 'returning_customer', priorityScore: item.priorityScore, priority: item.priority, priorityKey: item.priorityKey,
@@ -612,10 +647,10 @@ export function registerRevenueRoutes(app, {
       generatedAt: new Date().toISOString(),
       windowDays: 30,
       funnel,
-      opportunities: { abandonedCarts: abandoned, inactiveCustomers, returnCustomers, upcomingReservations },
+      opportunities: { abandonedCarts: abandoned, inactiveCustomers, returnCustomers, productInterest, upcomingReservations },
       topActions,
       counts: {
-        abandonedCarts: abandoned.length, inactiveCustomers: inactiveCustomers.length, returnCustomers: returnCustomers.length,
+        abandonedCarts: abandoned.length, inactiveCustomers: inactiveCustomers.length, returnCustomers: returnCustomers.length, productInterest: productInterest.length,
         upcomingReservations: upcomingReservations.length, topActions: topActions.length
       },
       potentialAbandonedRevenue: abandoned.reduce((sum, item) => sum + number(item.cartValue), 0),
@@ -686,7 +721,9 @@ export function registerRevenueRoutes(app, {
             ? `مسودة إعادة تنشيط للعميل: ${clean(action.title.replace('إعادة تنشيط: ', ''), 70)}.`
             : type === 'returning_customer'
               ? clean(action.recommendedAction, 500)
-              : `مسودة اقتراح Pre-order للحجز: ${clean(action.title.replace('حجز قريب: ', ''), 70)}.`,
+              : type === 'product_interest'
+                ? clean(action.recommendedAction, 500)
+                : `مسودة اقتراح Pre-order للحجز: ${clean(action.title.replace('حجز قريب: ', ''), 70)}.`,
       status: 'draft',
       consentRequired: true,
       sendable: false,
