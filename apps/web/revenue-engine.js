@@ -192,6 +192,32 @@ export function registerRevenueRoutes(app, {
       .sort((a, b) => b.priorityScore - a.priorityScore || a.at - b.at)
       .slice(0, 50);
 
+    const intentSessions = [...bySession.keys()].length;
+    const intentConversions = [];
+    for (const [sessionId] of bySession) {
+      const rows = recent.filter(row => row.sessionId === sessionId).sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+      let intent = null;
+      for (const row of rows) {
+        if (row.eventName === 'add_to_cart' || row.eventName === 'checkout_started') {
+          intent = { at: row.createdAt, value: Math.max(number(row.cartValue), number(intent?.value)) };
+        }
+        if (row.eventName === 'order_completed' && intent) {
+          const gap = Date.parse(row.createdAt) - Date.parse(intent.at);
+          if (Number.isFinite(gap) && gap >= 60 * 1000 && gap <= 72 * 60 * 60 * 1000) {
+            intentConversions.push({
+              sessionId,
+              orderId: row.orderId,
+              orderValue: number(row.orderValue),
+              minutesToOrder: Math.floor(gap / 60000)
+            });
+            break;
+          }
+        }
+      }
+    }
+    const intentConversionRate = intentSessions ? Math.round((intentConversions.length / intentSessions) * 1000) / 10 : 0;
+    const attributedIntentRevenue = Math.round(intentConversions.reduce((sum, row) => sum + number(row.orderValue), 0) * 100) / 100;
+
     const topActions = [
       ...abandoned.map(item => ({
         type: 'abandoned_cart', priorityScore: item.priorityScore, priority: item.priority, priorityKey: item.priorityKey,
@@ -220,7 +246,14 @@ export function registerRevenueRoutes(app, {
         abandonedCarts: abandoned.length, inactiveCustomers: inactiveCustomers.length,
         upcomingReservations: upcomingReservations.length, topActions: topActions.length
       },
-      potentialAbandonedRevenue: abandoned.reduce((sum, item) => sum + number(item.cartValue), 0)
+      potentialAbandonedRevenue: abandoned.reduce((sum, item) => sum + number(item.cartValue), 0),
+      measurement: {
+        intentSessions,
+        intentConversions: intentConversions.length,
+        intentConversionRate,
+        attributedIntentRevenue,
+        attributionNote: 'الإيراد مرتبط بطلب حدث بعد نية شراء داخل الجلسة، وليس إثباتًا سببيًا بأن الفرصة أنشأت الطلب.'
+      }
     };
   }
 
