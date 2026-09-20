@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 
 const REVENUE_STATE_KEY = 'data/arabisk-revenue-v1.json';
 const MAX_EVENTS = 8000;
+const MAX_CAMPAIGNS = 1000;
 const ALLOWED_EVENTS = new Set([
   'menu_view',
   'item_view',
@@ -33,17 +34,19 @@ export function registerRevenueRoutes(app, {
   reservations
 }) {
   const events = [];
+  const campaigns = [];
   let persistQueue = Promise.resolve();
 
   async function restoreRevenue() {
     if (!storageReady) return;
     const saved = await readJson(REVENUE_STATE_KEY, null);
     if (saved && Array.isArray(saved.events)) events.splice(0, events.length, ...saved.events.slice(-MAX_EVENTS));
+    if (saved && Array.isArray(saved.campaigns)) campaigns.splice(0, campaigns.length, ...saved.campaigns.slice(-MAX_CAMPAIGNS));
   }
 
   function persistRevenue() {
     if (!storageReady) return Promise.resolve(false);
-    const snapshot = { version: 1, events: events.slice(-MAX_EVENTS) };
+    const snapshot = { version: 2, events: events.slice(-MAX_EVENTS), campaigns: campaigns.slice(-MAX_CAMPAIGNS) };
     persistQueue = persistQueue.catch(() => {}).then(() => writeJson(REVENUE_STATE_KEY, snapshot));
     return persistQueue;
   }
@@ -247,6 +250,8 @@ export function registerRevenueRoutes(app, {
         upcomingReservations: upcomingReservations.length, topActions: topActions.length
       },
       potentialAbandonedRevenue: abandoned.reduce((sum, item) => sum + number(item.cartValue), 0),
+      campaigns: campaignSummary(),
+
       measurement: {
         intentSessions,
         intentConversions: intentConversions.length,
@@ -257,6 +262,76 @@ export function registerRevenueRoutes(app, {
     };
   }
 
+  function createCampaignDraft(input = {}) {
+    const type = clean(input.type, 40);
+    const reference = clean(input.reference, 120);
+    const summary = buildSummary();
+    const action = (summary.topActions || []).find(item => item.type === type && item.reference === reference);
+    if (!action) return null;
+
+    const draft = {
+      id: `C${crypto.randomUUID().replace(/-/g, '').slice(0, 10).toUpperCase()}`,
+      type,
+      reference,
+      title: action.title,
+      message: type === 'abandoned_cart'
+        ? 'مسودة استرجاع سلة: راجع السلة المتروكة وحدد قناة التواصل المناسبة بعد التحقق من الموافقة.'
+        : type === 'inactive_customer'
+          ? `مسودة إعادة تنشيط للعميل: ${clean(action.title.replace('إعادة تنشيط: ', ''), 70)}.`
+          : `مسودة اقتراح Pre-order للحجز: ${clean(action.title.replace('حجز قريب: ', ''), 70)}.`,
+      status: 'draft',
+      consentRequired: true,
+      sendable: false,
+      executionNote: 'V1 لا يرسل الرسائل تلقائيًا. يجب تنفيذ التواصل خارج النظام فقط بعد التحقق من موافقة العميل.',
+      potentialValue: number(action.potentialValue),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    campaigns.push(draft);
+    if (campaigns.length > MAX_CAMPAIGNS) campaigns.splice(0, campaigns.length - MAX_CAMPAIGNS);
+    void persistRevenue();
+    return draft;
+  }
+
+  function updateCampaignOutcome(id, input = {}) {
+    const campaign = campaigns.find(item => item.id === clean(id, 40));
+    if (!campaign) return null;
+    const outcome = clean(input.outcome, 30);
+    if (!new Set(['executed', 'converted', 'ignored']).has(outcome)) return null;
+    campaign.status = outcome;
+    campaign.resultRevenue = Math.max(0, number(input.revenue));
+    campaign.orderId = clean(input.orderId, 30);
+    campaign.updatedAt = new Date().toISOString();
+    void persistRevenue();
+    return campaign;
+  }
+
+  function campaignSummary() {
+    const recent = [...campaigns].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 30);
+    return {
+      counts: {
+        drafts: campaigns.filter(item => item.status === 'draft').length,
+        executed: campaigns.filter(item => item.status === 'executed').length,
+        converted: campaigns.filter(item => item.status === 'converted').length,
+        ignored: campaigns.filter(item => item.status === 'ignored').length,
+        measuredRevenue: campaigns.reduce((sum, item) => sum + number(item.resultRevenue), 0)
+      },
+      recent
+    };
+  }
+
+  app.post('/api/revenue/campaign-drafts', requireAdminApiKey, (req, res) => {
+    const draft = createCampaignDraft(req.body || {});
+    if (!draft) return res.status(404).json({ message: 'Revenue opportunity not found.' });
+    return res.status(201).json(draft);
+  });
+
+  app.post('/api/revenue/campaigns/:id/outcome', requireAdminApiKey, (req, res) => {
+    const updated = updateCampaignOutcome(req.params.id, req.body || {});
+    if (!updated) return res.status(400).json({ message: 'Invalid campaign or outcome.' });
+    return res.json(updated);
+  });
+
   app.post('/api/events', (req, res) => {
     const event = recordEvent(req.body || {});
     if (!event) return res.status(400).json({ message: 'Unsupported event.' });
@@ -265,5 +340,5 @@ export function registerRevenueRoutes(app, {
 
   app.get('/api/revenue/summary', requireAdminApiKey, (_req, res) => res.json(buildSummary()));
 
-  return { restoreRevenue, recordEvent, buildSummary };
+  return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, updateCampaignOutcome, campaignSummary };
 }
