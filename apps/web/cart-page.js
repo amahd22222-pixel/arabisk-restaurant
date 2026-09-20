@@ -1,3 +1,6 @@
+(() => {
+'use strict';
+
 const CHECKOUT_KEY='arabisk-checkout-v3';
 const LAST_ORDER_KEY='arabisk-last-order-v1';
 
@@ -139,3 +142,4 @@ document.querySelector('#track-close').addEventListener('click',closeTracking);
 document.querySelector('#cart-success').addEventListener('click',function(event){if(event.target.id==='cart-success')closeModal('#cart-success');});
 document.addEventListener('keydown',function(event){if(event.key==='Escape'){closeModal('#cart-success');closeTracking();}});
 syncCheckoutFields();render();
+})();
