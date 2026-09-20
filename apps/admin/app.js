@@ -78,6 +78,8 @@ async function openCustomer360(customerId){
 }
 function closeCustomer360(){const modal=$('#customer360-modal');if(!modal)return;modal.classList.remove('show');modal.setAttribute('aria-hidden','true');}
 document.addEventListener('click',event=>{const segmentButton=event.target.closest('[data-segment-key]');if(segmentButton){const segment=customerSegments.find(item=>item.key===segmentButton.dataset.segmentKey);renderCustomerSegmentMembers(segment);}});
+document.querySelector('#customer-segments-refresh')?.addEventListener('click',()=>void loadCustomerSegments());
+document.querySelector('#customer-segment-close')?.addEventListener('click',()=>{const wrap=$('#customer-segment-members');if(wrap)wrap.hidden=true;});
 document.addEventListener('click',event=>{
   const button=event.target.closest('[data-customer-360]');
   if(button)void openCustomer360(button.dataset.customer360);
