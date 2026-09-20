@@ -16,6 +16,13 @@ const number = (value, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 };
+const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, Math.round(number(value))));
+const priority = score => score >= 75 ? { label: 'عالية', key: 'high' } : score >= 50 ? { label: 'متوسطة', key: 'medium' } : { label: 'منخفضة', key: 'low' };
+const ageMinutes = (now, iso) => {
+  const age = now - Date.parse(iso || '');
+  return Number.isFinite(age) ? Math.max(0, Math.floor(age / 60000)) : 0;
+};
+const ageLabel = minutes => minutes < 60 ? `${minutes} دقيقة` : minutes < 1440 ? `${Math.floor(minutes / 60)} ساعة` : `${Math.floor(minutes / 1440)} يوم`;
 
 export function registerRevenueRoutes(app, {
   readJson,
@@ -31,9 +38,7 @@ export function registerRevenueRoutes(app, {
   async function restoreRevenue() {
     if (!storageReady) return;
     const saved = await readJson(REVENUE_STATE_KEY, null);
-    if (saved && Array.isArray(saved.events)) {
-      events.splice(0, events.length, ...saved.events.slice(-MAX_EVENTS));
-    }
+    if (saved && Array.isArray(saved.events)) events.splice(0, events.length, ...saved.events.slice(-MAX_EVENTS));
   }
 
   function persistRevenue() {
@@ -96,6 +101,7 @@ export function registerRevenueRoutes(app, {
         cartValue: 0,
         productId: '',
         hasIntent: false,
+        startedCheckout: false,
         completed: false
       };
       if (Date.parse(row.createdAt) >= Date.parse(current.lastActivityAt)) current.lastActivityAt = row.createdAt;
@@ -104,6 +110,7 @@ export function registerRevenueRoutes(app, {
         current.cartValue = Math.max(current.cartValue, number(row.cartValue));
         current.productId = row.productId || current.productId;
       }
+      if (row.eventName === 'checkout_started') current.startedCheckout = true;
       if (row.eventName === 'order_completed') current.completed = true;
       bySession.set(row.sessionId, current);
     }
@@ -114,23 +121,51 @@ export function registerRevenueRoutes(app, {
         const age = now - Date.parse(item.lastActivityAt || '');
         return Number.isFinite(age) && age >= 30 * 60 * 1000 && age <= 72 * 60 * 60 * 1000;
       })
-      .sort((a, b) => number(b.cartValue) - number(a.cartValue))
+      .map(item => {
+        const minutes = ageMinutes(now, item.lastActivityAt);
+        const recencyPoints = minutes <= 180 ? 30 : minutes <= 720 ? 22 : minutes <= 1440 ? 14 : 6;
+        const cartPoints = Math.min(35, Math.round(number(item.cartValue) / 10));
+        const checkoutPoints = item.startedCheckout ? 25 : 12;
+        const score = clamp(18 + recencyPoints + cartPoints + checkoutPoints);
+        const p = priority(score);
+        return {
+          ...item,
+          priorityScore: score,
+          priority: p.label,
+          priorityKey: p.key,
+          reason: item.startedCheckout
+            ? `بدأ الدفع ولم يكمل الطلب منذ ${ageLabel(minutes)}.`
+            : `أضاف منتجات للسلة ولم يكمل الطلب منذ ${ageLabel(minutes)}.`,
+          recommendedAction: 'راجع سبب التوقف، ثم فعّل استرجاع السلة لاحقًا بعد وجود موافقة تواصل مناسبة.',
+          potentialValue: Math.round(number(item.cartValue) * 100) / 100
+        };
+      })
+      .sort((a, b) => b.priorityScore - a.priorityScore || number(b.cartValue) - number(a.cartValue))
       .slice(0, 50);
 
     const inactiveCustomers = customers
       .filter(customer => number(customer.orderCount) >= 2)
       .map(customer => ({ ...customer, daysSinceLastOrder: Math.floor((now - Date.parse(customer.lastOrderAt || '')) / 86400000) }))
       .filter(customer => Number.isFinite(customer.daysSinceLastOrder) && customer.daysSinceLastOrder >= 21)
-      .sort((a, b) => b.daysSinceLastOrder - a.daysSinceLastOrder)
-      .slice(0, 50)
-      .map(customer => ({
-        id: customer.id,
-        name: customer.name,
-        phone: customer.phone,
-        orderCount: customer.orderCount,
-        lastOrderAt: customer.lastOrderAt,
-        daysSinceLastOrder: customer.daysSinceLastOrder
-      }));
+      .map(customer => {
+        const score = clamp(25 + Math.min(35, Math.floor(customer.daysSinceLastOrder / 2)) + Math.min(35, number(customer.orderCount) * 5));
+        const p = priority(score);
+        return {
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          orderCount: customer.orderCount,
+          lastOrderAt: customer.lastOrderAt,
+          daysSinceLastOrder: customer.daysSinceLastOrder,
+          priorityScore: score,
+          priority: p.label,
+          priorityKey: p.key,
+          reason: `عميل متكرر لديه ${customer.orderCount} طلبات سابقة، وآخر طلب منذ ${customer.daysSinceLastOrder} يوم.`,
+          recommendedAction: 'راجِع آخر مشترياته واقترح عودة مناسبة، مع التحقق من حالة الموافقة قبل أي تواصل.'
+        };
+      })
+      .sort((a, b) => b.priorityScore - a.priorityScore || b.daysSinceLastOrder - a.daysSinceLastOrder)
+      .slice(0, 50);
 
     const upcomingReservations = reservations
       .filter(reservation => reservation.status !== 'cancelled')
@@ -139,23 +174,51 @@ export function registerRevenueRoutes(app, {
         return { ...reservation, at };
       })
       .filter(reservation => Number.isFinite(reservation.at) && reservation.at > now && reservation.at <= now + 48 * 60 * 60 * 1000)
-      .sort((a, b) => a.at - b.at)
-      .slice(0, 50)
-      .map(({ at, ...reservation }) => reservation);
+      .map(reservation => {
+        const hours = Math.max(0, Math.floor((reservation.at - now) / 3600000));
+        const urgencyPoints = hours <= 6 ? 60 : hours <= 24 ? 45 : 30;
+        const guestPoints = Math.min(35, number(reservation.guests) * 5);
+        const score = clamp(urgencyPoints + guestPoints);
+        const p = priority(score);
+        return {
+          ...reservation,
+          priorityScore: score,
+          priority: p.label,
+          priorityKey: p.key,
+          reason: `حجز قريب لـ${number(reservation.guests)} أشخاص.`,
+          recommendedAction: 'جهّز اقتراح Pre-order مناسب قبل الزيارة، مع الالتزام بالموافقة المطلوبة للتواصل.'
+        };
+      })
+      .sort((a, b) => b.priorityScore - a.priorityScore || a.at - b.at)
+      .slice(0, 50);
+
+    const topActions = [
+      ...abandoned.map(item => ({
+        type: 'abandoned_cart', priorityScore: item.priorityScore, priority: item.priority, priorityKey: item.priorityKey,
+        title: `سلة متروكة بقيمة ${Math.round(number(item.cartValue))} AED`, reason: item.reason,
+        recommendedAction: item.recommendedAction, potentialValue: item.potentialValue, reference: item.sessionId
+      })),
+      ...inactiveCustomers.map(item => ({
+        type: 'inactive_customer', priorityScore: item.priorityScore, priority: item.priority, priorityKey: item.priorityKey,
+        title: `إعادة تنشيط: ${clean(item.name || 'عميل', 70)}`, reason: item.reason,
+        recommendedAction: item.recommendedAction, potentialValue: 0, reference: item.id
+      })),
+      ...upcomingReservations.map(item => ({
+        type: 'upcoming_reservation', priorityScore: item.priorityScore, priority: item.priority, priorityKey: item.priorityKey,
+        title: `حجز قريب: ${clean(item.name || 'عميل', 70)}`, reason: item.reason,
+        recommendedAction: item.recommendedAction, potentialValue: 0, reference: item.id
+      }))
+    ].sort((a, b) => b.priorityScore - a.priorityScore).slice(0, 12);
 
     return {
       generatedAt: new Date().toISOString(),
       windowDays: 30,
       funnel,
-      opportunities: {
-        abandonedCarts: abandoned,
-        inactiveCustomers,
-        upcomingReservations
-      },
+      opportunities: { abandonedCarts: abandoned, inactiveCustomers, upcomingReservations },
+      topActions,
       counts: {
-        abandonedCarts: abandoned.length,
-        inactiveCustomers: inactiveCustomers.length,
-        upcomingReservations: upcomingReservations.length
+        abandonedCarts: abandoned.length, inactiveCustomers: inactiveCustomers.length,
+        upcomingReservations: upcomingReservations.length, topActions: topActions.length
       },
       potentialAbandonedRevenue: abandoned.reduce((sum, item) => sum + number(item.cartValue), 0)
     };
@@ -167,9 +230,7 @@ export function registerRevenueRoutes(app, {
     return res.status(202).json({ accepted: true, id: event.id });
   });
 
-  app.get('/api/revenue/summary', requireAdminApiKey, (_req, res) => {
-    return res.json(buildSummary());
-  });
+  app.get('/api/revenue/summary', requireAdminApiKey, (_req, res) => res.json(buildSummary()));
 
   return { restoreRevenue, recordEvent, buildSummary };
 }
