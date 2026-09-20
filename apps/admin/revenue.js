@@ -2,6 +2,43 @@ const revenueApiBase=()=>((localStorage.getItem('ARABISK_API_BASE')||window.ARAB
 const revEsc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
 const revMoney=value=>'AED '+Number(value||0).toFixed(0);
 const revPriority=(key,label)=>`<span class="rev-priority ${revEsc(key)}">${revEsc(label)}</span>`;
+let revenueTaskBoardData={};
+const taskBoardLabel={overdue:'متأخرة',escalated:'تصعيد مطلوب',in_progress:'قيد التنفيذ',today:'اليوم',doneToday:'أُنجزت اليوم'};
+const taskBoardTime=iso=>iso?new Date(iso).toLocaleString('ar-AE',{dateStyle:'short',timeStyle:'short'}):'بدون موعد';
+function renderRevenueTaskBoard(){
+  const board=revenueTaskBoardData||{};
+  const ownerFilter=document.querySelector('#revenue-task-owner-filter');
+  const statusFilter=document.querySelector('#revenue-task-status-filter');
+  const ownerValue=ownerFilter?.value||'';
+  const statusValue=statusFilter?.value||'';
+  const groups={overdue:board.overdue||[],inProgress:board.inProgress||[],today:board.today||[],doneToday:board.doneToday||[]};
+  const ownerNames=[...new Set(Object.values(groups).flat().map(row=>String(row.owner||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  if(ownerFilter){
+    const current=ownerFilter.value;
+    ownerFilter.innerHTML='<option value="">كل المسؤولين</option>'+ownerNames.map(name=>'<option value="'+revEsc(name)+'">'+revEsc(name)+'</option>').join('');
+    ownerFilter.value=ownerNames.includes(current)?current:'';
+  }
+  const renderGroup=(key,rows)=>{
+    const filtered=rows.filter(row=>(!ownerValue||String(row.owner||'')===ownerValue)&&(!statusValue||statusValue===key||(statusValue==='overdue'&&row.task?.key==='overdue')||(statusValue==='escalated'&&row.task?.key==='escalated')));
+    const node=document.querySelector('#task-board-'+(key==='inProgress'?'inprogress':key==='doneToday'?'done':'today'));
+    if(!node)return;
+    node.innerHTML=filtered.map(row=>{
+      const task=row.task||{};
+      const owner=row.owner||'غير محدد';
+      const due=taskBoardTime(row.dueAt);
+      const late=task.overdueHours>0?' — تأخير '+Number(task.overdueHours)+'س':'';
+      return '<article class="task-card '+revEsc(task.key||key)+'"><div class="task-card-top"><strong>'+revEsc(row.title)+'</strong><span>'+revEsc(task.label||taskBoardLabel[key]||key)+'</span></div><p>'+revEsc(row.message||row.executionNote||'مهمة تشغيلية في مركز الإيرادات.')+'</p><small>المسؤول: '+revEsc(owner)+'</small><small>الاستحقاق: '+revEsc(due+late)+'</small></article>';
+    }).join('')||'<div class="empty task-empty">لا توجد مهام في هذا القسم.</div>';
+    const countNode=document.querySelector('#task-board-'+(key==='inProgress'?'inprogress':key==='doneToday'?'done':key)+'-count');
+    if(countNode)countNode.textContent=String(filtered.length);
+  };
+  renderGroup('overdue',groups.overdue);
+  renderGroup('inProgress',groups.inProgress);
+  renderGroup('today',groups.today);
+  renderGroup('doneToday',groups.doneToday);
+  const dateNode=document.querySelector('#revenue-task-board-date');
+  if(dateNode)dateNode.textContent=board.date?('اليوم: '+board.date):'اليوم';
+}
 
 async function loadRevenue(){
   const state=document.querySelector('#revenue-state');
@@ -74,6 +111,8 @@ async function loadRevenue(){
     const upcoming=data.opportunities?.upcomingReservations||[];
     document.querySelector('#revenue-reservation-body').innerHTML=upcoming.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name)}</strong><small dir="ltr">${revEsc(row.phone)}</small></td><td>${revEsc(row.date)}<small>${revEsc(row.time)}</small></td><td>${Number(row.guests||0)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد حجوزات خلال 48 ساعة.</td></tr>';
     const campaigns=data.campaigns||{};
+    revenueTaskBoardData=campaigns.taskBoard||{};
+    renderRevenueTaskBoard();
     setMetric('#rev-drafts',campaigns.counts?.drafts);setMetric('#rev-executed',campaigns.counts?.executed);setMetric('#rev-converted',campaigns.counts?.converted);setMetric('#rev-attributed-orders',campaigns.counts?.attributedOrders);
     setMetric('#rev-open-tasks',campaigns.counts?.openTasks);setMetric('#rev-in-progress-tasks',campaigns.counts?.inProgressTasks);setMetric('#rev-overdue-tasks',campaigns.counts?.overdueTasks);setMetric('#rev-escalated-tasks',campaigns.counts?.escalatedTasks);
     const measured=document.querySelector('#rev-measured-revenue');if(measured)measured.textContent=revMoney(campaigns.counts?.measuredRevenue);
@@ -95,6 +134,8 @@ async function loadRevenue(){
     if(state)state.textContent=`آخر تحديث: ${new Date(data.generatedAt).toLocaleString('ar-AE')} — نافذة التحليل ${data.windowDays} يوم`;
   }catch(error){ if(state)state.textContent=error.message; }
 }
+document.querySelector('#revenue-task-owner-filter')?.addEventListener('change',renderRevenueTaskBoard);
+document.querySelector('#revenue-task-status-filter')?.addEventListener('change',renderRevenueTaskBoard);
 document.querySelector('#revenue-refresh')?.addEventListener('click',()=>void loadRevenue());
 document.querySelector('[data-section="revenue"]')?.addEventListener('click',()=>void loadRevenue());
 void loadRevenue();
