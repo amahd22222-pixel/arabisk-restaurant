@@ -288,7 +288,13 @@ export function registerRevenueRoutes(app, {
     const type = clean(input.type, 40);
     const reference = clean(input.reference, 120);
     const summary = buildSummary();
-    const action = (summary.topActions || []).find(item => item.type === type && item.reference === reference);
+    const segment = type === 'segment_action' ? customerSegments().find(item => item.key === reference) : null;
+    const action = segment ? {
+      title: segment.label,
+      reason: segment.description,
+      recommendedAction: segment.recommendedAction,
+      potentialValue: 0
+    } : (summary.topActions || []).find(item => item.type === type && item.reference === reference);
     if (!action) return null;
 
     const draft = {
@@ -296,11 +302,13 @@ export function registerRevenueRoutes(app, {
       type,
       reference,
       title: action.title,
-      message: type === 'abandoned_cart'
-        ? 'مسودة استرجاع سلة: راجع السلة المتروكة وحدد قناة التواصل المناسبة بعد التحقق من الموافقة.'
-        : type === 'inactive_customer'
-          ? `مسودة إعادة تنشيط للعميل: ${clean(action.title.replace('إعادة تنشيط: ', ''), 70)}.`
-          : `مسودة اقتراح Pre-order للحجز: ${clean(action.title.replace('حجز قريب: ', ''), 70)}.`,
+      message: type === 'segment_action'
+        ? clean(action.recommendedAction, 500)
+        : type === 'abandoned_cart'
+          ? 'مسودة استرجاع سلة: راجع السلة المتروكة وحدد قناة التواصل المناسبة بعد التحقق من الموافقة.'
+          : type === 'inactive_customer'
+            ? `مسودة إعادة تنشيط للعميل: ${clean(action.title.replace('إعادة تنشيط: ', ''), 70)}.`
+            : `مسودة اقتراح Pre-order للحجز: ${clean(action.title.replace('حجز قريب: ', ''), 70)}.`,
       status: 'draft',
       consentRequired: true,
       sendable: false,
@@ -351,11 +359,11 @@ export function registerRevenueRoutes(app, {
     }).filter(item => item.orderCount > 0 || item.reservationCount > 0);
 
     const definitions = [
-      { key:'high_value', label:'عملاء القيمة العالية', description:'عملاء معروفون تجاوز إجمالي طلباتهم 500 AED.', match:item => item.totalRevenue >= 500 },
-      { key:'repeat', label:'العملاء المتكررون', description:'عملاء لديهم طلبان مكتملان أو أكثر.', match:item => item.orderCount >= 2 },
-      { key:'lapsed', label:'عملاء مهددون بالفقد', description:'عملاء متكررون مرّ على آخر طلب لهم 21 يومًا أو أكثر.', match:item => item.orderCount >= 2 && item.daysSinceLastOrder !== null && item.daysSinceLastOrder >= 21 },
-      { key:'recent', label:'عملاء نشطون مؤخرًا', description:'عميل لديه طلب خلال آخر 30 يومًا.', match:item => item.daysSinceLastOrder !== null && item.daysSinceLastOrder >= 0 && item.daysSinceLastOrder <= 30 },
-      { key:'reservation_led', label:'عملاء مرتبطون بالحجوزات', description:'عملاء لديهم حجز نشط مرتبط بهويتهم.', match:item => item.reservationCount > 0 }
+      { key:'high_value', label:'عملاء القيمة العالية', description:'عملاء معروفون تجاوز إجمالي طلباتهم 500 AED.', action:'اطلب من الفريق إعداد تجربة مميزة أو عرض مناسب يحافظ على العلاقة، مع مراجعة موافقة التواصل.', match:item => item.totalRevenue >= 500 },
+      { key:'repeat', label:'العملاء المتكررون', description:'عملاء لديهم طلبان مكتملان أو أكثر.', action:'حوّل تكرار الشراء إلى زيارة أو طلب جديد عبر عرض مرتبط بآخر مشتريات العميل، بعد التحقق من الموافقة.', match:item => item.orderCount >= 2 },
+      { key:'lapsed', label:'عملاء مهددون بالفقد', description:'عملاء متكررون مرّ على آخر طلب لهم 21 يومًا أو أكثر.', action:'راجع آخر مشتريات العميل وجهّز محاولة إعادة تنشيط مناسبة بعد التحقق من الموافقة.', match:item => item.orderCount >= 2 && item.daysSinceLastOrder !== null && item.daysSinceLastOrder >= 21 },
+      { key:'recent', label:'عملاء نشطون مؤخرًا', description:'عميل لديه طلب خلال آخر 30 يومًا.', action:'استفد من النشاط الحديث باقتراح مكمل أو زيارة قادمة، مع الالتزام بالموافقة المطلوبة.', match:item => item.daysSinceLastOrder !== null && item.daysSinceLastOrder >= 0 && item.daysSinceLastOrder <= 30 },
+      { key:'reservation_led', label:'عملاء مرتبطون بالحجوزات', description:'عملاء لديهم حجز نشط مرتبط بهويتهم.', action:'جهّز اقتراح Pre-order أو إضافة مناسبة قبل الزيارة، مع التحقق من الموافقة قبل التواصل.', match:item => item.reservationCount > 0 }
     ];
 
     return definitions.map(definition => {
@@ -367,6 +375,11 @@ export function registerRevenueRoutes(app, {
         count: members.length,
         totalRevenue: Math.round(members.reduce((sum, item) => sum + item.totalRevenue, 0) * 100) / 100,
         averageRevenue: members.length ? Math.round((members.reduce((sum, item) => sum + item.totalRevenue, 0) / members.length) * 100) / 100 : 0,
+        recommendedAction: definition.action,
+        actionType: 'segment_action',
+        actionReference: definition.key,
+        actionRequiresConsent: true,
+        actionSendable: false,
         members: members.slice(0, 100)
       };
     });
