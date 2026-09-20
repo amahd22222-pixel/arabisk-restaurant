@@ -314,6 +314,8 @@ export function registerRevenueRoutes(app, {
       sendable: false,
       executionNote: 'V1 لا يرسل الرسائل تلقائيًا. يجب تنفيذ التواصل خارج النظام فقط بعد التحقق من موافقة العميل.',
       potentialValue: number(action.potentialValue),
+      audienceCount: segment ? Number(segment.count || 0) : 0,
+      historicalSegmentRevenue: segment ? number(segment.totalRevenue) : 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
