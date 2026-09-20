@@ -39,7 +39,7 @@ const revMoney=value=>'AED '+Number(value||0).toFixed(0);
 const revPriority=(key,label)=>`<span class="rev-priority ${revEsc(key)}">${revEsc(label)}</span>`;
 let revenueTaskBoardData={};
 let revenueCampaignsData=[];
-const taskBoardLabel={overdue:'متأخرة',escalated:'تصعيد مطلوب',in_progress:'قيد التنفيذ',today:'اليوم',doneToday:'أُنجزت اليوم'};
+const taskBoardLabel={blocked:'محجوبة',overdue:'متأخرة',escalated:'تصعيد مطلوب',in_progress:'قيد التنفيذ',today:'اليوم',doneToday:'أُنجزت اليوم'};
 const taskBoardTime=iso=>iso?new Date(iso).toLocaleString('ar-AE',{dateStyle:'short',timeStyle:'short'}):'بدون موعد';
 function renderRevenueActivityPanel(data){
   const panel=document.querySelector('#revenue-activity-panel');
@@ -54,7 +54,9 @@ function renderRevenueActivityPanel(data){
     started:'بدأ التنفيذ',
     sla_updated:'تم تحديث الـSLA',
     task_updated:'تم تحديث المهمة',
-    outcome_recorded:'تم تسجيل النتيجة'
+    outcome_recorded:'تم تسجيل النتيجة',
+    blocked:'تم حجب المهمة',
+    unblocked:'تم حل العائق وإعادة المهمة'
   };
   const detailText=item=>{
     const d=item.details||{};
@@ -64,6 +66,7 @@ function renderRevenueActivityPanel(data){
     if(d.outcome)parts.push('النتيجة: '+d.outcome);
     if(d.revenue&&Number(d.revenue)>0)parts.push('الإيراد: '+revMoney(d.revenue));
     if(d.orderId)parts.push('الطلب: '+d.orderId);
+    if(d.blockerReason)parts.push('العائق: '+d.blockerReason);
     if(d.previousOwner&&d.previousOwner!==d.owner)parts.push('السابق: '+d.previousOwner);
     return parts.join(' — ')||'تغيير تشغيلي مسجل.';
   };
@@ -85,7 +88,7 @@ function renderRevenueTaskDetail(row,activity=[]){
   const source=row.sourceType||row.type||'—';
   const attribution=row.attribution||{};
   const resultRevenue=Number(row.resultRevenue||0)>0?revMoney(row.resultRevenue):'—';
-  const activityLabels={created:'تم إنشاء المهمة',assigned:'تم تعيين المسؤول',started:'بدأ التنفيذ',sla_updated:'تم تحديث الـSLA',task_updated:'تم تحديث المهمة',outcome_recorded:'تم تسجيل النتيجة'};
+  const activityLabels={created:'تم إنشاء المهمة',assigned:'تم تعيين المسؤول',started:'بدأ التنفيذ',sla_updated:'تم تحديث الـSLA',task_updated:'تم تحديث المهمة',blocked:'تم حجب المهمة',unblocked:'تم حل العائق وإعادة المهمة',outcome_recorded:'تم تسجيل النتيجة'};
   const activityHtml=(Array.isArray(activity)?activity:[]).slice().reverse().map(item=>{
     const d=item.details||{};
     const bits=[];
@@ -94,16 +97,19 @@ function renderRevenueTaskDetail(row,activity=[]){
     if(d.outcome)bits.push('النتيجة: '+d.outcome);
     if(Number(d.revenue)>0)bits.push('الإيراد: '+revMoney(d.revenue));
     if(d.orderId)bits.push('الطلب: '+d.orderId);
+    if(d.blockerReason)bits.push('العائق: '+d.blockerReason);
     return '<article class="revenue-detail-activity"><strong>'+revEsc(activityLabels[item.type]||item.type)+'</strong><small>'+revEsc(item.actor||'لوحة الإيرادات')+' — '+revEsc(taskBoardTime(item.createdAt))+'</small><p>'+revEsc(bits.join(' — ')||'تغيير تشغيلي مسجل.')+'</p></article>';
   }).join('')||'<div class="empty">لا يوجد سجل نشاط لهذه المهمة حتى الآن.</div>';
   const riskClass=task.riskKey||'low';
   body.innerHTML='<div class="revenue-detail-head"><div><span class="rev-task '+revEsc(task.key||'unassigned')+'">'+revEsc(task.label||'مفتوحة')+'</span><h3>'+revEsc(row.title||'مهمة إيرادات')+'</h3><small>'+revEsc(row.id||'')+'</small></div><div class="revenue-detail-value"><span>قيمة الفرصة</span><strong>'+revMoney(row.potentialValue||0)+'</strong></div></div>'+
     '<div class="revenue-detail-grid"><article><span>المسؤول</span><strong>'+revEsc(owner)+'</strong></article><article><span>الـSLA</span><strong>'+revEsc(due)+'</strong></article><article><span>الحالة</span><strong>'+revEsc(statusLabel)+' — '+revEsc(outcomeLabel)+'</strong></article><article><span>المصدر</span><strong>'+revEsc(source)+'</strong></article><article><span>الإيراد المقاس</span><strong>'+resultRevenue+'</strong></article><article><span>الطلب المربوط</span><strong>'+revEsc(attribution.orderId||row.orderId||'—')+'</strong></article><article><span>سبب النتيجة</span><strong>'+revEsc(row.outcomeReasonLabel||revenueOutcomeReasonLabel(row.outcomeReason)||'غير مصنف')+'</strong></article></div>'+
     '<div class="revenue-detail-risk '+riskClass+'"><div><span>مخاطرة التشغيل</span><strong>'+revEsc(task.riskLabel||'—')+'</strong></div><b>'+Number(task.riskScore||0)+'/100</b><p>'+revEsc(task.nextAction||'تابع المهمة وسجّل النتيجة عند الإغلاق.')+'</p></div>'+
-    '<div class="revenue-detail-note"><span>إجراء التنفيذ</span><p>'+revEsc(row.executionNote||row.message||'مهمة تشغيلية داخل مركز الإيرادات.')+'</p></div>'+
+    '<div class="revenue-detail-note"><span>إجراء التنفيذ</span><p>'+revEsc(row.executionNote||row.message||'مهمة تشغيلية داخل مركز الإيرادات.')+'</p></div>'+(task.key==='blocked' ? '<div class="revenue-detail-blocker"><span>العائق التشغيلي</span><strong>'+revEsc(task.blockerReason||row.blockerReason||'غير محدد')+'</strong></div>' : '')+
     (row.status==='draft' ? '<div class="revenue-detail-operator-note"><label>ملاحظات تشغيلية<textarea id="revenue-detail-task-note" rows="4" maxlength="600" placeholder="اكتب تعليمات التنفيذ، ما تم التواصل بشأنه، أو أي متابعة مطلوبة...">'+revEsc(row.taskNotes||'')+'</textarea></label><button class="small-action detail-note-save" data-id="'+revEsc(row.id)+'" type="button">حفظ الملاحظات</button></div>' : (row.taskNotes ? '<div class="revenue-detail-operator-note"><span>الملاحظات التشغيلية</span><p>'+revEsc(row.taskNotes)+'</p></div>' : ''))+
     '<div class="revenue-detail-actions">'+(row.status==='draft'
-      ? '<button class="small-action detail-task-assign" data-id="'+revEsc(row.id)+'" type="button">تعيين / تحديث SLA</button><button class="small-action detail-task-start" data-id="'+revEsc(row.id)+'" type="button">بدء التنفيذ</button><button class="small-action detail-task-complete" data-id="'+revEsc(row.id)+'" type="button">تسجيل النتيجة</button>'
+      ? (task.key==='blocked'
+          ? '<button class="small-action detail-task-unblock" data-id="'+revEsc(row.id)+'" type="button">حل العائق</button><button class="small-action detail-task-assign" data-id="'+revEsc(row.id)+'" type="button">تعيين / تحديث SLA</button>'
+          : '<button class="small-action detail-task-assign" data-id="'+revEsc(row.id)+'" type="button">تعيين / تحديث SLA</button><button class="small-action detail-task-start" data-id="'+revEsc(row.id)+'" type="button">بدء التنفيذ</button><button class="small-action detail-task-block" data-id="'+revEsc(row.id)+'" type="button">حجب المهمة</button><button class="small-action detail-task-complete" data-id="'+revEsc(row.id)+'" type="button">تسجيل النتيجة</button>')
       : '<span class="status on">تم إغلاق المهمة</span>')+'</div>'+
     '<div class="revenue-detail-history"><h4>سجل النشاط</h4><div class="revenue-detail-activities">'+activityHtml+'</div></div>';
   modal.setAttribute('aria-hidden','false');
@@ -128,6 +134,22 @@ async function revenueTaskAssignFromDetail(id){
   const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner,dueAt,workflowStatus:'assigned'})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.message||'تعذر تحديث المهمة.');
+}
+async function revenueTaskBlockFromDetail(id){
+  const row=revenueTaskById(id)||{};
+  const reason=prompt('اكتب سبب العائق التشغيلي:',row.blockerReason||'');
+  if(reason===null)return;
+  if(!reason.trim())throw new Error('يجب تسجيل سبب العائق.');
+  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:'blocked',blockerReason:reason.trim(),notes:row.taskNotes||''})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.message||'تعذر حجب المهمة.');
+}
+async function revenueTaskUnblockFromDetail(id){
+  const row=revenueTaskById(id)||{};
+  const nextStatus=row.owner?'assigned':'unassigned';
+  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:nextStatus,notes:row.taskNotes||''})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.message||'تعذر حل العائق.');
 }
 async function revenueTaskStartFromDetail(id){
   const row=revenueTaskById(id)||{};
@@ -158,7 +180,7 @@ function renderRevenueTaskBoard(){
   const statusFilter=document.querySelector('#revenue-task-status-filter');
   const ownerValue=ownerFilter?.value||'';
   const statusValue=statusFilter?.value||'';
-  const groups={overdue:board.overdue||[],inProgress:board.inProgress||[],today:board.today||[],doneToday:board.doneToday||[]};
+  const groups={blocked:board.blocked||[],overdue:board.overdue||[],inProgress:board.inProgress||[],today:board.today||[],doneToday:board.doneToday||[]};
   const ownerNames=[...new Set(Object.values(groups).flat().map(row=>String(row.owner||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
   if(ownerFilter){
     const current=ownerFilter.value;
@@ -167,7 +189,7 @@ function renderRevenueTaskBoard(){
   }
   const renderGroup=(key,rows)=>{
     const filtered=rows.filter(row=>(!ownerValue||String(row.owner||'')===ownerValue)&&(!statusValue||statusValue===key||(statusValue==='overdue'&&row.task?.key==='overdue')||(statusValue==='escalated'&&row.task?.key==='escalated')));
-    const node=document.querySelector('#task-board-'+(key==='inProgress'?'inprogress':key==='doneToday'?'done':'today'));
+    const node=document.querySelector('#task-board-'+(key==='inProgress'?'inprogress':key==='doneToday'?'done':key));
     if(!node)return;
     node.innerHTML=filtered.map(row=>{
       const task=row.task||{};
@@ -175,15 +197,18 @@ function renderRevenueTaskBoard(){
       const due=taskBoardTime(row.dueAt);
       const late=task.overdueHours>0?' — تأخير '+Number(task.overdueHours)+'س':'';
       const controls=(row.status==='draft'
-        ? (task.key==='unassigned'
-          ? '<button class="small-action task-board-assign" data-task-action="assign" data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(row.owner||'')+'">تعيين</button>'
-          : '<button class="small-action task-board-start" data-task-action="start" data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(row.owner||'')+'" data-due-at="'+revEsc(row.dueAt||'')+'">بدء التنفيذ</button><button class="small-action task-board-complete" data-task-action="complete" data-id="'+revEsc(row.id)+'">تسجيل النتيجة</button>')
+        ? (task.key==='blocked'
+          ? '<button class="small-action task-board-unblock" data-task-action="unblock" data-id="'+revEsc(row.id)+'">حل العائق</button>'
+          : task.key==='unassigned'
+            ? '<button class="small-action task-board-assign" data-task-action="assign" data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(row.owner||'')+'">تعيين</button>'
+            : '<button class="small-action task-board-start" data-task-action="start" data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(row.owner||'')+'" data-due-at="'+revEsc(row.dueAt||'')+'">بدء التنفيذ</button><button class="small-action task-board-block" data-task-action="block" data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(row.owner||'')+'" data-due-at="'+revEsc(row.dueAt||'')+'" data-blocker-reason="'+revEsc(task.blockerReason||row.blockerReason||'')+'">حجب</button><button class="small-action task-board-complete" data-task-action="complete" data-id="'+revEsc(row.id)+'">تسجيل النتيجة</button>')
         : '<span class="status on">مغلقة</span>')+'<button class="small-action task-board-history" data-task-action="history" data-id="'+revEsc(row.id)+'">سجل النشاط</button>';
-      return '<article class="task-card '+revEsc(task.key||key)+'"><div class="task-card-top"><strong>'+revEsc(row.title)+'</strong><span>'+revEsc(task.label||taskBoardLabel[key]||key)+'</span></div><p>'+revEsc(row.message||row.executionNote||'مهمة تشغيلية في مركز الإيرادات.')+'</p><div class="task-risk-line"><span class="task-risk-badge '+revEsc(task.riskKey||'low')+'">'+revEsc(task.riskLabel||'مخاطرة منخفضة')+'</span><small>'+revEsc(task.nextAction||'متابعة المهمة.')+'</small></div><small>المسؤول: '+revEsc(owner)+'</small><small>الاستحقاق: '+revEsc(due+late)+'</small><div class="task-card-actions">'+controls+'<button class="small-action task-board-detail" data-task-action="detail" data-id="'+revEsc(row.id)+'">التفاصيل</button></div></article>';
+      return '<article class="task-card '+revEsc(task.key||key)+'"><div class="task-card-top"><strong>'+revEsc(row.title)+'</strong><span>'+revEsc(task.label||taskBoardLabel[key]||key)+'</span></div><p>'+revEsc(row.message||row.executionNote||'مهمة تشغيلية في مركز الإيرادات.')+'</p><div class="task-risk-line">'+(task.key==='blocked'?'<span class="task-blocker-reason">العائق: '+revEsc(task.blockerReason||row.blockerReason||'غير محدد')+'</span>':'')+'<span class="task-risk-badge '+revEsc(task.riskKey||'low')+'">'+revEsc(task.riskLabel||'مخاطرة منخفضة')+'</span><small>'+revEsc(task.nextAction||'متابعة المهمة.')+'</small></div><small>المسؤول: '+revEsc(owner)+'</small><small>الاستحقاق: '+revEsc(due+late)+'</small><div class="task-card-actions">'+controls+'<button class="small-action task-board-detail" data-task-action="detail" data-id="'+revEsc(row.id)+'">التفاصيل</button></div></article>';
     }).join('')||'<div class="empty task-empty">لا توجد مهام في هذا القسم.</div>';
     const countNode=document.querySelector('#task-board-'+(key==='inProgress'?'inprogress':key==='doneToday'?'done':key)+'-count');
     if(countNode)countNode.textContent=String(filtered.length);
   };
+  renderGroup('blocked',groups.blocked);
   renderGroup('overdue',groups.overdue);
   renderGroup('inProgress',groups.inProgress);
   renderGroup('today',groups.today);
@@ -271,7 +296,7 @@ async function loadRevenue(){
     workloadSet('#workload-overdue',workload.counts?.overdue);
     workloadSet('#workload-owners',workload.counts?.owners);
     const workloadRows=workload.rows||[];
-    document.querySelector('#task-workload-owner-body').innerHTML=workloadRows.map(row=>'<tr><td><strong>'+revEsc(row.owner)+'</strong></td><td>'+Number(row.open||0)+'</td><td>'+Number(row.inProgress||0)+'</td><td>'+Number(row.dueSoon||0)+'</td><td>'+Number(row.overdue||0)+'</td><td>'+Number(row.escalated||0)+'</td><td class="price">'+revMoney(row.potentialValue)+'</td></tr>').join('')||'<tr><td colspan="7" class="empty">لا توجد مهام مفتوحة حاليًا.</td></tr>';
+    document.querySelector('#task-workload-owner-body').innerHTML=workloadRows.map(row=>'<tr><td><strong>'+revEsc(row.owner)+'</strong></td><td>'+Number(row.open||0)+'</td><td>'+Number(row.blocked||0)+'</td><td>'+Number(row.inProgress||0)+'</td><td>'+Number(row.dueSoon||0)+'</td><td>'+Number(row.overdue||0)+'</td><td>'+Number(row.escalated||0)+'</td><td class="price">'+revMoney(row.potentialValue)+'</td></tr>').join('')||'<tr><td colspan="8" class="empty">لا توجد مهام مفتوحة حاليًا.</td></tr>';
 
     const riskExposure=data.riskExposure||{};
     const riskSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
@@ -327,9 +352,9 @@ async function loadRevenue(){
     revenueTaskBoardData=campaigns.taskBoard||{};
     renderRevenueTaskBoard();
     setMetric('#rev-drafts',campaigns.counts?.drafts);setMetric('#rev-executed',campaigns.counts?.executed);setMetric('#rev-converted',campaigns.counts?.converted);setMetric('#rev-attributed-orders',campaigns.counts?.attributedOrders);
-    setMetric('#rev-open-tasks',campaigns.counts?.openTasks);setMetric('#rev-in-progress-tasks',campaigns.counts?.inProgressTasks);setMetric('#rev-overdue-tasks',campaigns.counts?.overdueTasks);setMetric('#rev-escalated-tasks',campaigns.counts?.escalatedTasks);
+    setMetric('#rev-open-tasks',campaigns.counts?.openTasks);setMetric('#rev-in-progress-tasks',campaigns.counts?.inProgressTasks);setMetric('#rev-overdue-tasks',campaigns.counts?.overdueTasks);setMetric('#rev-escalated-tasks',campaigns.counts?.escalatedTasks);setMetric('#rev-blocked-tasks',campaigns.counts?.blockedTasks);
     const measured=document.querySelector('#rev-measured-revenue');if(measured)measured.textContent=revMoney(campaigns.counts?.measuredRevenue);
-    const taskLabels={unassigned:'غير مسندة',assigned:'مسندة',in_progress:'قيد التنفيذ',overdue:'متأخرة',escalated:'تصعيد مطلوب',done:'مكتملة'};
+    const taskLabels={unassigned:'غير مسندة',assigned:'مسندة',in_progress:'قيد التنفيذ',blocked:'محجوبة',overdue:'متأخرة',escalated:'تصعيد مطلوب',done:'مكتملة'};
     const campaignRows=campaigns.recent||[];
     document.querySelector('#revenue-campaigns-body').innerHTML=campaignRows.map(row=>{
       const task=row.task||{};
@@ -340,8 +365,16 @@ async function loadRevenue(){
       const taskClass=taskKey;
       const taskLabel=taskLabels[taskKey]||taskKey;
       const owner=task.owner||row.owner||'غير محدد';
-      const actionButtons=row.status==='draft' ? '<button class="small-action" data-campaign-task data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(task.owner||row.owner||'')+'" data-due-at="'+revEsc(dueAt)+'" type="button">'+(taskKey==='unassigned'?'تعيين + SLA':'تعديل المهمة')+'</button>'+(taskKey==='assigned' ? '<button class="small-action" data-campaign-start data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(owner==='غير محدد'?'':owner)+'" data-due-at="'+revEsc(dueAt)+'" type="button">بدء التنفيذ</button>' : '') : '';
-      const outcomeButtons=row.status==='draft' ? '<button class="small-action" data-campaign-outcome="executed" data-id="'+revEsc(row.id)+'" type="button">تم التنفيذ</button><button class="small-action" data-campaign-outcome="converted" data-id="'+revEsc(row.id)+'" type="button">سجل التحول</button><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>' : '<span class="status on">تم تسجيل النتيجة</span><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>';
+      const actionButtons=row.status==='draft'
+        ? (taskKey==='blocked'
+          ? '<button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>'
+          : '<button class="small-action" data-campaign-task data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(task.owner||row.owner||'')+'" data-due-at="'+revEsc(dueAt)+'" type="button">'+(taskKey==='unassigned'?'تعيين + SLA':'تعديل المهمة')+'</button>'+(taskKey==='assigned' ? '<button class="small-action" data-campaign-start data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(owner==='غير محدد'?'':owner)+'" data-due-at="'+revEsc(dueAt)+'" type="button">بدء التنفيذ</button>' : '')+(taskKey==='assigned'||taskKey==='in_progress'||taskKey==='overdue'||taskKey==='escalated' ? '<button class="small-action" data-campaign-block data-id="'+revEsc(row.id)+'" type="button">حجب</button>' : ''))
+        : '';
+      const outcomeButtons=row.status==='draft'
+        ? (taskKey==='blocked'
+          ? '<span class="status pending">محجوبة — حل العائق أولًا</span><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>'
+          : '<button class="small-action" data-campaign-outcome="executed" data-id="'+revEsc(row.id)+'" type="button">تم التنفيذ</button><button class="small-action" data-campaign-outcome="converted" data-id="'+revEsc(row.id)+'" type="button">سجل التحول</button><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>')
+        : '<span class="status on">تم تسجيل النتيجة</span><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>';
       return '<tr><td><strong>'+revEsc(row.id)+'</strong><small>'+revEsc(row.title)+'</small></td><td>'+revEsc({draft:'مسودة',executed:'تم التنفيذ',converted:'تحولت',ignored:'تم التجاهل'}[row.status]||row.status)+'</td><td><div class="task-meta"><span class="rev-task '+revEsc(taskClass)+'">'+revEsc(taskLabel)+'</span><strong>'+revEsc(owner)+'</strong><small>'+revEsc(dueText)+'</small></div></td><td class="price">'+(row.resultRevenue?revMoney(row.resultRevenue):'—')+'</td><td class="campaign-actions">'+(actionButtons||'—')+'</td><td>'+outcomeButtons+'</td></tr>';
     }).join('')||'<tr><td colspan="6" class="empty">لا توجد مسودات حتى الآن.</td></tr>';
     if(state)state.textContent=`آخر تحديث: ${new Date(data.generatedAt).toLocaleString('ar-AE')} — نافذة التحليل ${data.windowDays} يوم`;
@@ -369,8 +402,8 @@ async function revenueTaskSaveNotesFromDetail(id){
   const row=revenueTaskById(id)||{};
   const note=document.querySelector('#revenue-detail-task-note');
   const notes=note?note.value.trim():'';
-  const workflowStatus=['unassigned','assigned','in_progress'].includes(row.workflowStatus)?row.workflowStatus:(row.owner?'assigned':'unassigned');
-  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus,notes})});
+  const workflowStatus=['unassigned','assigned','in_progress','blocked'].includes(row.workflowStatus)?row.workflowStatus:(row.owner?'assigned':'unassigned');
+  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus,notes,blockerReason:row.blockerReason||row.task?.blockerReason||''})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.message||'تعذر حفظ الملاحظات.');
 }
@@ -387,6 +420,8 @@ document.querySelector('#revenue-task-detail-body')?.addEventListener('click',as
     }
     if(button.classList.contains('detail-task-assign')) await revenueTaskAssignFromDetail(id);
     else if(button.classList.contains('detail-task-start')) await revenueTaskStartFromDetail(id);
+    else if(button.classList.contains('detail-task-block')) await revenueTaskBlockFromDetail(id);
+    else if(button.classList.contains('detail-task-unblock')) await revenueTaskUnblockFromDetail(id);
     else if(button.classList.contains('detail-task-complete')) await revenueTaskCompleteFromDetail(id);
     await loadRevenue();
     await openRevenueTaskDetail(id);
@@ -404,6 +439,15 @@ document.querySelector('#revenue-task-board')?.addEventListener('click',async ev
   try{
     if(action==='detail'){
       await openRevenueTaskDetail(id);
+      return;
+    }
+    if(action==='unblock'){
+      const row=revenueTaskById(id)||{};
+      const nextStatus=row.owner?'assigned':'unassigned';
+      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:nextStatus,notes:row.taskNotes||''})});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.message||'تعذر حل العائق.');
+      await loadRevenue();
       return;
     }
     if(action==='history'){
@@ -427,6 +471,13 @@ document.querySelector('#revenue-task-board')?.addEventListener('click',async ev
       const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:button.dataset.owner||'',dueAt:button.dataset.dueAt||'',workflowStatus:'in_progress'})});
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(data.message||'تعذر بدء التنفيذ.');
+    }else if(action==='block'){
+      const reason=prompt('اكتب سبب العائق التشغيلي:',button.dataset.blockerReason||'');
+      if(reason===null)return;
+      if(!reason.trim())throw new Error('يجب تسجيل سبب العائق.');
+      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:button.dataset.owner||'',dueAt:button.dataset.dueAt||'',workflowStatus:'blocked',blockerReason:reason.trim()})});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.message||'تعذر حجب المهمة.');
     }else if(action==='complete'){
       await submitRevenueOutcome(id);
     }
@@ -478,6 +529,22 @@ document.querySelector('#revenue-campaigns-body')?.addEventListener('click',asyn
     }catch(error){alert(error.message)}finally{taskButton.disabled=false;}
     return;
   }
+  const blockButton=event.target.closest('[data-campaign-block]');
+  if(blockButton){
+    const reason=prompt('اكتب سبب العائق التشغيلي:','');
+    if(reason===null)return;
+    if(!reason.trim()){alert('يجب تسجيل سبب العائق.');return;}
+    blockButton.disabled=true;
+    try{
+      const row=revenueTaskById(blockButton.dataset.id)||{};
+      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(blockButton.dataset.id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:'blocked',blockerReason:reason.trim(),notes:row.taskNotes||''})});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.message||'تعذر حجب المهمة.');
+      await loadRevenue();
+    }catch(error){alert(error.message)}finally{blockButton.disabled=false;}
+    return;
+  }
+
   const startButton=event.target.closest('[data-campaign-start]');
   if(startButton){
     startButton.disabled=true;
