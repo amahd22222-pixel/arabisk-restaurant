@@ -1,3 +1,20 @@
+const revenueBlockerTypes=[['customer_response','انتظار رد العميل'],['owner_unavailable','المسؤول غير متاح'],['approval','انتظار موافقة'],['inventory','المخزون / توفر المنتج'],['pricing','السعر / العرض يحتاج تعديل'],['technical','مشكلة تقنية'],['dependency','اعتماد على مهمة أو طرف آخر'],['capacity','القدرة التشغيلية غير كافية'],['other','عائق آخر']];
+const revenueBlockerTypeLabel=key=>revenueBlockerTypes.find(item=>item[0]===key)?.[1]||'عائق آخر';
+async function promptRevenueBlocker(id){
+  const row=revenueTaskById(id)||{};
+  const menu=revenueBlockerTypes.map((item,index)=>(index+1)+'. '+item[1]).join('\n');
+  const answer=prompt('اختر نوع العائق:\n'+menu,'1');
+  if(answer===null)return false;
+  const type=revenueBlockerTypes[Number(answer)-1]?.[0]||null;
+  if(!type)throw new Error('يجب اختيار نوع عائق صحيح.');
+  const reason=prompt('اكتب وصف العائق بالتفصيل:',row.blockerReason||'');
+  if(reason===null)return false;
+  if(!reason.trim())throw new Error('يجب تسجيل وصف للعائق.');
+  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:'blocked',blockerType:type,blockerReason:reason.trim(),notes:row.taskNotes||''})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.message||'تعذر حجب المهمة.');
+  return true;
+}
 const revenueIgnoredReasons=[['customer_unresponsive','لم يرد العميل'],['not_interested','غير مهتم'],['not_relevant','العرض غير مناسب'],['operational_issue','عائق تشغيلي'],['timing','التوقيت غير مناسب'],['duplicate','مكرر / تمت معالجته سابقًا'],['other','سبب آخر']];
 const revenueOutcomeReasonLabel=key=>({converted_to_order:'تحول إلى طلب فعلي',manual_conversion:'تحول مسجل يدويًا',completed_no_conversion:'تم التنفيذ بدون تحول',customer_unresponsive:'لم يرد العميل',not_interested:'غير مهتم',not_relevant:'العرض غير مناسب',operational_issue:'عائق تشغيلي',timing:'التوقيت غير مناسب',duplicate:'مكرر / تمت معالجته سابقًا',other:'سبب آخر',unclassified:'غير مصنف'}[key]||'غير مصنف');
 function promptRevenueOutcomeReason(outcome){
@@ -66,7 +83,7 @@ function renderRevenueActivityPanel(data){
     if(d.outcome)parts.push('النتيجة: '+d.outcome);
     if(d.revenue&&Number(d.revenue)>0)parts.push('الإيراد: '+revMoney(d.revenue));
     if(d.orderId)parts.push('الطلب: '+d.orderId);
-    if(d.blockerReason)parts.push('العائق: '+d.blockerReason);
+    if(d.blockerType)parts.push('نوع العائق: '+d.blockerType);if(d.blockerReason)parts.push('العائق: '+d.blockerReason);
     if(d.previousOwner&&d.previousOwner!==d.owner)parts.push('السابق: '+d.previousOwner);
     return parts.join(' — ')||'تغيير تشغيلي مسجل.';
   };
@@ -97,14 +114,14 @@ function renderRevenueTaskDetail(row,activity=[]){
     if(d.outcome)bits.push('النتيجة: '+d.outcome);
     if(Number(d.revenue)>0)bits.push('الإيراد: '+revMoney(d.revenue));
     if(d.orderId)bits.push('الطلب: '+d.orderId);
-    if(d.blockerReason)bits.push('العائق: '+d.blockerReason);
+    if(d.blockerType)bits.push('نوع العائق: '+d.blockerType);if(d.blockerReason)bits.push('العائق: '+d.blockerReason);
     return '<article class="revenue-detail-activity"><strong>'+revEsc(activityLabels[item.type]||item.type)+'</strong><small>'+revEsc(item.actor||'لوحة الإيرادات')+' — '+revEsc(taskBoardTime(item.createdAt))+'</small><p>'+revEsc(bits.join(' — ')||'تغيير تشغيلي مسجل.')+'</p></article>';
   }).join('')||'<div class="empty">لا يوجد سجل نشاط لهذه المهمة حتى الآن.</div>';
   const riskClass=task.riskKey||'low';
   body.innerHTML='<div class="revenue-detail-head"><div><span class="rev-task '+revEsc(task.key||'unassigned')+'">'+revEsc(task.label||'مفتوحة')+'</span><h3>'+revEsc(row.title||'مهمة إيرادات')+'</h3><small>'+revEsc(row.id||'')+'</small></div><div class="revenue-detail-value"><span>قيمة الفرصة</span><strong>'+revMoney(row.potentialValue||0)+'</strong></div></div>'+
     '<div class="revenue-detail-grid"><article><span>المسؤول</span><strong>'+revEsc(owner)+'</strong></article><article><span>الـSLA</span><strong>'+revEsc(due)+'</strong></article><article><span>الحالة</span><strong>'+revEsc(statusLabel)+' — '+revEsc(outcomeLabel)+'</strong></article><article><span>المصدر</span><strong>'+revEsc(source)+'</strong></article><article><span>الإيراد المقاس</span><strong>'+resultRevenue+'</strong></article><article><span>الطلب المربوط</span><strong>'+revEsc(attribution.orderId||row.orderId||'—')+'</strong></article><article><span>سبب النتيجة</span><strong>'+revEsc(row.outcomeReasonLabel||revenueOutcomeReasonLabel(row.outcomeReason)||'غير مصنف')+'</strong></article></div>'+
     '<div class="revenue-detail-risk '+riskClass+'"><div><span>مخاطرة التشغيل</span><strong>'+revEsc(task.riskLabel||'—')+'</strong></div><b>'+Number(task.riskScore||0)+'/100</b><p>'+revEsc(task.nextAction||'تابع المهمة وسجّل النتيجة عند الإغلاق.')+'</p></div>'+
-    '<div class="revenue-detail-note"><span>إجراء التنفيذ</span><p>'+revEsc(row.executionNote||row.message||'مهمة تشغيلية داخل مركز الإيرادات.')+'</p></div>'+(task.key==='blocked' ? '<div class="revenue-detail-blocker"><span>العائق التشغيلي</span><strong>'+revEsc(task.blockerReason||row.blockerReason||'غير محدد')+'</strong></div>' : '')+
+    '<div class="revenue-detail-note"><span>إجراء التنفيذ</span><p>'+revEsc(row.executionNote||row.message||'مهمة تشغيلية داخل مركز الإيرادات.')+'</p></div>'+(task.key==='blocked' ? '<div class="revenue-detail-blocker"><span>نوع العائق</span><strong>'+revEsc(task.blockerTypeLabel||revenueBlockerTypeLabel(row.blockerType||'other'))+'</strong><span>العائق التشغيلي</span><strong>'+revEsc(task.blockerReason||row.blockerReason||'غير محدد')+'</strong></div>' : '')+
     (row.status==='draft' ? '<div class="revenue-detail-operator-note"><label>ملاحظات تشغيلية<textarea id="revenue-detail-task-note" rows="4" maxlength="600" placeholder="اكتب تعليمات التنفيذ، ما تم التواصل بشأنه، أو أي متابعة مطلوبة...">'+revEsc(row.taskNotes||'')+'</textarea></label><button class="small-action detail-note-save" data-id="'+revEsc(row.id)+'" type="button">حفظ الملاحظات</button></div>' : (row.taskNotes ? '<div class="revenue-detail-operator-note"><span>الملاحظات التشغيلية</span><p>'+revEsc(row.taskNotes)+'</p></div>' : ''))+
     '<div class="revenue-detail-actions">'+(row.status==='draft'
       ? (task.key==='blocked'
@@ -135,15 +152,7 @@ async function revenueTaskAssignFromDetail(id){
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.message||'تعذر تحديث المهمة.');
 }
-async function revenueTaskBlockFromDetail(id){
-  const row=revenueTaskById(id)||{};
-  const reason=prompt('اكتب سبب العائق التشغيلي:',row.blockerReason||'');
-  if(reason===null)return;
-  if(!reason.trim())throw new Error('يجب تسجيل سبب العائق.');
-  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:'blocked',blockerReason:reason.trim(),notes:row.taskNotes||''})});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.message||'تعذر حجب المهمة.');
-}
+async function revenueTaskBlockFromDetail(id){ await promptRevenueBlocker(id); }
 async function revenueTaskUnblockFromDetail(id){
   const row=revenueTaskById(id)||{};
   const nextStatus=row.owner?'assigned':'unassigned';
@@ -298,6 +307,16 @@ async function loadRevenue(){
     const workloadRows=workload.rows||[];
     document.querySelector('#task-workload-owner-body').innerHTML=workloadRows.map(row=>'<tr><td><strong>'+revEsc(row.owner)+'</strong></td><td>'+Number(row.open||0)+'</td><td>'+Number(row.blocked||0)+'</td><td>'+Number(row.inProgress||0)+'</td><td>'+Number(row.dueSoon||0)+'</td><td>'+Number(row.overdue||0)+'</td><td>'+Number(row.escalated||0)+'</td><td class="price">'+revMoney(row.potentialValue)+'</td></tr>').join('')||'<tr><td colspan="8" class="empty">لا توجد مهام مفتوحة حاليًا.</td></tr>';
 
+    const blockerAnalytics=data.blockerAnalytics||{};
+    const blockerSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
+    blockerSet('#blocker-open-count',blockerAnalytics.openCount||0);
+    blockerSet('#blocker-resolved-count',blockerAnalytics.resolvedCount||0);
+    blockerSet('#blocker-occurrences',blockerAnalytics.totalOccurrences||0);
+    blockerSet('#blocker-avg-hours',(blockerAnalytics.averageDurationHours||0).toFixed ? Number(blockerAnalytics.averageDurationHours||0).toFixed(1)+' ساعة' : '0 ساعة');
+    blockerSet('#blocker-open-value',revMoney(blockerAnalytics.openPotentialValue||0));
+    const blockerBody=document.querySelector('#revenue-blocker-analytics-body');
+    if(blockerBody)blockerBody.innerHTML=(blockerAnalytics.rows||[]).map(row=>'<tr><td><strong>'+revEsc(row.label)+'</strong><small>'+revEsc(row.type)+'</small></td><td>'+Number(row.occurrences||0)+'</td><td>'+Number(row.open||0)+'</td><td>'+Number(row.resolved||0)+'</td><td>'+Number(row.averageDurationHours||0).toFixed(1)+'س</td><td class="price">'+revMoney(row.potentialValue||0)+'</td></tr>').join('')||'<tr><td colspan="6" class="empty">لا توجد بيانات حجب مسجلة بعد.</td></tr>';
+    const blockerNote=document.querySelector('#revenue-blocker-analytics-note');if(blockerNote)blockerNote.textContent=blockerAnalytics.note||'تحليل العوائق مبني على سجل الحجب.';
     const riskExposure=data.riskExposure||{};
     const riskSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
     riskSet('#risk-high-count',riskExposure.highRiskCount||0);
@@ -472,12 +491,7 @@ document.querySelector('#revenue-task-board')?.addEventListener('click',async ev
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(data.message||'تعذر بدء التنفيذ.');
     }else if(action==='block'){
-      const reason=prompt('اكتب سبب العائق التشغيلي:',button.dataset.blockerReason||'');
-      if(reason===null)return;
-      if(!reason.trim())throw new Error('يجب تسجيل سبب العائق.');
-      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:button.dataset.owner||'',dueAt:button.dataset.dueAt||'',workflowStatus:'blocked',blockerReason:reason.trim()})});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(data.message||'تعذر حجب المهمة.');
+      await promptRevenueBlocker(id);
     }else if(action==='complete'){
       await submitRevenueOutcome(id);
     }
@@ -531,16 +545,9 @@ document.querySelector('#revenue-campaigns-body')?.addEventListener('click',asyn
   }
   const blockButton=event.target.closest('[data-campaign-block]');
   if(blockButton){
-    const reason=prompt('اكتب سبب العائق التشغيلي:','');
-    if(reason===null)return;
-    if(!reason.trim()){alert('يجب تسجيل سبب العائق.');return;}
     blockButton.disabled=true;
     try{
-      const row=revenueTaskById(blockButton.dataset.id)||{};
-      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(blockButton.dataset.id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:'blocked',blockerReason:reason.trim(),notes:row.taskNotes||''})});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(data.message||'تعذر حجب المهمة.');
-      await loadRevenue();
+      if(await promptRevenueBlocker(blockButton.dataset.id))await loadRevenue();
     }catch(error){alert(error.message)}finally{blockButton.disabled=false;}
     return;
   }
