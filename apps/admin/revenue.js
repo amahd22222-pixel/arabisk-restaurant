@@ -6,6 +6,7 @@ const revPriority=(key,label)=>`<span class="rev-priority ${revEsc(key)}">${revE
 async function loadRevenue(){
   const state=document.querySelector('#revenue-state');
   if(state)state.textContent='جارٍ تحليل فرص الإيراد…';
+  const setMetric=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
   try{
     const response=await fetch(revenueApiBase()+'/api/revenue/summary',{cache:'no-store'});
     const data=await response.json().catch(()=>({}));
@@ -55,7 +56,6 @@ async function loadRevenue(){
     document.querySelector('#intel-next-actions').innerHTML=nextActions.map(row=>`<div class="intelligence-action"><strong>${revEsc(row.priority||'—')}</strong><span>${revEsc(row.title)}</span><small>${revEsc(row.recommendedAction||row.reason)}</small></div>`).join('')||'<div class="empty">لا توجد أولوية تنفيذية حالية.</div>';
 
     const measurement=data.measurement||{};
-    const setMetric=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
     setMetric('#rev-intent-sessions',measurement.intentSessions);
     setMetric('#rev-intent-conversions',measurement.intentConversions);
     setMetric('#rev-intent-rate',`${Number(measurement.intentConversionRate||0).toFixed(1)}%`);
