@@ -328,6 +328,50 @@ export function registerRevenueRoutes(app, {
     return campaign;
   }
 
+  function customerSegments() {
+    const now = Date.now();
+    const rows = customers.map(customer => {
+      const customerOrders = orders.filter(order => order.phone && customer.phone && order.phone === customer.phone);
+      const validOrders = customerOrders.filter(order => order.status !== 'cancelled');
+      const totalRevenue = validOrders.reduce((sum, order) => sum + number(order.total), 0);
+      const lastOrderAt = validOrders.map(order => order.updatedAt || order.createdAt).filter(Boolean).sort().pop() || customer.lastOrderAt || '';
+      const daysSinceLastOrder = lastOrderAt ? Math.floor((now - Date.parse(lastOrderAt)) / 86400000) : null;
+      const reservationCount = reservations.filter(item => item.phone && customer.phone && item.phone === customer.phone && item.status !== 'cancelled').length;
+      return {
+        id: customer.id,
+        name: clean(customer.name || 'عميل', 80),
+        phone: clean(customer.phone, 40),
+        orderCount: validOrders.length,
+        totalRevenue: Math.round(totalRevenue * 100) / 100,
+        averageOrderValue: validOrders.length ? Math.round((totalRevenue / validOrders.length) * 100) / 100 : 0,
+        lastOrderAt,
+        daysSinceLastOrder,
+        reservationCount
+      };
+    }).filter(item => item.orderCount > 0 || item.reservationCount > 0);
+
+    const definitions = [
+      { key:'high_value', label:'عملاء القيمة العالية', description:'عملاء معروفون تجاوز إجمالي طلباتهم 500 AED.', match:item => item.totalRevenue >= 500 },
+      { key:'repeat', label:'العملاء المتكررون', description:'عملاء لديهم طلبان مكتملان أو أكثر.', match:item => item.orderCount >= 2 },
+      { key:'lapsed', label:'عملاء مهددون بالفقد', description:'عملاء متكررون مرّ على آخر طلب لهم 21 يومًا أو أكثر.', match:item => item.orderCount >= 2 && item.daysSinceLastOrder !== null && item.daysSinceLastOrder >= 21 },
+      { key:'recent', label:'عملاء نشطون مؤخرًا', description:'عميل لديه طلب خلال آخر 30 يومًا.', match:item => item.daysSinceLastOrder !== null && item.daysSinceLastOrder >= 0 && item.daysSinceLastOrder <= 30 },
+      { key:'reservation_led', label:'عملاء مرتبطون بالحجوزات', description:'عملاء لديهم حجز نشط مرتبط بهويتهم.', match:item => item.reservationCount > 0 }
+    ];
+
+    return definitions.map(definition => {
+      const members = rows.filter(definition.match).sort((a,b) => b.totalRevenue - a.totalRevenue || b.orderCount - a.orderCount);
+      return {
+        key: definition.key,
+        label: definition.label,
+        description: definition.description,
+        count: members.length,
+        totalRevenue: Math.round(members.reduce((sum, item) => sum + item.totalRevenue, 0) * 100) / 100,
+        averageRevenue: members.length ? Math.round((members.reduce((sum, item) => sum + item.totalRevenue, 0) / members.length) * 100) / 100 : 0,
+        members: members.slice(0, 100)
+      };
+    });
+  }
+
   function customer360(customerId) {
     const id = clean(customerId, 100);
     const customer = customers.find(item => item.id === id);
@@ -407,7 +451,9 @@ export function registerRevenueRoutes(app, {
   });
 
   app.get('/api/revenue/summary', requireAdminApiKey, (_req, res) => res.json(buildSummary()));
+  app.get('/api/revenue/customer-segments', requireAdminApiKey, (_req, res) => res.json({ generatedAt: new Date().toISOString(), segments: customerSegments() }));
+
   app.get('/api/revenue/customers/:id/360', requireAdminApiKey, (req, res) => { const profile = customer360(req.params.id); if (!profile) return res.status(404).json({ message: 'Customer not found.' }); return res.json(profile); });
 
-  return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, updateCampaignOutcome, campaignSummary, customer360 };
+  return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, updateCampaignOutcome, campaignSummary, customer360, customerSegments };
 }
