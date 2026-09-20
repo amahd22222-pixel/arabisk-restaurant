@@ -951,6 +951,33 @@ export function registerRevenueRoutes(app, {
         : 'لا يوجد مسؤول نشط معروف من المهام الحالية لتوليد اقتراح توزيع.'
     };
 
+    const riskTaskRows = openTaskRows.map(row => ({ ...row, risk: row.task.riskKey || 'low' }));
+    const riskBuckets = {
+      high: riskTaskRows.filter(row => row.risk === 'high'),
+      medium: riskTaskRows.filter(row => row.risk === 'medium'),
+      low: riskTaskRows.filter(row => row.risk === 'low')
+    };
+    const sumPotential = rows => Math.round(rows.reduce((sum, row) => sum + Math.max(0, number(row.potentialValue)), 0) * 100) / 100;
+    const riskExposure = {
+      high: {
+        count: riskBuckets.high.length,
+        potentialValue: sumPotential(riskBuckets.high)
+      },
+      medium: {
+        count: riskBuckets.medium.length,
+        potentialValue: sumPotential(riskBuckets.medium)
+      },
+      low: {
+        count: riskBuckets.low.length,
+        potentialValue: sumPotential(riskBuckets.low)
+      },
+      openTasks: riskTaskRows.length,
+      highRiskCount: riskBuckets.high.length,
+      highRiskPotentialValue: sumPotential(riskBuckets.high),
+      totalPotentialValue: sumPotential(riskTaskRows),
+      note: 'قيمة الفرص هنا مرتبطة بمهام ذات مخاطرة تشغيلية؛ لا تعني أن هذا الإيراد سيُفقد فعليًا.'
+    };
+
     const dailyBriefing = {
       generatedAt: new Date(now).toISOString(),
       date: todayKey,
@@ -1036,7 +1063,8 @@ export function registerRevenueRoutes(app, {
       taskPerformance,
       dailyBriefing,
       taskWorkload,
-      taskRouting
+      taskRouting,
+      riskExposure
     };
   }
 
