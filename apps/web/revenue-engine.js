@@ -26,17 +26,81 @@ const ageMinutes = (now, iso) => {
 const ageLabel = minutes => minutes < 60 ? `${minutes} دقيقة` : minutes < 1440 ? `${Math.floor(minutes / 60)} ساعة` : `${Math.floor(minutes / 1440)} يوم`;
 
 const taskWorkflow = (campaign, now = Date.now()) => {
-  if (campaign.status !== 'draft') return { key:'done', label:'مكتملة', overdue:false, escalated:false, overdueHours:0 };
+  if (campaign.status !== 'draft') {
+    return {
+      key:'done',
+      label:'مكتملة',
+      overdue:false,
+      escalated:false,
+      overdueHours:0,
+      dueHoursRemaining:null,
+      riskKey:'done',
+      riskLabel:'مغلقة',
+      riskScore:0,
+      nextAction:'راجع النتيجة والإيراد المقاس عند الحاجة.'
+    };
+  }
   const dueAt = Date.parse(campaign.dueAt || '');
+  const dueHoursRemaining = Number.isFinite(dueAt) ? Math.round(((dueAt - now) / 3600000) * 10) / 10 : null;
   if (Number.isFinite(dueAt) && dueAt < now) {
     const overdueHours = Math.max(0, Math.floor((now - dueAt) / 3600000));
     const escalated = overdueHours >= 24;
-    return { key: escalated ? 'escalated' : 'overdue', label: escalated ? 'تصعيد مطلوب' : 'متأخرة', overdue:true, escalated, overdueHours };
+    return {
+      key: escalated ? 'escalated' : 'overdue',
+      label: escalated ? 'تصعيد مطلوب' : 'متأخرة',
+      overdue:true,
+      escalated,
+      overdueHours,
+      dueHoursRemaining,
+      riskKey:'high',
+      riskLabel:'مخاطرة عالية',
+      riskScore:escalated ? 100 : 90,
+      nextAction: escalated
+        ? 'راجع المسؤول فورًا، حدّث الحالة وسجّل الإجراء المتخذ.'
+        : 'حدّث الـSLA أو ابدأ التنفيذ وسجّل النتيجة.'
+    };
   }
   const state = clean(campaign.workflowStatus, 30);
-  if (state === 'in_progress') return { key:'in_progress', label:'قيد التنفيذ', overdue:false, escalated:false, overdueHours:0 };
-  if (state === 'assigned') return { key:'assigned', label:'مسندة', overdue:false, escalated:false, overdueHours:0 };
-  return { key:'unassigned', label:'غير مسندة', overdue:false, escalated:false, overdueHours:0 };
+  if (state === 'in_progress') return {
+    key:'in_progress',
+    label:'قيد التنفيذ',
+    overdue:false,
+    escalated:false,
+    overdueHours:0,
+    dueHoursRemaining,
+    riskKey:dueHoursRemaining !== null && dueHoursRemaining <= 4 ? 'high' : dueHoursRemaining !== null && dueHoursRemaining <= 24 ? 'medium' : 'low',
+    riskLabel:dueHoursRemaining !== null && dueHoursRemaining <= 4 ? 'مخاطرة عالية' : dueHoursRemaining !== null && dueHoursRemaining <= 24 ? 'مخاطرة متوسطة' : 'مخاطرة منخفضة',
+    riskScore:dueHoursRemaining !== null && dueHoursRemaining <= 4 ? 80 : dueHoursRemaining !== null && dueHoursRemaining <= 24 ? 55 : 30,
+    nextAction:dueHoursRemaining !== null && dueHoursRemaining <= 4
+      ? 'أكمل التنفيذ الآن لتفادي تجاوز الـSLA.'
+      : 'تابع التنفيذ وسجّل النتيجة عند الإغلاق.'
+  };
+  if (state === 'assigned') return {
+    key:'assigned',
+    label:'مسندة',
+    overdue:false,
+    escalated:false,
+    overdueHours:0,
+    dueHoursRemaining,
+    riskKey:dueHoursRemaining !== null && dueHoursRemaining <= 4 ? 'high' : dueHoursRemaining !== null && dueHoursRemaining <= 24 ? 'medium' : 'low',
+    riskLabel:dueHoursRemaining !== null && dueHoursRemaining <= 4 ? 'مخاطرة عالية' : dueHoursRemaining !== null && dueHoursRemaining <= 24 ? 'مخاطرة متوسطة' : 'مخاطرة منخفضة',
+    riskScore:dueHoursRemaining !== null && dueHoursRemaining <= 4 ? 75 : dueHoursRemaining !== null && dueHoursRemaining <= 24 ? 50 : 20,
+    nextAction:dueHoursRemaining !== null && dueHoursRemaining <= 4
+      ? 'ابدأ التنفيذ الآن قبل اقتراب الـSLA.'
+      : 'ابدأ التنفيذ وسجّل تقدم المهمة.'
+  };
+  return {
+    key:'unassigned',
+    label:'غير مسندة',
+    overdue:false,
+    escalated:false,
+    overdueHours:0,
+    dueHoursRemaining,
+    riskKey:'high',
+    riskLabel:'مخاطرة عالية',
+    riskScore:70,
+    nextAction:'عيّن مسؤولًا وحدد SLA واضحًا قبل ترك المهمة مفتوحة.'
+  };
 };
 
 export function registerRevenueRoutes(app, {
