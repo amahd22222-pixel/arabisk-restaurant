@@ -25,7 +25,7 @@ async function loadRevenue(){
     const note=document.querySelector('#rev-attribution-note');if(note)note.textContent=measurement.attributionNote||'قياس ارتباطي فقط، وليس إثباتًا سببيًا.';
 
     const actions=data.topActions||[];
-    document.querySelector('#revenue-actions-body').innerHTML=actions.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)}</td><td><strong>${revEsc(row.title)}</strong><small>${revEsc(row.reason)}</small></td><td>${revEsc(row.recommendedAction)}</td><td class="price">${row.potentialValue?revMoney(row.potentialValue):'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد إجراءات مقترحة حاليًا.</td></tr>';
+    document.querySelector('#revenue-actions-body').innerHTML=actions.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)}</td><td><strong>${revEsc(row.title)}</strong><small>${revEsc(row.reason)}</small></td><td>${revEsc(row.recommendedAction)}</td><td class="price">${row.potentialValue?revMoney(row.potentialValue):'—'}</td><td><button class="small-action" data-create-draft data-type="${revEsc(row.type)}" data-reference="${revEsc(row.reference)}" type="button">إنشاء مسودة</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد إجراءات مقترحة حاليًا.</td></tr>';
 
     const abandoned=data.opportunities?.abandonedCarts||[];
     document.querySelector('#revenue-abandoned-body').innerHTML=abandoned.map(row=>`<tr><td><strong>${revEsc(row.sessionId.slice(0,12))}</strong><small>${new Date(row.lastActivityAt).toLocaleString('ar-AE')}</small></td><td>${revEsc(row.productId||'—')}</td><td>${revPriority(row.priorityKey,row.priority)}</td><td class="price">${revMoney(row.cartValue)}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد سلات متروكة مؤهلة حاليًا.</td></tr>';
@@ -35,9 +35,44 @@ async function loadRevenue(){
 
     const upcoming=data.opportunities?.upcomingReservations||[];
     document.querySelector('#revenue-reservation-body').innerHTML=upcoming.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name)}</strong><small dir="ltr">${revEsc(row.phone)}</small></td><td>${revEsc(row.date)}<small>${revEsc(row.time)}</small></td><td>${Number(row.guests||0)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد حجوزات خلال 48 ساعة.</td></tr>';
+    const campaigns=data.campaigns||{};
+    setMetric('#rev-drafts',campaigns.counts?.drafts);setMetric('#rev-executed',campaigns.counts?.executed);setMetric('#rev-converted',campaigns.counts?.converted);
+    const measured=document.querySelector('#rev-measured-revenue');if(measured)measured.textContent=revMoney(campaigns.counts?.measuredRevenue);
+    const campaignRows=campaigns.recent||[];
+    document.querySelector('#revenue-campaigns-body').innerHTML=campaignRows.map(row=>`<tr><td><strong>${revEsc(row.id)}</strong><small>${revEsc(row.title)}</small></td><td>${revEsc({draft:'مسودة',executed:'تم التنفيذ',converted:'تحولت',ignored:'تم التجاهل'}[row.status]||row.status)}</td><td class="price">${row.resultRevenue?revMoney(row.resultRevenue):'—'}</td><td><button class="small-action" data-campaign-outcome="executed" data-id="${revEsc(row.id)}" type="button">تم التنفيذ</button><button class="small-action" data-campaign-outcome="converted" data-id="${revEsc(row.id)}" type="button">سجل التحول</button></td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد مسودات حتى الآن.</td></tr>';
     if(state)state.textContent=`آخر تحديث: ${new Date(data.generatedAt).toLocaleString('ar-AE')} — نافذة التحليل ${data.windowDays} يوم`;
   }catch(error){ if(state)state.textContent=error.message; }
 }
 document.querySelector('#revenue-refresh')?.addEventListener('click',()=>void loadRevenue());
 document.querySelector('[data-section="revenue"]')?.addEventListener('click',()=>void loadRevenue());
 void loadRevenue();
+
+document.querySelector('#revenue-actions-body')?.addEventListener('click',async event=>{
+  const button=event.target.closest('[data-create-draft]'); if(!button)return;
+  button.disabled=true;
+  try{
+    const response=await fetch(revenueApiBase()+'/api/revenue/campaign-drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:button.dataset.type,reference:button.dataset.reference})});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(data.message||'تعذر إنشاء المسودة.');
+    alert('تم إنشاء المسودة. لا يوجد إرسال تلقائي في هذه النسخة.');
+    await loadRevenue();
+  }catch(error){alert(error.message)}finally{button.disabled=false;}
+});
+document.querySelector('#revenue-campaigns-body')?.addEventListener('click',async event=>{
+  const button=event.target.closest('[data-campaign-outcome]'); if(!button)return;
+  const outcome=button.dataset.campaignOutcome;
+  const payload={outcome};
+  if(outcome==='converted'){
+    const revenue=prompt('أدخل قيمة الإيراد المرتبط بالتحول (AED):','0');
+    if(revenue===null)return;
+    payload.revenue=Number(revenue)||0;
+    payload.orderId=prompt('أدخل رقم الطلب إن وجد:','')||'';
+  }
+  button.disabled=true;
+  try{
+    const response=await fetch(revenueApiBase()+`/api/revenue/campaigns/${encodeURIComponent(button.dataset.id)}/outcome`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.message||'تعذر حفظ النتيجة.');
+    await loadRevenue();
+  }catch(error){alert(error.message)}finally{button.disabled=false;}
+});
