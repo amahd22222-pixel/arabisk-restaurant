@@ -1114,6 +1114,75 @@ export function registerRevenueRoutes(app, {
       note: 'الأسباب مبنية على النتائج التي يسجلها الفريق يدويًا، وهي أداة تشخيص وليست إثباتًا لسبب سببي.'
     };
 
+
+    const learningMap = new Map();
+    for (const row of outcomeReasonRows) {
+      const sourceType = clean(row.item.sourceType || 'revenue_opportunity', 50);
+      const sourceKey = clean(row.item.sourceKey || row.item.type || row.item.reference || 'unknown', 120);
+      const key = sourceType + ':' + sourceKey;
+      const current = learningMap.get(key) || {
+        key,
+        sourceType,
+        sourceKey,
+        label: row.item.title || sourceKey,
+        total: 0,
+        converted: 0,
+        executed: 0,
+        ignored: 0,
+        measuredRevenue: 0,
+        reasons: new Map()
+      };
+      current.total += 1;
+      if (row.item.status === 'converted') current.converted += 1;
+      if (row.item.status === 'executed') current.executed += 1;
+      if (row.item.status === 'ignored') current.ignored += 1;
+      current.measuredRevenue += Math.max(0, number(row.item.resultRevenue));
+      current.reasons.set(row.reasonKey, (current.reasons.get(row.reasonKey) || 0) + 1);
+      learningMap.set(key, current);
+    }
+    const outcomeLearningRows = [...learningMap.values()]
+      .map(row => {
+        const reasonEntry = [...row.reasons.entries()].sort((a,b) => b[1] - a[1])[0] || null;
+        const conversionRate = row.total ? Math.round((row.converted / row.total) * 1000) / 10 : 0;
+        const frictionKeys = new Set(['customer_unresponsive','not_interested','not_relevant','operational_issue','timing','duplicate','other','unclassified']);
+        let learningAction = 'استمر في القياس وسجّل النتيجة مع سبب واضح.';
+        if (reasonEntry && frictionKeys.has(reasonEntry[0])) {
+          if (reasonEntry[0] === 'customer_unresponsive') learningAction = 'راجع توقيت وقناة التواصل، ثم أعد التجربة فقط مع وجود موافقة مناسبة.';
+          else if (reasonEntry[0] === 'not_relevant') learningAction = 'راجع ملاءمة العرض مع مصدر الفرصة أو الشريحة قبل تكرار الإجراء.';
+          else if (reasonEntry[0] === 'operational_issue') learningAction = 'عالج العائق التشغيلي أولًا قبل إعادة نفس الإجراء.';
+          else if (reasonEntry[0] === 'timing') learningAction = 'راجع توقيت التنفيذ قبل إعادة المحاولة.';
+          else if (reasonEntry[0] === 'not_interested') learningAction = 'راجع العرض والقيمة المقترحة بدل تكرار نفس الرسالة.';
+          else learningAction = 'راجع السبب المتكرر قبل إعادة تنفيذ الإجراء بنفس الطريقة.';
+        } else if (row.converted > 0) {
+          learningAction = 'احتفظ بنفس مسار التنفيذ، وواصل ربط التحولات بطلبات فعلية عندما يكون ذلك متاحًا.';
+        }
+        return {
+          key: row.key,
+          sourceType: row.sourceType,
+          sourceKey: row.sourceKey,
+          label: clean(row.label, 120),
+          total: row.total,
+          converted: row.converted,
+          executed: row.executed,
+          ignored: row.ignored,
+          conversionRate,
+          measuredRevenue: Math.round(row.measuredRevenue * 100) / 100,
+          topReasonKey: reasonEntry?.[0] || 'unclassified',
+          topReason: outcomeReasonLabel(reasonEntry?.[0] || 'unclassified'),
+          topReasonCount: reasonEntry?.[1] || 0,
+          learningAction
+        };
+      })
+      .sort((a,b) => b.total - a.total || b.measuredRevenue - a.measuredRevenue || b.conversionRate - a.conversionRate);
+    const outcomeLearning = {
+      sourcesMeasured: outcomeLearningRows.length,
+      outcomesMeasured: outcomeLearningRows.reduce((sum,row) => sum + row.total, 0),
+      converted: outcomeLearningRows.reduce((sum,row) => sum + row.converted, 0),
+      measuredRevenue: Math.round(outcomeLearningRows.reduce((sum,row) => sum + row.measuredRevenue, 0) * 100) / 100,
+      rows: outcomeLearningRows,
+      note: 'التعلم هنا مبني على نتائج الفريق المسجلة يدويًا؛ لا يثبت أن السبب وحده هو الذي أدى إلى النتيجة.'
+    };
+
     return {
       counts: {
         drafts: campaigns.filter(item => item.status === 'draft').length,
@@ -1136,7 +1205,8 @@ export function registerRevenueRoutes(app, {
       taskWorkload,
       taskRouting,
       riskExposure,
-      outcomeInsights
+      outcomeInsights,
+      outcomeLearning
     };
   }
 
