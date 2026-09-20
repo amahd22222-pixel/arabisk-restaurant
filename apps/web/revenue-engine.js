@@ -884,7 +884,8 @@ export function registerRevenueRoutes(app, {
       unassignedCount: workloadRows.filter(item => !item.owner).length,
       note: routingOwners.length
         ? 'الاقتراحات مرتبة باستخدام عبء العمل الحالي فقط؛ لا يتم نقل أو تعيين أي مهمة تلقائيًا.'
-        : 'لا يوجد مسؤول نشط معروف من المهام الحالية لتوليد اقتراح توزيع.';
+        : 'لا يوجد مسؤول نشط معروف من المهام الحالية لتوليد اقتراح توزيع.'
+    };
 
     const dailyBriefing = {
       generatedAt: new Date(now).toISOString(),
