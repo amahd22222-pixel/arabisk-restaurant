@@ -575,6 +575,7 @@ export function registerRevenueRoutes(app, {
       },
       potentialAbandonedRevenue: abandoned.reduce((sum, item) => sum + number(item.cartValue), 0),
       campaigns: campaignSummary(),
+      valueRealization,
       health: { score: healthScore, label: healthLabel, biggestLeak, funnelRates },
       identity: { identifiedCustomers, identifiedEvents, coverageRate: recent.length ? Math.round((identifiedEvents / recent.length) * 1000) / 10 : 0 },
 
@@ -1254,6 +1255,80 @@ export function registerRevenueRoutes(app, {
       onTimeRate: slaTasks.length ? Math.round((slaTasks.filter(row => row.onTime).length / slaTasks.length) * 1000) / 10 : null,
       averageCompletionHours: durationRows.length ? Math.round((totalDurationHours / durationRows.length) * 10) / 10 : null,
       byOwner
+    };
+
+    const valueRealizationRows = completedTasks
+      .map(item => {
+        const potentialValue = Math.max(0, number(item.potentialValue));
+        const measuredRevenue = Math.max(0, number(item.resultRevenue));
+        if (potentialValue <= 0) return null;
+        const capturedPotentialValue = Math.min(measuredRevenue, potentialValue);
+        const unrealizedPotentialValue = Math.max(0, potentialValue - measuredRevenue);
+        return {
+          item,
+          potentialValue,
+          measuredRevenue,
+          capturedPotentialValue,
+          unrealizedPotentialValue,
+          converted: item.status === 'converted'
+        };
+      })
+      .filter(Boolean);
+    const valueRealizationMap = new Map();
+    for (const row of valueRealizationRows) {
+      const sourceType = clean(row.item.sourceType || 'revenue_opportunity', 50);
+      const sourceKey = clean(row.item.sourceKey || row.item.type || row.item.reference || 'unknown', 120);
+      const key = sourceType + ':' + sourceKey;
+      const current = valueRealizationMap.get(key) || {
+        key,
+        sourceType,
+        sourceKey,
+        label: row.item.title || sourceKey,
+        tasks: 0,
+        converted: 0,
+        potentialValue: 0,
+        capturedPotentialValue: 0,
+        measuredRevenue: 0,
+        unrealizedPotentialValue: 0
+      };
+      current.tasks += 1;
+      if (row.converted) current.converted += 1;
+      current.potentialValue += row.potentialValue;
+      current.capturedPotentialValue += row.capturedPotentialValue;
+      current.measuredRevenue += row.measuredRevenue;
+      current.unrealizedPotentialValue += row.unrealizedPotentialValue;
+      valueRealizationMap.set(key, current);
+    }
+    const valueRealizationRowsSorted = [...valueRealizationMap.values()]
+      .map(row => ({
+        key: row.key,
+        sourceType: row.sourceType,
+        sourceKey: row.sourceKey,
+        label: clean(row.label, 120),
+        tasks: row.tasks,
+        converted: row.converted,
+        potentialValue: Math.round(row.potentialValue * 100) / 100,
+        capturedPotentialValue: Math.round(row.capturedPotentialValue * 100) / 100,
+        measuredRevenue: Math.round(row.measuredRevenue * 100) / 100,
+        unrealizedPotentialValue: Math.round(row.unrealizedPotentialValue * 100) / 100,
+        realizationRate: row.potentialValue ? Math.round((row.capturedPotentialValue / row.potentialValue) * 1000) / 10 : null
+      }))
+      .sort((a,b) => b.potentialValue - a.potentialValue || b.capturedPotentialValue - a.capturedPotentialValue || b.tasks - a.tasks);
+    const totalPotentialValue = valueRealizationRowsSorted.reduce((sum,row) => sum + row.potentialValue, 0);
+    const totalCapturedPotentialValue = valueRealizationRowsSorted.reduce((sum,row) => sum + row.capturedPotentialValue, 0);
+    const totalMeasuredRevenueForPotential = valueRealizationRowsSorted.reduce((sum,row) => sum + row.measuredRevenue, 0);
+    const totalUnrealizedPotentialValue = valueRealizationRowsSorted.reduce((sum,row) => sum + row.unrealizedPotentialValue, 0);
+    const valueRealization = {
+      measurableTasks: valueRealizationRows.length,
+      convertedTasks: valueRealizationRows.filter(row => row.converted).length,
+      potentialValue: Math.round(totalPotentialValue * 100) / 100,
+      capturedPotentialValue: Math.round(totalCapturedPotentialValue * 100) / 100,
+      measuredRevenue: Math.round(totalMeasuredRevenueForPotential * 100) / 100,
+      unrealizedPotentialValue: Math.round(totalUnrealizedPotentialValue * 100) / 100,
+      realizationRate: totalPotentialValue ? Math.round((totalCapturedPotentialValue / totalPotentialValue) * 1000) / 10 : null,
+      rows: valueRealizationRowsSorted,
+      note: 'معدل تحقق القيمة يقارن القيمة المحتملة المسجلة عند إنشاء المهمة بالقيمة المقاسة عند الإغلاق. هو مقياس تشغيلي وليس إثباتًا سببيًا؛ الإيراد المقاس قد يتجاوز قيمة الفرصة الأصلية، لذلك تُحسب نسبة التحقق على القيمة المحتملة بحد أقصى 100%.',
+      coverageNote: 'المهام التي لا تحتوي على قيمة فرصة موجبة لا تدخل في هذا القياس.'
     };
 
     const outcomeReasonRows = campaigns
