@@ -25,6 +25,16 @@ const ageMinutes = (now, iso) => {
 };
 const ageLabel = minutes => minutes < 60 ? `${minutes} دقيقة` : minutes < 1440 ? `${Math.floor(minutes / 60)} ساعة` : `${Math.floor(minutes / 1440)} يوم`;
 
+const taskWorkflow = (campaign, now = Date.now()) => {
+  if (campaign.status !== 'draft') return { key:'done', label:'مكتملة', overdue:false };
+  const dueAt = Date.parse(campaign.dueAt || '');
+  if (Number.isFinite(dueAt) && dueAt < now) return { key:'overdue', label:'متأخرة', overdue:true };
+  const state = clean(campaign.workflowStatus, 30);
+  if (state === 'in_progress') return { key:'in_progress', label:'قيد التنفيذ', overdue:false };
+  if (state === 'assigned') return { key:'assigned', label:'مسندة', overdue:false };
+  return { key:'unassigned', label:'غير مسندة', overdue:false };
+};
+
 export function registerRevenueRoutes(app, {
   readJson,
   writeJson,
@@ -476,6 +486,13 @@ export function registerRevenueRoutes(app, {
       sourceType: alert ? 'revenue_alert' : segment ? 'customer_segment' : 'revenue_opportunity',
       sourceKey: alert?.key || segment?.key || type,
       alertSeverity: alert?.severity || '',
+      owner: '',
+      dueAt: '',
+      workflowStatus: 'unassigned',
+      assignedAt: '',
+      startedAt: '',
+      completedAt: '',
+      taskNotes: '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -494,6 +511,8 @@ export function registerRevenueRoutes(app, {
     const linkedOrder = orderId ? orders.find(order => order.id === orderId) : null;
     const manualRevenue = Math.max(0, number(input.revenue));
     campaign.status = outcome;
+    campaign.workflowStatus = 'done';
+    campaign.completedAt = new Date().toISOString();
     campaign.orderId = orderId;
     campaign.customerId = linkedOrder?.phone ? (customers.find(customer => customer.phone === linkedOrder.phone)?.id || '') : '';
     campaign.resultRevenue = outcome === 'converted' && linkedOrder
@@ -511,6 +530,26 @@ export function registerRevenueRoutes(app, {
     campaign.updatedAt = new Date().toISOString();
     void persistRevenue();
     return campaign;
+  }
+
+  function updateCampaignTask(id, input = {}) {
+    const campaign = campaigns.find(item => item.id === clean(id, 40));
+    if (!campaign || campaign.status !== 'draft') return null;
+    const requestedStatus = clean(input.workflowStatus, 30);
+    if (!new Set(['unassigned', 'assigned', 'in_progress']).has(requestedStatus)) return null;
+    const owner = clean(input.owner, 80);
+    const dueAt = clean(input.dueAt, 40);
+    if (dueAt && !Number.isFinite(Date.parse(dueAt))) return null;
+    const now = new Date().toISOString();
+    campaign.owner = owner;
+    campaign.dueAt = dueAt;
+    campaign.workflowStatus = requestedStatus;
+    campaign.taskNotes = clean(input.notes, 400);
+    campaign.assignedAt = requestedStatus === 'unassigned' ? '' : (campaign.assignedAt || now);
+    campaign.startedAt = requestedStatus === 'in_progress' ? (campaign.startedAt || now) : campaign.startedAt || '';
+    campaign.updatedAt = now;
+    void persistRevenue();
+    return { ...campaign, task: taskWorkflow(campaign) };
   }
 
   function customerSegments() {
@@ -620,7 +659,12 @@ export function registerRevenueRoutes(app, {
   }
 
   function campaignSummary() {
-    const recent = [...campaigns].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 30);
+    const now = Date.now();
+    const taskRows = campaigns.filter(item => item.status === 'draft').map(item => taskWorkflow(item, now));
+    const recent = [...campaigns]
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+      .slice(0, 30)
+      .map(item => ({ ...item, task: taskWorkflow(item, now) }));
     return {
       counts: {
         drafts: campaigns.filter(item => item.status === 'draft').length,
@@ -628,7 +672,12 @@ export function registerRevenueRoutes(app, {
         converted: campaigns.filter(item => item.status === 'converted').length,
         ignored: campaigns.filter(item => item.status === 'ignored').length,
         attributedOrders: campaigns.filter(item => item.status === 'converted' && item.attribution?.matchedOrder).length,
-        measuredRevenue: campaigns.reduce((sum, item) => sum + number(item.resultRevenue), 0)
+        measuredRevenue: campaigns.reduce((sum, item) => sum + number(item.resultRevenue), 0),
+        openTasks: taskRows.filter(item => item.key !== 'done').length,
+        assignedTasks: taskRows.filter(item => item.key === 'assigned').length,
+        inProgressTasks: taskRows.filter(item => item.key === 'in_progress').length,
+        overdueTasks: taskRows.filter(item => item.key === 'overdue').length,
+        unassignedTasks: taskRows.filter(item => item.key === 'unassigned').length
       },
       recent
     };
@@ -646,6 +695,12 @@ export function registerRevenueRoutes(app, {
     return res.json(updated);
   });
 
+  app.post('/api/revenue/campaigns/:id/task', requireAdminApiKey, (req, res) => {
+    const updated = updateCampaignTask(req.params.id, req.body || {});
+    if (!updated) return res.status(400).json({ message: 'Invalid campaign task.' });
+    return res.json(updated);
+  });
+
   app.post('/api/events', (req, res) => {
     const event = recordEvent(req.body || {});
     if (!event) return res.status(400).json({ message: 'Unsupported event.' });
@@ -657,5 +712,5 @@ export function registerRevenueRoutes(app, {
 
   app.get('/api/revenue/customers/:id/360', requireAdminApiKey, (req, res) => { const profile = customer360(req.params.id); if (!profile) return res.status(404).json({ message: 'Customer not found.' }); return res.json(profile); });
 
-  return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, updateCampaignOutcome, campaignSummary, customer360, customerSegments };
+  return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, updateCampaignOutcome, updateCampaignTask, campaignSummary, customer360, customerSegments };
 }
