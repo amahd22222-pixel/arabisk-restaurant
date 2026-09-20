@@ -64,6 +64,7 @@ function renderRevenueTaskDetail(row,activity=[]){
   body.innerHTML='<div class="revenue-detail-head"><div><span class="rev-task '+revEsc(task.key||'unassigned')+'">'+revEsc(task.label||'مفتوحة')+'</span><h3>'+revEsc(row.title||'مهمة إيرادات')+'</h3><small>'+revEsc(row.id||'')+'</small></div><div class="revenue-detail-value"><span>قيمة الفرصة</span><strong>'+revMoney(row.potentialValue||0)+'</strong></div></div>'+
     '<div class="revenue-detail-grid"><article><span>المسؤول</span><strong>'+revEsc(owner)+'</strong></article><article><span>الـSLA</span><strong>'+revEsc(due)+'</strong></article><article><span>الحالة</span><strong>'+revEsc(statusLabel)+' — '+revEsc(outcomeLabel)+'</strong></article><article><span>المصدر</span><strong>'+revEsc(source)+'</strong></article><article><span>الإيراد المقاس</span><strong>'+resultRevenue+'</strong></article><article><span>الطلب المربوط</span><strong>'+revEsc(attribution.orderId||row.orderId||'—')+'</strong></article></div>'+
     '<div class="revenue-detail-note"><span>إجراء التنفيذ</span><p>'+revEsc(row.executionNote||row.message||'مهمة تشغيلية داخل مركز الإيرادات.')+'</p></div>'+
+    (row.status==='draft' ? '<div class="revenue-detail-operator-note"><label>ملاحظات تشغيلية<textarea id="revenue-detail-task-note" rows="4" maxlength="600" placeholder="اكتب تعليمات التنفيذ، ما تم التواصل بشأنه، أو أي متابعة مطلوبة...">'+revEsc(row.taskNotes||'')+'</textarea></label><button class="small-action detail-note-save" data-id="'+revEsc(row.id)+'" type="button">حفظ الملاحظات</button></div>' : (row.taskNotes ? '<div class="revenue-detail-operator-note"><span>الملاحظات التشغيلية</span><p>'+revEsc(row.taskNotes)+'</p></div>' : ''))+
     '<div class="revenue-detail-actions">'+(row.status==='draft'
       ? '<button class="small-action detail-task-assign" data-id="'+revEsc(row.id)+'" type="button">تعيين / تحديث SLA</button><button class="small-action detail-task-start" data-id="'+revEsc(row.id)+'" type="button">بدء التنفيذ</button><button class="small-action detail-task-complete" data-id="'+revEsc(row.id)+'" type="button">تسجيل النتيجة</button>'
       : '<span class="status on">تم إغلاق المهمة</span>')+'</div>'+
@@ -311,10 +312,26 @@ document.querySelector('#revenue-routing-body')?.addEventListener('click',async 
   }catch(error){alert(error.message);button.disabled=false;}
 });
 
+async function revenueTaskSaveNotesFromDetail(id){
+  const row=revenueTaskById(id)||{};
+  const note=document.querySelector('#revenue-detail-task-note');
+  const notes=note?note.value.trim():'';
+  const workflowStatus=['unassigned','assigned','in_progress'].includes(row.workflowStatus)?row.workflowStatus:(row.owner?'assigned':'unassigned');
+  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus,notes})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.message||'تعذر حفظ الملاحظات.');
+}
+
 document.querySelector('#revenue-task-detail-body')?.addEventListener('click',async event=>{
   const button=event.target.closest('[data-id][class*="detail-task-"]'); if(!button)return;
   const id=button.dataset.id; button.disabled=true;
   try{
+    if(button.classList.contains('detail-note-save')){
+      await revenueTaskSaveNotesFromDetail(id);
+      await loadRevenue();
+      await openRevenueTaskDetail(id);
+      return;
+    }
     if(button.classList.contains('detail-task-assign')) await revenueTaskAssignFromDetail(id);
     else if(button.classList.contains('detail-task-start')) await revenueTaskStartFromDetail(id);
     else if(button.classList.contains('detail-task-complete')) await revenueTaskCompleteFromDetail(id);
