@@ -144,6 +144,15 @@ async function loadRevenue(){
 
     const upcoming=data.opportunities?.upcomingReservations||[];
     document.querySelector('#revenue-reservation-body').innerHTML=upcoming.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name)}</strong><small dir="ltr">${revEsc(row.phone)}</small></td><td>${revEsc(row.date)}<small>${revEsc(row.time)}</small></td><td>${Number(row.guests||0)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد حجوزات خلال 48 ساعة.</td></tr>';
+    const briefing=data.dailyBriefing||{};
+    const bset=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
+    bset('#briefing-urgent',briefing.summary?.urgent||0);
+    bset('#briefing-due-soon',briefing.summary?.dueSoon||0);
+    bset('#briefing-unassigned',briefing.summary?.unassigned||0);
+    const briefingDate=document.querySelector('#daily-briefing-date');if(briefingDate)briefingDate.textContent=briefing.date?('اليوم: '+briefing.date):'اليوم';
+    const briefingList=document.querySelector('#daily-briefing-list');
+    briefingList.innerHTML=(briefing.items||[]).map(item=>'<article class="briefing-item '+revEsc(item.status)+'"><div class="briefing-item-top"><strong>'+revEsc(item.title)+'</strong><span>'+revEsc(item.statusLabel||item.status||'—')+'</span></div><p>'+revEsc(item.reason)+'</p><small>المسؤول: '+revEsc(item.owner||'غير محدد')+' — '+revEsc(item.dueAt?new Date(item.dueAt).toLocaleString('ar-AE',{dateStyle:'short',timeStyle:'short'}):'بدون SLA')+'</small><small>الإجراء: '+revEsc(item.recommendedAction)+'</small></article>').join('')||'<div class="empty">لا توجد نقاط عاجلة في موجز اليوم.</div>';
+
     const campaigns=data.campaigns||{};
     const taskPerformance=data.taskPerformance||{};
     const perfSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??'—')};
