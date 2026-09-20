@@ -7,6 +7,7 @@ const ALLOWED_EVENTS = new Set([
   'menu_view',
   'item_view',
   'add_to_cart',
+  'cart_updated',
   'checkout_started',
   'order_completed',
   'reservation_created'
@@ -257,7 +258,8 @@ export function registerRevenueRoutes(app, {
         hasIntent: false,
         startedCheckout: false,
         completed: false,
-        cartItems: []
+        cartItems: [],
+        cartCleared: false
       };
       if (Date.parse(row.createdAt) >= Date.parse(current.lastActivityAt)) current.lastActivityAt = row.createdAt;
       if (row.eventName === 'add_to_cart' || row.eventName === 'checkout_started') {
@@ -266,13 +268,16 @@ export function registerRevenueRoutes(app, {
         current.productId = row.productId || current.productId;
       }
       if (row.eventName === 'checkout_started') current.startedCheckout = true;
-      if (Array.isArray(row.cartItems) && row.cartItems.length) current.cartItems = row.cartItems;
+      if (Array.isArray(row.cartItems)) {
+        current.cartItems = row.cartItems;
+        if (row.eventName === 'cart_updated') current.cartCleared = row.cartItems.length === 0;
+      }
       if (row.eventName === 'order_completed') current.completed = true;
       bySession.set(row.sessionId, current);
     }
 
     const abandoned = [...bySession.values()]
-      .filter(item => item.hasIntent && !item.completed)
+      .filter(item => item.hasIntent && !item.completed && !item.cartCleared)
       .filter(item => {
         const age = now - Date.parse(item.lastActivityAt || '');
         return Number.isFinite(age) && age >= 30 * 60 * 1000 && age <= 72 * 60 * 60 * 1000;
