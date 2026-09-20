@@ -756,6 +756,65 @@ export function registerRevenueRoutes(app, {
       doneToday: taskBoard.doneToday.length
     };
 
+    const openTaskRows = campaigns
+      .filter(item => item.status === 'draft')
+      .map(item => ({ ...item, task: taskWorkflow(item, now) }));
+    const briefingCandidates = [];
+    for (const row of openTaskRows) {
+      const dueAt = Date.parse(row.dueAt || '');
+      const hoursToDue = Number.isFinite(dueAt) ? (dueAt - now) / 3600000 : null;
+      let urgency = 0;
+      let reason = '';
+      if (row.task.key === 'escalated') {
+        urgency = 1000;
+        reason = 'تجاوز الـSLA بأكثر من 24 ساعة.';
+      } else if (row.task.key === 'overdue') {
+        urgency = 900;
+        reason = 'تجاوز موعد الـSLA.';
+      } else if (!row.owner) {
+        urgency = hoursToDue !== null && hoursToDue <= 0 ? 850 : hoursToDue !== null && hoursToDue <= 4 ? 800 : 650;
+        reason = 'المهمة غير مسندة لمسؤول.';
+      } else if (hoursToDue !== null && hoursToDue <= 4) {
+        urgency = 750;
+        reason = 'موعد الـSLA قريب خلال 4 ساعات.';
+      } else if (row.task.key === 'in_progress') {
+        urgency = 500;
+        reason = 'المهمة قيد التنفيذ.';
+      }
+      if (urgency > 0) {
+        briefingCandidates.push({
+          id: row.id,
+          title: row.title,
+          owner: row.owner || 'غير محدد',
+          status: row.task.key,
+          statusLabel: row.task.label,
+          dueAt: row.dueAt || '',
+          potentialValue: number(row.potentialValue),
+          urgency,
+          reason,
+          recommendedAction: row.task.key === 'escalated' || row.task.key === 'overdue'
+            ? 'راجع المسؤول وحدّث الحالة أو سجّل النتيجة فورًا.'
+            : !row.owner
+              ? 'عيّن مسؤولًا وحدد SLA واضحًا قبل ترك المهمة.'
+              : hoursToDue !== null && hoursToDue <= 4
+                ? 'ابدأ التنفيذ الآن لتقليل خطر تجاوز الـSLA.'
+                : 'تابع التقدم وسجّل النتيجة عند الإغلاق.'
+        });
+      }
+    }
+    const dailyBriefing = {
+      generatedAt: new Date(now).toISOString(),
+      date: todayKey,
+      summary: {
+        urgent: briefingCandidates.filter(item => item.urgency >= 800).length,
+        dueSoon: briefingCandidates.filter(item => item.urgency === 750).length,
+        unassigned: openTaskRows.filter(item => !item.owner).length
+      },
+      items: briefingCandidates
+        .sort((a,b) => b.urgency - a.urgency || (Date.parse(a.dueAt || '') || Number.MAX_SAFE_INTEGER) - (Date.parse(b.dueAt || '') || Number.MAX_SAFE_INTEGER))
+        .slice(0, 8)
+    };
+
     const completedTasks = campaigns.filter(item => item.status !== 'draft');
     const measurableTasks = completedTasks.map(item => {
       const startedAt = Date.parse(item.startedAt || item.assignedAt || '');
@@ -825,7 +884,8 @@ export function registerRevenueRoutes(app, {
       },
       recent,
       taskBoard,
-      taskPerformance
+      taskPerformance,
+      dailyBriefing
     };
   }
 
