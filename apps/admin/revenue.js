@@ -512,7 +512,7 @@ document.querySelector('#revenue-actions-body')?.addEventListener('click',async 
     const response=await fetch(revenueApiBase()+'/api/revenue/campaign-drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:button.dataset.type,reference:button.dataset.reference})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok) throw new Error(data.message||'تعذر إنشاء المسودة.');
-    alert('تم إنشاء المسودة. لا يوجد إرسال تلقائي في هذه النسخة.');
+    alert(data.reused ? 'المهمة موجودة بالفعل ومفتوحة لنفس الفرصة؛ لم يتم إنشاء نسخة مكررة.' : 'تم إنشاء المسودة. لا يوجد إرسال تلقائي في هذه النسخة.');
     await loadRevenue();
   }catch(error){alert(error.message)}finally{button.disabled=false;}
 });
@@ -578,7 +578,7 @@ document.querySelector('#revenue-alerts-list')?.addEventListener('click',async e
     const response=await fetch(revenueApiBase()+'/api/revenue/campaign-drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'alert_action',reference:button.dataset.alertAction})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(data.message||'تعذر إنشاء المهمة.');
-    button.textContent='تم إنشاء المهمة';
+    button.textContent=data.reused?'المهمة موجودة بالفعل':'تم إنشاء المهمة';
     await loadRevenue();
   }catch(error){alert(error.message);button.disabled=false;}
 });

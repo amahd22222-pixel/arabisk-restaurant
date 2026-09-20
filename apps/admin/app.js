@@ -81,8 +81,9 @@ document.addEventListener('click',event=>{const segmentButton=event.target.close
 async function createSegmentActionDraft(segmentKey){
   const segment=customerSegments.find(item=>item.key===segmentKey); if(!segment)return;
   try{
-    const draft=await request('/api/revenue/campaign-drafts',{method:'POST',body:JSON.stringify({type:'segment_action',reference:segment.key})});
-    const state=$('#customers-state'); if(state)state.textContent=`تم إنشاء مسودة إجراء لـ${segment.label} (${draft.id}). التنفيذ يدوي وبعد التحقق من الموافقة.`;
+    const data=await request('/api/revenue/campaign-drafts',{method:'POST',body:JSON.stringify({type:'segment_action',reference:segment.key})});
+    const draft=data;
+    const state=$('#customers-state'); if(state)state.textContent=data.reused?`المهمة الخاصة بـ${segment.label} موجودة بالفعل ومفتوحة (${draft.id}) — لم يتم إنشاء نسخة مكررة.`:`تم إنشاء مسودة إجراء لـ${segment.label} (${draft.id}). التنفيذ يدوي وبعد التحقق من الموافقة.`;
   }catch(error){const state=$('#customers-state');if(state)state.textContent=error.message;}
 }
 document.querySelector('#customer-segments-refresh')?.addEventListener('click',()=>void loadCustomerSegments());
