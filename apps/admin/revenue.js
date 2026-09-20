@@ -254,6 +254,17 @@ async function loadRevenue(){
     const workloadRows=workload.rows||[];
     document.querySelector('#task-workload-owner-body').innerHTML=workloadRows.map(row=>'<tr><td><strong>'+revEsc(row.owner)+'</strong></td><td>'+Number(row.open||0)+'</td><td>'+Number(row.inProgress||0)+'</td><td>'+Number(row.dueSoon||0)+'</td><td>'+Number(row.overdue||0)+'</td><td>'+Number(row.escalated||0)+'</td><td class="price">'+revMoney(row.potentialValue)+'</td></tr>').join('')||'<tr><td colspan="7" class="empty">لا توجد مهام مفتوحة حاليًا.</td></tr>';
 
+    const riskExposure=data.riskExposure||{};
+    const riskSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
+    riskSet('#risk-high-count',riskExposure.highRiskCount||0);
+    riskSet('#risk-high-value',revMoney(riskExposure.highRiskPotentialValue||0));
+    riskSet('#risk-total-value',revMoney(riskExposure.totalPotentialValue||0));
+    riskSet('#risk-open-count',riskExposure.openTasks||0);
+    const riskNote=document.querySelector('#risk-exposure-note');if(riskNote)riskNote.textContent=riskExposure.note||'قيمة الفرص المعرضة للمخاطر لا تعني خسارة مؤكدة.';
+    const riskBody=document.querySelector('#risk-exposure-body');
+    const riskLabels={high:'عالية',medium:'متوسطة',low:'منخفضة'};
+    if(riskBody)riskBody.innerHTML=['high','medium','low'].map(key=>'<tr><td><span class="task-risk-badge '+key+'">'+riskLabels[key]+'</span></td><td>'+Number(riskExposure[key]?.count||0)+'</td><td class="price">'+revMoney(riskExposure[key]?.potentialValue||0)+'</td></tr>').join('');
+    
     const briefing=data.dailyBriefing||{};
     const bset=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
     bset('#briefing-urgent',briefing.summary?.urgent||0);
