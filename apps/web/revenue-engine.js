@@ -38,6 +38,20 @@ const OUTCOME_REASON_DEFINITIONS = {
   unclassified: 'غير مصنف'
 };
 const outcomeReasonLabel = key => OUTCOME_REASON_DEFINITIONS[key] || OUTCOME_REASON_DEFINITIONS.unclassified;
+const BLOCKER_TYPE_DEFINITIONS = {
+  customer_response: 'انتظار رد العميل',
+  owner_unavailable: 'المسؤول غير متاح',
+  approval: 'انتظار موافقة',
+  inventory: 'المخزون / توفر المنتج',
+  pricing: 'السعر / العرض يحتاج تعديل',
+  technical: 'مشكلة تقنية',
+  dependency: 'اعتماد على مهمة أو طرف آخر',
+  capacity: 'القدرة التشغيلية غير كافية',
+  other: 'عائق آخر'
+};
+const blockerTypeLabel = key => BLOCKER_TYPE_DEFINITIONS[key] || BLOCKER_TYPE_DEFINITIONS.other;
+
+
 
 const taskWorkflow = (campaign, now = Date.now()) => {
   if (campaign.status !== 'draft') {
@@ -66,8 +80,11 @@ const taskWorkflow = (campaign, now = Date.now()) => {
       overdueHours:0,
       dueHoursRemaining,
       blockerReason: clean(campaign.blockerReason, 240) || 'يوجد عائق تشغيلي يحتاج معالجة.',
+      blockerType: clean(campaign.blockerType, 40) || 'other',
+      blockerTypeLabel: blockerTypeLabel(clean(campaign.blockerType, 40) || 'other'),
       blockedAt: clean(campaign.blockedAt, 40),
       resolvedAt: clean(campaign.resolvedAt, 40),
+      blockedDurationHours: Number.isFinite(Date.parse(campaign.blockedAt || '')) ? Math.max(0, Math.round(((now - Date.parse(campaign.blockedAt || '')) / 3600000) * 10) / 10) : 0,
       riskKey:'high',
       riskLabel:'مخاطرة عالية',
       riskScore:85,
@@ -637,8 +654,10 @@ export function registerRevenueRoutes(app, {
       completedAt: '',
       taskNotes: '',
       blockerReason: '',
+      blockerType: 'other',
       blockedAt: '',
       resolvedAt: '',
+      blockerHistory: [],
       activityLog: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -711,6 +730,9 @@ export function registerRevenueRoutes(app, {
     const owner = clean(input.owner, 80);
     const dueAt = clean(input.dueAt, 40);
     const blockerReason = clean(input.blockerReason, 240);
+    const blockerType = Object.prototype.hasOwnProperty.call(BLOCKER_TYPE_DEFINITIONS, clean(input.blockerType, 40))
+      ? clean(input.blockerType, 40)
+      : 'other';
     const actor = clean(input.actor, 80);
     if (dueAt && !Number.isFinite(Date.parse(dueAt))) return null;
     const previousOwner = clean(campaign.owner, 80);
@@ -724,17 +746,51 @@ export function registerRevenueRoutes(app, {
     campaign.taskNotes = clean(input.notes, 400);
     campaign.assignedAt = requestedStatus === 'unassigned' ? '' : (campaign.assignedAt || now);
     campaign.startedAt = requestedStatus === 'in_progress' ? (campaign.startedAt || now) : campaign.startedAt || '';
+    if (!Array.isArray(campaign.blockerHistory)) campaign.blockerHistory = [];
     if (requestedStatus === 'blocked') {
+      const wasBlocked = previousStatus === 'blocked';
       campaign.blockerReason = blockerReason || clean(campaign.blockerReason, 240);
-      campaign.blockedAt = previousStatus === 'blocked' && campaign.blockedAt ? campaign.blockedAt : now;
+      campaign.blockerType = wasBlocked ? (Object.prototype.hasOwnProperty.call(BLOCKER_TYPE_DEFINITIONS, clean(campaign.blockerType, 40)) ? clean(campaign.blockerType, 40) : blockerType) : blockerType;
+      campaign.blockedAt = wasBlocked && campaign.blockedAt ? campaign.blockedAt : now;
       campaign.resolvedAt = '';
+      if (!wasBlocked) {
+        campaign.blockerHistory.push({
+          id: crypto.randomUUID(),
+          type: campaign.blockerType,
+          label: blockerTypeLabel(campaign.blockerType),
+          reason: campaign.blockerReason,
+          blockedAt: campaign.blockedAt,
+          resolvedAt: '',
+          durationHours: 0
+        });
+      } else if (campaign.blockerHistory.length) {
+        const currentHistory = campaign.blockerHistory[campaign.blockerHistory.length - 1];
+        currentHistory.type = campaign.blockerType;
+        currentHistory.label = blockerTypeLabel(campaign.blockerType);
+        currentHistory.reason = campaign.blockerReason;
+        currentHistory.blockedAt = campaign.blockedAt;
+      }
     } else if (previousStatus === 'blocked') {
-      campaign.resolvedAt = now;
+      const resolvedAt = now;
+      const blockedAt = Date.parse(campaign.blockedAt || '');
+      const durationHours = Number.isFinite(blockedAt)
+        ? Math.max(0, Math.round(((Date.parse(resolvedAt) - blockedAt) / 3600000) * 10) / 10)
+        : 0;
+      campaign.resolvedAt = resolvedAt;
+      campaign.blockerHistory = campaign.blockerHistory || [];
+      const currentHistory = campaign.blockerHistory[campaign.blockerHistory.length - 1];
+      if (currentHistory && !currentHistory.resolvedAt) {
+        currentHistory.resolvedAt = resolvedAt;
+        currentHistory.durationHours = durationHours;
+      }
       campaign.blockerReason = '';
+      campaign.blockerType = 'other';
       campaign.blockedAt = '';
     } else {
       campaign.blockerReason = blockerReason || '';
+      campaign.blockerType = blockerType;
     }
+    if (campaign.blockerHistory.length > 30) campaign.blockerHistory.splice(0, campaign.blockerHistory.length - 30);
     campaign.updatedAt = now;
     const activityType = requestedStatus === 'blocked' && previousStatus !== 'blocked'
       ? 'blocked'
@@ -751,6 +807,7 @@ export function registerRevenueRoutes(app, {
       owner,
       dueAt,
       workflowStatus: requestedStatus,
+      blockerType: blockerTypeLabel(campaign.blockerType),
       blockerReason: campaign.blockerReason || '',
       previousOwner,
       previousDueAt,
@@ -1044,6 +1101,66 @@ export function registerRevenueRoutes(app, {
         : 'لا يوجد مسؤول نشط معروف من المهام الحالية لتوليد اقتراح توزيع.'
     };
 
+    const blockerAnalyticsMap = new Map();
+    let blockedCurrentCount = 0;
+    let totalBlockedHours = 0;
+    let resolvedBlockCount = 0;
+    for (const campaign of campaigns) {
+      const history = Array.isArray(campaign.blockerHistory) ? campaign.blockerHistory : [];
+      if (!history.length && campaign.blockerReason) {
+        history.push({
+          id: 'legacy-' + campaign.id,
+          type: Object.prototype.hasOwnProperty.call(BLOCKER_TYPE_DEFINITIONS, campaign.blockerType) ? campaign.blockerType : 'other',
+          label: blockerTypeLabel(campaign.blockerType),
+          reason: clean(campaign.blockerReason, 240),
+          blockedAt: clean(campaign.blockedAt, 40),
+          resolvedAt: clean(campaign.resolvedAt, 40),
+          durationHours: campaign.resolvedAt && campaign.blockedAt
+            ? Math.max(0, (Date.parse(campaign.resolvedAt) - Date.parse(campaign.blockedAt)) / 3600000)
+            : Number.isFinite(Date.parse(campaign.blockedAt || '')) ? Math.max(0, (now - Date.parse(campaign.blockedAt)) / 3600000) : 0
+        });
+      }
+      for (const entry of history) {
+        const type = Object.prototype.hasOwnProperty.call(BLOCKER_TYPE_DEFINITIONS, entry.type) ? entry.type : 'other';
+        const blockedAt = Date.parse(entry.blockedAt || '');
+        const resolvedAt = Date.parse(entry.resolvedAt || '');
+        const durationHours = entry.resolvedAt && Number.isFinite(blockedAt) && Number.isFinite(resolvedAt)
+          ? Math.max(0, (resolvedAt - blockedAt) / 3600000)
+          : Number.isFinite(blockedAt) ? Math.max(0, (now - blockedAt) / 3600000) : Math.max(0, number(entry.durationHours));
+        const current = blockerAnalyticsMap.get(type) || { type, label:blockerTypeLabel(type), occurrences:0, open:0, resolved:0, totalDurationHours:0, potentialValue:0 };
+        current.occurrences += 1;
+        if (!entry.resolvedAt) { current.open += 1; blockedCurrentCount += 1; }
+        else { current.resolved += 1; resolvedBlockCount += 1; }
+        current.totalDurationHours += durationHours;
+        if (entry.blockedAt && !entry.resolvedAt) {
+          const related = campaigns.find(item => item === campaign);
+          current.potentialValue += Math.max(0, number(related?.potentialValue));
+        }
+        totalBlockedHours += durationHours;
+        blockerAnalyticsMap.set(type, current);
+      }
+    }
+    const blockerAnalyticsRows = [...blockerAnalyticsMap.values()]
+      .map(row => ({
+        type: row.type,
+        label: row.label,
+        occurrences: row.occurrences,
+        open: row.open,
+        resolved: row.resolved,
+        averageDurationHours: row.occurrences ? Math.round((row.totalDurationHours / row.occurrences) * 10) / 10 : 0,
+        potentialValue: Math.round(row.potentialValue * 100) / 100
+      }))
+      .sort((a,b) => b.open - a.open || b.occurrences - a.occurrences || b.potentialValue - a.potentialValue);
+    const blockerAnalytics = {
+      openCount: blockedCurrentCount,
+      resolvedCount: resolvedBlockCount,
+      totalOccurrences: blockerAnalyticsRows.reduce((sum,row) => sum + row.occurrences, 0),
+      averageDurationHours: blockerAnalyticsRows.reduce((sum,row) => sum + row.occurrences, 0) ? Math.round((totalBlockedHours / blockerAnalyticsRows.reduce((sum,row) => sum + row.occurrences, 0)) * 10) / 10 : 0,
+      openPotentialValue: Math.round(blockerAnalyticsRows.reduce((sum,row) => sum + row.potentialValue, 0) * 100) / 100,
+      rows: blockerAnalyticsRows,
+      note: 'مدة الحجب محسوبة من سجل الحجب؛ العائق المفتوح يستمر احتسابه حتى وقت إنشاء الملخص. القيمة المفتوحة ليست خسارة مؤكدة.'
+    };
+
     const riskTaskRows = openTaskRows.map(row => ({ ...row, risk: row.task.riskKey || 'low' }));
     const riskBuckets = {
       high: riskTaskRows.filter(row => row.risk === 'high'),
@@ -1280,7 +1397,8 @@ export function registerRevenueRoutes(app, {
       taskRouting,
       riskExposure,
       outcomeInsights,
-      outcomeLearning
+      outcomeLearning,
+      blockerAnalytics
     };
   }
 
