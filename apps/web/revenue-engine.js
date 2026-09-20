@@ -307,8 +307,20 @@ export function registerRevenueRoutes(app, {
 
     const inactiveCustomers = customers
       .filter(customer => number(customer.orderCount) >= 2)
-      .map(customer => ({ ...customer, daysSinceLastOrder: Math.floor((now - Date.parse(customer.lastOrderAt || '')) / 86400000) }))
-      .filter(customer => Number.isFinite(customer.daysSinceLastOrder) && customer.daysSinceLastOrder >= 21)
+      .map(customer => {
+        const daysSinceLastOrder = Math.floor((now - Date.parse(customer.lastOrderAt || '')) / 86400000);
+        const lastOrder = orders
+          .filter(order => order.phone && customer.phone && order.phone === customer.phone && order.status !== 'cancelled')
+          .sort((a,b) => Date.parse(b.updatedAt || b.createdAt || '') - Date.parse(a.updatedAt || a.createdAt || ''))[0] || null;
+        const cartItems = Array.isArray(lastOrder?.items)
+          ? lastOrder.items.map(item => ({
+              productId: clean(item.productId, 50),
+              quantity: Math.max(1, Math.min(20, Math.round(number(item.quantity, 1))))
+            })).filter(item => item.productId)
+          : [];
+        return { ...customer, daysSinceLastOrder, lastOrder, cartItems };
+      })
+      .filter(customer => Number.isFinite(customer.daysSinceLastOrder) && customer.daysSinceLastOrder >= 21 && customer.cartItems.length > 0)
       .map(customer => {
         const score = clamp(25 + Math.min(35, Math.floor(customer.daysSinceLastOrder / 2)) + Math.min(35, number(customer.orderCount) * 5));
         const p = priority(score);
@@ -319,11 +331,14 @@ export function registerRevenueRoutes(app, {
           orderCount: customer.orderCount,
           lastOrderAt: customer.lastOrderAt,
           daysSinceLastOrder: customer.daysSinceLastOrder,
+          lastOrderValue: Math.max(0, number(customer.lastOrder?.total)),
+          cartItems: customer.cartItems,
           priorityScore: score,
           priority: p.label,
           priorityKey: p.key,
           reason: `عميل متكرر لديه ${customer.orderCount} طلبات سابقة، وآخر طلب منذ ${customer.daysSinceLastOrder} يوم.`,
-          recommendedAction: 'راجِع آخر مشترياته واقترح عودة مناسبة، مع التحقق من حالة الموافقة قبل أي تواصل.'
+          recommendedAction: 'جهّز رابط إعادة الطلب من آخر مشتريات العميل، ثم شاركه يدويًا بعد التحقق من موافقة التواصل.',
+          potentialValue: Math.max(0, number(customer.lastOrder?.total))
         };
       })
       .sort((a, b) => b.priorityScore - a.priorityScore || b.daysSinceLastOrder - a.daysSinceLastOrder)
@@ -470,7 +485,7 @@ export function registerRevenueRoutes(app, {
       ...inactiveCustomers.map(item => ({
         type: 'inactive_customer', priorityScore: item.priorityScore, priority: item.priority, priorityKey: item.priorityKey,
         title: `إعادة تنشيط: ${clean(item.name || 'عميل', 70)}`, reason: item.reason,
-        recommendedAction: item.recommendedAction, potentialValue: 0, reference: item.id
+        recommendedAction: item.recommendedAction, potentialValue: item.potentialValue, cartItems: item.cartItems, reference: item.id
       })),
       ...upcomingReservations.map(item => ({
         type: 'upcoming_reservation', priorityScore: item.priorityScore, priority: item.priority, priorityKey: item.priorityKey,
@@ -721,7 +736,7 @@ export function registerRevenueRoutes(app, {
       item.status === 'draft' &&
       item.type === type &&
       item.reference === reference &&
-      (type !== 'abandoned_cart' || !item.recoveryExpiresAt || Date.parse(item.recoveryExpiresAt || '') > Date.now())
+      (!['abandoned_cart', 'inactive_customer'].includes(type) || !item.recoveryExpiresAt || Date.parse(item.recoveryExpiresAt || '') > Date.now())
     );
     if (existing) return { ...existing, reused: true };
 
@@ -735,9 +750,9 @@ export function registerRevenueRoutes(app, {
         : type === 'segment_action'
           ? clean(action.recommendedAction, 500)
           : type === 'abandoned_cart'
-          ? 'مسودة استرجاع سلة: راجع السلة المتروكة وحدد قناة التواصل المناسبة بعد التحقق من الموافقة.'
+          ? 'مسودة استرجاع سلة: شارك رابط استرجاع السلة يدويًا بعد التحقق من الموافقة.'
           : type === 'inactive_customer'
-            ? `مسودة إعادة تنشيط للعميل: ${clean(action.title.replace('إعادة تنشيط: ', ''), 70)}.`
+            ? 'مسودة إعادة تنشيط: شارك رابط إعادة الطلب من آخر مشتريات العميل يدويًا بعد التحقق من الموافقة.'
             : type === 'returning_customer'
               ? clean(action.recommendedAction, 500)
               : type === 'product_interest'
@@ -748,14 +763,18 @@ export function registerRevenueRoutes(app, {
       sendable: false,
       executionNote: 'V1 لا يرسل الرسائل تلقائيًا. يجب تنفيذ التواصل خارج النظام فقط بعد التحقق من موافقة العميل.',
       potentialValue: number(action.potentialValue),
-      cartItems: type === 'abandoned_cart' && Array.isArray(action.cartItems)
+      cartItems: ['abandoned_cart', 'inactive_customer'].includes(type) && Array.isArray(action.cartItems)
         ? action.cartItems.slice(0, 30).map(item => ({
             productId: clean(item?.productId, 50),
             quantity: Math.max(1, Math.min(20, Math.round(number(item?.quantity, 1))))
           })).filter(item => item.productId)
         : [],
-      recoveryToken: type === 'abandoned_cart' ? crypto.randomBytes(18).toString('hex') : '',
-      recoveryExpiresAt: type === 'abandoned_cart' ? new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString() : '',
+      recoveryToken: ['abandoned_cart', 'inactive_customer'].includes(type) ? crypto.randomBytes(18).toString('hex') : '',
+      recoveryExpiresAt: type === 'abandoned_cart'
+        ? new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
+        : type === 'inactive_customer'
+          ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          : '',
       recoveryPath: '',
       audienceCount: segment ? Number(segment.count || 0) : 0,
       historicalSegmentRevenue: segment ? number(segment.totalRevenue) : 0,
@@ -786,6 +805,24 @@ export function registerRevenueRoutes(app, {
     return draft;
   }
 
+  function executeInactiveCustomerRecovery(reference) {
+    const cleanReference = clean(reference, 120);
+    const summary = buildSummary();
+    const opportunity = (summary.opportunities?.inactiveCustomers || []).find(item => item.id === cleanReference);
+    if (!opportunity) return null;
+    if (!opportunity.cartItems?.length) return { error: 'CART_SNAPSHOT_UNAVAILABLE' };
+    const existing = campaigns.find(item =>
+      item.status === 'draft' &&
+      item.type === 'inactive_customer' &&
+      item.reference === cleanReference &&
+      item.recoveryToken &&
+      Date.parse(item.recoveryExpiresAt || '') > Date.now()
+    );
+    if (existing) return { campaign: existing, reused: true };
+    const draft = createCampaignDraft({ type: 'inactive_customer', reference: cleanReference });
+    return draft ? { campaign: draft, reused: false } : null;
+  }
+
   function executeAbandonedCartRecovery(reference) {
     const cleanReference = clean(reference, 120);
     const summary = buildSummary();
@@ -806,7 +843,7 @@ export function registerRevenueRoutes(app, {
 
   function getRecoveryCart(token) {
     const cleanToken = clean(token, 80);
-    const campaign = campaigns.find(item => item.type === 'abandoned_cart' && item.recoveryToken === cleanToken);
+    const campaign = campaigns.find(item => ['abandoned_cart', 'inactive_customer'].includes(item.type) && item.recoveryToken === cleanToken);
     if (!campaign) return { error: 'NOT_FOUND' };
     if (campaign.status === 'converted') return { error: 'ALREADY_RECOVERED' };
     const expiresAt = Date.parse(campaign.recoveryExpiresAt || '');
@@ -822,7 +859,7 @@ export function registerRevenueRoutes(app, {
   function recordRecoveryOrder(token, orderId) {
     const cleanToken = clean(token, 80);
     const campaign = campaigns.find(item =>
-      item.type === 'abandoned_cart' &&
+      ['abandoned_cart', 'inactive_customer'].includes(item.type) &&
       item.recoveryToken === cleanToken &&
       item.status === 'draft'
     );
@@ -1665,6 +1702,24 @@ export function registerRevenueRoutes(app, {
     });
   });
 
+  app.post('/api/revenue/inactive-customers/:reference/execute', requireAdminApiKey, (req, res) => {
+    const result = executeInactiveCustomerRecovery(req.params.reference);
+    if (!result) return res.status(404).json({ message: 'Inactive customer opportunity not found.' });
+    if (result.error === 'CART_SNAPSHOT_UNAVAILABLE') {
+      return res.status(409).json({ message: 'لا يمكن إنشاء رابط إعادة الطلب لأن آخر طلب للعميل لا يحتوي على أصناف قابلة للاسترجاع.' });
+    }
+    const campaign = result.campaign;
+    return res.status(result.reused ? 200 : 201).json({
+      ok: true,
+      reused: Boolean(result.reused),
+      campaignId: campaign.id,
+      recoveryToken: campaign.recoveryToken,
+      recoveryPath: campaign.recoveryPath,
+      recoveryExpiresAt: campaign.recoveryExpiresAt,
+      cartValue: campaign.potentialValue
+    });
+  });
+
   app.post('/api/revenue/campaigns/:id/outcome', requireAdminApiKey, (req, res) => {
     const updated = updateCampaignOutcome(req.params.id, req.body || {});
     if (!updated) return res.status(400).json({ message: 'Invalid campaign or outcome.' });
@@ -1707,5 +1762,5 @@ export function registerRevenueRoutes(app, {
 
   app.get('/api/revenue/customers/:id/360', requireAdminApiKey, (req, res) => { const profile = customer360(req.params.id); if (!profile) return res.status(404).json({ message: 'Customer not found.' }); return res.json(profile); });
 
-  return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, executeAbandonedCartRecovery, getRecoveryCart, recordRecoveryOrder, updateCampaignOutcome, updateCampaignTask, campaignSummary, customer360, customerSegments };
+  return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, executeAbandonedCartRecovery, executeInactiveCustomerRecovery, getRecoveryCart, recordRecoveryOrder, updateCampaignOutcome, updateCampaignTask, campaignSummary, customer360, customerSegments };
 }
