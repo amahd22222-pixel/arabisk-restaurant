@@ -6,6 +6,7 @@ const revPriority=(key,label)=>`<span class="rev-priority ${revEsc(key)}">${revE
 async function loadRevenue(){
   const state=document.querySelector('#revenue-state');
   if(state)state.textContent='جارٍ تحليل فرص الإيراد…';
+  const setMetric=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
   try{
     const response=await fetch(revenueApiBase()+'/api/revenue/summary',{cache:'no-store'});
     const data=await response.json().catch(()=>({}));
@@ -55,7 +56,6 @@ async function loadRevenue(){
     document.querySelector('#intel-next-actions').innerHTML=nextActions.map(row=>`<div class="intelligence-action"><strong>${revEsc(row.priority||'—')}</strong><span>${revEsc(row.title)}</span><small>${revEsc(row.recommendedAction||row.reason)}</small></div>`).join('')||'<div class="empty">لا توجد أولوية تنفيذية حالية.</div>';
 
     const measurement=data.measurement||{};
-    const setMetric=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
     setMetric('#rev-intent-sessions',measurement.intentSessions);
     setMetric('#rev-intent-conversions',measurement.intentConversions);
     setMetric('#rev-intent-rate',`${Number(measurement.intentConversionRate||0).toFixed(1)}%`);
@@ -75,9 +75,22 @@ async function loadRevenue(){
     document.querySelector('#revenue-reservation-body').innerHTML=upcoming.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name)}</strong><small dir="ltr">${revEsc(row.phone)}</small></td><td>${revEsc(row.date)}<small>${revEsc(row.time)}</small></td><td>${Number(row.guests||0)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد حجوزات خلال 48 ساعة.</td></tr>';
     const campaigns=data.campaigns||{};
     setMetric('#rev-drafts',campaigns.counts?.drafts);setMetric('#rev-executed',campaigns.counts?.executed);setMetric('#rev-converted',campaigns.counts?.converted);setMetric('#rev-attributed-orders',campaigns.counts?.attributedOrders);
+    setMetric('#rev-open-tasks',campaigns.counts?.openTasks);setMetric('#rev-in-progress-tasks',campaigns.counts?.inProgressTasks);setMetric('#rev-overdue-tasks',campaigns.counts?.overdueTasks);
     const measured=document.querySelector('#rev-measured-revenue');if(measured)measured.textContent=revMoney(campaigns.counts?.measuredRevenue);
+    const taskLabels={unassigned:'غير مسندة',assigned:'مسندة',in_progress:'قيد التنفيذ',overdue:'متأخرة',done:'مكتملة'};
     const campaignRows=campaigns.recent||[];
-    document.querySelector('#revenue-campaigns-body').innerHTML=campaignRows.map(row=>`<tr><td><strong>${revEsc(row.id)}</strong><small>${revEsc(row.title)}</small></td><td>${revEsc({draft:'مسودة',executed:'تم التنفيذ',converted:'تحولت',ignored:'تم التجاهل'}[row.status]||row.status)}</td><td class="price">${row.resultRevenue?revMoney(row.resultRevenue):'—'}</td><td>${row.attribution?.matchedOrder?`<span class="status on">طلب ${revEsc(row.orderId)}</span>`:'<span class="status pending">غير مربوط</span>'}</td><td><button class="small-action" data-campaign-outcome="executed" data-id="${revEsc(row.id)}" type="button">تم التنفيذ</button><button class="small-action" data-campaign-outcome="converted" data-id="${revEsc(row.id)}" type="button">سجل التحول</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد مسودات حتى الآن.</td></tr>';
+    document.querySelector('#revenue-campaigns-body').innerHTML=campaignRows.map(row=>{
+      const task=row.task||{};
+      const dueAt=task.dueAt||row.dueAt||'';
+      const dueText=dueAt?new Date(dueAt).toLocaleString('ar-AE',{dateStyle:'short',timeStyle:'short'}):'بدون موعد';
+      const taskKey=task.key||row.workflowStatus||'unassigned';
+      const taskClass=taskKey==='overdue'?'overdue':taskKey;
+      const taskLabel=taskLabels[taskKey]||taskKey;
+      const owner=task.owner||row.owner||'غير محدد';
+      const actionButtons=row.status==='draft' ? '<button class="small-action" data-campaign-task data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(task.owner||row.owner||'')+'" data-due-at="'+revEsc(dueAt)+'" type="button">'+(taskKey==='unassigned'?'تعيين + SLA':'تعديل المهمة')+'</button>'+(taskKey==='assigned' ? '<button class="small-action" data-campaign-start data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(owner==='غير محدد'?'':owner)+'" data-due-at="'+revEsc(dueAt)+'" type="button">بدء التنفيذ</button>' : '') : '';
+      const outcomeButtons=row.status==='draft' ? '<button class="small-action" data-campaign-outcome="executed" data-id="'+revEsc(row.id)+'" type="button">تم التنفيذ</button><button class="small-action" data-campaign-outcome="converted" data-id="'+revEsc(row.id)+'" type="button">سجل التحول</button>' : '<span class="status on">تم تسجيل النتيجة</span>';
+      return '<tr><td><strong>'+revEsc(row.id)+'</strong><small>'+revEsc(row.title)+'</small></td><td>'+revEsc({draft:'مسودة',executed:'تم التنفيذ',converted:'تحولت',ignored:'تم التجاهل'}[row.status]||row.status)+'</td><td><div class="task-meta"><span class="rev-task '+revEsc(taskClass)+'">'+revEsc(taskLabel)+'</span><strong>'+revEsc(owner)+'</strong><small>'+revEsc(dueText)+'</small></div></td><td class="price">'+(row.resultRevenue?revMoney(row.resultRevenue):'—')+'</td><td class="campaign-actions">'+(actionButtons||'—')+'</td><td>'+outcomeButtons+'</td></tr>';
+    }).join('')||'<tr><td colspan="6" class="empty">لا توجد مسودات حتى الآن.</td></tr>';
     if(state)state.textContent=`آخر تحديث: ${new Date(data.generatedAt).toLocaleString('ar-AE')} — نافذة التحليل ${data.windowDays} يوم`;
   }catch(error){ if(state)state.textContent=error.message; }
 }
@@ -97,6 +110,34 @@ document.querySelector('#revenue-actions-body')?.addEventListener('click',async 
   }catch(error){alert(error.message)}finally{button.disabled=false;}
 });
 document.querySelector('#revenue-campaigns-body')?.addEventListener('click',async event=>{
+  const taskButton=event.target.closest('[data-campaign-task]');
+  if(taskButton){
+    const owner=prompt('اكتب اسم المسؤول أو الدور المسؤول عن المهمة:',taskButton.dataset.owner||'');
+    if(owner===null)return;
+    const hoursInput=prompt('مدة الـSLA بالساعات من الآن:','24');
+    if(hoursInput===null)return;
+    const hours=Math.max(1,Math.min(720,Number(hoursInput)||24));
+    const dueAt=new Date(Date.now()+hours*3600000).toISOString();
+    taskButton.disabled=true;
+    try{
+      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(taskButton.dataset.id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner,dueAt,workflowStatus:'assigned'})});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.message||'تعذر تعيين المهمة.');
+      await loadRevenue();
+    }catch(error){alert(error.message)}finally{taskButton.disabled=false;}
+    return;
+  }
+  const startButton=event.target.closest('[data-campaign-start]');
+  if(startButton){
+    startButton.disabled=true;
+    try{
+      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(startButton.dataset.id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:startButton.dataset.owner||'',dueAt:startButton.dataset.dueAt||'',workflowStatus:'in_progress'})});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.message||'تعذر بدء المهمة.');
+      await loadRevenue();
+    }catch(error){alert(error.message)}finally{startButton.disabled=false;}
+    return;
+  }
   const button=event.target.closest('[data-campaign-outcome]'); if(!button)return;
   const outcome=button.dataset.campaignOutcome;
   const payload={outcome};
