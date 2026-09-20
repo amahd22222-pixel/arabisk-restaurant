@@ -11,6 +11,11 @@ async function loadRevenue(){
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(data.message||'تعذر تحميل بيانات الإيراد.');
     const f=data.funnel||{};
+    const health=data.health||{};
+    setMetric('#rev-health-score',health.score);
+    const healthLabel=document.querySelector('#rev-health-label');if(healthLabel)healthLabel.textContent=health.label||'—';
+    const leak=document.querySelector('#rev-biggest-leak');if(leak)leak.textContent=health.biggestLeak?.label||'لا توجد بيانات كافية';
+    const leakRate=document.querySelector('#rev-leak-rate');if(leakRate)leakRate.textContent=health.biggestLeak?.lossRate!==null&&health.biggestLeak?.lossRate!==undefined?`${Number(health.biggestLeak.lossRate).toFixed(1)}% تسريب`:'';
     const set=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
     set('#rev-menu',f.menuViews);set('#rev-item',f.itemViews);set('#rev-cart',f.addToCart);set('#rev-checkout',f.checkoutStarted);set('#rev-orders',f.completedOrders);
     set('#rev-abandoned',data.counts?.abandonedCarts);set('#rev-inactive',data.counts?.inactiveCustomers);set('#rev-reservations',data.counts?.upcomingReservations);set('#rev-actions-count',data.counts?.topActions);
