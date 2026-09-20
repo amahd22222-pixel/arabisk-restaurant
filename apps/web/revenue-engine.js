@@ -330,6 +330,68 @@ export function registerRevenueRoutes(app, {
 
     const totalMeasuredRevenue = campaigns.reduce((sum, item) => sum + number(item.resultRevenue), 0);
     const bestMeasuredSegment = [...segmentPerformance].sort((a,b) => b.measuredRevenue - a.measuredRevenue)[0] || null;
+    const alerts = [];
+    if (health.biggestLeak && health.biggestLeak.lossRate >= 70) {
+      alerts.push({
+        severity:'high',
+        key:'funnel_leak',
+        title:'تسريب كبير في مسار الطلب',
+        detail:`${health.biggestLeak.label} لديه ${Number(health.biggestLeak.lossRate).toFixed(1)}% فقد.`,
+        action:'راجع هذه المرحلة أولًا قبل زيادة الإنفاق أو توسيع الحملات.'
+      });
+    }
+    if (forecast.trendRate !== null && forecast.trendRate <= -10) {
+      alerts.push({
+        severity:'high',
+        key:'revenue_downtrend',
+        title:'اتجاه الإيراد هابط',
+        detail:`متوسط الإيراد اليومي لآخر 14 يومًا أقل من فترة المقارنة بنسبة ${Math.abs(Number(forecast.trendRate)).toFixed(1)}%.`,
+        action:'راجع مصادر الطلب والإجراءات المقاسة قبل توسيع النشاط.'
+      });
+    } else if (forecast.trendRate !== null && forecast.trendRate >= 10) {
+      alerts.push({
+        severity:'medium',
+        key:'revenue_uptrend',
+        title:'اتجاه الإيراد صاعد',
+        detail:`متوسط الإيراد اليومي لآخر 14 يومًا أعلى من فترة المقارنة بنسبة ${Number(forecast.trendRate).toFixed(1)}%.`,
+        action:'راجع ما حدث في هذه الفترة وسجّل الإجراءات المرتبطة قبل تكرارها.'
+      });
+    }
+    if (abandoned.length > 0) {
+      alerts.push({
+        severity:'medium',
+        key:'abandoned_carts',
+        title:'فرص سلال متروكة متاحة',
+        detail:`${abandoned.length} سلة مؤهلة بقيمة محتملة إجمالية ${Math.round(abandoned.reduce((sum,item)=>sum+number(item.cartValue),0))} AED.`,
+        action:'ابدأ بالأعلى أولوية، ثم استخدم مسودة الإجراء بعد التحقق من الموافقة.'
+      });
+    }
+    if (inactiveCustomers.length > 0) {
+      alerts.push({
+        severity:'medium',
+        key:'lapsed_customers',
+        title:'عملاء متكررون غير نشطين',
+        detail:`${inactiveCustomers.length} عميل يحتاج مراجعة لإعادة التنشيط.`,
+        action:'افتح الشرائح وراجع تاريخ العميل قبل أي تواصل.'
+      });
+    }
+    if (upcomingReservations.length > 0) {
+      alerts.push({
+        severity:'low',
+        key:'upcoming_reservations',
+        title:'حجوزات قريبة',
+        detail:`${upcomingReservations.length} حجز خلال 48 ساعة يمكن الاستعداد له.`,
+        action:'جهّز عروض Pre-order أو إضافات مناسبة قبل الزيارة.'
+      });
+    }
+    const alertsSummary = {
+      count: alerts.length,
+      high: alerts.filter(item=>item.severity==='high').length,
+      medium: alerts.filter(item=>item.severity==='medium').length,
+      low: alerts.filter(item=>item.severity==='low').length,
+      items: alerts
+    };
+
     const intelligence = {
       nextActions: topActions.slice(0, 5),
       segmentPerformance,
@@ -360,6 +422,7 @@ export function registerRevenueRoutes(app, {
 
       intelligence,
       forecast,
+      alerts: alertsSummary,
       measurement: {
         intentSessions,
         intentConversions: intentConversions.length,
