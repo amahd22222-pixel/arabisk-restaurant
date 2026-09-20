@@ -34,11 +34,35 @@ const saveLastOrder=(data,{orderType='dine_in',tableNumber='',name='',phone='' }
 const readLastOrder=()=>{const value=readJson(LAST_ORDER_KEY,null);return value&&value.id?value:null};
 const statusMeta={pending:{label:'تم استلام الطلب',step:1},confirmed:{label:'تم تأكيد الطلب',step:2},preparing:{label:'جاري التحضير',step:3},ready:{label:'الطلب جاهز',step:4},completed:{label:'تم إكمال الطلب',step:5},cancelled:{label:'تم إلغاء الطلب',step:0}};
 let cart=readCart();
+let recoveryToken=new URLSearchParams(location.search).get('recover')||'';
+let recoveryRestorePromise=null;
 let trackingTimer=null;
 const total=()=>cart.reduce((sum,item)=>sum+(Number(item.price)||0)*(Number(item.qty)||0),0);
 const count=()=>cart.reduce((sum,item)=>sum+(Number(item.qty)||0),0);
 const money=value=>'AED '+Number(value||0).toFixed(0);
 
+async function restoreRecoveryCart(){
+  if(recoveryRestorePromise)return recoveryRestorePromise;
+  if(!recoveryToken)return null;
+  recoveryRestorePromise=(async()=>{
+    try{
+      const response=await fetch('/api/revenue/recovery/'+encodeURIComponent(recoveryToken),{cache:'no-store'});
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(data.message||'تعذر استرجاع السلة.');
+      if(!Array.isArray(data.items)||!data.items.length)throw new Error('السلة المسترجعة فارغة.');
+      window.ARABISK_CART?.setItems?.(data.items.map(item=>({id:item.id,qty:item.qty})));
+      cart=await hydrateCartView();
+      const status=document.querySelector('#cart-form-status');
+      if(status)status.textContent='تم استرجاع سلتك السابقة. يمكنك إكمال الطلب الآن.';
+      return true;
+    }catch(error){
+      const status=document.querySelector('#cart-form-status');
+      if(status)status.textContent=error.message||'تعذر استرجاع السلة.';
+      return false;
+    }
+  })();
+  return recoveryRestorePromise;
+}
 function syncCheckoutFields(){const saved=readCheckout();const type=document.querySelector('#cart-order-type');const table=document.querySelector('#cart-table');const name=document.querySelector('#cart-name');const phone=document.querySelector('#cart-phone');if(type)type.value=saved.orderType||'dine_in';if(table)table.value=saved.tableNumber||'';if(name)name.value=saved.name||'';if(phone)phone.value=saved.phone||'';syncOrderTypeUI();}
 function persistCheckout(){saveCheckout({orderType:document.querySelector('#cart-order-type')?.value,tableNumber:document.querySelector('#cart-table')?.value,name:document.querySelector('#cart-name')?.value,phone:document.querySelector('#cart-phone')?.value});}
 function syncOrderTypeUI(){
@@ -117,8 +141,8 @@ async function submitOrder(event){
   if(orderType==='pickup'&&(name.length<2||phone.length<5)){status.textContent='يرجى إدخال الاسم ورقم الهاتف للاستلام.';return;}
   persistCheckout();submit.disabled=true;status.textContent='جاري إرسال الطلب…';
   try{
-    const sessionId=window.ARABISK_ANALYTICS?.getSessionId?.()||'';window.ARABISK_ANALYTICS?.track?.('checkout_started',{cartValue:total(),metadata:{orderType}});
-    const payload={orderType,tableNumber:orderType==='dine_in'?tableNumber:'',name:orderType==='pickup'?name:'',phone:orderType==='pickup'?phone:'',notes,sessionId,items:cart.map(item=>({productId:item.id,quantity:item.qty}))};
+    const sessionId=window.ARABISK_ANALYTICS?.getSessionId?.()||'';window.ARABISK_ANALYTICS?.track?.('checkout_started',{cartValue:total(),cartItems:cart.map(item=>({productId:item.id,quantity:Number(item.qty)||1})),metadata:{orderType}});
+    const payload={orderType,tableNumber:orderType==='dine_in'?tableNumber:'',name:orderType==='pickup'?name:'',phone:orderType==='pickup'?phone:'',notes,sessionId,recoveryToken,items:cart.map(item=>({productId:item.id,quantity:item.qty}))};
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);let response;
     try{response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});}finally{clearTimeout(timer);}
     const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر إرسال الطلب.');
@@ -142,5 +166,7 @@ window.addEventListener('storage',event=>{if(event.key==='arabisk-cart-v4'){cart
 document.querySelector('#track-close').addEventListener('click',closeTracking);
 document.querySelector('#cart-success').addEventListener('click',function(event){if(event.target.id==='cart-success')closeModal('#cart-success');});
 document.addEventListener('keydown',function(event){if(event.key==='Escape'){closeModal('#cart-success');closeTracking();}});
-syncCheckoutFields();render();
+syncCheckoutFields();
+void restoreRecoveryCart().then(()=>{cart=readCart();render();});
+render();
 })();

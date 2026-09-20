@@ -167,7 +167,7 @@ function add(item,quantity=1){
   cart=saveCart(cart);
   renderBadge();
   showToast(normalized,qty);
-  track('add_to_cart',{productId:normalized.id,cartValue:cartValue(cart)});
+  track('add_to_cart',{productId:normalized.id,cartValue:cartValue(cart),cartItems:cart.map(item=>({productId:item.id,quantity:Number(item.qty)||1}))});
   return true;
 }
 
@@ -181,12 +181,14 @@ function setQuantity(id,next){
   else item.qty=Math.min(20,Math.max(1,Math.round(Number(next)||1)));
   cart=saveCart(cart);
   renderBadge();
+  track('cart_updated',{cartValue:cartValue(cart),cartItems:cart.map(item=>({productId:item.id,quantity:Number(item.qty)||1}))});
   return true;
 }
 
 function clear(){
   cart=saveCart([]);
   renderBadge();
+  track('cart_updated',{cartValue:0,cartItems:[]});
 }
 
 function open(){window.location.assign('/cart')}

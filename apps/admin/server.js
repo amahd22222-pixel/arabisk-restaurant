@@ -224,6 +224,13 @@ const server = http.createServer(async (req, res) => {
     return res.end(JSON.stringify({ ok: true }));
   }
 
+  if (requestPath === '/revenue-recovery') {
+    const incoming = new URL(req.url || '/revenue-recovery', `http://${req.headers.host || 'localhost'}`);
+    const token = String(incoming.searchParams.get('token') || '').trim();
+    if (!token || token.length > 80) return res.writeHead(400).end('Invalid recovery link');
+    return redirect(res, `${webApiBase}/cart?recover=${encodeURIComponent(token)}`);
+  }
+
   if (requestPath === '/auth/session') {
     const session = getSession(req);
     if (!session) return unauthorized(res, 'Session expired');
