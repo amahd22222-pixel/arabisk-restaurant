@@ -212,6 +212,8 @@ export function registerRevenueRoutes(app, {
       .sort((a, b) => b.priorityScore - a.priorityScore || a.at - b.at)
       .slice(0, 50);
 
+    const identifiedCustomers = new Set(recent.filter(row => row.customerId).map(row => row.customerId)).size;
+    const identifiedEvents = recent.filter(row => row.customerId).length;
     const intentSessions = [...bySession.keys()].length;
     const intentConversions = [];
     for (const [sessionId] of bySession) {
@@ -269,6 +271,7 @@ export function registerRevenueRoutes(app, {
       potentialAbandonedRevenue: abandoned.reduce((sum, item) => sum + number(item.cartValue), 0),
       campaigns: campaignSummary(),
       health: { score: healthScore, label: healthLabel, biggestLeak, funnelRates },
+      identity: { identifiedCustomers, identifiedEvents, coverageRate: recent.length ? Math.round((identifiedEvents / recent.length) * 1000) / 10 : 0 },
 
       measurement: {
         intentSessions,
