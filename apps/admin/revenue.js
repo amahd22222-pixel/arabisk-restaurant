@@ -21,6 +21,14 @@ async function loadRevenue(){
     set('#rev-abandoned',data.counts?.abandonedCarts);set('#rev-inactive',data.counts?.inactiveCustomers);set('#rev-reservations',data.counts?.upcomingReservations);set('#rev-actions-count',data.counts?.topActions);
     const potential=document.querySelector('#rev-potential');if(potential)potential.textContent=revMoney(data.potentialAbandonedRevenue);
 
+    const alerts=data.alerts||{};
+    const alertSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
+    alertSet('#alerts-high',`${Number(alerts.high||0)} عالي`);
+    alertSet('#alerts-medium',`${Number(alerts.medium||0)} متوسط`);
+    alertSet('#alerts-low',`${Number(alerts.low||0)} منخفض`);
+    const alertSeverity={high:'عالي',medium:'متوسط',low:'منخفض'};
+    document.querySelector('#revenue-alerts-list').innerHTML=(alerts.items||[]).map(item=>`<article class="revenue-alert ${revEsc(item.severity)}"><div class="revenue-alert-top"><strong>${revEsc(item.title)}</strong><span>${revEsc(alertSeverity[item.severity]||item.severity)}</span></div><p>${revEsc(item.detail)}</p><small>${revEsc(item.action)}</small></article>`).join('')||'<div class="empty">لا توجد تنبيهات تشغيلية حاليًا.</div>';
+
     const forecast=data.forecast||{};
     const forecastSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
     forecastSet('#forecast-actual-14',revMoney(forecast.actual?.revenue14));
