@@ -684,7 +684,9 @@ export function registerRevenueRoutes(app, {
           ? 'مسودة استرجاع سلة: راجع السلة المتروكة وحدد قناة التواصل المناسبة بعد التحقق من الموافقة.'
           : type === 'inactive_customer'
             ? `مسودة إعادة تنشيط للعميل: ${clean(action.title.replace('إعادة تنشيط: ', ''), 70)}.`
-            : `مسودة اقتراح Pre-order للحجز: ${clean(action.title.replace('حجز قريب: ', ''), 70)}.`,
+            : type === 'returning_customer'
+              ? clean(action.recommendedAction, 500)
+              : `مسودة اقتراح Pre-order للحجز: ${clean(action.title.replace('حجز قريب: ', ''), 70)}.`,
       status: 'draft',
       consentRequired: true,
       sendable: false,
