@@ -188,6 +188,7 @@ function setQuantity(id,next){
 function clear(){
   cart=saveCart([]);
   renderBadge();
+  track('cart_updated',{cartValue:0,cartItems:[]});
 }
 
 function open(){window.location.assign('/cart')}
