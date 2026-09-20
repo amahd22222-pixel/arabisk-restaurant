@@ -26,7 +26,16 @@
 </div><div class="revenue-activity-panel" id="revenue-activity-panel" hidden>
   <div class="activity-panel-head"><div><h3>سجل نشاط المهمة</h3><span id="revenue-activity-title">—</span></div><button id="revenue-activity-close" class="small-action" type="button">إغلاق</button></div>
   <div id="revenue-activity-body" class="activity-timeline"></div>
-</div><div class="revenue-task-performance" id="revenue-task-performance">
+</div><div class="revenue-daily-briefing" id="revenue-daily-briefing">
+  <div class="daily-briefing-head"><div><h3>موجز التشغيل اليومي</h3><span id="daily-briefing-date">اليوم</span></div></div>
+  <div class="daily-briefing-kpis">
+    <article><span>عاجل</span><b id="briefing-urgent">0</b></article>
+    <article><span>SLA قريب</span><b id="briefing-due-soon">0</b></article>
+    <article><span>غير مسندة</span><b id="briefing-unassigned">0</b></article>
+  </div>
+  <div id="daily-briefing-list" class="daily-briefing-list"></div>
+</div>
+<div class="revenue-task-performance" id="revenue-task-performance">
   <div class="task-performance-head"><div><h3>أداء تنفيذ المهام</h3><span>قياس الالتزام بالـSLA وزمن الإنجاز من المهام التي تم تسجيل نتيجتها.</span></div></div>
   <div class="task-performance-kpis">
     <article><span>معدل الالتزام بالـSLA</span><b id="task-perf-sla-rate">—</b></article>
