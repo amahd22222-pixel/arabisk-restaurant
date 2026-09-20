@@ -834,6 +834,58 @@ export function registerRevenueRoutes(app, {
       }
     };
 
+    const routingOwners = taskWorkloadRows
+      .filter(row => row.owner !== 'غير مسند')
+      .map(row => ({
+        owner: row.owner,
+        loadScore: row.open + (row.inProgress * 1.5) + (row.overdue * 4) + (row.escalated * 6) + (row.dueSoon * 2),
+        open: row.open,
+        inProgress: row.inProgress,
+        overdue: row.overdue,
+        escalated: row.escalated,
+        dueSoon: row.dueSoon
+      }))
+      .sort((a,b) => a.loadScore - b.loadScore || a.open - b.open || a.overdue - b.overdue || a.owner.localeCompare(b.owner, 'ar'));
+
+    const routingRecommendations = [];
+    const virtualOwners = routingOwners.map(row => ({ ...row }));
+    for (const row of openTaskRows.filter(item => !item.owner).sort((a,b) => number(b.potentialValue) - number(a.potentialValue))) {
+      virtualOwners.sort((a,b) => a.loadScore - b.loadScore || a.open - b.open || a.overdue - b.overdue || a.owner.localeCompare(b.owner, 'ar'));
+      const suggestion = virtualOwners[0];
+      if (!suggestion) break;
+      routingRecommendations.push({
+        id: row.id,
+        title: row.title,
+        potentialValue: Math.round(Math.max(0, number(row.potentialValue)) * 100) / 100,
+        dueAt: row.dueAt || '',
+        status: row.task.key,
+        statusLabel: row.task.label,
+        suggestedOwner: suggestion.owner,
+        suggestedOwnerOpenTasks: suggestion.open,
+        suggestedOwnerOverdueTasks: suggestion.overdue,
+        reason: `اقتراح مبدئي لأن ${suggestion.owner} لديه حاليًا ${suggestion.open} مهام مفتوحة و${suggestion.overdue} متأخرة.`,
+        note: 'الاقتراح يعتمد على عبء العمل الحالي فقط، ويظل قرار التعيين بيد المدير.'
+      });
+      suggestion.open += 1;
+      suggestion.loadScore += 1;
+    }
+    const taskRouting = {
+      generatedAt: new Date(now).toISOString(),
+      availableOwners: routingOwners.map(row => ({
+        owner: row.owner,
+        open: row.open,
+        inProgress: row.inProgress,
+        overdue: row.overdue,
+        escalated: row.escalated,
+        dueSoon: row.dueSoon,
+        loadScore: Math.round(row.loadScore * 10) / 10
+      })),
+      recommendations: routingRecommendations,
+      unassignedCount: workloadRows.filter(item => !item.owner).length,
+      note: routingOwners.length
+        ? 'الاقتراحات مرتبة باستخدام عبء العمل الحالي فقط؛ لا يتم نقل أو تعيين أي مهمة تلقائيًا.'
+        : 'لا يوجد مسؤول نشط معروف من المهام الحالية لتوليد اقتراح توزيع.';
+
     const dailyBriefing = {
       generatedAt: new Date(now).toISOString(),
       date: todayKey,
@@ -918,7 +970,8 @@ export function registerRevenueRoutes(app, {
       taskBoard,
       taskPerformance,
       dailyBriefing,
-      taskWorkload
+      taskWorkload,
+      taskRouting
     };
   }
 
