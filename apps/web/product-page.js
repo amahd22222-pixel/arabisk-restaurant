@@ -176,7 +176,13 @@
     };
     if (loading) loading.hidden = true;
     if (root) root.hidden = false;
-    renderDetails(current);
+    try {
+      const details = await fetchJson(`/api/product-details/${encodeURIComponent(product.id)}`, 5000);
+      current = {...current, ...(details && typeof details === 'object' ? details : {})};
+      renderDetails(current);
+    } catch (error) {
+      console.warn('[ARABISK product details]', error.message);
+    }
   }
 
   async function load() {
