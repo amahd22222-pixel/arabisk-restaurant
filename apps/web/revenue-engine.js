@@ -847,27 +847,28 @@ export function registerRevenueRoutes(app, {
       }))
       .sort((a,b) => a.loadScore - b.loadScore || a.open - b.open || a.overdue - b.overdue || a.owner.localeCompare(b.owner, 'ar'));
 
-    const routingRecommendations = openTaskRows
-      .filter(row => !row.owner && routingOwners.length)
-      .map(row => {
-        const suggestion = routingOwners[0];
-        return {
-          id: row.id,
-          title: row.title,
-          potentialValue: Math.round(Math.max(0, number(row.potentialValue)) * 100) / 100,
-          dueAt: row.dueAt || '',
-          status: row.task.key,
-          statusLabel: row.task.label,
-          suggestedOwner: suggestion.owner,
-          suggestedOwnerOpenTasks: suggestion.open,
-          suggestedOwnerOverdueTasks: suggestion.overdue,
-          reason: `اقتراح مبدئي لأن ${suggestion.owner} لديه حاليًا ${suggestion.open} مهام مفتوحة و${suggestion.overdue} متأخرة.`,
-          note: 'الاقتراح يعتمد على عبء العمل الحالي فقط، ويظل قرار التعيين بيد المدير.'
-        };
-      })
-      .sort((a,b) => number(b.potentialValue) - number(a.potentialValue) || (Date.parse(a.dueAt || '') || Number.MAX_SAFE_INTEGER) - (Date.parse(b.dueAt || '') || Number.MAX_SAFE_INTEGER))
-      .slice(0, 12);
-
+    const routingRecommendations = [];
+    const virtualOwners = routingOwners.map(row => ({ ...row }));
+    for (const row of openTaskRows.filter(item => !item.owner).sort((a,b) => number(b.potentialValue) - number(a.potentialValue))) {
+      virtualOwners.sort((a,b) => a.loadScore - b.loadScore || a.open - b.open || a.overdue - b.overdue || a.owner.localeCompare(b.owner, 'ar'));
+      const suggestion = virtualOwners[0];
+      if (!suggestion) break;
+      routingRecommendations.push({
+        id: row.id,
+        title: row.title,
+        potentialValue: Math.round(Math.max(0, number(row.potentialValue)) * 100) / 100,
+        dueAt: row.dueAt || '',
+        status: row.task.key,
+        statusLabel: row.task.label,
+        suggestedOwner: suggestion.owner,
+        suggestedOwnerOpenTasks: suggestion.open,
+        suggestedOwnerOverdueTasks: suggestion.overdue,
+        reason: `اقتراح مبدئي لأن ${suggestion.owner} لديه حاليًا ${suggestion.open} مهام مفتوحة و${suggestion.overdue} متأخرة.`,
+        note: 'الاقتراح يعتمد على عبء العمل الحالي فقط، ويظل قرار التعيين بيد المدير.'
+      });
+      suggestion.open += 1;
+      suggestion.loadScore += 1;
+    }
     const taskRouting = {
       generatedAt: new Date(now).toISOString(),
       availableOwners: routingOwners.map(row => ({
