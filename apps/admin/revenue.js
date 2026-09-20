@@ -145,6 +145,14 @@ async function loadRevenue(){
     const upcoming=data.opportunities?.upcomingReservations||[];
     document.querySelector('#revenue-reservation-body').innerHTML=upcoming.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name)}</strong><small dir="ltr">${revEsc(row.phone)}</small></td><td>${revEsc(row.date)}<small>${revEsc(row.time)}</small></td><td>${Number(row.guests||0)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد حجوزات خلال 48 ساعة.</td></tr>';
     const campaigns=data.campaigns||{};
+    const taskPerformance=data.taskPerformance||{};
+    const perfSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??'—')};
+    perfSet('#task-perf-sla-rate',taskPerformance.onTimeRate===null||taskPerformance.onTimeRate===undefined?'—':Number(taskPerformance.onTimeRate).toFixed(1)+'%');
+    perfSet('#task-perf-avg-hours',taskPerformance.averageCompletionHours===null||taskPerformance.averageCompletionHours===undefined?'—':Number(taskPerformance.averageCompletionHours).toFixed(1)+' ساعة');
+    perfSet('#task-perf-completed',taskPerformance.completed||0);
+    perfSet('#task-perf-overdue',taskPerformance.overdueCompleted||0);
+    const ownerRows=taskPerformance.byOwner||[];
+    document.querySelector('#task-performance-owner-body').innerHTML=ownerRows.map(row=>'<tr><td><strong>'+revEsc(row.owner)+'</strong></td><td>'+Number(row.completed||0)+'</td><td>'+Number(row.slaMeasured||0)+'</td><td>'+Number(row.onTime||0)+'</td><td>'+Number(row.overdueCompleted||0)+'</td><td>'+((row.onTimeRate===null||row.onTimeRate===undefined)?'—':Number(row.onTimeRate).toFixed(1)+'%')+'</td><td>'+((row.averageCompletionHours===null||row.averageCompletionHours===undefined)?'—':Number(row.averageCompletionHours).toFixed(1)+'س')+'</td></tr>').join('')||'<tr><td colspan="7" class="empty">لا توجد بيانات كافية لقياس أداء المسؤولين بعد.</td></tr>';
     revenueTaskBoardData=campaigns.taskBoard||{};
     renderRevenueTaskBoard();
     setMetric('#rev-drafts',campaigns.counts?.drafts);setMetric('#rev-executed',campaigns.counts?.executed);setMetric('#rev-converted',campaigns.counts?.converted);setMetric('#rev-attributed-orders',campaigns.counts?.attributedOrders);
