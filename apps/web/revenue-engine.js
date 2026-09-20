@@ -31,7 +31,8 @@ export function registerRevenueRoutes(app, {
   storageReady,
   requireAdminApiKey,
   customers,
-  reservations
+  reservations,
+  orders = []
 }) {
   const events = [];
   const campaigns = [];
@@ -327,6 +328,52 @@ export function registerRevenueRoutes(app, {
     return campaign;
   }
 
+  function customer360(customerId) {
+    const id = clean(customerId, 100);
+    const customer = customers.find(item => item.id === id);
+    if (!customer) return null;
+    const customerOrders = orders.filter(order => order.phone && customer.phone && order.phone === customer.phone);
+    const customerReservations = reservations.filter(item => item.phone && customer.phone && item.phone === customer.phone);
+    const customerEvents = events.filter(item => item.customerId === id).sort((a,b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 30);
+    const summary = buildSummary();
+    const opportunities = [
+      ...(summary.opportunities?.inactiveCustomers || []).filter(item => item.id === id),
+      ...(summary.opportunities?.upcomingReservations || []).filter(item => item.phone === customer.phone)
+    ];
+    return {
+      customer: {
+        id: customer.id,
+        name: customer.name || 'عميل',
+        phone: customer.phone || '',
+        orderCount: Number(customer.orderCount || 0),
+        reservationCount: Number(customer.reservationCount || 0),
+        lastOrderAt: customer.lastOrderAt || '',
+        lastReservationAt: customer.lastReservationAt || '',
+        marketingOptIn: Boolean(customer.marketingOptIn)
+      },
+      summary: {
+        totalOrderValue: Math.round(customerOrders.reduce((sum, order) => sum + number(order.total), 0) * 100) / 100,
+        completedOrders: customerOrders.filter(order => order.status === 'completed').length,
+        totalReservations: customerReservations.filter(item => item.status !== 'cancelled').length,
+        lastActivityAt: [...customerOrders.map(item => item.updatedAt || item.createdAt), ...customerReservations.map(item => item.createdAt), ...customerEvents.map(item => item.createdAt)].filter(Boolean).sort().pop() || ''
+      },
+      orders: customerOrders.slice().sort((a,b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 30).map(order => ({
+        id: order.id,
+        total: number(order.total),
+        status: order.status,
+        orderType: order.orderType,
+        createdAt: order.createdAt
+      })),
+      reservations: customerReservations.slice().sort((a,b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 30).map(item => ({
+        id:item.id, date:item.date, time:item.time, guests:Number(item.guests||0), status:item.status, eventSlug:item.eventSlug || ''
+      })),
+      recentEvents: customerEvents.map(item => ({
+        eventName:item.eventName, productId:item.productId, orderId:item.orderId, createdAt:item.createdAt
+      })),
+      opportunities
+    };
+  }
+
   function campaignSummary() {
     const recent = [...campaigns].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 30);
     return {
@@ -360,6 +407,7 @@ export function registerRevenueRoutes(app, {
   });
 
   app.get('/api/revenue/summary', requireAdminApiKey, (_req, res) => res.json(buildSummary()));
+  app.get('/api/revenue/customers/:id/360', requireAdminApiKey, (req, res) => { const profile = customer360(req.params.id); if (!profile) return res.status(404).json({ message: 'Customer not found.' }); return res.json(profile); });
 
-  return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, updateCampaignOutcome, campaignSummary };
+  return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, updateCampaignOutcome, campaignSummary, customer360 };
 }
