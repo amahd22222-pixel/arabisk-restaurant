@@ -802,6 +802,35 @@ export function registerRevenueRoutes(app, {
         });
       }
     }
+    const workloadRows = campaigns
+      .filter(item => item.status === 'draft')
+      .map(item => ({ ...item, task: taskWorkflow(item, now) }));
+    const workloadMap = new Map();
+    for (const row of workloadRows) {
+      const owner = clean(row.owner, 80) || 'غير مسند';
+      const current = workloadMap.get(owner) || { owner, open:0, overdue:0, escalated:0, inProgress:0, dueSoon:0, potentialValue:0 };
+      current.open += 1;
+      current.potentialValue += Math.max(0, number(row.potentialValue));
+      if (row.task.key === 'overdue') current.overdue += 1;
+      if (row.task.key === 'escalated') { current.overdue += 1; current.escalated += 1; }
+      if (row.task.key === 'in_progress') current.inProgress += 1;
+      const dueAt = Date.parse(row.dueAt || '');
+      if (Number.isFinite(dueAt) && dueAt >= now && dueAt <= now + 4 * 3600000) current.dueSoon += 1;
+      workloadMap.set(owner, current);
+    }
+    const taskWorkload = [...workloadMap.values()]
+      .map(row => ({
+        ...row,
+        potentialValue: Math.round(row.potentialValue * 100) / 100
+      }))
+      .sort((a,b) => b.open - a.open || b.overdue - a.overdue || b.potentialValue - a.potentialValue);
+    taskWorkload.counts = {
+      owners: taskWorkload.filter(row => row.owner !== 'غير مسند').length,
+      open: workloadRows.length,
+      unassigned: workloadRows.filter(row => !row.owner).length,
+      overdue: workloadRows.filter(row => row.task.overdue).length
+    };
+
     const dailyBriefing = {
       generatedAt: new Date(now).toISOString(),
       date: todayKey,
@@ -885,7 +914,8 @@ export function registerRevenueRoutes(app, {
       recent,
       taskBoard,
       taskPerformance,
-      dailyBriefing
+      dailyBriefing,
+      taskWorkload
     };
   }
 
