@@ -34,6 +34,22 @@ function renderRevenueActivityPanel(data){
   body.innerHTML=items.map(item=>'<article class="activity-item"><div class="activity-dot"></div><div><strong>'+revEsc(labels[item.type]||item.type)+'</strong><small>'+revEsc(item.actor||'لوحة الإيرادات')+' — '+revEsc(taskBoardTime(item.createdAt))+'</small><p>'+revEsc(detailText(item))+'</p></div></article>').join('')||'<div class="empty">لا يوجد سجل نشاط محفوظ لهذه المهمة حتى الآن.</div>';
   panel.hidden=false;
 }
+function renderRevenueTaskRouting(){
+  const routing=window.revenueTaskRouting||{};
+  const set=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
+  set('#routing-owner-count',(routing.availableOwners||[]).length);
+  set('#routing-unassigned-count',routing.unassignedCount||0);
+  set('#routing-suggestion-count',(routing.recommendations||[]).length);
+  const note=document.querySelector('#revenue-routing-note');
+  if(note)note.textContent=routing.note||'لا توجد اقتراحات توزيع حاليًا.';
+  const body=document.querySelector('#revenue-routing-body');
+  if(!body)return;
+  body.innerHTML=(routing.recommendations||[]).map(row=>{
+    const due=row.dueAt?new Date(row.dueAt).toLocaleString('ar-AE',{dateStyle:'short',timeStyle:'short'}):'بدون SLA';
+    return '<tr><td><strong>'+revEsc(row.title)+'</strong><small>'+revEsc(row.id)+'</small></td><td class="price">'+revMoney(row.potentialValue)+'</td><td>'+revEsc(row.suggestedOwner)+'</td><td>'+Number(row.suggestedOwnerOpenTasks||0)+' مفتوحة — '+Number(row.suggestedOwnerOverdueTasks||0)+' متأخرة<small>'+revEsc(due)+'</small></td><td><button class="small-action revenue-route-apply" data-route-task="'+revEsc(row.id)+'" data-route-owner="'+revEsc(row.suggestedOwner)+'" data-route-due="'+revEsc(row.dueAt||'')+'" type="button">تطبيق الاقتراح</button></td></tr>';
+  }).join('')||'<tr><td colspan="5" class="empty">لا توجد مهام غير مسندة تحتاج اقتراح توزيع حاليًا.</td></tr>';
+}
+
 function renderRevenueTaskBoard(){
   const board=revenueTaskBoardData||{};
   const ownerFilter=document.querySelector('#revenue-task-owner-filter');
@@ -144,6 +160,8 @@ async function loadRevenue(){
 
     const upcoming=data.opportunities?.upcomingReservations||[];
     document.querySelector('#revenue-reservation-body').innerHTML=upcoming.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name)}</strong><small dir="ltr">${revEsc(row.phone)}</small></td><td>${revEsc(row.date)}<small>${revEsc(row.time)}</small></td><td>${Number(row.guests||0)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد حجوزات خلال 48 ساعة.</td></tr>';
+    window.revenueTaskRouting=data.taskRouting||{};
+    renderRevenueTaskRouting();
     const workload=data.taskWorkload||{};
     const workloadSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
     workloadSet('#workload-open',workload.counts?.open);
@@ -194,6 +212,24 @@ async function loadRevenue(){
     if(state)state.textContent=`آخر تحديث: ${new Date(data.generatedAt).toLocaleString('ar-AE')} — نافذة التحليل ${data.windowDays} يوم`;
   }catch(error){ if(state)state.textContent=error.message; }
 }
+
+document.querySelector('#revenue-routing-body')?.addEventListener('click',async event=>{
+  const button=event.target.closest('[data-route-task]'); if(!button)return;
+  const id=button.dataset.routeTask;
+  const owner=button.dataset.routeOwner||'';
+  button.disabled=true;
+  try{
+    const currentRouting=window.revenueTaskRouting?.recommendations||[];
+    const row=currentRouting.find(item=>item.id===id);
+    if(!owner)throw new Error('لا يوجد مسؤول مقترح لهذه المهمة.');
+    const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner,dueAt:row?.dueAt||button.dataset.routeDue||'',workflowStatus:'assigned'})});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.message||'تعذر تطبيق اقتراح التوزيع.');
+    button.textContent='تم التعيين';
+    await loadRevenue();
+  }catch(error){alert(error.message);button.disabled=false;}
+});
+
 document.querySelector('#revenue-task-board')?.addEventListener('click',async event=>{
   const button=event.target.closest('[data-task-action]'); if(!button)return;
   const action=button.dataset.taskAction;
