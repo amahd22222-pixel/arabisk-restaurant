@@ -287,6 +287,47 @@ export function registerRevenueRoutes(app, {
         customerId: item.customerId || '',
         updatedAt: item.updatedAt
       }));
+    const completedOrderEvents = events
+      .filter(item => item.eventName === 'order_completed' && number(item.orderValue) > 0)
+      .map(item => ({ time: Date.parse(item.createdAt || ''), value: number(item.orderValue) }))
+      .filter(item => Number.isFinite(item.time))
+      .sort((a,b) => a.time - b.time);
+    const dayMs = 24 * 60 * 60 * 1000;
+    const recent14 = completedOrderEvents.filter(item => item.time >= now - 14 * dayMs);
+    const recent30 = completedOrderEvents.filter(item => item.time >= now - 30 * dayMs);
+    const previous16 = completedOrderEvents.filter(item => item.time >= now - 30 * dayMs && item.time < now - 14 * dayMs);
+    const revenue14 = recent14.reduce((sum, item) => sum + item.value, 0);
+    const revenue30 = recent30.reduce((sum, item) => sum + item.value, 0);
+    const previous16Revenue = previous16.reduce((sum, item) => sum + item.value, 0);
+    const daily14 = revenue14 / 14;
+    const daily30 = revenue30 / 30;
+    const dailyPrevious16 = previous16Revenue / 16;
+    const blendedDailyRunRate = (daily14 * 0.6) + (daily30 * 0.4);
+    const trendRate = dailyPrevious16 > 0
+      ? Math.round(((daily14 - dailyPrevious16) / dailyPrevious16) * 1000) / 10
+      : null;
+    const forecast = {
+      basis: 'completed_order_events',
+      methodology: 'تقدير تشغيلي مبني على 60% من متوسط الإيراد اليومي لآخر 14 يومًا و40% من متوسط آخر 30 يومًا.',
+      actual: {
+        revenue14: Math.round(revenue14 * 100) / 100,
+        revenue30: Math.round(revenue30 * 100) / 100,
+        orders14: recent14.length,
+        orders30: recent30.length
+      },
+      runRate: {
+        daily14: Math.round(daily14 * 100) / 100,
+        daily30: Math.round(daily30 * 100) / 100,
+        blendedDaily: Math.round(blendedDailyRunRate * 100) / 100
+      },
+      next7Days: Math.round(blendedDailyRunRate * 7 * 100) / 100,
+      next30Days: Math.round(blendedDailyRunRate * 30 * 100) / 100,
+      trendRate,
+      trendLabel: trendRate === null ? 'لا توجد مقارنة كافية' : trendRate > 5 ? 'صاعد' : trendRate < -5 ? 'هابط' : 'مستقر',
+      openOpportunityValue: Math.round(abandoned.reduce((sum, item) => sum + number(item.cartValue), 0) * 100) / 100,
+      note: 'هذا تقدير تشغيلي من البيانات المسجلة، وليس ضمانًا للإيراد المستقبلي. قيمة الفرص المفتوحة معروضة منفصلة ولا تدخل التوقع الأساسي.'
+    };
+
     const totalMeasuredRevenue = campaigns.reduce((sum, item) => sum + number(item.resultRevenue), 0);
     const bestMeasuredSegment = [...segmentPerformance].sort((a,b) => b.measuredRevenue - a.measuredRevenue)[0] || null;
     const intelligence = {
@@ -318,6 +359,7 @@ export function registerRevenueRoutes(app, {
       identity: { identifiedCustomers, identifiedEvents, coverageRate: recent.length ? Math.round((identifiedEvents / recent.length) * 1000) / 10 : 0 },
 
       intelligence,
+      forecast,
       measurement: {
         intentSessions,
         intentConversions: intentConversions.length,
