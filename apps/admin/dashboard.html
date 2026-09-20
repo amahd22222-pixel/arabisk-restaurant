@@ -35,7 +35,16 @@
   </div>
   <div id="daily-briefing-list" class="daily-briefing-list"></div>
 </div>
-<div class="revenue-task-performance" id="revenue-task-performance">
+<div class="revenue-task-workload" id="revenue-task-workload">
+  <div class="task-workload-head"><div><h3>توزيع عبء العمل</h3><span>المهام المفتوحة والمتأخرة وقريبة الـSLA حسب المسؤول، مع قيمة الفرص المرتبطة.</span></div></div>
+  <div class="task-workload-kpis">
+    <article><span>مهام مفتوحة</span><b id="workload-open">0</b></article>
+    <article><span>غير مسندة</span><b id="workload-unassigned">0</b></article>
+    <article><span>متأخرة</span><b id="workload-overdue">0</b></article>
+    <article><span>مسؤولون نشطون</span><b id="workload-owners">0</b></article>
+  </div>
+  <div class="table-wrap"><table><thead><tr><th>المسؤول</th><th>مفتوحة</th><th>قيد التنفيذ</th><th>قريبة SLA</th><th>متأخرة</th><th>تصعيد</th><th>قيمة الفرص</th></tr></thead><tbody id="task-workload-owner-body"></tbody></table></div>
+</div><div class="revenue-task-performance" id="revenue-task-performance">
   <div class="task-performance-head"><div><h3>أداء تنفيذ المهام</h3><span>قياس الالتزام بالـSLA وزمن الإنجاز من المهام التي تم تسجيل نتيجتها.</span></div></div>
   <div class="task-performance-kpis">
     <article><span>معدل الالتزام بالـSLA</span><b id="task-perf-sla-rate">—</b></article>
