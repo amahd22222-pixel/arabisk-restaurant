@@ -1156,12 +1156,22 @@ export function registerRevenueRoutes(app, {
         } else if (row.converted > 0) {
           learningAction = 'احتفظ بنفس مسار التنفيذ، وواصل ربط التحولات بطلبات فعلية عندما يكون ذلك متاحًا.';
         }
+        const sampleSize = row.total;
+        const signal = sampleSize >= 10
+          ? { key:'strong', label:'إشارة قوية', note:'العينة 10 نتائج أو أكثر.' }
+          : sampleSize >= 3
+            ? { key:'medium', label:'إشارة متوسطة', note:'العينة 3 إلى 9 نتائج.' }
+            : { key:'early', label:'إشارة مبكرة', note:'العينة أقل من 3 نتائج؛ لا تبنِ قرارًا كبيرًا عليها.' };
         return {
           key: row.key,
           sourceType: row.sourceType,
           sourceKey: row.sourceKey,
           label: clean(row.label, 120),
           total: row.total,
+          sampleSize,
+          signalKey: signal.key,
+          signalLabel: signal.label,
+          signalNote: signal.note,
           converted: row.converted,
           executed: row.executed,
           ignored: row.ignored,
