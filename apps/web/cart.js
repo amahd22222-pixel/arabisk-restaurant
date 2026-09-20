@@ -181,6 +181,7 @@ function setQuantity(id,next){
   else item.qty=Math.min(20,Math.max(1,Math.round(Number(next)||1)));
   cart=saveCart(cart);
   renderBadge();
+  track('cart_updated',{cartValue:cartValue(cart),cartItems:cart.map(item=>({productId:item.id,quantity:Number(item.qty)||1}))});
   return true;
 }
 
