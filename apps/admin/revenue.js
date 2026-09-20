@@ -88,7 +88,7 @@ function renderRevenueTaskDetail(row,activity=[]){
   const source=row.sourceType||row.type||'—';
   const attribution=row.attribution||{};
   const resultRevenue=Number(row.resultRevenue||0)>0?revMoney(row.resultRevenue):'—';
-  const activityLabels={created:'تم إنشاء المهمة',assigned:'تم تعيين المسؤول',started:'بدأ التنفيذ',sla_updated:'تم تحديث الـSLA',task_updated:'تم تحديث المهمة',outcome_recorded:'تم تسجيل النتيجة'};
+  const activityLabels={created:'تم إنشاء المهمة',assigned:'تم تعيين المسؤول',started:'بدأ التنفيذ',sla_updated:'تم تحديث الـSLA',task_updated:'تم تحديث المهمة',blocked:'تم حجب المهمة',unblocked:'تم حل العائق وإعادة المهمة',outcome_recorded:'تم تسجيل النتيجة'};
   const activityHtml=(Array.isArray(activity)?activity:[]).slice().reverse().map(item=>{
     const d=item.details||{};
     const bits=[];
@@ -97,6 +97,7 @@ function renderRevenueTaskDetail(row,activity=[]){
     if(d.outcome)bits.push('النتيجة: '+d.outcome);
     if(Number(d.revenue)>0)bits.push('الإيراد: '+revMoney(d.revenue));
     if(d.orderId)bits.push('الطلب: '+d.orderId);
+    if(d.blockerReason)bits.push('العائق: '+d.blockerReason);
     return '<article class="revenue-detail-activity"><strong>'+revEsc(activityLabels[item.type]||item.type)+'</strong><small>'+revEsc(item.actor||'لوحة الإيرادات')+' — '+revEsc(taskBoardTime(item.createdAt))+'</small><p>'+revEsc(bits.join(' — ')||'تغيير تشغيلي مسجل.')+'</p></article>';
   }).join('')||'<div class="empty">لا يوجد سجل نشاط لهذه المهمة حتى الآن.</div>';
   const riskClass=task.riskKey||'low';
@@ -295,7 +296,7 @@ async function loadRevenue(){
     workloadSet('#workload-overdue',workload.counts?.overdue);
     workloadSet('#workload-owners',workload.counts?.owners);
     const workloadRows=workload.rows||[];
-    document.querySelector('#task-workload-owner-body').innerHTML=workloadRows.map(row=>'<tr><td><strong>'+revEsc(row.owner)+'</strong></td><td>'+Number(row.open||0)+'</td><td>'+Number(row.inProgress||0)+'</td><td>'+Number(row.dueSoon||0)+'</td><td>'+Number(row.overdue||0)+'</td><td>'+Number(row.escalated||0)+'</td><td class="price">'+revMoney(row.potentialValue)+'</td></tr>').join('')||'<tr><td colspan="7" class="empty">لا توجد مهام مفتوحة حاليًا.</td></tr>';
+    document.querySelector('#task-workload-owner-body').innerHTML=workloadRows.map(row=>'<tr><td><strong>'+revEsc(row.owner)+'</strong></td><td>'+Number(row.open||0)+'</td><td>'+Number(row.blocked||0)+'</td><td>'+Number(row.inProgress||0)+'</td><td>'+Number(row.dueSoon||0)+'</td><td>'+Number(row.overdue||0)+'</td><td>'+Number(row.escalated||0)+'</td><td class="price">'+revMoney(row.potentialValue)+'</td></tr>').join('')||'<tr><td colspan="8" class="empty">لا توجد مهام مفتوحة حاليًا.</td></tr>';
 
     const riskExposure=data.riskExposure||{};
     const riskSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
@@ -351,7 +352,7 @@ async function loadRevenue(){
     revenueTaskBoardData=campaigns.taskBoard||{};
     renderRevenueTaskBoard();
     setMetric('#rev-drafts',campaigns.counts?.drafts);setMetric('#rev-executed',campaigns.counts?.executed);setMetric('#rev-converted',campaigns.counts?.converted);setMetric('#rev-attributed-orders',campaigns.counts?.attributedOrders);
-    setMetric('#rev-open-tasks',campaigns.counts?.openTasks);setMetric('#rev-in-progress-tasks',campaigns.counts?.inProgressTasks);setMetric('#rev-overdue-tasks',campaigns.counts?.overdueTasks);setMetric('#rev-escalated-tasks',campaigns.counts?.escalatedTasks);
+    setMetric('#rev-open-tasks',campaigns.counts?.openTasks);setMetric('#rev-in-progress-tasks',campaigns.counts?.inProgressTasks);setMetric('#rev-overdue-tasks',campaigns.counts?.overdueTasks);setMetric('#rev-escalated-tasks',campaigns.counts?.escalatedTasks);setMetric('#rev-blocked-tasks',campaigns.counts?.blockedTasks);
     const measured=document.querySelector('#rev-measured-revenue');if(measured)measured.textContent=revMoney(campaigns.counts?.measuredRevenue);
     const taskLabels={unassigned:'غير مسندة',assigned:'مسندة',in_progress:'قيد التنفيذ',blocked:'محجوبة',overdue:'متأخرة',escalated:'تصعيد مطلوب',done:'مكتملة'};
     const campaignRows=campaigns.recent||[];
@@ -369,7 +370,11 @@ async function loadRevenue(){
           ? '<button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>'
           : '<button class="small-action" data-campaign-task data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(task.owner||row.owner||'')+'" data-due-at="'+revEsc(dueAt)+'" type="button">'+(taskKey==='unassigned'?'تعيين + SLA':'تعديل المهمة')+'</button>'+(taskKey==='assigned' ? '<button class="small-action" data-campaign-start data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(owner==='غير محدد'?'':owner)+'" data-due-at="'+revEsc(dueAt)+'" type="button">بدء التنفيذ</button>' : '')+(taskKey==='assigned'||taskKey==='in_progress'||taskKey==='overdue'||taskKey==='escalated' ? '<button class="small-action" data-campaign-block data-id="'+revEsc(row.id)+'" type="button">حجب</button>' : ''))
         : '';
-      const outcomeButtons=row.status==='draft' ? '<button class="small-action" data-campaign-outcome="executed" data-id="'+revEsc(row.id)+'" type="button">تم التنفيذ</button><button class="small-action" data-campaign-outcome="converted" data-id="'+revEsc(row.id)+'" type="button">سجل التحول</button><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>' : '<span class="status on">تم تسجيل النتيجة</span><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>';
+      const outcomeButtons=row.status==='draft'
+        ? (taskKey==='blocked'
+          ? '<span class="status pending">محجوبة — حل العائق أولًا</span><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>'
+          : '<button class="small-action" data-campaign-outcome="executed" data-id="'+revEsc(row.id)+'" type="button">تم التنفيذ</button><button class="small-action" data-campaign-outcome="converted" data-id="'+revEsc(row.id)+'" type="button">سجل التحول</button><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>')
+        : '<span class="status on">تم تسجيل النتيجة</span><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>';
       return '<tr><td><strong>'+revEsc(row.id)+'</strong><small>'+revEsc(row.title)+'</small></td><td>'+revEsc({draft:'مسودة',executed:'تم التنفيذ',converted:'تحولت',ignored:'تم التجاهل'}[row.status]||row.status)+'</td><td><div class="task-meta"><span class="rev-task '+revEsc(taskClass)+'">'+revEsc(taskLabel)+'</span><strong>'+revEsc(owner)+'</strong><small>'+revEsc(dueText)+'</small></div></td><td class="price">'+(row.resultRevenue?revMoney(row.resultRevenue):'—')+'</td><td class="campaign-actions">'+(actionButtons||'—')+'</td><td>'+outcomeButtons+'</td></tr>';
     }).join('')||'<tr><td colspan="6" class="empty">لا توجد مسودات حتى الآن.</td></tr>';
     if(state)state.textContent=`آخر تحديث: ${new Date(data.generatedAt).toLocaleString('ar-AE')} — نافذة التحليل ${data.windowDays} يوم`;
@@ -397,8 +402,8 @@ async function revenueTaskSaveNotesFromDetail(id){
   const row=revenueTaskById(id)||{};
   const note=document.querySelector('#revenue-detail-task-note');
   const notes=note?note.value.trim():'';
-  const workflowStatus=['unassigned','assigned','in_progress'].includes(row.workflowStatus)?row.workflowStatus:(row.owner?'assigned':'unassigned');
-  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus,notes})});
+  const workflowStatus=['unassigned','assigned','in_progress','blocked'].includes(row.workflowStatus)?row.workflowStatus:(row.owner?'assigned':'unassigned');
+  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus,notes,blockerReason:row.blockerReason||row.task?.blockerReason||''})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.message||'تعذر حفظ الملاحظات.');
 }
