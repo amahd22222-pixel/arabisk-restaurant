@@ -24,6 +24,20 @@ const ageMinutes = (now, iso) => {
   return Number.isFinite(age) ? Math.max(0, Math.floor(age / 60000)) : 0;
 };
 const ageLabel = minutes => minutes < 60 ? `${minutes} دقيقة` : minutes < 1440 ? `${Math.floor(minutes / 60)} ساعة` : `${Math.floor(minutes / 1440)} يوم`;
+const OUTCOME_REASON_DEFINITIONS = {
+  converted_to_order: 'تحول إلى طلب فعلي',
+  manual_conversion: 'تحول مسجل يدويًا',
+  completed_no_conversion: 'تم التنفيذ بدون تحول',
+  customer_unresponsive: 'لم يرد العميل',
+  not_interested: 'العميل غير مهتم',
+  not_relevant: 'العرض غير مناسب',
+  operational_issue: 'عائق تشغيلي',
+  timing: 'التوقيت غير مناسب',
+  duplicate: 'مكرر / تمت معالجته سابقًا',
+  other: 'سبب آخر',
+  unclassified: 'غير مصنف'
+};
+const outcomeReasonLabel = key => OUTCOME_REASON_DEFINITIONS[key] || OUTCOME_REASON_DEFINITIONS.unclassified;
 
 const taskWorkflow = (campaign, now = Date.now()) => {
   if (campaign.status !== 'draft') {
@@ -611,6 +625,17 @@ export function registerRevenueRoutes(app, {
     const linkedOrder = orderId ? orders.find(order => order.id === orderId) : null;
     const manualRevenue = Math.max(0, number(input.revenue));
     const actor = clean(input.actor, 80);
+    const requestedReason = clean(input.outcomeReason, 40);
+    const validReason = Object.prototype.hasOwnProperty.call(OUTCOME_REASON_DEFINITIONS, requestedReason);
+    const outcomeReason = validReason
+      ? requestedReason
+      : outcome === 'converted'
+        ? (linkedOrder ? 'converted_to_order' : 'manual_conversion')
+        : outcome === 'executed'
+          ? 'completed_no_conversion'
+          : 'unclassified';
+    const outcomeReasonNote = clean(input.outcomeReasonNote, 240);
+
     campaign.status = outcome;
     campaign.workflowStatus = 'done';
     campaign.completedAt = new Date().toISOString();
@@ -619,6 +644,9 @@ export function registerRevenueRoutes(app, {
     campaign.resultRevenue = outcome === 'converted' && linkedOrder
       ? Math.max(0, number(linkedOrder.total))
       : manualRevenue;
+    campaign.outcomeReason = outcomeReason;
+    campaign.outcomeReasonLabel = outcomeReasonLabel(outcomeReason);
+    campaign.outcomeReasonNote = outcomeReasonNote;
     campaign.attribution = outcome === 'converted'
       ? {
           source: linkedOrder ? 'order_lookup' : 'manual',
@@ -631,6 +659,9 @@ export function registerRevenueRoutes(app, {
     campaign.updatedAt = new Date().toISOString();
     appendCampaignActivity(campaign, 'outcome_recorded', {
       outcome,
+      reason: outcomeReasonLabel(outcomeReason),
+      reasonKey: outcomeReason,
+      reasonNote: outcomeReasonNote,
       revenue: campaign.resultRevenue,
       orderId,
       matchedOrder: campaign.attribution?.matchedOrder ? 'yes' : 'no'
@@ -638,7 +669,6 @@ export function registerRevenueRoutes(app, {
     void persistRevenue();
     return campaign;
   }
-
   function updateCampaignTask(id, input = {}) {
     const campaign = campaigns.find(item => item.id === clean(id, 40));
     if (!campaign || campaign.status !== 'draft') return null;
@@ -1043,6 +1073,47 @@ export function registerRevenueRoutes(app, {
       byOwner
     };
 
+    const outcomeReasonRows = campaigns
+      .filter(item => item.status !== 'draft')
+      .map(item => {
+        const reasonKey = Object.prototype.hasOwnProperty.call(OUTCOME_REASON_DEFINITIONS, item.outcomeReason)
+          ? item.outcomeReason
+          : item.status === 'converted'
+            ? (item.attribution?.matchedOrder ? 'converted_to_order' : 'manual_conversion')
+            : item.status === 'executed'
+              ? 'completed_no_conversion'
+              : 'unclassified';
+        return { item, reasonKey, reasonLabel: outcomeReasonLabel(reasonKey) };
+      });
+    const outcomeReasonMap = new Map();
+    for (const row of outcomeReasonRows) {
+      const current = outcomeReasonMap.get(row.reasonKey) || {
+        key: row.reasonKey, label: row.reasonLabel, count: 0, converted: 0, executed: 0, ignored: 0, measuredRevenue: 0
+      };
+      current.count += 1;
+      if (row.item.status === 'converted') current.converted += 1;
+      if (row.item.status === 'executed') current.executed += 1;
+      if (row.item.status === 'ignored') current.ignored += 1;
+      current.measuredRevenue += Math.max(0, number(row.item.resultRevenue));
+      outcomeReasonMap.set(row.reasonKey, current);
+    }
+    const outcomeReasonRowsSorted = [...outcomeReasonMap.values()]
+      .map(row => ({ ...row, measuredRevenue: Math.round(row.measuredRevenue * 100) / 100 }))
+      .sort((a,b) => b.count - a.count || b.measuredRevenue - a.measuredRevenue || a.label.localeCompare(b.label, 'ar'));
+    const frictionKeys = new Set(['customer_unresponsive','not_interested','not_relevant','operational_issue','timing','duplicate','other','unclassified']);
+    const topFriction = outcomeReasonRowsSorted.find(row => frictionKeys.has(row.key)) || null;
+    const outcomeInsights = {
+      totalRecorded: outcomeReasonRows.length,
+      converted: outcomeReasonRows.filter(row => row.item.status === 'converted').length,
+      executed: outcomeReasonRows.filter(row => row.item.status === 'executed').length,
+      ignored: outcomeReasonRows.filter(row => row.item.status === 'ignored').length,
+      measuredRevenue: Math.round(outcomeReasonRows.reduce((sum,row) => sum + Math.max(0, number(row.item.resultRevenue)), 0) * 100) / 100,
+      topReason: outcomeReasonRowsSorted[0] || null,
+      topFriction,
+      byReason: outcomeReasonRowsSorted,
+      note: 'الأسباب مبنية على النتائج التي يسجلها الفريق يدويًا، وهي أداة تشخيص وليست إثباتًا لسبب سببي.'
+    };
+
     return {
       counts: {
         drafts: campaigns.filter(item => item.status === 'draft').length,
@@ -1064,7 +1135,8 @@ export function registerRevenueRoutes(app, {
       dailyBriefing,
       taskWorkload,
       taskRouting,
-      riskExposure
+      riskExposure,
+      outcomeInsights
     };
   }
 

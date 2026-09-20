@@ -1,3 +1,38 @@
+const revenueIgnoredReasons=[['customer_unresponsive','لم يرد العميل'],['not_interested','غير مهتم'],['not_relevant','العرض غير مناسب'],['operational_issue','عائق تشغيلي'],['timing','التوقيت غير مناسب'],['duplicate','مكرر / تمت معالجته سابقًا'],['other','سبب آخر']];
+const revenueOutcomeReasonLabel=key=>({converted_to_order:'تحول إلى طلب فعلي',manual_conversion:'تحول مسجل يدويًا',completed_no_conversion:'تم التنفيذ بدون تحول',customer_unresponsive:'لم يرد العميل',not_interested:'غير مهتم',not_relevant:'العرض غير مناسب',operational_issue:'عائق تشغيلي',timing:'التوقيت غير مناسب',duplicate:'مكرر / تمت معالجته سابقًا',other:'سبب آخر',unclassified:'غير مصنف'}[key]||'غير مصنف');
+function promptRevenueOutcomeReason(outcome){
+  if(outcome==='executed')return 'completed_no_conversion';
+  if(outcome!=='ignored')return '';
+  const menu=revenueIgnoredReasons.map((item,index)=>(index+1)+'. '+item[1]).join('\n');
+  const answer=prompt('اختر سبب عدم التحول:\n'+menu,'1');
+  if(answer===null)return null;
+  return revenueIgnoredReasons[Number(answer)-1]?.[0]||null;
+}
+async function submitRevenueOutcome(id,outcomePreset=''){
+  const outcome=outcomePreset||prompt('اكتب النتيجة: executed أو converted أو ignored.','executed');
+  if(outcome===null)return false;
+  const normalized=String(outcome).trim().toLowerCase();
+  if(!['executed','converted','ignored'].includes(normalized))throw new Error('النتيجة يجب أن تكون executed أو converted أو ignored.');
+  const payload={outcome:normalized};
+  if(normalized==='converted'){
+    const revenue=prompt('قيمة الإيراد المرتبط بالتحول (AED):','0');
+    if(revenue===null)return false;
+    payload.revenue=Number(revenue)||0;
+    payload.orderId=prompt('رقم الطلب إن وجد:','')||'';
+    payload.outcomeReason=payload.orderId?'converted_to_order':'manual_conversion';
+  }else{
+    const reason=promptRevenueOutcomeReason(normalized);
+    if(!reason)throw new Error('لم يتم تحديد سبب النتيجة.');
+    payload.outcomeReason=reason;
+  }
+  const note=prompt('ملاحظة مختصرة اختيارية للنتيجة:','');
+  if(note===null)return false;
+  if(note.trim())payload.outcomeReasonNote=note.trim();
+  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/outcome',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.message||'تعذر تسجيل النتيجة.');
+  return true;
+}
 const revenueApiBase=()=>((localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||import.meta.env.VITE_API_BASE_URL||(import.meta.env.DEV?'http://localhost:3000':'/proxy')).replace(/\/$/,''));
 const revEsc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
 const revMoney=value=>'AED '+Number(value||0).toFixed(0);
@@ -63,7 +98,7 @@ function renderRevenueTaskDetail(row,activity=[]){
   }).join('')||'<div class="empty">لا يوجد سجل نشاط لهذه المهمة حتى الآن.</div>';
   const riskClass=task.riskKey||'low';
   body.innerHTML='<div class="revenue-detail-head"><div><span class="rev-task '+revEsc(task.key||'unassigned')+'">'+revEsc(task.label||'مفتوحة')+'</span><h3>'+revEsc(row.title||'مهمة إيرادات')+'</h3><small>'+revEsc(row.id||'')+'</small></div><div class="revenue-detail-value"><span>قيمة الفرصة</span><strong>'+revMoney(row.potentialValue||0)+'</strong></div></div>'+
-    '<div class="revenue-detail-grid"><article><span>المسؤول</span><strong>'+revEsc(owner)+'</strong></article><article><span>الـSLA</span><strong>'+revEsc(due)+'</strong></article><article><span>الحالة</span><strong>'+revEsc(statusLabel)+' — '+revEsc(outcomeLabel)+'</strong></article><article><span>المصدر</span><strong>'+revEsc(source)+'</strong></article><article><span>الإيراد المقاس</span><strong>'+resultRevenue+'</strong></article><article><span>الطلب المربوط</span><strong>'+revEsc(attribution.orderId||row.orderId||'—')+'</strong></article></div>'+
+    '<div class="revenue-detail-grid"><article><span>المسؤول</span><strong>'+revEsc(owner)+'</strong></article><article><span>الـSLA</span><strong>'+revEsc(due)+'</strong></article><article><span>الحالة</span><strong>'+revEsc(statusLabel)+' — '+revEsc(outcomeLabel)+'</strong></article><article><span>المصدر</span><strong>'+revEsc(source)+'</strong></article><article><span>الإيراد المقاس</span><strong>'+resultRevenue+'</strong></article><article><span>الطلب المربوط</span><strong>'+revEsc(attribution.orderId||row.orderId||'—')+'</strong></article><article><span>سبب النتيجة</span><strong>'+revEsc(row.outcomeReasonLabel||revenueOutcomeReasonLabel(row.outcomeReason)||'غير مصنف')+'</strong></article></div>'+
     '<div class="revenue-detail-risk '+riskClass+'"><div><span>مخاطرة التشغيل</span><strong>'+revEsc(task.riskLabel||'—')+'</strong></div><b>'+Number(task.riskScore||0)+'/100</b><p>'+revEsc(task.nextAction||'تابع المهمة وسجّل النتيجة عند الإغلاق.')+'</p></div>'+
     '<div class="revenue-detail-note"><span>إجراء التنفيذ</span><p>'+revEsc(row.executionNote||row.message||'مهمة تشغيلية داخل مركز الإيرادات.')+'</p></div>'+
     (row.status==='draft' ? '<div class="revenue-detail-operator-note"><label>ملاحظات تشغيلية<textarea id="revenue-detail-task-note" rows="4" maxlength="600" placeholder="اكتب تعليمات التنفيذ، ما تم التواصل بشأنه، أو أي متابعة مطلوبة...">'+revEsc(row.taskNotes||'')+'</textarea></label><button class="small-action detail-note-save" data-id="'+revEsc(row.id)+'" type="button">حفظ الملاحظات</button></div>' : (row.taskNotes ? '<div class="revenue-detail-operator-note"><span>الملاحظات التشغيلية</span><p>'+revEsc(row.taskNotes)+'</p></div>' : ''))+
@@ -100,23 +135,7 @@ async function revenueTaskStartFromDetail(id){
   const data=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(data.message||'تعذر بدء التنفيذ.');
 }
-async function revenueTaskCompleteFromDetail(id){
-  const outcome=prompt('اكتب النتيجة: executed أو converted أو ignored.','executed');
-  if(outcome===null)return;
-  const normalized=String(outcome).trim().toLowerCase();
-  if(!['executed','converted','ignored'].includes(normalized))throw new Error('النتيجة يجب أن تكون executed أو converted أو ignored.');
-  const payload={outcome:normalized};
-  if(normalized==='converted'){
-    const revenue=prompt('قيمة الإيراد المرتبط بالتحول (AED):','0');
-    if(revenue===null)return;
-    payload.revenue=Number(revenue)||0;
-    payload.orderId=prompt('رقم الطلب إن وجد:','')||'';
-  }
-  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/outcome',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.message||'تعذر تسجيل النتيجة.');
-}
-
+async function revenueTaskCompleteFromDetail(id){ await submitRevenueOutcome(id); }
 function renderRevenueTaskRouting(){
   const routing=window.revenueTaskRouting||{};
   const set=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
@@ -276,6 +295,16 @@ async function loadRevenue(){
 
     const campaigns=data.campaigns||{};
     revenueCampaignsData=campaigns.recent||[];
+    const outcomeInsights=campaigns.outcomeInsights||{};
+    const outcomeSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
+    outcomeSet('#outcome-total',outcomeInsights.totalRecorded||0);
+    outcomeSet('#outcome-converted',outcomeInsights.converted||0);
+    outcomeSet('#outcome-executed',outcomeInsights.executed||0);
+    outcomeSet('#outcome-ignored',outcomeInsights.ignored||0);
+    outcomeSet('#outcome-top-reason',outcomeInsights.topReason?.label||'—');
+    const outcomeNote=document.querySelector('#outcome-reasons-note');if(outcomeNote)outcomeNote.textContent=outcomeInsights.note||'أسباب النتائج تُسجّل يدويًا لأغراض التشخيص.';
+    const outcomeBody=document.querySelector('#outcome-reasons-body');
+    if(outcomeBody)outcomeBody.innerHTML=(outcomeInsights.byReason||[]).map(row=>'<tr><td><strong>'+revEsc(row.label)+'</strong><small>'+revEsc(row.key)+'</small></td><td>'+Number(row.count||0)+'</td><td>'+Number(row.converted||0)+'</td><td>'+Number(row.executed||0)+'</td><td>'+Number(row.ignored||0)+'</td><td class="price">'+revMoney(row.measuredRevenue)+'</td></tr>').join('')||'<tr><td colspan="6" class="empty">لا توجد نتائج مسجلة بعد.</td></tr>';
     const taskPerformance=data.taskPerformance||{};
     const perfSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??'—')};
     perfSet('#task-perf-sla-rate',taskPerformance.onTimeRate===null||taskPerformance.onTimeRate===undefined?'—':Number(taskPerformance.onTimeRate).toFixed(1)+'%');
@@ -388,20 +417,7 @@ document.querySelector('#revenue-task-board')?.addEventListener('click',async ev
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(data.message||'تعذر بدء التنفيذ.');
     }else if(action==='complete'){
-      const outcome=prompt('اكتب النتيجة: executed للتنفيذ أو converted للتحول أو ignored للتجاهل.','executed');
-      if(outcome===null)return;
-      const normalized=String(outcome).trim().toLowerCase();
-      if(!['executed','converted','ignored'].includes(normalized))throw new Error('النتيجة يجب أن تكون executed أو converted أو ignored.');
-      const payload={outcome:normalized};
-      if(normalized==='converted'){
-        const revenue=prompt('قيمة الإيراد المرتبط بالتحول (AED):','0');
-        if(revenue===null)return;
-        payload.revenue=Number(revenue)||0;
-        payload.orderId=prompt('رقم الطلب إن وجد:','')||'';
-      }
-      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/outcome',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(data.message||'تعذر تسجيل النتيجة.');
+      await submitRevenueOutcome(id);
     }
     await loadRevenue();
   }catch(error){alert(error.message)}finally{button.disabled=false;}
@@ -463,20 +479,10 @@ document.querySelector('#revenue-campaigns-body')?.addEventListener('click',asyn
     return;
   }
   const button=event.target.closest('[data-campaign-outcome]'); if(!button)return;
-  const outcome=button.dataset.campaignOutcome;
-  const payload={outcome};
-  if(outcome==='converted'){
-    const revenue=prompt('أدخل قيمة الإيراد المرتبط بالتحول (AED):','0');
-    if(revenue===null)return;
-    payload.revenue=Number(revenue)||0;
-    payload.orderId=prompt('أدخل رقم الطلب إن وجد:','')||'';
-  }
   button.disabled=true;
   try{
-    const response=await fetch(revenueApiBase()+`/api/revenue/campaigns/${encodeURIComponent(button.dataset.id)}/outcome`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.message||'تعذر حفظ النتيجة.');
-    await loadRevenue();
+    const saved=await submitRevenueOutcome(button.dataset.id,button.dataset.campaignOutcome);
+    if(saved)await loadRevenue();
   }catch(error){alert(error.message)}finally{button.disabled=false;}
 });
 
