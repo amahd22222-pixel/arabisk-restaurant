@@ -330,9 +330,24 @@ export function registerRevenueRoutes(app, {
     if (!campaign) return null;
     const outcome = clean(input.outcome, 30);
     if (!new Set(['executed', 'converted', 'ignored']).has(outcome)) return null;
+    const orderId = clean(input.orderId, 30);
+    const linkedOrder = orderId ? orders.find(order => order.id === orderId) : null;
+    const manualRevenue = Math.max(0, number(input.revenue));
     campaign.status = outcome;
-    campaign.resultRevenue = Math.max(0, number(input.revenue));
-    campaign.orderId = clean(input.orderId, 30);
+    campaign.orderId = orderId;
+    campaign.customerId = linkedOrder?.phone ? (customers.find(customer => customer.phone === linkedOrder.phone)?.id || '') : '';
+    campaign.resultRevenue = outcome === 'converted' && linkedOrder
+      ? Math.max(0, number(linkedOrder.total))
+      : manualRevenue;
+    campaign.attribution = outcome === 'converted'
+      ? {
+          source: linkedOrder ? 'order_lookup' : 'manual',
+          orderId,
+          customerId: campaign.customerId,
+          orderValue: campaign.resultRevenue,
+          matchedOrder: Boolean(linkedOrder)
+        }
+      : null;
     campaign.updatedAt = new Date().toISOString();
     void persistRevenue();
     return campaign;
@@ -389,6 +404,7 @@ export function registerRevenueRoutes(app, {
             executed: actions.filter(item => item.status === 'executed').length,
             converted: actions.filter(item => item.status === 'converted').length,
             ignored: actions.filter(item => item.status === 'ignored').length,
+            attributedOrders: actions.filter(item => item.status === 'converted' && item.attribution?.matchedOrder).length,
             measuredRevenue: Math.round(actions.reduce((sum, item) => sum + number(item.resultRevenue), 0) * 100) / 100
           };
         })(),
@@ -451,6 +467,7 @@ export function registerRevenueRoutes(app, {
         executed: campaigns.filter(item => item.status === 'executed').length,
         converted: campaigns.filter(item => item.status === 'converted').length,
         ignored: campaigns.filter(item => item.status === 'ignored').length,
+        attributedOrders: campaigns.filter(item => item.status === 'converted' && item.attribution?.matchedOrder).length,
         measuredRevenue: campaigns.reduce((sum, item) => sum + number(item.resultRevenue), 0)
       },
       recent
