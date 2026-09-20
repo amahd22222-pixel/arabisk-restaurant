@@ -314,6 +314,46 @@ export function registerRevenueRoutes(app, {
       .sort((a, b) => b.priorityScore - a.priorityScore || b.daysSinceLastOrder - a.daysSinceLastOrder)
       .slice(0, 50);
 
+    const returnCustomers = customers
+      .map(customer => {
+        const customerOrders = orders
+          .filter(order => order.phone && customer.phone && order.phone === customer.phone && order.status !== 'cancelled')
+          .map(order => Date.parse(order.updatedAt || order.createdAt || ''))
+          .filter(time => Number.isFinite(time))
+          .sort((a,b) => a - b);
+        if (customerOrders.length < 3) return null;
+        const gaps = [];
+        for (let index = 1; index < customerOrders.length; index += 1) {
+          const gapDays = (customerOrders[index] - customerOrders[index - 1]) / 86400000;
+          if (gapDays >= 7 && gapDays <= 60) gaps.push(gapDays);
+        }
+        if (gaps.length < 2) return null;
+        const averageGap = gaps.reduce((sum, value) => sum + value, 0) / gaps.length;
+        const lastOrderAt = customerOrders[customerOrders.length - 1];
+        const daysSinceLastOrder = Math.floor((now - lastOrderAt) / 86400000);
+        if (daysSinceLastOrder < Math.max(5, Math.floor(averageGap * 0.8)) || daysSinceLastOrder > Math.ceil(averageGap * 1.5)) return null;
+        const progress = Math.max(0, Math.min(1, daysSinceLastOrder / averageGap));
+        const score = clamp(45 + Math.round(progress * 35) + Math.min(20, gaps.length * 3));
+        const p = priority(score);
+        return {
+          id: customer.id,
+          name: clean(customer.name || 'عميل', 80),
+          phone: clean(customer.phone, 40),
+          orderCount: customerOrders.length,
+          averageGapDays: Math.round(averageGap * 10) / 10,
+          daysSinceLastOrder,
+          priorityScore: score,
+          priority: p.label,
+          priorityKey: p.key,
+          reason: 'نمط الطلبات يشير إلى عودة كل ' + Math.round(averageGap) + ' يوم تقريبًا، ومرّ ' + daysSinceLastOrder + ' يومًا منذ آخر طلب.',
+          recommendedAction: 'راجع آخر طلبات العميل وجهّز اقتراح عودة مناسب، مع التحقق من موافقة التواصل قبل أي تواصل.',
+          potentialValue: 0
+        };
+      })
+      .filter(Boolean)
+      .sort((a,b) => b.priorityScore - a.priorityScore || b.daysSinceLastOrder - a.daysSinceLastOrder)
+      .slice(0, 50);
+
     const upcomingReservations = reservations
       .filter(reservation => reservation.status !== 'cancelled')
       .map(reservation => {
@@ -372,6 +412,11 @@ export function registerRevenueRoutes(app, {
         type: 'abandoned_cart', priorityScore: item.priorityScore, priority: item.priority, priorityKey: item.priorityKey,
         title: `سلة متروكة بقيمة ${Math.round(number(item.cartValue))} AED`, reason: item.reason,
         recommendedAction: item.recommendedAction, potentialValue: item.potentialValue, reference: item.sessionId
+      })),
+      ...returnCustomers.map(item => ({
+        type: 'returning_customer', priorityScore: item.priorityScore, priority: item.priority, priorityKey: item.priorityKey,
+        title: `موعد عودة قريب: ${clean(item.name || 'عميل', 70)}`, reason: item.reason,
+        recommendedAction: item.recommendedAction, potentialValue: item.potentialValue, reference: item.id
       })),
       ...inactiveCustomers.map(item => ({
         type: 'inactive_customer', priorityScore: item.priorityScore, priority: item.priority, priorityKey: item.priorityKey,
@@ -567,10 +612,10 @@ export function registerRevenueRoutes(app, {
       generatedAt: new Date().toISOString(),
       windowDays: 30,
       funnel,
-      opportunities: { abandonedCarts: abandoned, inactiveCustomers, upcomingReservations },
+      opportunities: { abandonedCarts: abandoned, inactiveCustomers, returnCustomers, upcomingReservations },
       topActions,
       counts: {
-        abandonedCarts: abandoned.length, inactiveCustomers: inactiveCustomers.length,
+        abandonedCarts: abandoned.length, inactiveCustomers: inactiveCustomers.length, returnCustomers: returnCustomers.length,
         upcomingReservations: upcomingReservations.length, topActions: topActions.length
       },
       potentialAbandonedRevenue: abandoned.reduce((sum, item) => sum + number(item.cartValue), 0),
