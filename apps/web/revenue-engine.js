@@ -736,7 +736,7 @@ export function registerRevenueRoutes(app, {
       item.status === 'draft' &&
       item.type === type &&
       item.reference === reference &&
-      (type !== 'abandoned_cart' || !item.recoveryExpiresAt || Date.parse(item.recoveryExpiresAt || '') > Date.now())
+      (!['abandoned_cart', 'inactive_customer'].includes(type) || !item.recoveryExpiresAt || Date.parse(item.recoveryExpiresAt || '') > Date.now())
     );
     if (existing) return { ...existing, reused: true };
 
@@ -752,7 +752,7 @@ export function registerRevenueRoutes(app, {
           : type === 'abandoned_cart'
           ? 'مسودة استرجاع سلة: شارك رابط استرجاع السلة يدويًا بعد التحقق من الموافقة.'
           : type === 'inactive_customer'
-            ? `مسودة إعادة تنشيط للعميل: ${clean(action.title.replace('إعادة تنشيط: ', ''), 70)}.`
+            ? 'مسودة إعادة تنشيط: شارك رابط إعادة الطلب من آخر مشتريات العميل يدويًا بعد التحقق من الموافقة.'
             : type === 'returning_customer'
               ? clean(action.recommendedAction, 500)
               : type === 'product_interest'
