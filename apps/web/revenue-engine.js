@@ -335,7 +335,7 @@ export function registerRevenueRoutes(app, {
           priorityScore: score,
           priority: p.label,
           priorityKey: p.key,
-          reason: \`المنتج شوهد \${views} مرة في جلسات مختلفة، لكن الإضافة للسلة حدثت في \${adds} جلسات فقط.\`,
+          reason: 'المنتج شوهد ' + views + ' مرة في جلسات مختلفة، لكن الإضافة للسلة حدثت في ' + adds + ' جلسات فقط.',
           recommendedAction: 'راجع السعر والصورة والوصف وطريقة تقديم المنتج، ثم قِس التفاعل مرة أخرى.',
           potentialValue: 0
         };
@@ -445,7 +445,7 @@ export function registerRevenueRoutes(app, {
       })),
       ...productInterest.map(item => ({
         type: 'product_interest', priorityScore: item.priorityScore, priority: item.priority, priorityKey: item.priorityKey,
-        title: \`اهتمام غير مكتمل: \${clean(item.name || item.productId, 70)}\`, reason: item.reason,
+        title: 'اهتمام غير مكتمل: ' + clean(item.name || item.productId, 70), reason: item.reason,
         recommendedAction: item.recommendedAction, potentialValue: item.potentialValue, reference: item.productId
       })),
       ...returnCustomers.map(item => ({
