@@ -438,10 +438,16 @@ export function registerRevenueRoutes(app, {
     const reference = clean(input.reference, 120);
     const summary = buildSummary();
     const segment = type === 'segment_action' ? customerSegments().find(item => item.key === reference) : null;
+    const alert = type === 'alert_action' ? (summary.alerts?.items || []).find(item => item.key === reference) : null;
     const action = segment ? {
       title: segment.label,
       reason: segment.description,
       recommendedAction: segment.recommendedAction,
+      potentialValue: 0
+    } : alert ? {
+      title: alert.title,
+      reason: alert.detail,
+      recommendedAction: alert.action,
       potentialValue: 0
     } : (summary.topActions || []).find(item => item.type === type && item.reference === reference);
     if (!action) return null;
@@ -451,9 +457,11 @@ export function registerRevenueRoutes(app, {
       type,
       reference,
       title: action.title,
-      message: type === 'segment_action'
+      message: type === 'alert_action'
         ? clean(action.recommendedAction, 500)
-        : type === 'abandoned_cart'
+        : type === 'segment_action'
+          ? clean(action.recommendedAction, 500)
+          : type === 'abandoned_cart'
           ? 'مسودة استرجاع سلة: راجع السلة المتروكة وحدد قناة التواصل المناسبة بعد التحقق من الموافقة.'
           : type === 'inactive_customer'
             ? `مسودة إعادة تنشيط للعميل: ${clean(action.title.replace('إعادة تنشيط: ', ''), 70)}.`
@@ -465,6 +473,9 @@ export function registerRevenueRoutes(app, {
       potentialValue: number(action.potentialValue),
       audienceCount: segment ? Number(segment.count || 0) : 0,
       historicalSegmentRevenue: segment ? number(segment.totalRevenue) : 0,
+      sourceType: alert ? 'revenue_alert' : segment ? 'customer_segment' : 'revenue_opportunity',
+      sourceKey: alert?.key || segment?.key || type,
+      alertSeverity: alert?.severity || '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
