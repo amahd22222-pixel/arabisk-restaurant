@@ -21,6 +21,19 @@ async function loadRevenue(){
     set('#rev-abandoned',data.counts?.abandonedCarts);set('#rev-inactive',data.counts?.inactiveCustomers);set('#rev-reservations',data.counts?.upcomingReservations);set('#rev-actions-count',data.counts?.topActions);
     const potential=document.querySelector('#rev-potential');if(potential)potential.textContent=revMoney(data.potentialAbandonedRevenue);
 
+    const intelligence=data.intelligence||{};
+    const intelSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
+    intelSet('#intel-potential',revMoney(intelligence.totals?.potentialAbandonedRevenue));
+    intelSet('#intel-measured',revMoney(intelligence.totals?.measuredRevenue));
+    intelSet('#intel-orders',intelligence.totals?.attributedOrders);
+    intelSet('#intel-converted',intelligence.totals?.convertedActions);
+    const segRows=intelligence.segmentPerformance||[];
+    document.querySelector('#intel-segments-body').innerHTML=segRows.map(row=>`<tr><td><strong>${revEsc(row.label)}</strong></td><td>${Number(row.audience||0)}</td><td>${Number(row.executed||0)}</td><td>${Number(row.converted||0)} <small>${Number(row.conversionRate||0).toFixed(1)}%</small></td><td>${Number(row.attributedOrders||0)}</td><td class="price">${revMoney(row.measuredRevenue)}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">لا توجد بيانات أداء للشرائح حتى الآن.</td></tr>';
+    const measuredRows=intelligence.measuredActions||[];
+    document.querySelector('#intel-actions-body').innerHTML=measuredRows.map(row=>`<tr><td><strong>${revEsc(row.title)}</strong><small>${revEsc(row.id)}</small></td><td class="price">${revMoney(row.revenue)}</td><td>${row.orderId?revEsc(row.orderId):'—'}</td><td>${row.matchedOrder?'<span class="status on">طلب فعلي</span>':'<span class="status pending">يدوي</span>'}</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لم يتم تسجيل إيراد من إجراءات بعد.</td></tr>';
+    const nextActions=intelligence.nextActions||[];
+    document.querySelector('#intel-next-actions').innerHTML=nextActions.map(row=>`<div class="intelligence-action"><strong>${revEsc(row.priority||'—')}</strong><span>${revEsc(row.title)}</span><small>${revEsc(row.recommendedAction||row.reason)}</small></div>`).join('')||'<div class="empty">لا توجد أولوية تنفيذية حالية.</div>';
+
     const measurement=data.measurement||{};
     const setMetric=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
     setMetric('#rev-intent-sessions',measurement.intentSessions);

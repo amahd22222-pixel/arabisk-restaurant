@@ -259,6 +259,49 @@ export function registerRevenueRoutes(app, {
       }))
     ].sort((a, b) => b.priorityScore - a.priorityScore).slice(0, 12);
 
+    const segmentPerformance = customerSegments().map(segment => {
+      const metrics = segment.actionMetrics || {};
+      return {
+        key: segment.key,
+        label: segment.label,
+        audience: segment.count,
+        executed: metrics.executed,
+        converted: metrics.converted,
+        attributedOrders: metrics.attributedOrders,
+        measuredRevenue: metrics.measuredRevenue,
+        conversionRate: metrics.executed ? Math.round((metrics.converted / metrics.executed) * 1000) / 10 : 0
+      };
+    });
+    const measuredActions = campaigns
+      .filter(item => item.status === 'converted' && number(item.resultRevenue) > 0)
+      .sort((a,b) => number(b.resultRevenue) - number(a.resultRevenue))
+      .slice(0, 10)
+      .map(item => ({
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        reference: item.reference,
+        revenue: number(item.resultRevenue),
+        orderId: item.orderId || '',
+        matchedOrder: Boolean(item.attribution?.matchedOrder),
+        customerId: item.customerId || '',
+        updatedAt: item.updatedAt
+      }));
+    const totalMeasuredRevenue = campaigns.reduce((sum, item) => sum + number(item.resultRevenue), 0);
+    const bestMeasuredSegment = [...segmentPerformance].sort((a,b) => b.measuredRevenue - a.measuredRevenue)[0] || null;
+    const intelligence = {
+      nextActions: topActions.slice(0, 5),
+      segmentPerformance,
+      measuredActions,
+      totals: {
+        potentialAbandonedRevenue: abandoned.reduce((sum, item) => sum + number(item.cartValue), 0),
+        measuredRevenue: Math.round(totalMeasuredRevenue * 100) / 100,
+        attributedOrders: campaigns.filter(item => item.status === 'converted' && item.attribution?.matchedOrder).length,
+        convertedActions: campaigns.filter(item => item.status === 'converted').length
+      },
+      bestMeasuredSegment
+    };
+
     return {
       generatedAt: new Date().toISOString(),
       windowDays: 30,
@@ -274,6 +317,7 @@ export function registerRevenueRoutes(app, {
       health: { score: healthScore, label: healthLabel, biggestLeak, funnelRates },
       identity: { identifiedCustomers, identifiedEvents, coverageRate: recent.length ? Math.round((identifiedEvents / recent.length) * 1000) / 10 : 0 },
 
+      intelligence,
       measurement: {
         intentSessions,
         intentConversions: intentConversions.length,
