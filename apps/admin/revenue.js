@@ -287,7 +287,7 @@ async function loadRevenue(){
       const taskLabel=taskLabels[taskKey]||taskKey;
       const owner=task.owner||row.owner||'غير محدد';
       const actionButtons=row.status==='draft' ? '<button class="small-action" data-campaign-task data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(task.owner||row.owner||'')+'" data-due-at="'+revEsc(dueAt)+'" type="button">'+(taskKey==='unassigned'?'تعيين + SLA':'تعديل المهمة')+'</button>'+(taskKey==='assigned' ? '<button class="small-action" data-campaign-start data-id="'+revEsc(row.id)+'" data-owner="'+revEsc(owner==='غير محدد'?'':owner)+'" data-due-at="'+revEsc(dueAt)+'" type="button">بدء التنفيذ</button>' : '') : '';
-      const outcomeButtons=row.status==='draft' ? '<button class="small-action" data-campaign-outcome="executed" data-id="'+revEsc(row.id)+'" type="button">تم التنفيذ</button><button class="small-action" data-campaign-outcome="converted" data-id="'+revEsc(row.id)+'" type="button">سجل التحول</button>' : '<span class="status on">تم تسجيل النتيجة</span>';
+      const outcomeButtons=row.status==='draft' ? '<button class="small-action" data-campaign-outcome="executed" data-id="'+revEsc(row.id)+'" type="button">تم التنفيذ</button><button class="small-action" data-campaign-outcome="converted" data-id="'+revEsc(row.id)+'" type="button">سجل التحول</button><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>' : '<span class="status on">تم تسجيل النتيجة</span><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>';
       return '<tr><td><strong>'+revEsc(row.id)+'</strong><small>'+revEsc(row.title)+'</small></td><td>'+revEsc({draft:'مسودة',executed:'تم التنفيذ',converted:'تحولت',ignored:'تم التجاهل'}[row.status]||row.status)+'</td><td><div class="task-meta"><span class="rev-task '+revEsc(taskClass)+'">'+revEsc(taskLabel)+'</span><strong>'+revEsc(owner)+'</strong><small>'+revEsc(dueText)+'</small></div></td><td class="price">'+(row.resultRevenue?revMoney(row.resultRevenue):'—')+'</td><td class="campaign-actions">'+(actionButtons||'—')+'</td><td>'+outcomeButtons+'</td></tr>';
     }).join('')||'<tr><td colspan="6" class="empty">لا توجد مسودات حتى الآن.</td></tr>';
     if(state)state.textContent=`آخر تحديث: ${new Date(data.generatedAt).toLocaleString('ar-AE')} — نافذة التحليل ${data.windowDays} يوم`;
@@ -311,10 +311,6 @@ document.querySelector('#revenue-routing-body')?.addEventListener('click',async 
   }catch(error){alert(error.message);button.disabled=false;}
 });
 
-document.querySelector('#revenue-task-detail-modal')?.addEventListener('click',async event=>{
-  const button=event.target.closest('[data-detail-action],[data-id][class*="detail-task-"]');
-  if(!button)return;
-});
 document.querySelector('#revenue-task-detail-body')?.addEventListener('click',async event=>{
   const button=event.target.closest('[data-id][class*="detail-task-"]'); if(!button)return;
   const id=button.dataset.id; button.disabled=true;
@@ -399,6 +395,15 @@ document.querySelector('#revenue-actions-body')?.addEventListener('click',async 
   }catch(error){alert(error.message)}finally{button.disabled=false;}
 });
 document.querySelector('#revenue-campaigns-body')?.addEventListener('click',async event=>{
+  const detailButton=event.target.closest('[data-campaign-detail]');
+  if(detailButton){
+    detailButton.disabled=true;
+    try{ await openRevenueTaskDetail(detailButton.dataset.id); }
+    catch(error){ alert(error.message); }
+    finally{ detailButton.disabled=false; }
+    return;
+  }
+
   const taskButton=event.target.closest('[data-campaign-task]');
   if(taskButton){
     const owner=prompt('اكتب اسم المسؤول أو الدور المسؤول عن المهمة:',taskButton.dataset.owner||'');
