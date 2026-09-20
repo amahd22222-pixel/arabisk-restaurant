@@ -13,7 +13,7 @@ function renderReservations(){const rows=reservations.map(r=>`<tr><td><strong>${
 function renderOrders(){const body=$('#orders-body');if(!orders.length){body.innerHTML='';$('#orders-state').textContent='لا توجد طلبات مسجلة حاليًا.';return}$('#orders-state').textContent=`${orders.length} طلب مسجل.`;body.innerHTML=orders.map(order=>{const items=(order.items||[]).map(item=>`${escapeHtml(item.nameAr)} × ${Number(item.quantity)}`).join('، ');const orderType=order.orderType==='pickup'?'استلام':'داخل المطعم';const location=order.tableNumber?`<small>طاولة ${escapeHtml(order.tableNumber)}</small>`:'';return `<tr><td><strong>${escapeHtml(order.id)}</strong><small>${new Date(order.createdAt).toLocaleString('ar-AE')}</small></td><td><strong>${escapeHtml(order.name)}</strong><small dir="ltr">${escapeHtml(order.phone)}</small></td><td><small>${items}</small></td><td class="price">AED ${Number(order.total).toFixed(0)}</td><td><strong>${orderType}</strong>${location}</td><td><span class="status ${statusClass(order.status)}">${orderStatusLabel[order.status]||order.status}</span></td><td class="actions"><select data-order-status="${escapeHtml(order.id)}"><option value="pending">قيد المراجعة</option><option value="confirmed">مؤكد</option><option value="preparing">قيد التحضير</option><option value="ready">جاهز</option><option value="completed">مكتمل</option><option value="cancelled">ملغي</option></select></td></tr>`}).join('');orders.forEach(order=>{const select=document.querySelector(`select[data-order-status="${CSS.escape(order.id)}"]`);if(select)select.value=order.status});}
 function renderCustomerSegments(){
   const grid=$('#customer-segments-grid'); if(!grid)return;
-  grid.innerHTML=customerSegments.map(segment=>`<button class="customer-segment-card" type="button" data-segment-key="${escapeHtml(segment.key)}"><span>${escapeHtml(segment.label)}</span><b>${Number(segment.count||0)}</b><small>${escapeHtml(segment.description)}</small><em>قيمة الطلبات: AED ${Number(segment.totalRevenue||0).toFixed(0)}</em></button>`).join('')||'<div class="empty">لا توجد شرائح بيانات حالياً.</div>';
+  grid.innerHTML=customerSegments.map(segment=>`<article class="customer-segment-card"><button class="segment-main" type="button" data-segment-key="${escapeHtml(segment.key)}"><span>${escapeHtml(segment.label)}</span><b>${Number(segment.count||0)}</b><small>${escapeHtml(segment.description)}</small><em>قيمة الطلبات السابقة: AED ${Number(segment.totalRevenue||0).toFixed(0)}</em></button><p>${escapeHtml(segment.recommendedAction||'راجع الشريحة وحدد الإجراء المناسب.')}</p><button class="segment-action" type="button" data-segment-action="${escapeHtml(segment.key)}">إنشاء مسودة إجراء</button></article>`).join('')||'<div class="empty">لا توجد شرائح بيانات حالياً.</div>';
 }
 function renderCustomerSegmentMembers(segment){
   const wrap=$('#customer-segment-members'); const body=$('#customer-segment-members-body'); const title=$('#customer-segment-members-title'); if(!wrap||!body||!title)return;
@@ -78,7 +78,15 @@ async function openCustomer360(customerId){
 }
 function closeCustomer360(){const modal=$('#customer360-modal');if(!modal)return;modal.classList.remove('show');modal.setAttribute('aria-hidden','true');}
 document.addEventListener('click',event=>{const segmentButton=event.target.closest('[data-segment-key]');if(segmentButton){const segment=customerSegments.find(item=>item.key===segmentButton.dataset.segmentKey);renderCustomerSegmentMembers(segment);}});
+async function createSegmentActionDraft(segmentKey){
+  const segment=customerSegments.find(item=>item.key===segmentKey); if(!segment)return;
+  try{
+    const draft=await request('/api/revenue/campaign-drafts',{method:'POST',body:JSON.stringify({type:'segment_action',reference:segment.key})});
+    const state=$('#customers-state'); if(state)state.textContent=`تم إنشاء مسودة إجراء لـ${segment.label} (${draft.id}). التنفيذ يدوي وبعد التحقق من الموافقة.`;
+  }catch(error){const state=$('#customers-state');if(state)state.textContent=error.message;}
+}
 document.querySelector('#customer-segments-refresh')?.addEventListener('click',()=>void loadCustomerSegments());
+document.addEventListener('click',event=>{const actionButton=event.target.closest('[data-segment-action]');if(actionButton){event.stopPropagation();void createSegmentActionDraft(actionButton.dataset.segmentAction);}});
 document.querySelector('#customer-segment-close')?.addEventListener('click',()=>{const wrap=$('#customer-segment-members');if(wrap)wrap.hidden=true;});
 document.addEventListener('click',event=>{
   const button=event.target.closest('[data-customer-360]');
