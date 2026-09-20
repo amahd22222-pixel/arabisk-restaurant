@@ -26,13 +26,17 @@ const ageMinutes = (now, iso) => {
 const ageLabel = minutes => minutes < 60 ? `${minutes} دقيقة` : minutes < 1440 ? `${Math.floor(minutes / 60)} ساعة` : `${Math.floor(minutes / 1440)} يوم`;
 
 const taskWorkflow = (campaign, now = Date.now()) => {
-  if (campaign.status !== 'draft') return { key:'done', label:'مكتملة', overdue:false };
+  if (campaign.status !== 'draft') return { key:'done', label:'مكتملة', overdue:false, escalated:false, overdueHours:0 };
   const dueAt = Date.parse(campaign.dueAt || '');
-  if (Number.isFinite(dueAt) && dueAt < now) return { key:'overdue', label:'متأخرة', overdue:true };
+  if (Number.isFinite(dueAt) && dueAt < now) {
+    const overdueHours = Math.max(0, Math.floor((now - dueAt) / 3600000));
+    const escalated = overdueHours >= 24;
+    return { key: escalated ? 'escalated' : 'overdue', label: escalated ? 'تصعيد مطلوب' : 'متأخرة', overdue:true, escalated, overdueHours };
+  }
   const state = clean(campaign.workflowStatus, 30);
-  if (state === 'in_progress') return { key:'in_progress', label:'قيد التنفيذ', overdue:false };
-  if (state === 'assigned') return { key:'assigned', label:'مسندة', overdue:false };
-  return { key:'unassigned', label:'غير مسندة', overdue:false };
+  if (state === 'in_progress') return { key:'in_progress', label:'قيد التنفيذ', overdue:false, escalated:false, overdueHours:0 };
+  if (state === 'assigned') return { key:'assigned', label:'مسندة', overdue:false, escalated:false, overdueHours:0 };
+  return { key:'unassigned', label:'غير مسندة', overdue:false, escalated:false, overdueHours:0 };
 };
 
 export function registerRevenueRoutes(app, {
@@ -367,6 +371,24 @@ export function registerRevenueRoutes(app, {
         action:'راجع ما حدث في هذه الفترة وسجّل الإجراءات المرتبطة قبل تكرارها.'
       });
     }
+    const overdueTaskRows = campaigns
+      .filter(item => item.status === 'draft')
+      .map(item => ({ campaign:item, task:taskWorkflow(item, now) }))
+      .filter(item => item.task.overdue);
+
+    if (overdueTaskRows.length > 0) {
+      const escalatedCount = overdueTaskRows.filter(item => item.task.escalated).length;
+      alerts.push({
+        severity: escalatedCount > 0 ? 'high' : 'medium',
+        key:'overdue_revenue_tasks',
+        title: escalatedCount > 0 ? 'تصعيد مهام إيرادات مطلوب' : 'مهام إيرادات متأخرة',
+        detail: escalatedCount > 0
+          ? escalatedCount + ' مهمة تجاوزت الـSLA بأكثر من 24 ساعة، من إجمالي ' + overdueTaskRows.length + ' مهام متأخرة.'
+          : overdueTaskRows.length + ' مهمة تجاوزت موعد الـSLA ولم تُغلق بعد.',
+        action: 'راجِع المسؤول والموعد فورًا، ثم حدّث حالة المهمة أو سجّل النتيجة التشغيلية.'
+      });
+    }
+
     if (abandoned.length > 0) {
       alerts.push({
         severity:'medium',
@@ -676,7 +698,8 @@ export function registerRevenueRoutes(app, {
         openTasks: taskRows.filter(item => item.key !== 'done').length,
         assignedTasks: taskRows.filter(item => item.key === 'assigned').length,
         inProgressTasks: taskRows.filter(item => item.key === 'in_progress').length,
-        overdueTasks: taskRows.filter(item => item.key === 'overdue').length,
+        overdueTasks: taskRows.filter(item => item.key === 'overdue' || item.key === 'escalated').length,
+        escalatedTasks: taskRows.filter(item => item.key === 'escalated').length,
         unassignedTasks: taskRows.filter(item => item.key === 'unassigned').length
       },
       recent
