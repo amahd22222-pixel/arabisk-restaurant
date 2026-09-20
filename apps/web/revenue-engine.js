@@ -57,7 +57,7 @@ export function registerRevenueRoutes(app, {
       cartValue: Math.max(0, number(input.cartValue)),
       orderValue: Math.max(0, number(input.orderValue)),
       metadata: input.metadata && typeof input.metadata === 'object'
-        ? JSON.parse(JSON.stringify(input.metadata).slice(0, 2000))
+        ? Object.fromEntries(Object.entries(input.metadata).slice(0, 12).map(([key, value]) => [clean(key, 60), clean(value, 180)]))
         : {},
       createdAt: new Date().toISOString()
     };
