@@ -1,3 +1,6 @@
+(() => {
+'use strict';
+
 const CART_KEY='arabisk-cart-v4';
 const COOKIE_KEY='arabisk_cart_v4';
 const CART_EVENT='arabisk-cart-updated';
@@ -49,12 +52,10 @@ const readCart=()=>{
   const candidates=[];
   try{const value=readStored(localStorage,CART_KEY);if(value)candidates.push(value)}catch{}
   try{const value=readStored(sessionStorage,CART_KEY);if(value)candidates.push(value)}catch{}
-  if(candidates.length){
-    candidates.sort((a,b)=>b.updatedAt-a.updatedAt);
-    return candidates[0].items;
-  }
-  const cookie=readCookie();
-  return cookie?cookie.items:[];
+  try{const value=readCookie();if(value)candidates.push(value)}catch{}
+  if(!candidates.length)return [];
+  candidates.sort((a,b)=>b.updatedAt-a.updatedAt);
+  return candidates[0].items;
 };const writeCookie=items=>{
   try{
     const compact={version:1,updatedAt:Date.now(),items:items.map(item=>({id:String(item.id),qty:Number(item.qty)||1}))};
@@ -203,3 +204,5 @@ window.addEventListener(CART_EVENT,()=>{cart=readCart();renderBadge()});
 window.addEventListener('storage',event=>{if(event.key===CART_KEY){cart=readCart();renderBadge()}});
 window.addEventListener('pageshow',()=>{cart=readCart();renderBadge();void ready()});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
+
+})();
