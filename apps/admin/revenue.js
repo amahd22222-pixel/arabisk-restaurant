@@ -544,6 +544,16 @@ document.querySelector('#revenue')?.addEventListener('click',event=>{
   if(!button||button.disabled)return;
   void executeAbandonedCartRecovery(button.dataset.reference,button);
 });
+document.querySelector('#revenue-recovery-copy')?.addEventListener('click',async()=>{
+  const input=document.querySelector('#revenue-recovery-url');
+  if(!input?.value)return;
+  try{await navigator.clipboard.writeText(input.value);alert('تم نسخ رابط استرجاع السلة.');}
+  catch{input.focus();input.select();alert('تم تحديد الرابط. انسخه يدويًا.');}
+});
+document.querySelector('#revenue-recovery-open')?.addEventListener('click',()=>{
+  const input=document.querySelector('#revenue-recovery-url');
+  if(input?.value)window.open(input.value,'_blank','noopener');
+});
 document.querySelector('#revenue-actions-body')?.addEventListener('click',async event=>{
   const button=event.target.closest('[data-create-draft]'); if(!button)return;
   button.disabled=true;
