@@ -140,6 +140,7 @@
 
   async function bindProduct(product, category, allProducts) {
     current = product;
+    window.ARABISK_ANALYTICS?.track?.('item_view',{productId:product.id});
     document.title = `${product.nameAr || product.nameEn} — ARABISK`;
     document.querySelector('#back').href = `/menu/${slug(category.id)}`;
     document.querySelector('#category').textContent = (category.nameEn || 'MENU').toUpperCase();
