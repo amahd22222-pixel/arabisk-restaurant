@@ -712,7 +712,12 @@ export function registerRevenueRoutes(app, {
     } : (summary.topActions || []).find(item => item.type === type && item.reference === reference);
     if (!action) return null;
 
-    const existing = campaigns.find(item => item.status === 'draft' && item.type === type && item.reference === reference);
+    const existing = campaigns.find(item =>
+      item.status === 'draft' &&
+      item.type === type &&
+      item.reference === reference &&
+      (type !== 'abandoned_cart' || !item.recoveryExpiresAt || Date.parse(item.recoveryExpiresAt || '') > Date.now())
+    );
     if (existing) return { ...existing, reused: true };
 
     const draft = {
