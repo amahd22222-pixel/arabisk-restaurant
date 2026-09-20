@@ -144,6 +144,15 @@ async function loadRevenue(){
 
     const upcoming=data.opportunities?.upcomingReservations||[];
     document.querySelector('#revenue-reservation-body').innerHTML=upcoming.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name)}</strong><small dir="ltr">${revEsc(row.phone)}</small></td><td>${revEsc(row.date)}<small>${revEsc(row.time)}</small></td><td>${Number(row.guests||0)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد حجوزات خلال 48 ساعة.</td></tr>';
+    const workload=data.taskWorkload||{};
+    const workloadSet=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
+    workloadSet('#workload-open',workload.counts?.open);
+    workloadSet('#workload-unassigned',workload.counts?.unassigned);
+    workloadSet('#workload-overdue',workload.counts?.overdue);
+    workloadSet('#workload-owners',workload.counts?.owners);
+    const workloadRows=workload||{};
+    document.querySelector('#task-workload-owner-body').innerHTML=(workloadRows.length?workloadRows:workloadRows.ownersList||[]).map(row=>'<tr><td><strong>'+revEsc(row.owner)+'</strong></td><td>'+Number(row.open||0)+'</td><td>'+Number(row.inProgress||0)+'</td><td>'+Number(row.dueSoon||0)+'</td><td>'+Number(row.overdue||0)+'</td><td>'+Number(row.escalated||0)+'</td><td class="price">'+revMoney(row.potentialValue)+'</td></tr>').join('')||'<tr><td colspan="7" class="empty">لا توجد مهام مفتوحة حاليًا.</td></tr>';
+
     const briefing=data.dailyBriefing||{};
     const bset=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
     bset('#briefing-urgent',briefing.summary?.urgent||0);
