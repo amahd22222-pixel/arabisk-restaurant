@@ -126,6 +126,7 @@ a{text-decoration:none;color:inherit}
 }
 .name{font-weight:900;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:560px}
 .date{font-size:11px;color:var(--muted);display:block;margin-top:3px}
+.post-badges{display:flex;align-items:center;gap:7px;margin-top:4px;flex-wrap:wrap}.pinned-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:#f4e8d2;color:#7f622f;font-size:9px;font-weight:900;border:1px solid #ead8b8}
 .more{
   width:38px;height:38px;border:1px solid var(--line);border-radius:50%;background:#fff;
   color:#6c6155;font-size:20px;line-height:1
@@ -307,6 +308,7 @@ function icon(name){
 }
 function getCard(id){return document.querySelector('#memory-'+CSS.escape(id))}
 function updateStat(card,key,value){if(!card)return;const count=Number(value||0);const b=card.querySelector('[data-count="'+key+'"]');if(b)b.textContent=String(count);const stat=card.querySelector('[data-stat="'+key+'"]');if(stat){if(key==='shares')stat.textContent=count+' مشاركة';else if(stat.childNodes.length)stat.lastChild.textContent=' '+count}if(key==='comments'){const label=card.querySelector('[data-count="comments-label"]');if(label)label.textContent=count+' تعليق ظاهر للجميع'}}
+function postBadge(m){return m.pinned?'<div class="post-badges"><span class="pinned-badge">✦ ذكرى مميزة</span></div>':''}
 function commentHtml(c){
   return '<div class="comment-item"><div class="comment-avatar">'+esc(initial(c.displayName))+'</div><div class="comment-bubble"><div class="comment-author">'+esc(c.displayName||'مجهول')+'</div><div class="comment-text">'+esc(c.text)+'</div><div class="comment-date">'+relativeTime(c.createdAt)+'</div></div></div>';
 }
@@ -319,7 +321,7 @@ function postHtml(m){
       :'';
   const commentList=comments.length?comments.map(commentHtml).join(''):'<div class="no-comments" style="color:var(--muted);font-size:12px;padding:5px 0 7px">لا توجد تعليقات بعد — كن أول من يعلق.</div>';
   return '<article class="memory" id="memory-'+esc(m.id)+'" data-memory-id="'+esc(m.id)+'">'+
-    '<div class="post-head"><div class="publisher"><div class="mini-avatar">'+esc(initial(m.displayName))+'</div><div><span class="name">'+esc(m.displayName||'مجهول')+'</span><span class="date" title="'+esc(new Date(m.createdAt).toLocaleString('ar-AE'))+'">'+relativeTime(m.createdAt)+'</span></div></div><button class="more" type="button" data-action="report" data-id="'+esc(m.id)+'" aria-label="إبلاغ">⋯</button></div>'+
+    '<div class="post-head"><div class="publisher"><div class="mini-avatar">'+esc(initial(m.displayName))+'</div><div><span class="name">'+esc(m.displayName||'مجهول')+'</span><span class="date" title="'+esc(new Date(m.createdAt).toLocaleString('ar-AE'))+'">'+relativeTime(m.createdAt)+'</span>'+postBadge(m)+'</div></div><button class="more" type="button" data-action="report" data-id="'+esc(m.id)+'" aria-label="إبلاغ">⋯</button></div>'+
     media+
     (m.text?'<div class="text">'+esc(m.text)+'</div>':'')+
     '<div class="meta-row"><div class="reactions"><span data-stat="likes">'+icon('like')+' '+Number(m.likes||0)+'</span><span data-stat="comments">'+icon('comment')+' '+Number(m.commentsCount||comments.length)+'</span></div><span data-stat="shares">'+Number(m.shareCount||0)+' مشاركة</span></div>'+
