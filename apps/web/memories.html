@@ -126,6 +126,7 @@ a{text-decoration:none;color:inherit}
 }
 .name{font-weight:900;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:560px}
 .date{font-size:11px;color:var(--muted);display:block;margin-top:3px}
+.post-badges{display:flex;align-items:center;gap:7px;margin-top:4px;flex-wrap:wrap}.pinned-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;background:#f4e8d2;color:#7f622f;font-size:9px;font-weight:900;border:1px solid #ead8b8}
 .more{
   width:38px;height:38px;border:1px solid var(--line);border-radius:50%;background:#fff;
   color:#6c6155;font-size:20px;line-height:1
@@ -274,6 +275,11 @@ a{text-decoration:none;color:inherit}
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 let sort='latest',page=0,hasMore=false,busy=false,selectedObjectUrl='';
+const likedKey='arabisk_memories_likes_v1';
+const likedIds=new Set(JSON.parse(localStorage.getItem(likedKey)||'[]'));
+function saveLiked(){localStorage.setItem(likedKey,JSON.stringify([...likedIds].slice(-500)))}
+function restoreLikedState(){document.querySelectorAll('[data-action="like"]').forEach(btn=>{if(likedIds.has(btn.dataset.id)){btn.classList.add('liked');btn.setAttribute('aria-pressed','true')}})}
+const savedName=localStorage.getItem('arabisk_memories_name_v1');if(savedName)$('#name').value=savedName;
 
 function api(url,opt={}){
   return fetch(url,{headers:{'Content-Type':'application/json',...(opt.headers||{})},...opt})
@@ -319,12 +325,12 @@ function postHtml(m){
       :'';
   const commentList=comments.length?comments.map(commentHtml).join(''):'<div class="no-comments" style="color:var(--muted);font-size:12px;padding:5px 0 7px">لا توجد تعليقات بعد — كن أول من يعلق.</div>';
   return '<article class="memory" id="memory-'+esc(m.id)+'" data-memory-id="'+esc(m.id)+'">'+
-    '<div class="post-head"><div class="publisher"><div class="mini-avatar">'+esc(initial(m.displayName))+'</div><div><span class="name">'+esc(m.displayName||'مجهول')+'</span><span class="date" title="'+esc(new Date(m.createdAt).toLocaleString('ar-AE'))+'">'+relativeTime(m.createdAt)+'</span></div></div><button class="more" type="button" data-action="report" data-id="'+esc(m.id)+'" aria-label="إبلاغ">⋯</button></div>'+
+    '<div class="post-head"><div class="publisher"><div class="mini-avatar">'+esc(initial(m.displayName))+'</div><div><span class="name">'+esc(m.displayName||'مجهول')+'</span><span class="date" title="'+esc(new Date(m.createdAt).toLocaleString('ar-AE'))+'">'+relativeTime(m.createdAt)+'</span>(m.pinned?'<div class="post-badges"><span class="pinned-badge">✦ ذكرى مميزة</span></div>':'')+'</div>'</div><button class="more" type="button" data-action="report" data-id="'+esc(m.id)+'" aria-label="إبلاغ">⋯</button></div>'+
     media+
     (m.text?'<div class="text">'+esc(m.text)+'</div>':'')+
     '<div class="meta-row"><div class="reactions"><span data-stat="likes">'+icon('like')+' '+Number(m.likes||0)+'</span><span data-stat="comments">'+icon('comment')+' '+Number(m.commentsCount||comments.length)+'</span></div><span data-stat="shares">'+Number(m.shareCount||0)+' مشاركة</span></div>'+
     '<div class="actions">'+
-      '<button class="action-btn" type="button" data-action="like" data-id="'+esc(m.id)+'" aria-label="إعجاب">'+icon('like')+'<span>إعجاب</span><b data-count="likes">'+Number(m.likes||0)+'</b></button>'+
+      '<button class="action-btn" type="button" data-action="like" data-id="'+esc(m.id)+'" aria-label="إعجاب" aria-pressed="false">'+icon('like')+'<span>إعجاب</span><b data-count="likes">'+Number(m.likes||0)+'</b></button>'+
       '<button class="action-btn" type="button" data-action="comment" data-id="'+esc(m.id)+'" aria-label="تعليق">'+icon('comment')+'<span>تعليق</span><b data-count="comments">'+Number(m.commentsCount||comments.length)+'</b></button>'+
       '<button class="action-btn" type="button" data-action="share" data-id="'+esc(m.id)+'" aria-label="مشاركة">'+icon('share')+'<span>مشاركة</span><b data-count="shares">'+Number(m.shareCount||0)+'</b></button>'+
     '</div>'+
@@ -348,7 +354,7 @@ async function loadFeed(reset=true){
     if(!items.length&&!page)$('#feed').innerHTML='<div class="empty">لا توجد ذكريات بعد. كن أول من يشارك لحظته.</div>';
     else{
       const html=items.map(postHtml).join('');
-      $('#feed').insertAdjacentHTML('beforeend',html);
+      $('#feed').insertAdjacentHTML('beforeend',html);restoreLikedState();
       page=next;
       hasMore=(result.headers.get('X-Memories-Has-More')==='true');
     }
@@ -385,6 +391,7 @@ function validateClientFile(file){
 }
 async function publish(){
   const b=$('#publish'),file=selectedFile(),text=$('#text').value.trim(),name=$('#name').value.trim();
+  if(name)localStorage.setItem('arabisk_memories_name_v1',name);
   if(!text&&!file){setMessage('أضف نصًا أو صورة أو فيديو أولًا.','error');return}
   const fileError=validateClientFile(file);if(fileError){setMessage(fileError,'error');return}
   b.disabled=true;setMessage('جاري تجهيز المنشور…');
@@ -403,9 +410,9 @@ async function publish(){
   }catch(e){setMessage(e.message,'error')}finally{b.disabled=false}
 }
 async function actLike(id){
-  const card=getCard(id),button=card?.querySelector('[data-action="like"]');if(!button||button.classList.contains('pending')||button.classList.contains('liked'))return;
+  const card=getCard(id),button=card?.querySelector('[data-action="like"]');if(!button||button.classList.contains('pending')||button.classList.contains('liked')||likedIds.has(id))return;
   button.classList.add('pending');
-  try{const result=await api('/api/memories/'+encodeURIComponent(id)+'/like',{method:'POST'});updateStat(card,'likes',result.data.likes);button.classList.add('liked');button.setAttribute('aria-pressed','true');showToast('تم تسجيل إعجابك')}catch(e){showToast(e.message)}finally{button.classList.remove('pending')}
+  try{const result=await api('/api/memories/'+encodeURIComponent(id)+'/like',{method:'POST'});updateStat(card,'likes',result.data.likes);button.classList.add('liked');button.setAttribute('aria-pressed','true');likedIds.add(id);saveLiked();showToast('تم تسجيل إعجابك')}catch(e){showToast(e.message)}finally{button.classList.remove('pending')}
 }
 async function actShare(id){
   const card=getCard(id),button=card?.querySelector('[data-action="share"]');if(!button||button.classList.contains('pending'))return;
@@ -437,6 +444,7 @@ document.addEventListener('submit',e=>{
   const form=e.target.closest('.comment-form');if(!form)return;
   e.preventDefault();const input=form.querySelector('input[name="comment"]'),text=input?.value.trim();if(text)void addComment(form.dataset.memoryId,text,input);
 });
+$('#name').addEventListener('input',()=>{const v=$('#name').value.trim();if(v)localStorage.setItem('arabisk_memories_name_v1',v);else localStorage.removeItem('arabisk_memories_name_v1')});
 $('#publish').addEventListener('click',()=>void publish());
 $('#previewRemove').addEventListener('click',clearMedia);
 $('#imageFile').addEventListener('change',()=>{$('#videoFile').value='';showPreview($('#imageFile').files[0]||null)});
