@@ -422,7 +422,7 @@ document.addEventListener('click',e=>{
   const el=e.target.closest('[data-action]');if(!el)return;
   const action=el.dataset.action,id=el.dataset.id;
   if(action==='like')void actLike(id);
-  else if(action==='comment'){const input=document.querySelector('#memory-'+CSS.escape(id)+' input[name="comment"]');if(input){input.focus();input.scrollIntoView({behavior:'smooth',block:'center')}}
+  else if(action==='comment'){const input=document.querySelector('#memory-'+CSS.escape(id)+' input[name="comment"]');if(input){input.focus();input.scrollIntoView({behavior:'smooth',block:'center'})}}
   else if(action==='share')void actShare(id);
   else if(action==='report')void actReport(id);
   else if(action==='play'){const video=el.previousElementSibling;if(video){video.play();el.remove()}}
