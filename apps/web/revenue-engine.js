@@ -566,12 +566,12 @@ export function registerRevenueRoutes(app, {
     const totalMeasuredRevenue = campaigns.reduce((sum, item) => sum + number(item.resultRevenue), 0);
     const bestMeasuredSegment = [...segmentPerformance].sort((a,b) => b.measuredRevenue - a.measuredRevenue)[0] || null;
     const alerts = [];
-    if (health.biggestLeak && health.biggestLeak.lossRate >= 70) {
+    if (biggestLeak && biggestLeak.lossRate >= 70) {
       alerts.push({
         severity:'high',
         key:'funnel_leak',
         title:'تسريب كبير في مسار الطلب',
-        detail:`${health.biggestLeak.label} لديه ${Number(health.biggestLeak.lossRate).toFixed(1)}% فقد.`,
+        detail:`${biggestLeak.label} لديه ${Number(biggestLeak.lossRate).toFixed(1)}% فقد.`,
         action:'راجع هذه المرحلة أولًا قبل زيادة الإنفاق أو توسيع الحملات.'
       });
     }
