@@ -116,7 +116,7 @@ app.delete('/api/products/:id',requireAdminApiKey,(req,res)=>{const index=produc
 
 app.get('/cart',(req,res)=>res.sendFile(path.join(__dirname,'cart-page.html')));
 app.get('/events',(req,res)=>res.sendFile(path.join(__dirname,'events.html')));
-app.get('/memories',(req,res)=>res.sendFile(path.join(__dirname,'memories.html')));
+app.get('/memories',(req,res)=>{res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');res.setHeader('Pragma','no-cache');res.setHeader('Expires','0');res.sendFile(path.join(__dirname,'memories.html'));});
 app.get(/^\/events\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'event-page.html')));
 app.get('/menu',(req,res)=>res.sendFile(path.join(__dirname,'menu.html')));
 app.get(/^\/menu\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'category-page.html')));
