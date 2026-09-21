@@ -10,6 +10,7 @@ import { registerMediaRoutes } from './media-routes.js';
 import { registerCategoryRoutes } from './category-routes.js';
 import { registerStudioRoutes } from './studio-routes.js';
 import { registerExperienceRoutes, experiences } from './experience-routes.js';
+import { registerMemoriesRoutes } from './memories-routes.js';
 import { registerRevenueRoutes } from './revenue-engine.js';
 
 const app = express();
@@ -83,6 +84,7 @@ const revenue=registerRevenueRoutes(app,{readJson,writeJson,storageReady,require
 const restoreCategories=registerCategoryRoutes(app,{categories,products,storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey,isAdminApiKeyValid});
 const restoreStudio=registerStudioRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey});
 const restoreExperiences=registerExperienceRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey,isAdminApiKeyValid});
+const memories=registerMemoriesRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey});
 const nextProductId=()=>{const max=products.reduce((highest,product)=>Math.max(highest,Number(String(product.id).replace(/^P/,''))||0),0);return `P${String(max+1).padStart(3,'0')}`;};
 const nextOrderId=()=>`O${String(orders.length+1).padStart(5,'0')}`;
 const nextReservationId=()=>`R${String(reservations.length+1).padStart(4,'0')}`;
@@ -114,10 +116,11 @@ app.delete('/api/products/:id',requireAdminApiKey,(req,res)=>{const index=produc
 
 app.get('/cart',(req,res)=>res.sendFile(path.join(__dirname,'cart-page.html')));
 app.get('/events',(req,res)=>res.sendFile(path.join(__dirname,'events.html')));
+app.get('/memories',(req,res)=>res.sendFile(path.join(__dirname,'memories.html')));
 app.get(/^\/events\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'event-page.html')));
 app.get('/menu',(req,res)=>res.sendFile(path.join(__dirname,'menu.html')));
 app.get(/^\/menu\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'category-page.html')));
 app.get(/^\/menu\/[^/]+\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'product-page.html')));
 
 app.use(express.static(dist));app.use((_req,res)=>res.sendFile(path.join(dist,'index.html')));app.use((error,_req,res,_next)=>{console.error('ARABISK web error:',error);if(!res.headersSent)res.status(500).json({message:'Internal server error'});});
-await restoreState();await restoreCategories();await restoreStudio();await restoreExperiences();await revenue.restoreRevenue();if(storageReady)persistState();app.listen(port,()=>console.log(`ARABISK web listening on ${port} — ${products.length} menu items, ${categories.length} categories`));
+await restoreState();await restoreCategories();await restoreStudio();await restoreExperiences();await memories.restore();await revenue.restoreRevenue();if(storageReady)persistState();app.listen(port,()=>console.log(`ARABISK web listening on ${port} — ${products.length} menu items, ${categories.length} categories`));
