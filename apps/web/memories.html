@@ -62,13 +62,12 @@ button{cursor:pointer}
 .media{width:100%;display:block;max-height:680px;object-fit:cover;background:#111}
 .video{position:relative;background:#111}
 .play{position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);width:68px;height:68px;border-radius:50%;border:0;background:rgba(255,255,255,.94);box-shadow:0 10px 30px rgba(0,0,0,.16);font-size:21px;color:#171310}
-.actions{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(250,246,239,.55)}
-.action-btn{min-width:0;border:0;border-left:1px solid var(--line);background:transparent;padding:14px 9px;color:#6e6459;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;transition:.18s}
-.action-btn:last-child{border-left:0}
+.stats{display:flex;gap:13px;padding:0 18px 12px;color:var(--muted);font-size:12px}
+.stats span{display:inline-flex;align-items:center;gap:5px}
+.actions{display:flex;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.action-btn{flex:1;min-width:0;border:0;background:transparent;padding:13px 8px;color:#6e6459;display:flex;align-items:center;justify-content:center;gap:7px;font-weight:700;transition:.18s}
 .action-btn:hover{background:#faf6ef;color:var(--ink)}
-.action-btn:active{transform:scale(.99)}
-.action-btn svg{width:20px;height:20px;stroke-width:1.7}
-.action-btn b{font-size:12px;color:#8f806f}
+.action-btn.liked{color:#a23b35}
 .comments{padding:15px 18px 10px;background:linear-gradient(180deg,#fffdf9 0,#faf6ef 100%)}
 .comments-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px;font-weight:900}
 .comments-title span{color:var(--muted);font-weight:600}
@@ -90,7 +89,7 @@ button{cursor:pointer}
   .composer-top{gap:9px}.avatar{width:38px;height:38px}.composer textarea{font-size:15px;min-height:88px}
   .composer-bottom{align-items:stretch}.publish-tools{width:100%}.publish{width:100%}
   .media-btn{flex:1;justify-content:center}.action-btn{font-size:11px}.action-btn svg{width:17px;height:17px}
-  .media{max-height:520px}
+  .media{max-height:520px}.stats{font-size:11px}
 }
 </style>
 </head>
@@ -171,10 +170,12 @@ function card(m){
   return '<article class="memory" id="memory-'+esc(m.id)+'">'+
     '<div class="head"><div class="publisher"><div class="mini-avatar">'+esc(initial(m.displayName))+'</div><div><span class="name">'+esc(m.displayName||'مجهول')+'</span><span class="date">'+new Date(m.createdAt).toLocaleString('ar-AE')+'</span></div></div><button class="more" onclick="reportMemory(\''+esc(m.id)+'\')" aria-label="إبلاغ">⋯</button></div>'+
     media+(m.text?'<div class="text">'+esc(m.text)+'</div>':'')+
+    '<div class="stats"><span>'+icon('like')+' '+Number(m.likes||0)+' إعجاب</span><span>'+icon('comment')+' '+Number(m.commentsCount||comments.length)+' تعليق</span><span>'+icon('share')+' '+Number(m.shareCount||0)+' مشاركة</span></div>'+
     '<div class="actions">'+
-      '<button class="action-btn" onclick="likeMemory(\\''+esc(m.id)+'\\')" aria-label="إعجاب">'+icon('like')+'<span>إعجاب</span><b>'+Number(m.likes||0)+'</b></button>'+
-      '<button class="action-btn" onclick="focusComment(\\''+esc(m.id)+'\\')" aria-label="تعليق">'+icon('comment')+'<span>تعليق</span><b>'+Number(m.commentsCount||comments.length)+'</b></button>'+
-      '<button class="action-btn" onclick="shareMemory(\\''+esc(m.id)+'\\')" aria-label="مشاركة">'+icon('share')+'<span>مشاركة</span><b>'+Number(m.shareCount||0)+'</b></button>'+
+      '<button class="action-btn" onclick="likeMemory(\''+esc(m.id)+'\')">'+icon('like')+'<span>إعجاب</span><b>'+Number(m.likes||0)+'</b></button>'+
+      '<button class="action-btn" onclick="focusComment(\''+esc(m.id)+'\')">'+icon('comment')+'<span>تعليق</span><b>'+Number(m.commentsCount||comments.length)+'</b></button>'+
+      '<button class="action-btn" onclick="shareMemory(\''+esc(m.id)+'\')">'+icon('share')+'<span>مشاركة</span></button>'+
+      '<button class="action-btn" onclick="reportMemory(\''+esc(m.id)+'\')">'+icon('report')+'<span>إبلاغ</span></button>'+
     '</div>'+
     '<div class="comments"><div class="comments-title"><strong>التعليقات</strong><span>'+comments.length+' تعليق ظاهر للجميع</span></div><div class="comment-list">'+commentList+'</div>'+
     '<div class="comment-form"><input id="ci-'+esc(m.id)+'" maxlength="500" placeholder="اكتب تعليقًا…"><button onclick="commentMemory(\''+esc(m.id)+'\')">إرسال</button></div></div>'+
