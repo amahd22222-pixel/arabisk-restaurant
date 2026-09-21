@@ -289,6 +289,8 @@ const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 let sort='latest',page=0,hasMore=false,busy=false,selectedObjectUrl='';
 const NAME_KEY='arabisk_memories_display_name';
+const LIKED_KEY='arabisk_memories_liked_ids';
+let likedIds=new Set();
 
 function api(url,opt={}){
   return fetch(url,{headers:{'Content-Type':'application/json',...(opt.headers||{})},...opt})
@@ -297,6 +299,22 @@ function api(url,opt={}){
 function showToast(text){
   const t=$('#toast');t.textContent=text;t.classList.add('show');clearTimeout(showToast.timer);
   showToast.timer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function loadLikedIds(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(LIKED_KEY)||'[]');
+    if(Array.isArray(saved))likedIds=new Set(saved.filter(v=>typeof v==='string').slice(-500));
+  }catch{}
+}
+function saveLikedIds(){
+  try{localStorage.setItem(LIKED_KEY,JSON.stringify(Array.from(likedIds).slice(-500)))}catch{}
+}
+function syncLikedButtons(){
+  document.querySelectorAll('[data-action="like"][data-id]').forEach(button=>{
+    const liked=likedIds.has(button.dataset.id);
+    button.classList.toggle('liked',liked);
+    button.setAttribute('aria-pressed',liked?'true':'false');
+  });
 }
 function loadSavedName(){
   try{const saved=localStorage.getItem(NAME_KEY);if(saved)$('#name').value=saved.slice(0,80)}catch{}
@@ -375,6 +393,7 @@ async function loadFeed(reset=true){
     else{
       const html=items.map(postHtml).join('');
       $('#feed').insertAdjacentHTML('beforeend',html);
+      syncLikedButtons();
       page=next;
       hasMore=(result.headers.get('X-Memories-Has-More')==='true');
     }
@@ -425,13 +444,13 @@ async function publish(){
     }
     await api('/api/memories',{method:'POST',body:JSON.stringify({text,displayName:name,imageKey,videoKey})});
     $('#text').value='';updateTextCount();saveName();clearMedia();setMessage('تم نشر الذكرى بنجاح.','ok');showToast('تم نشر الذكرى');
-    await loadSavedName();updateTextCount();loadFeed(true);window.scrollTo({top:360,behavior:'smooth'});
+    await loadSavedName();loadLikedIds();updateTextCount();loadFeed(true);window.scrollTo({top:360,behavior:'smooth'});
   }catch(e){setMessage(e.message,'error')}finally{b.disabled=false}
 }
 async function actLike(id){
   const card=getCard(id),button=card?.querySelector('[data-action="like"]');if(!button||button.classList.contains('pending')||button.classList.contains('liked'))return;
   button.classList.add('pending');
-  try{const result=await api('/api/memories/'+encodeURIComponent(id)+'/like',{method:'POST'});updateStat(card,'likes',result.data.likes);button.classList.add('liked');button.setAttribute('aria-pressed','true');showToast('تم تسجيل إعجابك')}catch(e){showToast(e.message)}finally{button.classList.remove('pending')}
+  try{const result=await api('/api/memories/'+encodeURIComponent(id)+'/like',{method:'POST'});updateStat(card,'likes',result.data.likes);likedIds.add(id);saveLikedIds();button.classList.add('liked');button.setAttribute('aria-pressed','true');showToast('تم تسجيل إعجابك')}catch(e){showToast(e.message)}finally{button.classList.remove('pending')}
 }
 async function actShare(id){
   const card=getCard(id),button=card?.querySelector('[data-action="share"]');if(!button||button.classList.contains('pending'))return;
