@@ -276,7 +276,7 @@ const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 let sort='latest',page=0,hasMore=false,busy=false,selectedObjectUrl='';
 const likedKey='arabisk_memories_likes_v1';
-const likedIds=new Set(JSON.parse(localStorage.getItem(likedKey)||'[]'));
+let likedIds=new Set();try{const saved=JSON.parse(localStorage.getItem(likedKey)||'[]');if(Array.isArray(saved))likedIds=new Set(saved.filter(Boolean).slice(-500))}catch{}
 function saveLiked(){localStorage.setItem(likedKey,JSON.stringify([...likedIds].slice(-500)))}
 function restoreLikedState(){document.querySelectorAll('[data-action="like"]').forEach(btn=>{if(likedIds.has(btn.dataset.id)){btn.classList.add('liked');btn.setAttribute('aria-pressed','true')}})}
 const savedName=localStorage.getItem('arabisk_memories_name_v1');if(savedName)$('#name').value=savedName;
@@ -325,7 +325,7 @@ function postHtml(m){
       :'';
   const commentList=comments.length?comments.map(commentHtml).join(''):'<div class="no-comments" style="color:var(--muted);font-size:12px;padding:5px 0 7px">لا توجد تعليقات بعد — كن أول من يعلق.</div>';
   return '<article class="memory" id="memory-'+esc(m.id)+'" data-memory-id="'+esc(m.id)+'">'+
-    '<div class="post-head"><div class="publisher"><div class="mini-avatar">'+esc(initial(m.displayName))+'</div><div><span class="name">'+esc(m.displayName||'مجهول')+'</span><span class="date" title="'+esc(new Date(m.createdAt).toLocaleString('ar-AE'))+'">'+relativeTime(m.createdAt)+'</span>(m.pinned?'<div class="post-badges"><span class="pinned-badge">✦ ذكرى مميزة</span></div>':'')+'</div>'</div><button class="more" type="button" data-action="report" data-id="'+esc(m.id)+'" aria-label="إبلاغ">⋯</button></div>'+
+    '<div class="post-head"><div class="publisher"><div class="mini-avatar">'+esc(initial(m.displayName))+'</div><div><span class="name">'+esc(m.displayName||'مجهول')+'</span><span class="date" title="'+esc(new Date(m.createdAt).toLocaleString('ar-AE'))+'">'+relativeTime(m.createdAt)+'</span>'+(m.pinned?'<div class="post-badges"><span class="pinned-badge">✦ ذكرى مميزة</span></div>':'')+'</div>'</div><button class="more" type="button" data-action="report" data-id="'+esc(m.id)+'" aria-label="إبلاغ">⋯</button></div>'+
     media+
     (m.text?'<div class="text">'+esc(m.text)+'</div>':'')+
     '<div class="meta-row"><div class="reactions"><span data-stat="likes">'+icon('like')+' '+Number(m.likes||0)+'</span><span data-stat="comments">'+icon('comment')+' '+Number(m.commentsCount||comments.length)+'</span></div><span data-stat="shares">'+Number(m.shareCount||0)+' مشاركة</span></div>'+
