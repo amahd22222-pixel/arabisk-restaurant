@@ -176,6 +176,16 @@ a{text-decoration:none;color:inherit}
 .comment-form input:focus{border-color:#d4bc91;box-shadow:0 0 0 3px rgba(184,138,59,.08)}
 .comment-form button{padding:10px 15px;border:1px solid var(--dark);border-radius:13px;background:var(--dark);color:#fff;font-weight:900}
 .empty{padding:42px 20px;text-align:center;color:var(--muted);border:1px dashed #d9cdbc;border-radius:20px;background:rgba(255,253,249,.72)}
+.skeleton-card{overflow:hidden;margin-bottom:20px;background:rgba(255,253,249,.97);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow)}
+.skeleton-line,.skeleton-media{position:relative;overflow:hidden;background:#eee7dc}
+.skeleton-line:after,.skeleton-media:after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.58),transparent);animation:skeleton-shimmer 1.25s infinite}
+.skeleton-head{display:flex;gap:10px;padding:16px 18px}
+.skeleton-avatar{width:39px;height:39px;border-radius:50%;background:#e8dfd2;flex:0 0 auto}
+.skeleton-copy{flex:1;padding-top:4px}.skeleton-line{height:10px;border-radius:999px;margin-bottom:9px}.skeleton-line.wide{width:44%}.skeleton-line.narrow{width:22%}
+.skeleton-media{height:300px}.skeleton-body{padding:16px 18px}.skeleton-body .skeleton-line{width:92%}.skeleton-body .skeleton-line:last-child{width:68%;margin-bottom:0}
+@keyframes skeleton-shimmer{100%{transform:translateX(100%)}}
+@media(max-width:640px){.skeleton-media{height:220px}}
+@media(prefers-reduced-motion:reduce){.skeleton-line:after,.skeleton-media:after{animation:none!important}}
 .load-more-wrap{text-align:center;padding:5px 0 6px}
 .load-more{
   padding:11px 20px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:900;color:#65594c
@@ -345,6 +355,9 @@ function postHtml(m){
     '<form class="comment-form" data-memory-id="'+esc(m.id)+'"><input name="comment" maxlength="500" placeholder="اكتب تعليقًا للجميع…" autocomplete="off"><button type="submit">إرسال</button></form></div>'+
   '</article>';
 }
+function skeletonHtml(count=2){
+  return Array.from({length:count},()=>'<div class="skeleton-card" aria-hidden="true"><div class="skeleton-head"><div class="skeleton-avatar"></div><div class="skeleton-copy"><div class="skeleton-line wide"></div><div class="skeleton-line narrow"></div></div></div><div class="skeleton-media"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line"></div></div></div>').join('');
+}
 function updateLoadMore(){
   $('#loadMoreWrap').classList.toggle('hidden',!hasMore);
   $('#loadMore').disabled=false;
@@ -352,7 +365,7 @@ function updateLoadMore(){
 async function loadFeed(reset=true){
   if(busy)return;
   busy=true;
-  if(reset){page=0;hasMore=false;$('#feed').innerHTML='<div class="empty">جارٍ تحميل الذكريات…</div>'}
+  if(reset){page=0;hasMore=false;$('#feed').innerHTML=skeletonHtml(2)}
   try{
     const next=page+1;
     const result=await api('/api/memories?sort='+encodeURIComponent(sort)+'&page='+next+'&limit=8');
@@ -466,7 +479,7 @@ $('#mediaDrop').addEventListener('drop',e=>{
   else{setMessage('اختر صورة أو فيديو صالحًا.','error');return}
   showPreview(file);
 });
-$('#loadMore').addEventListener('click',async()=>{if(busy||!hasMore)return;$('#loadMore').disabled=true;try{await loadFeed(false)}finally{updateLoadMore()}});
+$('#loadMore').addEventListener('click',async()=>{if(busy||!hasMore)return;$('#loadMore').disabled=true;$('#loadMore').textContent='جاري التحميل…';try{await loadFeed(false)}finally{$('#loadMore').textContent='تحميل المزيد';updateLoadMore()}});
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');sort=btn.dataset.sort;history.replaceState(null,'','#');void loadFeed(true)}));
 window.addEventListener('beforeunload',()=>{if(selectedObjectUrl)URL.revokeObjectURL(selectedObjectUrl)});
 loadFeed(true);
