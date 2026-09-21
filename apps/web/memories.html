@@ -373,6 +373,24 @@ function postHtml(m){
     '<form class="comment-form" data-memory-id="'+esc(m.id)+'"><input name="comment" maxlength="500" placeholder="اكتب تعليقًا للجميع…" autocomplete="off"><button type="submit">إرسال</button></form></div>'+
   '</article>';
 }
+async function revealMemory(memoryId){
+  if(!memoryId)return;
+  const highlight=()=>{
+    const target=document.getElementById('memory-'+CSS.escape(memoryId));
+    if(!target)return false;
+    target.classList.add('highlight');
+    setTimeout(()=>target.classList.remove('highlight'),2600);
+    setTimeout(()=>target.scrollIntoView({behavior:'smooth',block:'center'}),60);
+    return true;
+  };
+  if(highlight())return;
+  if(!hasMore)return;
+  const previousSort=sort;
+  while(hasMore&&!busy&&sort===previousSort){
+    await loadFeed(false);
+    if(highlight())return;
+  }
+}
 function skeletonHtml(count=2){
   return Array.from({length:count},()=>'<div class="skeleton-card" aria-hidden="true"><div class="skeleton-head"><div class="skeleton-avatar"></div><div class="skeleton-copy"><div class="skeleton-line wide"></div><div class="skeleton-line narrow"></div></div></div><div class="skeleton-media"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line"></div></div></div>').join('');
 }
@@ -400,8 +418,8 @@ async function loadFeed(reset=true){
     updateLoadMore();
     if(location.hash&&!location.hash.slice(1).startsWith('M')) location.hash='';
     if(reset&&location.hash){
-      const target=document.getElementById('memory-'+CSS.escape(location.hash.slice(1)));
-      if(target){setTimeout(()=>{target.classList.add('highlight');target.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>target.classList.remove('highlight'),2600)},60)}
+      const memoryId=location.hash.slice(1);
+      await revealMemory(memoryId);
     }
   }catch(e){
     if(reset)$('#feed').innerHTML='<div class="empty">'+esc(e.message)+'</div>';
