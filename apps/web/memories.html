@@ -61,6 +61,8 @@ a{text-decoration:none;color:inherit}
   font-size:17px;line-height:1.85;color:var(--ink)
 }
 .composer textarea::placeholder{color:#aaa093}
+.field-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:7px;color:var(--muted);font-size:10px}
+.char-count{font-variant-numeric:tabular-nums}
 .identity{margin-top:8px}
 .identity input{
   width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:13px;
@@ -225,6 +227,7 @@ a{text-decoration:none;color:inherit}
   </div>
   <div class="composer-main">
     <textarea id="text" maxlength="1200" placeholder="اكتب ذكرى أو لحظة جميلة من ARABISK…"></textarea>
+    <div class="field-meta"><span>الحد الأقصى 1200 حرف</span><span id="textCount" class="char-count" aria-live="polite">0 / 1200</span></div>
     <div class="identity"><input id="name" maxlength="80" placeholder="اسمك أو اسم مستعار — اتركه فارغًا ليظهر «مجهول»"></div>
   </div>
   <div id="mediaDrop" class="media-drop">
@@ -275,6 +278,7 @@ a{text-decoration:none;color:inherit}
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 let sort='latest',page=0,hasMore=false,busy=false,selectedObjectUrl='';
+const NAME_KEY='arabisk_memories_display_name';
 
 function api(url,opt={}){
   return fetch(url,{headers:{'Content-Type':'application/json',...(opt.headers||{})},...opt})
@@ -284,6 +288,13 @@ function showToast(text){
   const t=$('#toast');t.textContent=text;t.classList.add('show');clearTimeout(showToast.timer);
   showToast.timer=setTimeout(()=>t.classList.remove('show'),2200);
 }
+function loadSavedName(){
+  try{const saved=localStorage.getItem(NAME_KEY);if(saved)$('#name').value=saved.slice(0,80)}catch{}
+}
+function saveName(){
+  try{const value=$('#name').value.trim();if(value)localStorage.setItem(NAME_KEY,value);else localStorage.removeItem(NAME_KEY)}catch{}
+}
+function updateTextCount(){const el=$('#textCount'),value=$('#text').value.length; if(el)el.textContent=value+' / 1200'}
 function setMessage(text,type=''){
   const el=$('#message');el.textContent=text;el.className='status-message '+type;
 }
@@ -400,8 +411,8 @@ async function publish(){
       if(upload.data.kind==='image')imageKey=upload.data.key;else videoKey=upload.data.key;
     }
     await api('/api/memories',{method:'POST',body:JSON.stringify({text,displayName:name,imageKey,videoKey})});
-    $('#text').value='';clearMedia();setMessage('تم نشر الذكرى بنجاح.','ok');showToast('تم نشر الذكرى');
-    await loadFeed(true);window.scrollTo({top:360,behavior:'smooth'});
+    $('#text').value='';updateTextCount();saveName();clearMedia();setMessage('تم نشر الذكرى بنجاح.','ok');showToast('تم نشر الذكرى');
+    await loadSavedName();updateTextCount();loadFeed(true);window.scrollTo({top:360,behavior:'smooth'});
   }catch(e){setMessage(e.message,'error')}finally{b.disabled=false}
 }
 async function actLike(id){
@@ -440,6 +451,8 @@ document.addEventListener('submit',e=>{
   e.preventDefault();const input=form.querySelector('input[name="comment"]'),text=input?.value.trim();if(text)void addComment(form.dataset.memoryId,text,input);
 });
 $('#publish').addEventListener('click',()=>void publish());
+$('#text').addEventListener('input',updateTextCount);
+$('#name').addEventListener('input',saveName);
 $('#previewRemove').addEventListener('click',clearMedia);
 $('#imageFile').addEventListener('change',()=>{$('#videoFile').value='';showPreview($('#imageFile').files[0]||null)});
 $('#videoFile').addEventListener('change',()=>{$('#imageFile').value='';showPreview($('#videoFile').files[0]||null)});
