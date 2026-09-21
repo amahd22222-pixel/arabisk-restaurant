@@ -351,6 +351,11 @@ function postBadge(m){return m.pinned?'<div class="post-badges"><span class="pin
 function commentHtml(c){
   return '<div class="comment-item"><div class="comment-avatar">'+esc(initial(c.displayName))+'</div><div class="comment-bubble"><div class="comment-author">'+esc(c.displayName||'مجهول')+'</div><div class="comment-text">'+esc(c.text)+'</div><div class="comment-date">'+relativeTime(c.createdAt)+'</div></div></div>';
 }
+function updateCommentEmptyState(card){
+  const list=card?.querySelector('.comment-list');if(!list)return;
+  const empty=list.querySelector('.no-comments');
+  if(empty)empty.remove();
+}
 function postHtml(m){
   const comments=Array.isArray(m.comments)?m.comments:[];
   const media=m.mediaType==='image'&&m.imageUrl
@@ -481,7 +486,7 @@ async function actReport(id){
 }
 async function addComment(id,text,input){
   const card=getCard(id),button=input?.nextElementSibling;if(!card||!input||!text||button?.disabled)return;if(button)button.disabled=true;
-  try{const result=await api('/api/memories/'+encodeURIComponent(id)+'/comments',{method:'POST',body:JSON.stringify({text,displayName:$('#name').value.trim()||'مجهول'})});input.value='';const c=result.data.comment;if(c){card.querySelector('.comment-list')?.insertAdjacentHTML('afterbegin',commentHtml(c));updateStat(card,'comments',result.data.commentsCount)}showToast('تم نشر التعليق للجميع')}catch(e){showToast(e.message)}finally{if(button)button.disabled=false}
+  try{const result=await api('/api/memories/'+encodeURIComponent(id)+'/comments',{method:'POST',body:JSON.stringify({text,displayName:$('#name').value.trim()||'مجهول'})});input.value='';const c=result.data.comment;if(c){card.querySelector('.comment-list')?.insertAdjacentHTML('afterbegin',commentHtml(c));updateCommentEmptyState(card);updateStat(card,'comments',result.data.commentsCount)}showToast('تم نشر التعليق للجميع')}catch(e){showToast(e.message)}finally{if(button)button.disabled=false}
 }
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-action]');if(!el)return;
