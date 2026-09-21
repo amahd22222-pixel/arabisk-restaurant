@@ -14,6 +14,7 @@ function standaloneMenuPages() {
         const pathname = decodeURIComponent((req.url || '/').split('?')[0]);
         const routes = [
           { pattern: /^\/events\/?$/, file: 'events.html' },
+          { pattern: /^\/memories\/?$/, file: 'memories.html' },
           { pattern: /^\/events\/[^/]+\/?$/, file: 'event-page.html' },
           { pattern: /^\/menu\/?$/, file: 'menu.html' },
           { pattern: /^\/menu\/[^/]+\/?$/, file: 'category-page.html' },
