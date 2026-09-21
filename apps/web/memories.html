@@ -152,7 +152,8 @@ a{text-decoration:none;color:inherit}
 .action-btn:hover{background:#faf6ee;color:var(--ink)}
 .action-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7}
 .action-btn b{font-size:12px;color:#8b7d6d}
-.action-btn.liked{color:#9f3c35}
+.action-btn.liked{color:#9f3c35;background:#fbf5ed}
+.action-btn.pending{opacity:.55;pointer-events:none}
 .comments{padding:15px 18px 14px;background:linear-gradient(180deg,#fffdf9,#faf6ef)}
 .comments-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}
 .comments-head strong{font-size:13px}
@@ -184,6 +185,10 @@ a{text-decoration:none;color:inherit}
 }
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .hidden{display:none!important}
+.lightbox{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(15,12,9,.86);backdrop-filter:blur(10px)}
+.lightbox.show{display:flex}
+.lightbox img{max-width:min(1100px,94vw);max-height:88vh;object-fit:contain;border-radius:16px;box-shadow:0 25px 80px rgba(0,0,0,.35)}
+.lightbox-close{position:absolute;top:18px;left:18px;width:42px;height:42px;border:1px solid rgba(255,255,255,.28);border-radius:50%;background:rgba(0,0,0,.4);color:#fff;font-size:24px}
 @media(max-width:640px){
   .wrap{width:min(100% - 18px,900px);padding-top:21px}
   .hero h1{font-size:43px}.hero p{font-size:14px}
@@ -263,7 +268,7 @@ a{text-decoration:none;color:inherit}
 <div id="loadMoreWrap" class="load-more-wrap hidden"><button id="loadMore" class="load-more" type="button">تحميل المزيد</button></div>
 </main>
 
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div><div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="عرض الصورة"><button id="lightboxClose" class="lightbox-close" type="button" aria-label="إغلاق">×</button><img id="lightboxImage" alt=""></div>
 
 <script>
 const $=s=>document.querySelector(s);
@@ -300,28 +305,30 @@ function icon(name){
   };
   return map[name]||'';
 }
+function getCard(id){return document.querySelector('#memory-'+CSS.escape(id))}
+function updateStat(card,key,value){if(!card)return;const count=Number(value||0);const b=card.querySelector('[data-count="'+key+'"]');if(b)b.textContent=String(count);const stat=card.querySelector('[data-stat="'+key+'"]');if(stat){if(key==='shares')stat.textContent=count+' مشاركة';else if(stat.childNodes.length)stat.lastChild.textContent=' '+count}if(key==='comments'){const label=card.querySelector('[data-count="comments-label"]');if(label)label.textContent=count+' تعليق ظاهر للجميع'}}
 function commentHtml(c){
   return '<div class="comment-item"><div class="comment-avatar">'+esc(initial(c.displayName))+'</div><div class="comment-bubble"><div class="comment-author">'+esc(c.displayName||'مجهول')+'</div><div class="comment-text">'+esc(c.text)+'</div><div class="comment-date">'+relativeTime(c.createdAt)+'</div></div></div>';
 }
 function postHtml(m){
   const comments=Array.isArray(m.comments)?m.comments:[];
   const media=m.mediaType==='image'&&m.imageUrl
-    ?'<img class="media" src="'+esc(m.imageUrl)+'" alt="صورة ذكرى من ARABISK" loading="lazy" decoding="async">'
+    ?'<img class="media" src="'+esc(m.imageUrl)+'" alt="صورة ذكرى من ARABISK" loading="lazy" decoding="async" data-action="image" data-image-url="'+esc(m.imageUrl)+'">'
     :m.mediaType==='video'&&m.videoUrl
       ?'<div class="video-shell"><video class="media" src="'+esc(m.videoUrl)+'" controls playsinline preload="metadata"></video><button class="media-play" type="button" data-action="play">▶</button></div>'
       :'';
   const commentList=comments.length?comments.map(commentHtml).join(''):'<div class="no-comments" style="color:var(--muted);font-size:12px;padding:5px 0 7px">لا توجد تعليقات بعد — كن أول من يعلق.</div>';
-  return '<article class="memory" id="memory-'+esc(m.id)+'">'+
+  return '<article class="memory" id="memory-'+esc(m.id)+'" data-memory-id="'+esc(m.id)+'">'+
     '<div class="post-head"><div class="publisher"><div class="mini-avatar">'+esc(initial(m.displayName))+'</div><div><span class="name">'+esc(m.displayName||'مجهول')+'</span><span class="date" title="'+esc(new Date(m.createdAt).toLocaleString('ar-AE'))+'">'+relativeTime(m.createdAt)+'</span></div></div><button class="more" type="button" data-action="report" data-id="'+esc(m.id)+'" aria-label="إبلاغ">⋯</button></div>'+
     media+
     (m.text?'<div class="text">'+esc(m.text)+'</div>':'')+
-    '<div class="meta-row"><div class="reactions"><span>'+icon('like')+' '+Number(m.likes||0)+'</span><span>'+icon('comment')+' '+Number(m.commentsCount||comments.length)+'</span></div><span>'+Number(m.shareCount||0)+' مشاركة</span></div>'+
+    '<div class="meta-row"><div class="reactions"><span data-stat="likes">'+icon('like')+' '+Number(m.likes||0)+'</span><span data-stat="comments">'+icon('comment')+' '+Number(m.commentsCount||comments.length)+'</span></div><span data-stat="shares">'+Number(m.shareCount||0)+' مشاركة</span></div>'+
     '<div class="actions">'+
-      '<button class="action-btn" type="button" data-action="like" data-id="'+esc(m.id)+'" aria-label="إعجاب">'+icon('like')+'<span>إعجاب</span><b>'+Number(m.likes||0)+'</b></button>'+
-      '<button class="action-btn" type="button" data-action="comment" data-id="'+esc(m.id)+'" aria-label="تعليق">'+icon('comment')+'<span>تعليق</span><b>'+Number(m.commentsCount||comments.length)+'</b></button>'+
-      '<button class="action-btn" type="button" data-action="share" data-id="'+esc(m.id)+'" aria-label="مشاركة">'+icon('share')+'<span>مشاركة</span><b>'+Number(m.shareCount||0)+'</b></button>'+
+      '<button class="action-btn" type="button" data-action="like" data-id="'+esc(m.id)+'" aria-label="إعجاب">'+icon('like')+'<span>إعجاب</span><b data-count="likes">'+Number(m.likes||0)+'</b></button>'+
+      '<button class="action-btn" type="button" data-action="comment" data-id="'+esc(m.id)+'" aria-label="تعليق">'+icon('comment')+'<span>تعليق</span><b data-count="comments">'+Number(m.commentsCount||comments.length)+'</b></button>'+
+      '<button class="action-btn" type="button" data-action="share" data-id="'+esc(m.id)+'" aria-label="مشاركة">'+icon('share')+'<span>مشاركة</span><b data-count="shares">'+Number(m.shareCount||0)+'</b></button>'+
     '</div>'+
-    '<div class="comments"><div class="comments-head"><strong>التعليقات</strong><span>'+comments.length+' تعليق ظاهر للجميع</span></div><div class="comment-list">'+commentList+'</div>'+
+    '<div class="comments"><div class="comments-head"><strong>التعليقات</strong><span data-count="comments-label">'+comments.length+' تعليق ظاهر للجميع</span></div><div class="comment-list">'+commentList+'</div>'+
     '<form class="comment-form" data-memory-id="'+esc(m.id)+'"><input name="comment" maxlength="500" placeholder="اكتب تعليقًا للجميع…" autocomplete="off"><button type="submit">إرسال</button></form></div>'+
   '</article>';
 }
@@ -396,27 +403,22 @@ async function publish(){
   }catch(e){setMessage(e.message,'error')}finally{b.disabled=false}
 }
 async function actLike(id){
-  try{await api('/api/memories/'+encodeURIComponent(id)+'/like',{method:'POST'});await loadFeed(true)}catch(e){showToast(e.message)}
+  const card=getCard(id),button=card?.querySelector('[data-action="like"]');if(!button||button.classList.contains('pending')||button.classList.contains('liked'))return;
+  button.classList.add('pending');
+  try{const result=await api('/api/memories/'+encodeURIComponent(id)+'/like',{method:'POST'});updateStat(card,'likes',result.data.likes);button.classList.add('liked');button.setAttribute('aria-pressed','true');showToast('تم تسجيل إعجابك')}catch(e){showToast(e.message)}finally{button.classList.remove('pending')}
 }
 async function actShare(id){
-  try{
-    const url=location.origin+'/memories#'+id;
-    let copied=false;try{await navigator.clipboard.writeText(url);copied=true}catch{}
-    if(!copied)prompt('انسخ رابط الذكرى:',url);
-    await api('/api/memories/'+encodeURIComponent(id)+'/share',{method:'POST'});
-    showToast('تم نسخ رابط الذكرى');
-    await loadFeed(true);
-  }catch(e){showToast(e.message)}
+  const card=getCard(id),button=card?.querySelector('[data-action="share"]');if(!button||button.classList.contains('pending'))return;
+  button.classList.add('pending');
+  try{const url=location.origin+'/memories#'+id;if(navigator.share){try{await navigator.share({title:'ARABISK — ذكريات',text:'شارك هذه الذكرى من ARABISK',url})}catch(err){if(err?.name==='AbortError')return}}else{let copied=false;try{await navigator.clipboard.writeText(url);copied=true}catch{}if(!copied)prompt('انسخ رابط الذكرى:',url)}const result=await api('/api/memories/'+encodeURIComponent(id)+'/share',{method:'POST'});updateStat(card,'shares',result.data.shareCount);showToast('تمت مشاركة الذكرى')}catch(e){showToast(e.message)}finally{button.classList.remove('pending')}
 }
 async function actReport(id){
   const reason=prompt('سبب الإبلاغ؟');if(!reason)return;
   try{await api('/api/memories/'+encodeURIComponent(id)+'/report',{method:'POST',body:JSON.stringify({reason})});showToast('تم إرسال البلاغ للمراجعة')}catch(e){showToast(e.message)}
 }
 async function addComment(id,text,input){
-  try{
-    await api('/api/memories/'+encodeURIComponent(id)+'/comments',{method:'POST',body:JSON.stringify({text,displayName:$('#name').value.trim()||'مجهول'})});
-    input.value='';showToast('تم نشر التعليق للجميع');await loadFeed(true);
-  }catch(e){showToast(e.message)}
+  const card=getCard(id),button=input?.nextElementSibling;if(!card||!input||!text||button?.disabled)return;if(button)button.disabled=true;
+  try{const result=await api('/api/memories/'+encodeURIComponent(id)+'/comments',{method:'POST',body:JSON.stringify({text,displayName:$('#name').value.trim()||'مجهول'})});input.value='';const c=result.data.comment;if(c){card.querySelector('.comment-list')?.insertAdjacentHTML('afterbegin',commentHtml(c));updateStat(card,'comments',result.data.commentsCount)}showToast('تم نشر التعليق للجميع')}catch(e){showToast(e.message)}finally{if(button)button.disabled=false}
 }
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-action]');if(!el)return;
@@ -426,7 +428,11 @@ document.addEventListener('click',e=>{
   else if(action==='share')void actShare(id);
   else if(action==='report')void actReport(id);
   else if(action==='play'){const video=el.previousElementSibling;if(video){video.play();el.remove()}}
+  else if(action==='image'){openLightbox(el.dataset.imageUrl)}
 });
+function openLightbox(src){if(!src)return;$('#lightboxImage').src=src;$('#lightbox').classList.add('show');document.body.style.overflow='hidden';$('#lightboxClose').focus()}
+function closeLightbox(){$('#lightbox').classList.remove('show');$('#lightboxImage').removeAttribute('src');document.body.style.overflow=''}
+$('#lightboxClose').addEventListener('click',closeLightbox);$('#lightbox').addEventListener('click',e=>{if(e.target.id==='lightbox')closeLightbox()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox()});
 document.addEventListener('submit',e=>{
   const form=e.target.closest('.comment-form');if(!form)return;
   e.preventDefault();const input=form.querySelector('input[name="comment"]'),text=input?.value.trim();if(text)void addComment(form.dataset.memoryId,text,input);
