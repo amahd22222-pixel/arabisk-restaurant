@@ -1,3 +1,4 @@
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 const memoriesApiBase=()=>((localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||import.meta.env.VITE_API_BASE_URL||(import.meta.env.DEV?'http://localhost:3000':'/proxy')).replace(/\/$/,''));
 async function memoriesRequest(path,options={}){const response=await fetch(`${memoriesApiBase()}${path}`,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'حدث خطأ أثناء الاتصال بالخادم');return data;}
 const memoriesBody=document.querySelector('#memories-body'),memoriesState=document.querySelector('#memories-state'),memorySearch=document.querySelector('#memories-search');let adminMemories=[];
