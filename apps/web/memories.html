@@ -3,93 +3,198 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="ARABISK Memories — شارك لحظاتك وتعليقاتك مع مجتمع ARABISK.">
 <title>ARABISK — ذكريات</title>
 <style>
 :root{
-  --bg:#f3eee5;--paper:#fffdf9;--paper-2:#f9f5ee;--ink:#1d1914;--muted:#81776b;
-  --line:#e8dfd3;--gold:#b88a3b;--gold-soft:#efe2c7;--dark:#171310;--white:#fff;
-  --shadow:0 18px 50px rgba(47,34,20,.08);--radius:26px;
+  --bg:#f3eee5;--surface:#fffdf9;--surface-2:#faf6ee;--surface-3:#f4ecdf;--ink:#1c1814;
+  --muted:#7d7368;--line:#e5dbce;--gold:#b88a3b;--gold-2:#d8bc8a;--dark:#17130f;
+  --danger:#8b3f38;--success:#496d59;--shadow:0 22px 60px rgba(45,32,19,.09);--radius:26px
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:radial-gradient(circle at 50% -10%,#fffaf2 0,#f3eee5 42%,#eee6da 100%);color:var(--ink);font-family:Arial,sans-serif}
-body:before{content:"";position:fixed;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(184,138,59,.035),transparent 35%,rgba(23,19,16,.025));z-index:-1}
-a{color:inherit;text-decoration:none}
+body{
+  margin:0;color:var(--ink);font-family:Arial,sans-serif;
+  background:
+    radial-gradient(circle at 50% -18%,rgba(255,252,246,.95) 0,rgba(255,252,246,0) 38%),
+    linear-gradient(145deg,#f7f2e9 0,#f1eadf 58%,#ece3d6 100%);
+  min-height:100vh
+}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(184,138,59,.035),transparent 34%,rgba(23,19,15,.025));z-index:-1}
 button,input,textarea{font:inherit}
 button{cursor:pointer}
-.nav{position:sticky;top:0;z-index:20;background:rgba(243,238,229,.78);backdrop-filter:blur(18px);border-bottom:1px solid rgba(232,223,211,.9);padding:15px max(18px,5vw);display:flex;justify-content:space-between;align-items:center}
-.brand{font-weight:900;letter-spacing:3px;font-size:20px}
-.back{padding:10px 17px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.9);font-weight:700;box-shadow:0 5px 14px rgba(34,25,16,.04)}
-.wrap{max-width:860px;margin:auto;padding:30px 16px 90px}
-.hero{text-align:center;padding:10px 0 28px}
+a{text-decoration:none;color:inherit}
+.nav{
+  position:sticky;top:0;z-index:50;padding:14px max(18px,5vw);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(247,242,233,.78);backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(229,219,206,.9)
+}
+.brand{font-weight:900;letter-spacing:3px;font-size:19px}
+.back{
+  padding:10px 17px;border:1px solid var(--line);background:rgba(255,255,255,.88);
+  border-radius:999px;font-weight:800;box-shadow:0 7px 18px rgba(26,19,12,.04)
+}
+.wrap{width:min(900px,calc(100% - 28px));margin:auto;padding:32px 0 100px}
+.hero{text-align:center;padding:12px 0 26px}
 .eyebrow{font-size:10px;letter-spacing:5px;color:var(--gold);font-weight:900}
-.hero h1{font:500 52px Georgia,serif;margin:7px 0 6px}
-.hero p{max-width:620px;margin:0 auto;color:var(--muted);line-height:1.95;font-size:15px}
-.composer,.memory{background:rgba(255,253,249,.95);border:1px solid rgba(232,223,211,.95);border-radius:var(--radius);box-shadow:var(--shadow)}
-.composer{padding:18px 18px 15px;margin-bottom:18px}
-.composer-top{display:flex;gap:13px;align-items:flex-start}
-.avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#1e1914,#41372e);color:#fff;font-weight:800;flex:0 0 auto}
-.composer-main{flex:1}
-.composer textarea{display:block;width:100%;min-height:98px;border:0;outline:0;background:transparent;resize:vertical;font-size:17px;line-height:1.75;color:var(--ink)}
-.composer textarea::placeholder{color:#a79d91}
-.identity input{width:100%;border:1px solid var(--line);border-radius:13px;padding:11px 13px;background:var(--paper-2);outline:0}
-.identity input:focus{border-color:#d8c19a;box-shadow:0 0 0 3px rgba(184,138,59,.09)}
-.composer-bottom{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-top:8px;padding-top:14px;border-top:1px solid var(--line)}
-.publish-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.media-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 13px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--ink);font-weight:700;transition:.18s}
-.media-btn:hover{transform:translateY(-1px);border-color:#d4c3a7;background:#fffaf3}
-.media-btn svg,.action-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8}
+.hero h1{font:500 54px Georgia,serif;margin:7px 0 4px}
+.hero p{max-width:650px;margin:0 auto;color:var(--muted);font-size:15px;line-height:1.95}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:8px 12px;
+  border-radius:999px;background:rgba(255,253,249,.8);border:1px solid var(--line);
+  color:#7a6a54;font-size:11px;font-weight:800
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px var(--gold-2)}
+.panel{background:rgba(255,253,249,.95);border:1px solid rgba(229,219,206,.95);border-radius:var(--radius);box-shadow:var(--shadow)}
+.composer{overflow:hidden;margin-bottom:22px}
+.composer-head{padding:18px 20px 0;display:flex;gap:12px;align-items:center}
+.avatar{
+  width:46px;height:46px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;
+  background:linear-gradient(145deg,#201a15,#54473a);color:white;font-weight:900
+}
+.composer-head h2{margin:0;font-size:17px}
+.composer-head small{display:block;color:var(--muted);margin-top:3px}
+.composer-main{padding:12px 20px 0}
+.composer textarea{
+  width:100%;min-height:108px;border:0;outline:0;background:transparent;resize:vertical;
+  font-size:17px;line-height:1.85;color:var(--ink)
+}
+.composer textarea::placeholder{color:#aaa093}
+.identity{margin-top:8px}
+.identity input{
+  width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:13px;
+  outline:0;background:var(--surface-2)
+}
+.identity input:focus{border-color:#d4bc91;box-shadow:0 0 0 3px rgba(184,138,59,.08)}
+.media-drop{
+  margin:14px 20px 0;padding:14px;border:1px dashed #d5c5ae;border-radius:18px;
+  background:linear-gradient(180deg,#fbf7f0,#f7f0e6);text-align:center;transition:.2s
+}
+.media-drop.drag{border-color:var(--gold);background:#fff8ec}
+.media-drop strong{display:block;font-size:13px}
+.media-drop span{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.media-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.media-btn{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 13px;border:1px solid var(--line);
+  border-radius:13px;background:#fff;color:var(--ink);font-weight:800;transition:.18s
+}
+.media-btn:hover{transform:translateY(-1px);background:#fffbf4;border-color:#d4c3aa}
+.media-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7}
 .file input{display:none}
-.publish{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border:1px solid var(--dark);border-radius:13px;background:var(--dark);color:#fff;font-weight:800;min-width:138px;box-shadow:0 8px 18px rgba(23,19,16,.13)}
-.publish:disabled{opacity:.6;cursor:wait}
-.publish svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9}
-.note{color:var(--muted);font-size:12px}
-.message{font-weight:700}
-.selected-media{display:none;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;margin-top:10px;border:1px dashed #d7cab8;border-radius:13px;background:#fcf9f3;color:var(--muted);font-size:12px}
-.selected-media.show{display:flex}
-.selected-media button{border:0;background:transparent;color:#8d3f37;font-size:12px;font-weight:800}
-.tabs{display:flex;gap:8px;align-items:center;justify-content:center;margin:25px 0 18px}
-.pill{padding:10px 16px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.85);color:var(--muted);font-weight:700}
-.tab.active{background:var(--dark);color:#fff;border-color:var(--dark)}
-.memory{overflow:hidden;margin-bottom:20px}
-.head{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:17px 18px}
+.preview{display:none;margin-top:12px;overflow:hidden;border:1px solid var(--line);border-radius:16px;background:#111;position:relative}
+.preview.show{display:block}
+.preview img,.preview video{display:block;width:100%;max-height:360px;object-fit:contain;background:#111}
+.preview-remove{
+  position:absolute;top:10px;left:10px;border:0;border-radius:999px;
+  background:rgba(23,19,15,.82);color:#fff;padding:8px 11px;font-size:11px;font-weight:800
+}
+.composer-footer{
+  margin-top:16px;padding:14px 20px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap
+}
+.publish-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.publish{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:12px 18px;
+  border:1px solid var(--dark);border-radius:14px;background:var(--dark);color:#fff;font-weight:900;
+  box-shadow:0 9px 22px rgba(23,19,15,.12);min-width:145px
+}
+.publish:disabled{opacity:.65;cursor:wait}
+.publish svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9}
+.status-message{font-size:12px;color:var(--muted);min-height:18px}
+.status-message.ok{color:var(--success)}
+.status-message.error{color:var(--danger)}
+.feed-tools{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:4px 0 16px;flex-wrap:wrap}
+.feed-title{font-size:13px;font-weight:900}
+.sort-tabs{display:flex;gap:7px}
+.tab{
+  padding:9px 14px;border:1px solid var(--line);border-radius:999px;
+  background:rgba(255,255,255,.82);color:var(--muted);font-weight:800
+}
+.tab.active{background:var(--dark);border-color:var(--dark);color:#fff}
+.memory{
+  overflow:hidden;margin-bottom:20px;background:rgba(255,253,249,.97);
+  border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);
+  content-visibility:auto;contain-intrinsic-size:520px
+}
+.memory.highlight{box-shadow:0 0 0 2px rgba(184,138,59,.42),var(--shadow)}
+.post-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 18px}
 .publisher{display:flex;align-items:center;gap:10px;min-width:0}
-.mini-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(145deg,#c7a56d,#6d5537);color:#fff;display:grid;place-items:center;font-weight:900;flex:0 0 auto}
-.name{font-weight:900;display:block}
-.date{color:var(--muted);font-size:11px;margin-top:2px;display:block}
-.more{border:0;background:transparent;color:#6c6257;font-size:20px;line-height:1}
-.text{padding:0 18px 18px;line-height:2;font-size:16px;white-space:pre-wrap}
-.media{width:100%;display:block;max-height:680px;object-fit:cover;background:#111}
-.video{position:relative;background:#111}
-.play{position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);width:68px;height:68px;border-radius:50%;border:0;background:rgba(255,255,255,.94);box-shadow:0 10px 30px rgba(0,0,0,.16);font-size:21px;color:#171310}
-.stats{display:flex;gap:13px;padding:0 18px 12px;color:var(--muted);font-size:12px}
-.stats span{display:inline-flex;align-items:center;gap:5px}
-.actions{display:flex;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.action-btn{flex:1;min-width:0;border:0;background:transparent;padding:13px 8px;color:#6e6459;display:flex;align-items:center;justify-content:center;gap:7px;font-weight:700;transition:.18s}
-.action-btn:hover{background:#faf6ef;color:var(--ink)}
-.action-btn.liked{color:#a23b35}
-.comments{padding:15px 18px 10px;background:linear-gradient(180deg,#fffdf9 0,#faf6ef 100%)}
-.comments-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px;font-weight:900}
-.comments-title span{color:var(--muted);font-weight:600}
+.mini-avatar{
+  width:39px;height:39px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;
+  color:#fff;font-weight:900;background:linear-gradient(145deg,#c8aa77,#6d5536)
+}
+.name{font-weight:900;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:560px}
+.date{font-size:11px;color:var(--muted);display:block;margin-top:3px}
+.more{
+  width:38px;height:38px;border:1px solid var(--line);border-radius:50%;background:#fff;
+  color:#6c6155;font-size:20px;line-height:1
+}
+.more:hover{background:var(--surface-2)}
+.text{padding:0 18px 17px;font-size:16px;line-height:2;white-space:pre-wrap}
+.media{display:block;width:100%;max-height:700px;object-fit:cover;background:#111}
+.video-shell{position:relative;background:#111}
+.media-play{
+  position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);
+  width:70px;height:70px;border:0;border-radius:50%;background:rgba(255,255,255,.94);
+  box-shadow:0 15px 34px rgba(0,0,0,.18);font-size:20px;color:var(--dark)
+}
+.meta-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 18px;color:var(--muted);font-size:11px}
+.reactions{display:flex;gap:12px;align-items:center}
+.reactions span{display:inline-flex;align-items:center;gap:5px}
+.reactions svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.action-btn{
+  border:0;border-left:1px solid var(--line);background:transparent;padding:13px 8px;
+  display:flex;justify-content:center;align-items:center;gap:8px;color:#6d6358;font-weight:800;transition:.18s
+}
+.action-btn:last-child{border-left:0}
+.action-btn:hover{background:#faf6ee;color:var(--ink)}
+.action-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7}
+.action-btn b{font-size:12px;color:#8b7d6d}
+.action-btn.liked{color:#9f3c35}
+.comments{padding:15px 18px 14px;background:linear-gradient(180deg,#fffdf9,#faf6ef)}
+.comments-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}
+.comments-head strong{font-size:13px}
+.comments-head span{font-size:11px;color:var(--muted)}
 .comment-list{display:flex;flex-direction:column;gap:10px}
-.comment-item{display:flex;gap:9px;align-items:flex-start}
-.comment-avatar{width:31px;height:31px;border-radius:50%;background:#e6dccd;display:grid;place-items:center;font-size:11px;font-weight:900;color:#655846;flex:0 0 auto}
-.comment-bubble{background:#f0eadf;border-radius:16px;padding:8px 11px;min-width:0;flex:1}
+.comment-item{display:flex;align-items:flex-start;gap:9px}
+.comment-avatar{width:31px;height:31px;border-radius:50%;background:#e8dfd2;color:#6a5a48;display:grid;place-items:center;flex:0 0 auto;font-size:11px;font-weight:900}
+.comment-bubble{min-width:0;flex:1;background:#f0eadf;border-radius:17px;padding:8px 11px}
 .comment-author{font-size:12px;font-weight:900}
-.comment-text{font-size:13px;line-height:1.7;margin-top:2px;white-space:pre-wrap}
+.comment-text{font-size:13px;line-height:1.7;margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere}
 .comment-date{font-size:10px;color:var(--muted);margin-top:3px}
-.no-comments{color:var(--muted);font-size:12px;padding:5px 0 8px}
 .comment-form{display:flex;gap:8px;margin-top:12px}
-.comment-form input{flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;outline:0;min-width:0}
-.comment-form input:focus{border-color:#d8c19a;box-shadow:0 0 0 3px rgba(184,138,59,.08)}
-.comment-form button{padding:10px 14px;border:1px solid var(--dark);border-radius:12px;background:var(--dark);color:#fff;font-weight:800}
-.empty{text-align:center;color:var(--muted);padding:42px 20px;background:rgba(255,253,249,.72);border:1px dashed #d9cdbd;border-radius:20px}
+.comment-form input{
+  min-width:0;flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:13px;
+  background:#fff;outline:0
+}
+.comment-form input:focus{border-color:#d4bc91;box-shadow:0 0 0 3px rgba(184,138,59,.08)}
+.comment-form button{padding:10px 15px;border:1px solid var(--dark);border-radius:13px;background:var(--dark);color:#fff;font-weight:900}
+.empty{padding:42px 20px;text-align:center;color:var(--muted);border:1px dashed #d9cdbc;border-radius:20px;background:rgba(255,253,249,.72)}
+.load-more-wrap{text-align:center;padding:5px 0 6px}
+.load-more{
+  padding:11px 20px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:900;color:#65594c
+}
+.load-more:disabled{opacity:.6}
+.toast{
+  position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);opacity:0;pointer-events:none;
+  padding:11px 16px;border-radius:999px;background:var(--dark);color:#fff;font-size:12px;font-weight:800;
+  transition:.22s;z-index:100
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.hidden{display:none!important}
 @media(max-width:640px){
-  .wrap{padding-top:20px}.hero h1{font-size:42px}.hero p{font-size:14px}
-  .composer-top{gap:9px}.avatar{width:38px;height:38px}.composer textarea{font-size:15px;min-height:88px}
-  .composer-bottom{align-items:stretch}.publish-tools{width:100%}.publish{width:100%}
-  .media-btn{flex:1;justify-content:center}.action-btn{font-size:11px}.action-btn svg{width:17px;height:17px}
-  .media{max-height:520px}.stats{font-size:11px}
+  .wrap{width:min(100% - 18px,900px);padding-top:21px}
+  .hero h1{font-size:43px}.hero p{font-size:14px}
+  .composer-head{padding:15px 15px 0}.composer-main{padding:10px 15px 0}.composer-footer{padding:13px 15px}
+  .media-drop{margin:12px 15px 0}.composer textarea{font-size:15px;min-height:92px}
+  .publish{width:100%}.publish-wrap{width:100%}.status-message{width:100%}
+  .post-head{padding:14px 15px}.text{padding:0 15px 15px}.meta-row{padding:10px 15px}.comments{padding:14px 15px}
+  .action-btn{font-size:12px}.media{max-height:520px}.name{max-width:190px}
+}
+@media(prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important}
 }
 </style>
 </head>
@@ -103,148 +208,247 @@ button{cursor:pointer}
 <section class="hero">
   <div class="eyebrow">ARABISK MEMORIES</div>
   <h1>ذكريات</h1>
-  <p>مكان تجمع فيه لحظات ARABISK. انشر صورة أو فيديو أو كلماتك، وشاهد تعليقات الزوار بشكل واضح ومباشر.</p>
+  <p>مساحة بسيطة وأنيقة لمشاركة لحظاتك من ARABISK. كل منشور عام، والتعليقات تظهر للجميع.</p>
+  <div class="hero-badge"><span class="dot"></span> مجتمع ARABISK مفتوح للجميع</div>
 </section>
 
-<section class="composer">
-  <div class="composer-top">
+<section class="panel composer" aria-label="نشر ذكرى">
+  <div class="composer-head">
     <div class="avatar">A</div>
-    <div class="composer-main">
-      <textarea id="text" placeholder="اكتب ذكرى أو لحظة جميلة من ARABISK…"></textarea>
-      <div class="identity"><input id="name" maxlength="80" placeholder="اسمك أو اسم مستعار — اتركه فارغًا ليظهر «مجهول»"></div>
+    <div><h2>شارك لحظتك</h2><small>صورة، فيديو أو كلماتك — أنت تختار ما تريد مشاركته.</small></div>
+  </div>
+  <div class="composer-main">
+    <textarea id="text" maxlength="1200" placeholder="اكتب ذكرى أو لحظة جميلة من ARABISK…"></textarea>
+    <div class="identity"><input id="name" maxlength="80" placeholder="اسمك أو اسم مستعار — اتركه فارغًا ليظهر «مجهول»"></div>
+  </div>
+  <div id="mediaDrop" class="media-drop">
+    <strong>أضف وسائط للمنشور</strong>
+    <span>JPG / PNG / WebP / AVIF حتى 15MB — MP4 / WebM / MOV حتى 120MB</span>
+    <div class="media-actions">
+      <label class="media-btn file">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m4 17 5-5 4 4 2-2 5 5"></path></svg>
+        <span>إضافة صورة</span><input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
+      </label>
+      <label class="media-btn file">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="13" height="14" rx="2"></rect><path d="m16 10 5-3v10l-5-3z"></path></svg>
+        <span>إضافة فيديو</span><input id="videoFile" type="file" accept="video/mp4,video/webm,video/quicktime">
+      </label>
+    </div>
+    <div id="preview" class="preview">
+      <button id="previewRemove" class="preview-remove" type="button">إزالة الوسائط</button>
+      <img id="previewImage" alt="معاينة الصورة" loading="lazy" hidden>
+      <video id="previewVideo" controls playsinline preload="metadata" hidden></video>
     </div>
   </div>
-  <div id="selectedMedia" class="selected-media"><span id="fileName"></span><button id="clearFile" type="button">إزالة</button></div>
-  <div class="composer-bottom">
-    <div class="publish-tools">
-      <label class="media-btn file" title="إضافة صورة"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m4 17 5-5 4 4 2-2 5 5"></path></svg><span>صورة</span><input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp,image/avif"></label>
-      <label class="media-btn file" title="إضافة فيديو"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="13" height="14" rx="2"></rect><path d="m16 10 5-3v10l-5-3z"></path></svg><span>فيديو</span><input id="videoFile" type="file" accept="video/mp4,video/webm,video/quicktime"></label>
-    </div>
-    <div class="publish-tools">
-      <span id="message" class="note message"></span>
-      <button id="publish" class="publish" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 16-8-6 16-3-6-7-2Z"></path><path d="M11 14 20 4"></path></svg><span>نشر الذكرى</span></button>
+  <div class="composer-footer">
+    <div class="status-message" id="message" aria-live="polite"></div>
+    <div class="publish-wrap">
+      <button id="publish" class="publish" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 16-8-6 16-3-6-7-2Z"></path><path d="M11 14 20 4"></path></svg>
+        <span>نشر الذكرى</span>
+      </button>
     </div>
   </div>
 </section>
 
-<div class="tabs">
-  <button class="pill tab active" data-sort="latest">الأحدث</button>
-  <button class="pill tab" data-sort="popular">الأكثر تفاعلًا</button>
+<div class="feed-tools">
+  <strong class="feed-title">منشورات المجتمع</strong>
+  <div class="sort-tabs">
+    <button class="tab active" data-sort="latest" type="button">الأحدث</button>
+    <button class="tab" data-sort="popular" type="button">الأكثر تفاعلًا</button>
+  </div>
 </div>
 
-<section id="feed"></section>
+<section id="feed" aria-live="polite"></section>
+<div id="loadMoreWrap" class="load-more-wrap hidden"><button id="loadMore" class="load-more" type="button">تحميل المزيد</button></div>
 </main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-let sort='latest';
+let sort='latest',page=0,hasMore=false,busy=false,selectedObjectUrl='';
 
-async function api(url,opt={}){
-  const r=await fetch(url,{headers:{'Content-Type':'application/json',...(opt.headers||{})},...opt});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw Error(d.message||'حدث خطأ');
-  return d;
+function api(url,opt={}){
+  return fetch(url,{headers:{'Content-Type':'application/json',...(opt.headers||{})},...opt})
+    .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.message||'حدث خطأ');return {data:d,headers:r.headers}})
+}
+function showToast(text){
+  const t=$('#toast');t.textContent=text;t.classList.add('show');clearTimeout(showToast.timer);
+  showToast.timer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function setMessage(text,type=''){
+  const el=$('#message');el.textContent=text;el.className='status-message '+type;
+}
+function initial(name){return (String(name||'مجهول').trim()[0]||'م').toUpperCase()}
+function relativeTime(value){
+  const ts=Date.parse(value||''),diff=Date.now()-ts;
+  if(!Number.isFinite(ts))return '';
+  const mins=Math.floor(diff/60000);
+  if(mins<1)return 'الآن';
+  if(mins<60)return 'منذ '+mins+' دقيقة';
+  const hours=Math.floor(mins/60);if(hours<24)return 'منذ '+hours+' ساعة';
+  const days=Math.floor(hours/24);if(days<7)return 'منذ '+days+' أيام';
+  return new Date(ts).toLocaleDateString('ar-AE');
 }
 function icon(name){
   const map={
     like:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.9c0 5-8.8 10-8.8 10s-8.8-5-8.8-10A4.8 4.8 0 0 1 8 4.2c1.4 0 2.7.6 4 1.9 1.3-1.3 2.6-1.9 4-1.9a4.8 4.8 0 0 1 4.8 4.7Z"></path></svg>',
     comment:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7a2.5 2.5 0 0 1-2.5 2.5H11l-4.8 4v-4.2H6.5A2.5 2.5 0 0 1 4 12.5v-7Z"></path></svg>',
-    share:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"></path></svg>',
-    report:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg>'
+    share:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"></path></svg>'
   };
   return map[name]||'';
 }
-function initial(name){return (String(name||'مجهول').trim()[0]||'م').toUpperCase()}
 function commentHtml(c){
-  return '<div class="comment-item"><div class="comment-avatar">'+esc(initial(c.displayName))+'</div><div class="comment-bubble"><div class="comment-author">'+esc(c.displayName||'مجهول')+'</div><div class="comment-text">'+esc(c.text)+'</div><div class="comment-date">'+new Date(c.createdAt).toLocaleString('ar-AE')+'</div></div></div>';
+  return '<div class="comment-item"><div class="comment-avatar">'+esc(initial(c.displayName))+'</div><div class="comment-bubble"><div class="comment-author">'+esc(c.displayName||'مجهول')+'</div><div class="comment-text">'+esc(c.text)+'</div><div class="comment-date">'+relativeTime(c.createdAt)+'</div></div></div>';
 }
-function card(m){
-  const media=m.mediaType==='image'&&m.imageUrl
-    ?'<img class="media" src="'+esc(m.imageUrl)+'" alt="ذكرى ARABISK" loading="lazy">'
-    :m.mediaType==='video'&&m.videoUrl
-      ?'<div class="video"><video class="media" src="'+esc(m.videoUrl)+'" controls playsinline preload="metadata"></video><button class="play" onclick="this.previousElementSibling.play();this.remove()" aria-label="تشغيل الفيديو">▶</button></div>'
-      :'';
+function postHtml(m){
   const comments=Array.isArray(m.comments)?m.comments:[];
-  const commentList=comments.length?comments.map(commentHtml).join(''):'<div class="no-comments">لا توجد تعليقات بعد — كن أول من يعلق.</div>';
+  const media=m.mediaType==='image'&&m.imageUrl
+    ?'<img class="media" src="'+esc(m.imageUrl)+'" alt="صورة ذكرى من ARABISK" loading="lazy" decoding="async">'
+    :m.mediaType==='video'&&m.videoUrl
+      ?'<div class="video-shell"><video class="media" src="'+esc(m.videoUrl)+'" controls playsinline preload="metadata"></video><button class="media-play" type="button" data-action="play">▶</button></div>'
+      :'';
+  const commentList=comments.length?comments.map(commentHtml).join(''):'<div class="no-comments" style="color:var(--muted);font-size:12px;padding:5px 0 7px">لا توجد تعليقات بعد — كن أول من يعلق.</div>';
   return '<article class="memory" id="memory-'+esc(m.id)+'">'+
-    '<div class="head"><div class="publisher"><div class="mini-avatar">'+esc(initial(m.displayName))+'</div><div><span class="name">'+esc(m.displayName||'مجهول')+'</span><span class="date">'+new Date(m.createdAt).toLocaleString('ar-AE')+'</span></div></div><button class="more" onclick="reportMemory(\''+esc(m.id)+'\')" aria-label="إبلاغ">⋯</button></div>'+
-    media+(m.text?'<div class="text">'+esc(m.text)+'</div>':'')+
-    '<div class="stats"><span>'+icon('like')+' '+Number(m.likes||0)+' إعجاب</span><span>'+icon('comment')+' '+Number(m.commentsCount||comments.length)+' تعليق</span><span>'+icon('share')+' '+Number(m.shareCount||0)+' مشاركة</span></div>'+
+    '<div class="post-head"><div class="publisher"><div class="mini-avatar">'+esc(initial(m.displayName))+'</div><div><span class="name">'+esc(m.displayName||'مجهول')+'</span><span class="date" title="'+esc(new Date(m.createdAt).toLocaleString('ar-AE'))+'">'+relativeTime(m.createdAt)+'</span></div></div><button class="more" type="button" data-action="report" data-id="'+esc(m.id)+'" aria-label="إبلاغ">⋯</button></div>'+
+    media+
+    (m.text?'<div class="text">'+esc(m.text)+'</div>':'')+
+    '<div class="meta-row"><div class="reactions"><span>'+icon('like')+' '+Number(m.likes||0)+'</span><span>'+icon('comment')+' '+Number(m.commentsCount||comments.length)+'</span></div><span>'+Number(m.shareCount||0)+' مشاركة</span></div>'+
     '<div class="actions">'+
-      '<button class="action-btn" onclick="likeMemory(\''+esc(m.id)+'\')">'+icon('like')+'<span>إعجاب</span><b>'+Number(m.likes||0)+'</b></button>'+
-      '<button class="action-btn" onclick="focusComment(\''+esc(m.id)+'\')">'+icon('comment')+'<span>تعليق</span><b>'+Number(m.commentsCount||comments.length)+'</b></button>'+
-      '<button class="action-btn" onclick="shareMemory(\''+esc(m.id)+'\')">'+icon('share')+'<span>مشاركة</span></button>'+
-      '<button class="action-btn" onclick="reportMemory(\''+esc(m.id)+'\')">'+icon('report')+'<span>إبلاغ</span></button>'+
+      '<button class="action-btn" type="button" data-action="like" data-id="'+esc(m.id)+'" aria-label="إعجاب">'+icon('like')+'<span>إعجاب</span><b>'+Number(m.likes||0)+'</b></button>'+
+      '<button class="action-btn" type="button" data-action="comment" data-id="'+esc(m.id)+'" aria-label="تعليق">'+icon('comment')+'<span>تعليق</span><b>'+Number(m.commentsCount||comments.length)+'</b></button>'+
+      '<button class="action-btn" type="button" data-action="share" data-id="'+esc(m.id)+'" aria-label="مشاركة">'+icon('share')+'<span>مشاركة</span><b>'+Number(m.shareCount||0)+'</b></button>'+
     '</div>'+
-    '<div class="comments"><div class="comments-title"><strong>التعليقات</strong><span>'+comments.length+' تعليق ظاهر للجميع</span></div><div class="comment-list">'+commentList+'</div>'+
-    '<div class="comment-form"><input id="ci-'+esc(m.id)+'" maxlength="500" placeholder="اكتب تعليقًا…"><button onclick="commentMemory(\''+esc(m.id)+'\')">إرسال</button></div></div>'+
+    '<div class="comments"><div class="comments-head"><strong>التعليقات</strong><span>'+comments.length+' تعليق ظاهر للجميع</span></div><div class="comment-list">'+commentList+'</div>'+
+    '<form class="comment-form" data-memory-id="'+esc(m.id)+'"><input name="comment" maxlength="500" placeholder="اكتب تعليقًا للجميع…" autocomplete="off"><button type="submit">إرسال</button></form></div>'+
   '</article>';
 }
-async function load(){
-  const f=$('#feed');f.innerHTML='<div class="empty">جارٍ تحميل الذكريات…</div>';
+function updateLoadMore(){
+  $('#loadMoreWrap').classList.toggle('hidden',!hasMore);
+  $('#loadMore').disabled=false;
+}
+async function loadFeed(reset=true){
+  if(busy)return;
+  busy=true;
+  if(reset){page=0;hasMore=false;$('#feed').innerHTML='<div class="empty">جارٍ تحميل الذكريات…</div>'}
   try{
-    const d=await api('/api/memories?sort='+sort);
-    f.innerHTML=d.length?d.map(card).join(''):'<div class="empty">لا توجد ذكريات بعد. كن أول من يشارك لحظته.</div>';
-    if(location.hash){const el=document.getElementById('memory-'+CSS.escape(location.hash.slice(1)));el?.scrollIntoView({behavior:'smooth',block:'center'})}
-  }catch(e){f.innerHTML='<div class="empty">'+esc(e.message)+'</div>'}
+    const next=page+1;
+    const result=await api('/api/memories?sort='+encodeURIComponent(sort)+'&page='+next+'&limit=8');
+    const items=Array.isArray(result.data)?result.data:[];
+    if(reset)$('#feed').innerHTML='';
+    if(!items.length&&!page)$('#feed').innerHTML='<div class="empty">لا توجد ذكريات بعد. كن أول من يشارك لحظته.</div>';
+    else{
+      const html=items.map(postHtml).join('');
+      $('#feed').insertAdjacentHTML('beforeend',html);
+      page=next;
+      hasMore=(result.headers.get('X-Memories-Has-More')==='true');
+    }
+    updateLoadMore();
+    if(location.hash&&!location.hash.slice(1).startsWith('M')) location.hash='';
+    if(reset&&location.hash){
+      const target=document.getElementById('memory-'+CSS.escape(location.hash.slice(1)));
+      if(target){setTimeout(()=>{target.classList.add('highlight');target.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>target.classList.remove('highlight'),2600)},60)}
+    }
+  }catch(e){
+    if(reset)$('#feed').innerHTML='<div class="empty">'+esc(e.message)+'</div>';
+    else showToast(e.message);
+  }finally{busy=false}
 }
-function focusComment(id){const i=$('#ci-'+id);if(i){i.focus();i.scrollIntoView({behavior:'smooth',block:'center'})}}
-async function likeMemory(id){try{await api('/api/memories/'+id+'/like',{method:'POST'});load()}catch(e){alert(e.message)}}
-async function shareMemory(id){
-  try{
-    const url=location.origin+'/memories#'+id;
-    try{await navigator.clipboard.writeText(url)}catch{prompt('انسخ رابط الذكرى:',url)}
-    await api('/api/memories/'+id+'/share',{method:'POST'});
-    alert('تم نسخ رابط الذكرى.');
-  }catch(e){alert(e.message)}
+function clearMedia(){
+  if(selectedObjectUrl){URL.revokeObjectURL(selectedObjectUrl);selectedObjectUrl=''}
+  $('#imageFile').value='';$('#videoFile').value='';
+  $('#preview').classList.remove('show');$('#previewImage').hidden=true;$('#previewVideo').hidden=true;
+  $('#previewImage').removeAttribute('src');$('#previewVideo').removeAttribute('src');$('#previewVideo').load();
 }
-async function reportMemory(id){
-  const reason=prompt('سبب الإبلاغ؟');if(!reason)return;
-  try{await api('/api/memories/'+id+'/report',{method:'POST',body:JSON.stringify({reason})});alert('تم إرسال البلاغ للمراجعة.')}
-  catch(e){alert(e.message)}
+function showPreview(file){
+  clearMedia();if(!file)return;
+  selectedObjectUrl=URL.createObjectURL(file);
+  $('#preview').classList.add('show');
+  if(file.type.startsWith('image/')){$('#previewImage').src=selectedObjectUrl;$('#previewImage').hidden=false}
+  else{$('#previewVideo').src=selectedObjectUrl;$('#previewVideo').hidden=false}
 }
-async function commentMemory(id){
-  const i=$('#ci-'+id),text=i?.value.trim();if(!text)return;
-  try{
-    await api('/api/memories/'+id+'/comments',{method:'POST',body:JSON.stringify({text,displayName:$('#name').value.trim()||'مجهول'})});
-    i.value='';load();
-  }catch(e){alert(e.message)}
+function selectedFile(){return $('#imageFile').files[0]||$('#videoFile').files[0]||null}
+function validateClientFile(file){
+  if(!file)return '';
+  if(file.type.startsWith('image/')&&file.size>15*1024*1024)return 'حجم الصورة يجب ألا يتجاوز 15MB.';
+  if(file.type.startsWith('video/')&&file.size>120*1024*1024)return 'حجم الفيديو يجب ألا يتجاوز 120MB.';
+  return '';
 }
-function selectedFile(){
-  return $('#imageFile').files[0]||$('#videoFile').files[0]||null;
-}
-function updateSelected(){
-  const f=selectedFile();
-  $('#selectedMedia').classList.toggle('show',!!f);
-  $('#fileName').textContent=f?f.name:'';
-}
-$('#imageFile').addEventListener('change',()=>{$('#videoFile').value='';updateSelected()});
-$('#videoFile').addEventListener('change',()=>{$('#imageFile').value='';updateSelected()});
-$('#clearFile').addEventListener('click',()=>{$('#imageFile').value='';$('#videoFile').value='';updateSelected()});
-$('#publish').addEventListener('click',async()=>{
+async function publish(){
   const b=$('#publish'),file=selectedFile(),text=$('#text').value.trim(),name=$('#name').value.trim();
-  if(!text&&!file)return alert('أضف نصًا أو صورة أو فيديو.');
-  b.disabled=true;$('#message').textContent='جاري النشر…';
+  if(!text&&!file){setMessage('أضف نصًا أو صورة أو فيديو أولًا.','error');return}
+  const fileError=validateClientFile(file);if(fileError){setMessage(fileError,'error');return}
+  b.disabled=true;setMessage('جاري تجهيز المنشور…');
   try{
     let imageKey='',videoKey='';
     if(file){
-      const p=await api('/api/memories/upload',{method:'POST',body:JSON.stringify({fileName:file.name,contentType:file.type,size:file.size})});
-      const u=await fetch(p.uploadUrl,{method:'PUT',headers:{'Content-Type':file.type},body:file});
-      if(!u.ok)throw Error('فشل رفع الوسائط.');
-      if(p.kind==='image')imageKey=p.key;else videoKey=p.key;
+      const upload=await api('/api/memories/upload',{method:'POST',body:JSON.stringify({fileName:file.name,contentType:file.type,size:file.size})});
+      setMessage('جاري رفع الوسائط…');
+      const put=await fetch(upload.data.uploadUrl,{method:'PUT',headers:{'Content-Type':file.type},body:file});
+      if(!put.ok)throw Error('فشل رفع الوسائط.');
+      if(upload.data.kind==='image')imageKey=upload.data.key;else videoKey=upload.data.key;
     }
     await api('/api/memories',{method:'POST',body:JSON.stringify({text,displayName:name,imageKey,videoKey})});
-    $('#text').value='';$('#clearFile').click();$('#message').textContent='تم نشر الذكرى.';
-    await load();window.scrollTo({top:420,behavior:'smooth'});
-  }catch(e){$('#message').textContent=e.message}
-  finally{b.disabled=false}
+    $('#text').value='';clearMedia();setMessage('تم نشر الذكرى بنجاح.','ok');showToast('تم نشر الذكرى');
+    await loadFeed(true);window.scrollTo({top:360,behavior:'smooth'});
+  }catch(e){setMessage(e.message,'error')}finally{b.disabled=false}
+}
+async function actLike(id){
+  try{await api('/api/memories/'+encodeURIComponent(id)+'/like',{method:'POST'});await loadFeed(true)}catch(e){showToast(e.message)}
+}
+async function actShare(id){
+  try{
+    const url=location.origin+'/memories#'+id;
+    let copied=false;try{await navigator.clipboard.writeText(url);copied=true}catch{}
+    if(!copied)prompt('انسخ رابط الذكرى:',url);
+    await api('/api/memories/'+encodeURIComponent(id)+'/share',{method:'POST'});
+    showToast('تم نسخ رابط الذكرى');
+    await loadFeed(true);
+  }catch(e){showToast(e.message)}
+}
+async function actReport(id){
+  const reason=prompt('سبب الإبلاغ؟');if(!reason)return;
+  try{await api('/api/memories/'+encodeURIComponent(id)+'/report',{method:'POST',body:JSON.stringify({reason})});showToast('تم إرسال البلاغ للمراجعة')}catch(e){showToast(e.message)}
+}
+async function addComment(id,text,input){
+  try{
+    await api('/api/memories/'+encodeURIComponent(id)+'/comments',{method:'POST',body:JSON.stringify({text,displayName:$('#name').value.trim()||'مجهول'})});
+    input.value='';showToast('تم نشر التعليق للجميع');await loadFeed(true);
+  }catch(e){showToast(e.message)}
+}
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-action]');if(!el)return;
+  const action=el.dataset.action,id=el.dataset.id;
+  if(action==='like')void actLike(id);
+  else if(action==='comment'){const input=document.querySelector('#memory-'+CSS.escape(id)+' input[name="comment"]');if(input){input.focus();input.scrollIntoView({behavior:'smooth',block:'center')}}
+  else if(action==='share')void actShare(id);
+  else if(action==='report')void actReport(id);
+  else if(action==='play'){const video=el.previousElementSibling;if(video){video.play();el.remove()}}
 });
-document.querySelectorAll('.tab').forEach(x=>x.addEventListener('click',()=>{
-  document.querySelectorAll('.tab').forEach(y=>y.classList.remove('active'));
-  x.classList.add('active');sort=x.dataset.sort;load();
-}));
-load();
+document.addEventListener('submit',e=>{
+  const form=e.target.closest('.comment-form');if(!form)return;
+  e.preventDefault();const input=form.querySelector('input[name="comment"]'),text=input?.value.trim();if(text)void addComment(form.dataset.memoryId,text,input);
+});
+$('#publish').addEventListener('click',()=>void publish());
+$('#previewRemove').addEventListener('click',clearMedia);
+$('#imageFile').addEventListener('change',()=>{$('#videoFile').value='';showPreview($('#imageFile').files[0]||null)});
+$('#videoFile').addEventListener('change',()=>{$('#imageFile').value='';showPreview($('#videoFile').files[0]||null)});
+$('#mediaDrop').addEventListener('dragover',e=>{e.preventDefault();$('#mediaDrop').classList.add('drag')});
+$('#mediaDrop').addEventListener('dragleave',()=>$('#mediaDrop').classList.remove('drag'));
+$('#mediaDrop').addEventListener('drop',e=>{
+  e.preventDefault();$('#mediaDrop').classList.remove('drag');
+  const file=e.dataTransfer.files[0];if(!file)return;
+  if(file.type.startsWith('image/')){$('#imageFile').files=e.dataTransfer.files;$('#videoFile').value=''}
+  else if(file.type.startsWith('video/')){$('#videoFile').files=e.dataTransfer.files;$('#imageFile').value=''}
+  else{setMessage('اختر صورة أو فيديو صالحًا.','error');return}
+  showPreview(file);
+});
+$('#loadMore').addEventListener('click',async()=>{if(busy||!hasMore)return;$('#loadMore').disabled=true;try{await loadFeed(false)}finally{updateLoadMore()}});
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');sort=btn.dataset.sort;history.replaceState(null,'','#');void loadFeed(true)}));
+window.addEventListener('beforeunload',()=>{if(selectedObjectUrl)URL.revokeObjectURL(selectedObjectUrl)});
+loadFeed(true);
 </script>
 </body>
 </html>
