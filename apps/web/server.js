@@ -15,6 +15,8 @@ import { registerRevenueRoutes } from './revenue-engine.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
+const serverStartedAt = Date.now();
+app.set('trust proxy', 1);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.join(__dirname, 'dist');
 const MAX_VIDEO_BYTES = 120 * 1024 * 1024;
@@ -26,8 +28,20 @@ const corsOptions = { origin(origin, callback){ if(!origin || allowedCorsOrigins
 app.disable('x-powered-by');
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
-app.use((req,res,next)=>{ res.setHeader('X-Content-Type-Options','nosniff'); res.setHeader('Referrer-Policy','strict-origin-when-cross-origin'); res.setHeader('X-Frame-Options','SAMEORIGIN'); res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()'); if(req.path==='/health'||req.path.startsWith('/api/')) res.setHeader('Cache-Control','no-store'); next(); });
-app.use(express.json({limit:'1mb'}));
+app.use((req,res,next)=>{
+  const id=requestId(req);
+  res.setHeader('X-Request-Id',id);
+  res.setHeader('X-Content-Type-Options','nosniff');
+  res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
+  res.setHeader('X-Frame-Options','SAMEORIGIN');
+  res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=(), payment=()');
+  res.setHeader('Cross-Origin-Resource-Policy','same-site');
+  res.setHeader('X-Permitted-Cross-Domain-Policies','none');
+  if(req.secure||process.env.NODE_ENV==='production')res.setHeader('Strict-Transport-Security','max-age=31536000; includeSubDomains');
+  if(req.path==='/health'||req.path.startsWith('/api/'))res.setHeader('Cache-Control','no-store');
+  next();
+});
+app.use(express.json({limit:'1mb',strict:true}));
 
 const cleanText=(value,max=180)=>String(value??'').trim().slice(0,max);
 const cleanKey=(value)=>String(value??'').trim().replace(/^\/+/, '').slice(0,500);
@@ -43,7 +57,8 @@ const ORDER_RATE_WINDOW_MS=10*60*1000; const ORDER_RATE_LIMIT=10;
 const ORDER_STATUS_RATE_WINDOW_MS=10*60*1000; const ORDER_STATUS_RATE_LIMIT=60;
 const SMART_POPULAR_WINDOW_MS=7*24*60*60*1000;
 const SMART_NEW_WINDOW_MS=30*24*60*60*1000;
-const getClientKey=(req)=>String(req.ip||req.headers['x-forwarded-for']||'unknown').split(',')[0].trim().slice(0,120)||'unknown';
+const getClientKey=(req)=>String(req.ip||'unknown').trim().slice(0,120)||'unknown';
+const requestId=(req)=>{const incoming=String(req.headers['x-request-id']||'').trim();return /^[A-Za-z0-9._-]{1,80}$/.test(incoming)?incoming:crypto.randomUUID()};
 const createRateLimit=(store,windowMs,limit,message)=>(req,res,next)=>{const now=Date.now(),key=getClientKey(req),previous=store.get(key);if(!previous||now-previous.startedAt>=windowMs){store.set(key,{startedAt:now,count:1});return next()}if(previous.count>=limit){const retryAfter=Math.max(1,Math.ceil((windowMs-(now-previous.startedAt))/1000));res.setHeader('Retry-After',String(retryAfter));return res.status(429).json({message,retryAfter})}previous.count+=1;return next()};
 const reservationRateLimit=createRateLimit(reservationRate,RESERVATION_RATE_WINDOW_MS,RESERVATION_RATE_LIMIT,'Too many reservation requests. Please try again later.');
 const orderRateLimit=createRateLimit(orderRate,ORDER_RATE_WINDOW_MS,ORDER_RATE_LIMIT,'Too many order requests. Please try again later.');
@@ -89,7 +104,7 @@ const nextProductId=()=>{const max=products.reduce((highest,product)=>Math.max(h
 const nextOrderId=()=>`O${String(orders.length+1).padStart(5,'0')}`;
 const nextReservationId=()=>`R${String(reservations.length+1).padStart(4,'0')}`;
 
-app.get('/health',(_req,res)=>res.json({ok:true,service:'arabisk-web',storageReady,persistentStorage:storageReady,menuVersion:MENU_VERSION,productCount:products.length,categoryCount:categories.length,orderCount:orders.length}));
+app.get('/health',(_req,res)=>res.json({ok:true,service:'arabisk-web',uptimeSeconds:Math.floor((Date.now()-serverStartedAt)/1000)}));
 app.get('/api/orders',requireAdminApiKey,(_req,res)=>res.json(orders));
 app.get('/api/customers',requireAdminApiKey,(_req,res)=>res.json(customers));
 app.patch('/api/customers/:id',requireAdminApiKey,(req,res)=>{
@@ -139,5 +154,10 @@ app.get('/menu',(req,res)=>res.sendFile(path.join(__dirname,'menu.html')));
 app.get(/^\/menu\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'category-page.html')));
 app.get(/^\/menu\/[^/]+\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'product-page.html')));
 
-app.use(express.static(dist));app.use((_req,res)=>res.sendFile(path.join(dist,'index.html')));app.use((error,_req,res,_next)=>{console.error('ARABISK web error:',error);if(!res.headersSent)res.status(500).json({message:'Internal server error'});});
+app.use(express.static(dist));app.use((_req,res)=>res.sendFile(path.join(dist,'index.html')));app.use((error,_req,res,_next)=>{
+  if(error?.type==='entity.too.large')return res.status(413).json({message:'Request body is too large.'});
+  if(error instanceof SyntaxError&&error?.status===400)return res.status(400).json({message:'Invalid JSON request.'});
+  console.error('ARABISK web error:',error);
+  if(!res.headersSent)res.status(500).json({message:'Internal server error'});
+});
 await restoreState();await restoreCategories();await restoreStudio();await restoreExperiences();await memories.restore();await revenue.restoreRevenue();if(storageReady)persistState();app.listen(port,()=>console.log(`ARABISK web listening on ${port} — ${products.length} menu items, ${categories.length} categories`));
