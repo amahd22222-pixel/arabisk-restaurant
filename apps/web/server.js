@@ -32,6 +32,16 @@ const corsOptions = { origin(origin, callback){ if(!origin || allowedCorsOrigins
 app.disable('x-powered-by');
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+const errorRouteForLog=(req)=>{
+  const matchedRoute=req.route?.path;
+  if(matchedRoute)return String(matchedRoute).slice(0,160);
+  if(req.path.startsWith('/api/')){
+    const segments=req.path.split('/').filter(Boolean);
+    return '/' + segments.slice(0,2).join('/');
+  }
+  return req.path.slice(0,160);
+};
+
 app.use((req,res,next)=>{
   const id=requestId(req);
   res.locals.requestId=id;
@@ -43,7 +53,7 @@ app.use((req,res,next)=>{
       event:'http_server_error',
       requestId:id,
       method:req.method,
-      path:req.path,
+      route:errorRouteForLog(req),
       status:res.statusCode,
       durationMs:Math.round(durationMs*100)/100
     }));
