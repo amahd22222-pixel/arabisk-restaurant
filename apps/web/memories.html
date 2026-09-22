@@ -560,7 +560,7 @@ $('#mediaDrop').addEventListener('drop',e=>{
 $('#loadMore').addEventListener('click',async()=>{if(busy||!hasMore)return;$('#loadMore').disabled=true;$('#loadMore').textContent='جاري التحميل…';try{await loadFeed(false)}finally{$('#loadMore').textContent='تحميل المزيد';updateLoadMore()}});
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');sort=btn.dataset.sort;history.replaceState(null,'','#');void loadFeed(true)}));
 window.addEventListener('beforeunload',()=>{if(selectedObjectUrl)URL.revokeObjectURL(selectedObjectUrl)});
-loadFeed(true);
+loadMemoryContextOptions();loadFeed(true);
 </script>
 </body>
 </html>
