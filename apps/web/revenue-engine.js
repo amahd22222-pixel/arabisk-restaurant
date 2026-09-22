@@ -164,8 +164,45 @@ const outcomeLearningSignal = (learning, sourceType, sourceKey) => {
     conversionRate: Number(row.conversionRate || 0),
     topReasonKey: clean(row.topReasonKey || 'unclassified', 40),
     topReason: clean(row.topReason || 'غير مصنف', 100),
+    topReasonCount: Number(row.topReasonCount || 0),
     learningAction: clean(row.learningAction || '', 320),
     measuredRevenue: number(row.measuredRevenue)
+  };
+};
+
+const outcomeLearningPolicy = (signal) => {
+  if (!signal) return null;
+  const frictionReasons = new Set(['customer_unresponsive','not_interested','not_relevant','operational_issue','timing','duplicate']);
+  const sampleSize = Number(signal.sampleSize || 0);
+  const reasonCount = Number(signal.topReasonCount || 0);
+  const reasonShare = sampleSize ? reasonCount / sampleSize : 0;
+  const avoidRepeat = sampleSize >= 3 && reasonCount >= 2 && reasonShare >= 0.5 && Number(signal.conversionRate || 0) < 50 && frictionReasons.has(signal.topReasonKey);
+  if (!avoidRepeat) return {
+    key:'continue_with_measurement',
+    label:'يمكن الاستمرار مع القياس',
+    avoidRepeat:false,
+    reason: signal.topReason,
+    sampleSize,
+    conversionRate: Number(signal.conversionRate || 0),
+    alternativeAction:'واصل القياس وسجّل النتيجة والسبب قبل تغيير المسار.'
+  };
+  const alternatives = {
+    customer_unresponsive:'لا تكرر نفس محاولة التواصل؛ غيّر التوقيت أو قناة التواصل المعتمدة ثم اختبر النتيجة.',
+    not_interested:'لا تكرر نفس العرض؛ غيّر القيمة المقترحة أو صياغة العرض ثم اختبر الاستجابة.',
+    not_relevant:'لا تكرر نفس العرض لهذه الفرصة؛ غيّر المنتج أو الشريحة أو زاوية الاقتراح بما يتوافق مع السياق.',
+    operational_issue:'لا تكرر التنفيذ قبل معالجة العائق التشغيلي المسجل وإثبات جاهزية المسار.',
+    timing:'لا تكرر نفس التوقيت؛ انقل التنفيذ إلى نافذة أنسب وسجّل أثر التغيير.',
+    duplicate:'لا تنشئ إجراءً مكررًا؛ راجع الإجراء أو الطلب السابق أولًا وتأكد أن الحاجة ما زالت قائمة.'
+  };
+  return {
+    key:'change_strategy',
+    label:'لا تكرر نفس الأسلوب',
+    avoidRepeat:true,
+    reason: signal.topReason,
+    reasonCount,
+    sampleSize,
+    conversionRate: Number(signal.conversionRate || 0),
+    alternativeAction: alternatives[signal.topReasonKey] || 'غيّر تفاصيل التنفيذ بعد مراجعة سبب النتيجة السابقة.'
   };
 };
 
@@ -763,6 +800,7 @@ export function registerRevenueRoutes(app, {
     const sourceType = alert ? 'revenue_alert' : segment ? 'customer_segment' : 'revenue_opportunity';
     const sourceKey = alert?.key || segment?.key || type;
     const learningSignal = outcomeLearningSignal(summary.outcomeLearning, sourceType, sourceKey);
+    const learningPolicy = outcomeLearningPolicy(learningSignal);
 
     let customerId = '';
     let customerName = '';
@@ -811,7 +849,8 @@ export function registerRevenueRoutes(app, {
                 ? clean(action.recommendedAction, 500)
                 : `مسودة اقتراح Pre-order للحجز: ${clean(action.title.replace('حجز قريب: ', ''), 70)}.`,
       status: 'draft',
-      learningGuidance: learningSignal?.learningAction || '',
+      learningGuidance: learningPolicy?.avoidRepeat ? learningPolicy.alternativeAction : (learningSignal?.learningAction || ''),
+      learningPolicy,
       consentRequired: true,
       sendable: false,
       executionNote: 'V1 لا يرسل الرسائل تلقائيًا. يجب تنفيذ التواصل خارج النظام فقط بعد التحقق من موافقة العميل.',
@@ -865,7 +904,7 @@ export function registerRevenueRoutes(app, {
       updatedAt: new Date().toISOString()
     };
     if (draft.recoveryToken) draft.recoveryPath = '/cart?recover=' + encodeURIComponent(draft.recoveryToken);
-    appendCampaignActivity(draft, 'created', { title: draft.title, sourceType: draft.sourceType, sourceKey: draft.sourceKey });
+    appendCampaignActivity(draft, 'created', { title: draft.title, sourceType: draft.sourceType, sourceKey: draft.sourceKey, learningPolicy: learningPolicy?.key || 'none', alternativeAction: learningPolicy?.avoidRepeat ? learningPolicy.alternativeAction : '' });
     campaigns.push(draft);
     if (campaigns.length > MAX_CAMPAIGNS) campaigns.splice(0, campaigns.length - MAX_CAMPAIGNS);
     void persistRevenue();
@@ -1300,6 +1339,7 @@ export function registerRevenueRoutes(app, {
     const primaryLearning=primaryOpportunity
       ? outcomeLearningSignal(summary.outcomeLearning, 'revenue_opportunity', clean(primaryOpportunity.type || '', 50))
       : null;
+    const primaryLearningPolicy=outcomeLearningPolicy(primaryLearning);
     const openActions=relatedActions.filter(item=>item.status==='draft');
     const blockedActions=openActions.filter(item=>item.workflowStatus==='blocked');
     const overdueActions=openActions.filter(item=>item.workflowStatus==='overdue'||item.workflowStatus==='escalated');
@@ -1313,11 +1353,12 @@ export function registerRevenueRoutes(app, {
           key: primaryOpportunity.type || 'opportunity',
           label: primaryOpportunity.type==='upcoming_reservation' ? 'حجز قادم' : primaryOpportunity.type==='inactive_customer' ? 'إعادة تنشيط' : primaryOpportunity.type==='returning_customer' ? 'موعد عودة محتمل' : 'فرصة عميل',
           reason: clean(primaryOpportunity.reason || '', 220),
-          recommendedAction: clean(primaryLearning?.learningAction || primaryOpportunity.recommendedAction || '', 320),
+          recommendedAction: clean(primaryLearningPolicy?.avoidRepeat ? primaryLearningPolicy.alternativeAction : (primaryLearning?.learningAction || primaryOpportunity.recommendedAction || ''), 340),
           potentialValue: number(primaryOpportunity.potentialValue),
           learningSignal: primaryLearning
-            ? { signalKey: primaryLearning.signalKey, signalLabel: primaryLearning.signalLabel, sampleSize: primaryLearning.sampleSize, conversionRate: primaryLearning.conversionRate, topReason: primaryLearning.topReason, measuredRevenue: primaryLearning.measuredRevenue, applied: true }
+            ? { signalKey: primaryLearning.signalKey, signalLabel: primaryLearning.signalLabel, sampleSize: primaryLearning.sampleSize, conversionRate: primaryLearning.conversionRate, topReason: primaryLearning.topReason, topReasonCount: primaryLearning.topReasonCount, measuredRevenue: primaryLearning.measuredRevenue, applied: true }
             : null,
+          learningPolicy: primaryLearningPolicy,
           stateKey: !customer.marketingOptIn ? 'needs_consent' : blockedActions.length ? 'blocked' : overdueActions.length ? 'overdue' : openActions.length ? 'open' : 'observe',
           ready: customer.marketingOptIn && blockedActions.length===0 && overdueActions.length===0,
           consentRequired: !customer.marketingOptIn,
@@ -1350,9 +1391,11 @@ export function registerRevenueRoutes(app, {
           ? 'راجع المهمة المتأخرة وحدّث حالتها أو سجّل النتيجة قبل إنشاء إجراء جديد.'
           : nextOpenAction
             ? 'تابع الإجراء المفتوح: ' + clean(nextOpenAction.title || 'مهمة الإيراد', 140)
+            : primaryLearningPolicy?.avoidRepeat
+            ? clean(primaryLearningPolicy.alternativeAction, 300)
             : primaryLearning
-            ? 'طبّق التعلم المسجل لهذا النوع من الفرص: ' + clean(primaryLearning.learningAction, 260)
-            : (primaryOpportunity?.recommendedAction||'راجع آخر نشاط للعميل وحدد الإجراء المناسب.');
+              ? 'طبّق التعلم المسجل لهذا النوع من الفرص: ' + clean(primaryLearning.learningAction, 260)
+              : (primaryOpportunity?.recommendedAction||'راجع آخر نشاط للعميل وحدد الإجراء المناسب.');
     return {
       customer: {
         id: customer.id,
