@@ -210,8 +210,17 @@ async function openCustomer360(customerId){
         const response=await request('/api/revenue/campaign-drafts',{method:'POST',body:JSON.stringify({type:button.dataset.decisionType||'',reference:button.dataset.decisionReference||''})});
         if(!response)throw new Error('تعذر إنشاء الإجراء.');
         button.textContent=response.reused?'الإجراء موجود بالفعل':'تم إنشاء الإجراء';
-        button.dataset.campaignJump=response.id||response.campaignId||'';
-        if(button.dataset.campaignJump){button.removeAttribute('data-decision-create');button.setAttribute('data-campaign-jump',button.dataset.campaignJump);setTimeout(()=>button.click(),250);}
+        const campaignId=response.id||response.campaignId||'';
+        if(campaignId){
+          showSection('revenue');
+          if(window.ARABISK_LOAD_REVENUE)await window.ARABISK_LOAD_REVENUE();
+          const row=document.querySelector('[data-campaign-id="'+CSS.escape(campaignId)+'"]');
+          if(row){
+            row.classList.add('customer360-highlight-row');
+            row.scrollIntoView({behavior:'smooth',block:'center'});
+            setTimeout(()=>row.classList.remove('customer360-highlight-row'),2200);
+          }
+        }
       }catch(error){alert(error.message||'تعذر إنشاء الإجراء.')}finally{button.disabled=false;}
     }));
     body.querySelectorAll('[data-customer-opportunity]').forEach(button=>button.addEventListener('click',async()=>{
