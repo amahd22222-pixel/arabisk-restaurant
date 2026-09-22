@@ -16,6 +16,7 @@ const webApiBase = String(process.env.ARABISK_WEB_API_URL || '').trim().replace(
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const AUTH_RATE_WINDOW_MS = 10 * 60 * 1000;
 const AUTH_RATE_LIMIT = 6;
+const MAX_AUTH_RATE_KEYS = 5000;
 const UPSTREAM_API_TIMEOUT_MS = 15000;
 const MAX_UPSTREAM_RESPONSE_BYTES = 2 * 1024 * 1024;
 const sessions = new Map();
@@ -49,6 +50,18 @@ function consumeAuthAttempt(req, res) {
   const key = getClientKey(req);
   const previous = authRate.get(key);
   if (!previous || now - previous.startedAt >= AUTH_RATE_WINDOW_MS) {
+    if (!previous && authRate.size >= MAX_AUTH_RATE_KEYS) {
+      for (const [oldKey, oldEntry] of authRate) {
+        if (now - oldEntry.startedAt >= AUTH_RATE_WINDOW_MS) {
+          authRate.delete(oldKey);
+          break;
+        }
+      }
+      if (authRate.size >= MAX_AUTH_RATE_KEYS) {
+        const oldest = authRate.keys().next().value;
+        if (oldest !== undefined) authRate.delete(oldest);
+      }
+    }
     authRate.set(key, { startedAt: now, count: 1 });
     return false;
   }
