@@ -58,9 +58,12 @@ function renderNextAction(profile,customerId){
   if(head)head.insertAdjacentHTML('afterend',html);else summary.insertAdjacentHTML('afterbegin',html);
 }
 
-function scheduleRender(){
+function scheduleRender(attempt=0){
   if(!pendingProfile||!activeCustomerId)return;
-  setTimeout(()=>renderNextAction(pendingProfile,activeCustomerId),0);
+  const body=document.querySelector('#customer360-body');
+  const summary=body?.querySelector('[data-customer360-outcome-summary]');
+  if(summary){renderNextAction(pendingProfile,activeCustomerId);return;}
+  if(attempt<8)setTimeout(()=>scheduleRender(attempt+1),50);
 }
 
 document.addEventListener('click',event=>{
@@ -98,7 +101,5 @@ function patchCustomer360Response(){
     return response;
   };
 }
-const observer=new MutationObserver(scheduleRender);
-observer.observe(document.documentElement,{subtree:true,childList:true});
 ensureNextActionStyles();
 patchCustomer360Response();
