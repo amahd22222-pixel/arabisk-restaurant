@@ -19,6 +19,7 @@ const AUTH_RATE_LIMIT = 6;
 const sessions = new Map();
 const authRate = new Map();
 const serverStartedAt = Date.now();
+const MAX_ADMIN_BODY_BYTES = 256 * 1024;
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -124,12 +125,59 @@ setInterval(cleanupSessions, 15 * 60 * 1000).unref();
 function parseBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
+    let receivedBytes = 0;
+    let settled = false;
+    const contentLength = Number(req.headers['content-length']);
+
+    const fail = (message, status = 400) => {
+      const error = new Error(message);
+      error.status = status;
+      reject(error);
+    };
+
+    const cleanup = () => {
+      req.off('data', onData);
+      req.off('end', onEnd);
+      req.off('error', onError);
+    };
+
+    const onData = (chunk) => {
+      if (settled) return;
+      const chunkBytes = Buffer.byteLength(chunk, 'utf8');
+      if (receivedBytes + chunkBytes > MAX_ADMIN_BODY_BYTES) {
+        settled = true;
+        cleanup();
+        req.resume();
+        return fail('Request body too large.', 413);
+      }
+      receivedBytes += chunkBytes;
+      body += chunk;
+    };
+
+    const onEnd = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      try { resolve(body ? JSON.parse(body) : {}); } catch { fail('Invalid JSON request.'); }
+    };
+
+    const onError = (error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+
+    if (Number.isFinite(contentLength) && contentLength > MAX_ADMIN_BODY_BYTES) {
+      settled = true;
+      req.resume();
+      return fail('Request body too large.', 413);
+    }
+
     req.setEncoding('utf8');
-    req.on('data', (chunk) => { body += chunk; if (body.length > 16 * 1024) reject(new Error('Request body too large')); });
-    req.on('end', () => {
-      try { resolve(body ? JSON.parse(body) : {}); } catch { reject(new Error('Invalid JSON')); }
-    });
-    req.on('error', reject);
+    req.on('data', onData);
+    req.on('end', onEnd);
+    req.on('error', onError);
   });
 }
 
@@ -263,9 +311,10 @@ const server = http.createServer(async (req, res) => {
       createSession(res, req, username);
       res.writeHead(200, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
       return res.end(JSON.stringify({ ok: true }));
-    } catch {
-      res.writeHead(400, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
-      return res.end(JSON.stringify({ ok: false, message: 'Invalid login request' }));
+    } catch (error) {
+      const status = error?.status === 413 ? 413 : 400;
+      res.writeHead(status, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});
+      return res.end(JSON.stringify({ ok: false, message: status === 413 ? 'Request body is too large.' : 'Invalid login request' }));
     }
   }
 
