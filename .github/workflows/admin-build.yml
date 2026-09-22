@@ -67,6 +67,9 @@ jobs:
           done
           curl -fsS http://127.0.0.1:4175/health | grep -q '"ok":true'
           curl -fsS -o /dev/null http://127.0.0.1:4175/login
+          curl -fsSI http://127.0.0.1:4175/login | grep -qi '^X-Content-Type-Options: nosniff'
+          curl -fsSI http://127.0.0.1:4175/login | grep -qi '^Content-Security-Policy:'
+          curl -fsSI http://127.0.0.1:4175/login | grep -qi '^X-Request-Id:'
           cat /tmp/arabisk-admin.log
 
       - name: Web runtime smoke test
@@ -87,4 +90,6 @@ jobs:
             sleep 0.5
           done
           curl -fsS http://127.0.0.1:4176/health | grep -q '"ok":true'
+          curl -fsSI http://127.0.0.1:4176/health | grep -qi '^X-Content-Type-Options: nosniff'
+          curl -fsSI http://127.0.0.1:4176/health | grep -qi '^X-Request-Id:'
           cat /tmp/arabisk-web.log
