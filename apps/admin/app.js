@@ -41,7 +41,7 @@ function renderCustomers(){
   if(!customers.length){if(state)state.textContent='لا توجد بيانات عملاء مسجلة حاليًا.';if(body)body.innerHTML='';return;}
   const query=(search?.value||'').trim().toLowerCase();
   const filtered=query
-    ? customers.filter(customer=>${customer.name||''} ${customer.phone||''}.toLowerCase().includes(query))
+    ? customers.filter(customer=>`${customer.name||''} ${customer.phone||''}`.toLowerCase().includes(query))
     : customers;
   if(state)state.textContent=query
     ? `عرض ${filtered.length} من ${customers.length} عميل.`
