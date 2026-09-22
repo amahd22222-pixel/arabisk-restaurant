@@ -1249,6 +1249,7 @@ export function registerRevenueRoutes(app, {
       event: timeline.filter(item => item.type === 'event').length,
       action: timeline.filter(item => item.type === 'action').length
     };
+    const primaryOpportunity=opportunities.slice().sort((a,b)=>number(b.priorityScore)-number(a.priorityScore))[0]||null;
     const openActions=relatedActions.filter(item=>item.status==='draft');
     const blockedActions=openActions.filter(item=>item.workflowStatus==='blocked');
     const overdueActions=openActions.filter(item=>item.workflowStatus==='overdue'||item.workflowStatus==='escalated');
