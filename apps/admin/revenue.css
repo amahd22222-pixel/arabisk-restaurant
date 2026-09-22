@@ -50,3 +50,4 @@
 #revenue #revenue-task-detail-modal {
   display:none !important;
 }
+.revenue-learning-badge{display:block;margin-top:4px;font-size:9px;line-height:1.5;opacity:.58;white-space:normal}.revenue-learning-badge::before{content:'↳ ';opacity:.7}
