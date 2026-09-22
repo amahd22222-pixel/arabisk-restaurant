@@ -136,3 +136,47 @@ const observer = new MutationObserver(() => {
 });
 observer.observe(document.documentElement, {subtree:true, childList:true});
 ensureStyles();
+
+
+let customer360OutcomeRefreshTimer = 0;
+
+function scheduleCustomer360OutcomeRefresh(delay = 180) {
+  window.clearTimeout(customer360OutcomeRefreshTimer);
+  customer360OutcomeRefreshTimer = window.setTimeout(() => {
+    if (activeCustomerId) void refreshSummary(activeCustomerId);
+  }, delay);
+}
+
+function patchFetchForCustomer360OutcomeRefresh() {
+  if (window.__ARABISK_CUSTOMER360_OUTCOME_FETCH_PATCHED__) return;
+  window.__ARABISK_CUSTOMER360_OUTCOME_FETCH_PATCHED__ = true;
+  const originalFetch = window.fetch.bind(window);
+
+  window.fetch = async (...args) => {
+    const response = await originalFetch(...args);
+
+    try {
+      const input = args[0];
+      const rawUrl = typeof input === 'string' ? input : (input?.url || '');
+      const method = String(args[1]?.method || input?.method || 'GET').toUpperCase();
+      const path = new URL(rawUrl, window.location.href).pathname;
+
+      const relevant =
+        (method === 'POST' && (
+          path.endsWith('/api/revenue/campaign-drafts') ||
+          /\/api\/revenue\/campaigns\/[^/]+\/outcome$/.test(path)
+        )) ||
+        (method === 'PATCH' && /\/api\/orders\/[^/]+$/.test(path));
+
+      if (response.ok && relevant && activeCustomerId) {
+        scheduleCustomer360OutcomeRefresh();
+      }
+    } catch (_) {
+      // Never change the original fetch result because of this enhancement.
+    }
+
+    return response;
+  };
+}
+
+patchFetchForCustomer360OutcomeRefresh();
