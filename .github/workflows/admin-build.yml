@@ -83,8 +83,13 @@ jobs:
         run: |
           set -euo pipefail
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production PORT=4176 npm run start --workspace apps/web > /tmp/arabisk-web.log 2>&1 &
-          pid=$!
-          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          web_pid=$!
+          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY=ci PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin-web-smoke.log 2>&1 &
+          admin_pid=$!
+          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_API_KEY=ci PORT=4177 npm run start --workspace apps/web > /tmp/arabisk-web-revenue.log 2>&1 &
+          revenue_pid=$!
+          trap 'kill "$web_pid" "$admin_pid" "$revenue_pid" 2>/dev/null || true' EXIT
+          pid=$web_pid
           for i in {1..30}; do
             if curl -fsS http://127.0.0.1:4176/health > /tmp/web-health.json; then
               break
@@ -105,4 +110,53 @@ jobs:
           curl -fsS -c /tmp/arabisk-admin.cookies -H 'Content-Type: application/json' --data '{"username":"ci","password":"ci"}' http://127.0.0.1:4175/auth/check > /tmp/admin-login.json
           grep -q '"ok":true' /tmp/admin-login.json
           test "$(curl -s -o /dev/null -w '%{http_code}' -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/orders)" = "503"
-          cat /tmp/arabisk-web.log
+
+          for port in 4175 4177; do
+            for i in {1..30}; do
+              if curl -fsS http://127.0.0.1:$port/health >/dev/null; then break; fi
+              if ! kill -0 "$([ "$port" = "4175" ] && echo "$admin_pid" || echo "$revenue_pid")" 2>/dev/null; then
+                cat /tmp/arabisk-admin-web-smoke.log /tmp/arabisk-web-revenue.log
+                exit 1
+              fi
+              sleep 0.5
+            done
+          done
+
+          curl -fsS http://127.0.0.1:4177/api/products > /tmp/ci-products.json
+          product_id="$(python - <<'PY'
+          import json
+          with open('/tmp/ci-products.json') as f:
+              products=json.load(f)
+          print(next(p['id'] for p in products if p.get('available') is not False))
+          PY
+          )"
+          order_json="$(python - "$product_id" <<'PY'
+          import json, sys
+          print(json.dumps({
+              "orderType":"dine_in",
+              "tableNumber":"CI-1",
+              "name":"",
+              "phone":"",
+              "notes":"",
+              "sessionId":"ci-order-completion-smoke",
+              "items":[{"productId":sys.argv[1],"quantity":1}]
+          }))
+          PY
+          )"
+          curl -fsS -H 'Content-Type: application/json' --data "$order_json" http://127.0.0.1:4177/api/orders > /tmp/ci-order.json
+          order_id="$(python - <<'PY'
+          import json
+          print(json.load(open('/tmp/ci-order.json'))['id'])
+          PY
+          )"
+          before_completed="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4177/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
+          test "$before_completed" = "0"
+
+          for status in confirmed preparing ready completed; do
+            curl -fsS -H 'Content-Type: application/json' -H 'X-Arabisk-Admin-Key: ci' --data "$(python -c "import json; print(json.dumps({'status':'$status'}))")" -X PATCH "http://127.0.0.1:4177/api/orders/$order_id" >/dev/null
+          done
+
+          after_completed="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4177/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
+          test "$after_completed" = "1"
+
+          cat /tmp/arabisk-web.log /tmp/arabisk-admin-web-smoke.log /tmp/arabisk-web-revenue.log
