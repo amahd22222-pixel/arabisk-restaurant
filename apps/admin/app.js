@@ -45,7 +45,7 @@ function renderCustomers(){
   const mode=filter?.value||'';
   const order=sort?.value||'recent';
   let filtered=customers.filter(customer=>{
-    if(query&&!\`${customer.name||''} ${customer.phone||''}\`.toLowerCase().includes(query))return false;
+    if(query&&!`${customer.name||''} ${customer.phone||''}`.toLowerCase().includes(query))return false;
     if(mode==='orders'&&Number(customer.orderCount||0)<=0)return false;
     if(mode==='reservations'&&Number(customer.reservationCount||0)<=0)return false;
     return true;
@@ -59,8 +59,8 @@ function renderCustomers(){
     return rightTime-leftTime;
   });
   if(state)state.textContent=(query||mode)
-    ? \`عرض ${filtered.length} من ${customers.length} عميل.\`
-    : \`${customers.length} عميل مسجل — مرتب حسب الأحدث طلبًا.\`;
+    ? `عرض ${filtered.length} من ${customers.length} عميل.`
+    : `${customers.length} عميل مسجل — مرتب حسب الأحدث طلبًا.`;
   if(body)body.innerHTML=filtered.map(customer=>\`<tr><td><strong>${escapeHtml(customer.name||'عميل')}</strong><small dir="ltr">${escapeHtml(customer.phone||'')}</small></td><td>${Number(customer.orderCount||0)}</td><td>${Number(customer.reservationCount||0)}</td><td>${customer.lastOrderAt?new Date(customer.lastOrderAt).toLocaleDateString('ar-AE'):'—'}</td><td class="actions"><button class="small-action" data-customer-360="${escapeHtml(customer.id)}" type="button">فتح الملف</button></td></tr>\`).join('')||'<tr><td colspan="5" class="empty">لا يوجد عميل يطابق التصفية الحالية.</td></tr>';
 }
 function openModal(product=null){editingId=product?.id||null;$('#modal-title').textContent=editingId?'تعديل الصنف':'إضافة صنف جديد';$('#name-ar').value=product?.nameAr||'';$('#name-en').value=product?.nameEn||'';$('#price').value=product?.price??'';$('#image-url').value=product?.imageUrl&&!product.imageKey?product.imageUrl:'';$('#description-ar').value=product?.descriptionAr||'';$('#category').innerHTML=categories.map(c=>`<option value="${escapeHtml(c.id)}" ${product?.categoryId===c.id?'selected':''}>${escapeHtml(c.nameAr)}</option>`).join('');$('#available').checked=product?.available??true;$('#video-file').value='';$('#selected-file').textContent='';$('#remove-video').hidden=!product?.videoKey;updateVideoPreview(product?.videoUrl||'');$('#image-file').value='';$('#selected-image').textContent='';$('#remove-image').hidden=!product?.imageKey;updateImagePreview(product?.imageUrl||'');$('#modal').classList.add('show');$('#modal').setAttribute('aria-hidden','false');$('#name-ar').focus();}
