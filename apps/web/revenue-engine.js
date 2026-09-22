@@ -1271,7 +1271,9 @@ export function registerRevenueRoutes(app, {
           openActions: openActions.length,
           blockedActions: blockedActions.length,
           overdueActions: overdueActions.length,
-          nextOpenActionId: nextOpenAction?.id || ''
+          nextOpenActionId: nextOpenAction?.id || '',
+          actionType: clean(primaryOpportunity.type || '', 40),
+          actionReference: clean(primaryOpportunity.id || primaryOpportunity.reference || '', 120)
         }
       : {
           key: validOrders.length>=2 ? 'repeat_customer' : validOrders.length===1 ? 'first_repeat_window' : 'known_customer',
