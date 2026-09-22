@@ -1178,6 +1178,10 @@ export function registerRevenueRoutes(app, {
       .slice(0,20)
       .map(item=>({
         id:item.id,type:item.type,title:item.title,status:item.status,
+        workflowStatus:item.workflowStatus||'',
+        owner:item.owner||'',
+        dueAt:item.dueAt||'',
+        blockerReason:item.blockerReason||'',
         resultRevenue:number(item.resultRevenue),
         orderId:item.orderId||item.attribution?.orderId||'',
         updatedAt:item.updatedAt||item.createdAt||''
@@ -1245,7 +1249,41 @@ export function registerRevenueRoutes(app, {
       event: timeline.filter(item => item.type === 'event').length,
       action: timeline.filter(item => item.type === 'action').length
     };
-    const primaryOpportunity=opportunities.slice().sort((a,b)=>number(b.priorityScore)-number(a.priorityScore))[0]||null;
+    const openActions=relatedActions.filter(item=>item.status==='draft');
+    const blockedActions=openActions.filter(item=>item.workflowStatus==='blocked');
+    const overdueActions=openActions.filter(item=>item.workflowStatus==='overdue'||item.workflowStatus==='escalated');
+    const nextOpenAction=openActions.slice().sort((a,b)=>{
+      const aTime=Date.parse(a.dueAt||'')||Number.MAX_SAFE_INTEGER;
+      const bTime=Date.parse(b.dueAt||'')||Number.MAX_SAFE_INTEGER;
+      return aTime-bTime;
+    })[0]||null;
+    const decision = primaryOpportunity
+      ? {
+          key: primaryOpportunity.type || 'opportunity',
+          label: primaryOpportunity.type==='upcoming_reservation' ? 'حجز قادم' : primaryOpportunity.type==='inactive_customer' ? 'إعادة تنشيط' : primaryOpportunity.type==='returning_customer' ? 'موعد عودة محتمل' : 'فرصة عميل',
+          reason: clean(primaryOpportunity.reason || '', 220),
+          recommendedAction: clean(primaryOpportunity.recommendedAction || '', 300),
+          potentialValue: number(primaryOpportunity.potentialValue),
+          ready: customer.marketingOptIn && blockedActions.length===0,
+          consentRequired: !customer.marketingOptIn,
+          openActions: openActions.length,
+          blockedActions: blockedActions.length,
+          overdueActions: overdueActions.length,
+          nextOpenActionId: nextOpenAction?.id || ''
+        }
+      : {
+          key: validOrders.length>=2 ? 'repeat_customer' : validOrders.length===1 ? 'first_repeat_window' : 'known_customer',
+          label: validOrders.length>=2 ? 'عميل متكرر' : validOrders.length===1 ? 'بعد أول طلب' : 'عميل معروف',
+          reason: validOrders.length ? 'يوجد سجل طلبات؛ لا توجد فرصة تشغيلية مميزة مسجلة حاليًا.' : 'لا توجد طلبات مكتملة مرتبطة بالعميل حاليًا.',
+          recommendedAction: validOrders.length>=1 ? 'راجع آخر طلب ونمط التفاعل قبل إنشاء إجراء جديد.' : 'تابع أول تفاعل أو طلب قبل إنشاء إجراء موجه.',
+          potentialValue: 0,
+          ready: false,
+          consentRequired: !customer.marketingOptIn,
+          openActions: openActions.length,
+          blockedActions: blockedActions.length,
+          overdueActions: overdueActions.length,
+          nextOpenActionId: nextOpenAction?.id || ''
+        };
     const nextAction=customer.marketingOptIn
       ? (primaryOpportunity?.recommendedAction||'راجع آخر نشاط للعميل وحدد الإجراء المناسب.')
       : 'تحقق من موافقة التواصل قبل تنفيذ أي إجراء موجه للعميل.';
@@ -1291,6 +1329,7 @@ export function registerRevenueRoutes(app, {
       })),
       opportunities,
       relatedActions,
+      decision,
       nextAction
     };
   }
