@@ -24,7 +24,9 @@ export function buildCustomer360OutcomeSummary(profile = {}) {
           status: last.status || '',
           orderId: last.orderId || '',
           revenue: Math.max(0, Number(last.resultRevenue || 0)),
-          at: last.updatedAt || ''
+          at: last.completedAt || last.updatedAt || '',
+          reason: last.outcomeReason || '',
+          note: last.outcomeReasonNote || ''
         }
       : null
   };
@@ -83,6 +85,8 @@ function renderSummary(profile, customerId) {
     ? '<div class="customer360-outcome-last"><strong>آخر نتيجة: '+esc(statusLabel(last.status))+'</strong>'+
       (last.orderId ? '<span>الطلب #'+esc(last.orderId)+'</span>' : '<span>بدون طلب منسوب</span>')+
       '<span>'+money(last.revenue)+'</span>'+
+      (last.reason ? '<span>السبب: '+esc(last.reason)+'</span>' : '')+
+      (last.note ? '<span>ملاحظة: '+esc(last.note)+'</span>' : '')+
       (last.at ? '<time>'+esc(new Date(last.at).toLocaleString('ar-AE'))+'</time>' : '')+
       '</div>'
     : '<div class="customer360-outcome-last"><strong>لا توجد نتيجة مكتملة مسجلة بعد.</strong></div>';
