@@ -9,6 +9,7 @@ const ALLOWED_EVENTS = new Set([
   'add_to_cart',
   'cart_updated',
   'checkout_started',
+  'order_created',
   'order_completed',
   'reservation_created'
 ]);
