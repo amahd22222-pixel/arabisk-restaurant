@@ -748,7 +748,7 @@ export function registerRevenueRoutes(app, {
       item.status === 'draft' &&
       item.type === type &&
       item.reference === reference &&
-      (!['abandoned_cart', 'inactive_customer'].includes(type) || !item.recoveryExpiresAt || Date.parse(item.recoveryExpiresAt || '') > Date.now())
+      (!['abandoned_cart', 'inactive_customer', 'returning_customer'].includes(type) || !item.recoveryExpiresAt || Date.parse(item.recoveryExpiresAt || '') > Date.now())
     );
     if (existing) return { ...existing, reused: true };
 
@@ -767,8 +767,6 @@ export function registerRevenueRoutes(app, {
             ? 'مسودة إعادة تنشيط: شارك رابط إعادة الطلب من آخر مشتريات العميل يدويًا بعد التحقق من الموافقة.'
             : type === 'returning_customer'
               ? 'مسودة عودة العميل: شارك رابط إعادة الطلب من آخر مشترياته يدويًا بعد التحقق من موافقة التواصل.'
-              : type === 'returning_customer'
-              ? clean(action.recommendedAction, 500)
               : type === 'product_interest'
                 ? clean(action.recommendedAction, 500)
                 : `مسودة اقتراح Pre-order للحجز: ${clean(action.title.replace('حجز قريب: ', ''), 70)}.`,
