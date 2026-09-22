@@ -80,6 +80,7 @@ const DIETARY_TAGS=new Set(['vegetarian','vegan','gluten-free']);
 
 const orders=[]; const customers=[]; const reservations=[];
 const reservationRate=new Map(); const orderRate=new Map(); const orderStatusRate=new Map();
+const MAX_RATE_KEYS=5000;
 const RESERVATION_RATE_WINDOW_MS=10*60*1000; const RESERVATION_RATE_LIMIT=8;
 const ORDER_RATE_WINDOW_MS=10*60*1000; const ORDER_RATE_LIMIT=10;
 const ORDER_STATUS_RATE_WINDOW_MS=10*60*1000; const ORDER_STATUS_RATE_LIMIT=60;
@@ -87,7 +88,34 @@ const SMART_POPULAR_WINDOW_MS=7*24*60*60*1000;
 const SMART_NEW_WINDOW_MS=30*24*60*60*1000;
 const getClientKey=(req)=>String(req.ip||'unknown').trim().slice(0,120)||'unknown';
 const requestId=(req)=>{const incoming=String(req.headers['x-request-id']||'').trim();return /^[A-Za-z0-9._-]{1,80}$/.test(incoming)?incoming:crypto.randomUUID()};
-const createRateLimit=(store,windowMs,limit,message)=>(req,res,next)=>{const now=Date.now(),key=getClientKey(req),previous=store.get(key);if(!previous||now-previous.startedAt>=windowMs){store.set(key,{startedAt:now,count:1});return next()}if(previous.count>=limit){const retryAfter=Math.max(1,Math.ceil((windowMs-(now-previous.startedAt))/1000));res.setHeader('Retry-After',String(retryAfter));return res.status(429).json({message,retryAfter})}previous.count+=1;return next()};
+const rememberRateKey=(store,key,entry,windowMs)=>{
+  const now=Date.now();
+  if(!store.has(key)&&store.size>=MAX_RATE_KEYS){
+    for(const [oldKey,oldEntry] of store){
+      if(now-oldEntry.startedAt>=windowMs){store.delete(oldKey);break;}
+    }
+    if(store.size>=MAX_RATE_KEYS){
+      const oldest=store.keys().next().value;
+      if(oldest!==undefined)store.delete(oldest);
+    }
+  }
+  store.set(key,entry);
+};
+
+const createRateLimit=(store,windowMs,limit,message)=>(req,res,next)=>{
+  const now=Date.now(),key=getClientKey(req),previous=store.get(key);
+  if(!previous||now-previous.startedAt>=windowMs){
+    rememberRateKey(store,key,{startedAt:now,count:1},windowMs);
+    return next();
+  }
+  if(previous.count>=limit){
+    const retryAfter=Math.max(1,Math.ceil((windowMs-(now-previous.startedAt))/1000));
+    res.setHeader('Retry-After',String(retryAfter));
+    return res.status(429).json({message,retryAfter});
+  }
+  previous.count+=1;
+  return next();
+};
 const reservationRateLimit=createRateLimit(reservationRate,RESERVATION_RATE_WINDOW_MS,RESERVATION_RATE_LIMIT,'Too many reservation requests. Please try again later.');
 const orderRateLimit=createRateLimit(orderRate,ORDER_RATE_WINDOW_MS,ORDER_RATE_LIMIT,'Too many order requests. Please try again later.');
 const orderStatusRateLimit=createRateLimit(orderStatusRate,ORDER_STATUS_RATE_WINDOW_MS,ORDER_STATUS_RATE_LIMIT,'Too many order status requests. Please try again later.');
