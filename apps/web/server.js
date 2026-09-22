@@ -30,6 +30,20 @@ app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 app.use((req,res,next)=>{
   const id=requestId(req);
+  res.locals.requestId=id;
+  const startedAt=process.hrtime.bigint();
+  res.on('finish',()=>{
+    if(res.statusCode<500)return;
+    const durationMs=Number(process.hrtime.bigint()-startedAt)/1e6;
+    console.error(JSON.stringify({
+      event:'http_server_error',
+      requestId:id,
+      method:req.method,
+      path:req.path,
+      status:res.statusCode,
+      durationMs:Math.round(durationMs*100)/100
+    }));
+  });
   res.setHeader('X-Request-Id',id);
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
@@ -154,10 +168,19 @@ app.get('/menu',(req,res)=>res.sendFile(path.join(__dirname,'menu.html')));
 app.get(/^\/menu\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'category-page.html')));
 app.get(/^\/menu\/[^/]+\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'product-page.html')));
 
-app.use(express.static(dist));app.use((_req,res)=>res.sendFile(path.join(dist,'index.html')));app.use((error,_req,res,_next)=>{
+app.use(express.static(dist));app.use((_req,res)=>res.sendFile(path.join(dist,'index.html')));app.use((error,req,res,_next)=>{
   if(error?.type==='entity.too.large')return res.status(413).json({message:'Request body is too large.'});
   if(error instanceof SyntaxError&&error?.status===400)return res.status(400).json({message:'Invalid JSON request.'});
-  console.error('ARABISK web error:',error);
+  console.error(JSON.stringify({event:'web_unhandled_error',requestId:res.locals.requestId||'unknown',method:req.method,path:req.path,error:String(error?.message||error)}));
   if(!res.headersSent)res.status(500).json({message:'Internal server error'});
 });
-await restoreState();await restoreCategories();await restoreStudio();await restoreExperiences();await memories.restore();await revenue.restoreRevenue();if(storageReady)persistState();app.listen(port,()=>console.log(`ARABISK web listening on ${port} — ${products.length} menu items, ${categories.length} categories`));
+
+await restoreState();await restoreCategories();await restoreStudio();await restoreExperiences();await memories.restore();await revenue.restoreRevenue();if(storageReady)persistState();
+const server=app.listen(port,()=>console.log(`ARABISK web listening on ${port} — ${products.length} menu items, ${categories.length} categories`));
+const shutdown=(signal)=>{
+  console.log(`ARABISK web received ${signal}; shutting down gracefully`);
+  server.close(()=>process.exit(0));
+  setTimeout(()=>process.exit(1),10000).unref();
+};
+process.on('SIGTERM',()=>shutdown('SIGTERM'));
+process.on('SIGINT',()=>shutdown('SIGINT'));
