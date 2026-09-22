@@ -2274,7 +2274,42 @@ export function registerRevenueRoutes(app, {
     });
   });
 
-  app.post('/api/events', (req, res) => {
+  const analyticsRate = new Map();
+  const analyticsRateLimit = (() => {
+    const windowMs = 10 * 60 * 1000;
+    const limit = 180;
+    const message = 'Too many analytics events. Please try again later.';
+    return (req, res, next) => {
+      const now = Date.now();
+      const key = clean(req.ip || 'unknown', 120);
+      const previous = analyticsRate.get(key);
+      if (!previous || now - previous.startedAt >= windowMs) {
+        if (!previous && analyticsRate.size >= 5000) {
+          for (const [oldKey, oldEntry] of analyticsRate) {
+            if (now - oldEntry.startedAt >= windowMs) {
+              analyticsRate.delete(oldKey);
+              break;
+            }
+          }
+          if (analyticsRate.size >= 5000) {
+            const oldest = analyticsRate.keys().next().value;
+            if (oldest !== undefined) analyticsRate.delete(oldest);
+          }
+        }
+        analyticsRate.set(key, { startedAt: now, count: 1 });
+        return next();
+      }
+      if (previous.count >= limit) {
+        const retryAfter = Math.max(1, Math.ceil((windowMs - (now - previous.startedAt)) / 1000));
+        res.setHeader('Retry-After', String(retryAfter));
+        return res.status(429).json({ message, retryAfter });
+      }
+      previous.count += 1;
+      return next();
+    };
+  })();
+
+  app.post('/api/events', analyticsRateLimit, (req, res) => {
     const event = recordEvent(req.body || {});
     if (!event) return res.status(400).json({ message: 'Unsupported event.' });
     return res.status(202).json({ accepted: true, id: event.id });
