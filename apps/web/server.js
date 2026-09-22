@@ -273,6 +273,7 @@ const shutdown=(signal)=>{
     clearTimeout(forceExit);
     try{
       await flushPersistState();
+      await revenue.flushPersistRevenue();
     }catch(error){
       console.error('State flush failed during shutdown:',error);
     }
