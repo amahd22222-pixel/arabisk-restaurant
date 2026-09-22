@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="متابعة حالة طلبك من ARABISK Restaurant & Cafe.">
+<title>ARABISK — متابعة الطلب</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600&display=swap');
+:root{--ink:#141210;--black:#0d0d0d;--gold:#b89455;--gold2:#d2b16d;--cream:#f6f1e7;--paper:#fffdf8;--muted:#81786c;--line:#e3dbce;--danger:#a64b35;--soft:#f2eadf}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:Cairo,sans-serif}
+[hidden]{display:none!important}
+.nav{height:82px;background:var(--black);color:#fff;display:flex;align-items:center;padding:0 6vw;gap:42px;position:sticky;top:0;z-index:10}
+.brand{font-family:'Playfair Display',serif;font-size:26px;letter-spacing:3px;line-height:1;color:#fff}
+.brand span{display:block;font-family:Cairo;font-size:8px;letter-spacing:2px;color:var(--gold2);margin-top:7px}
+.nav nav{display:flex;gap:26px;margin:auto}
+.nav a{color:#eee;text-decoration:none;font-size:13px}
+.nav a:hover{color:var(--gold2)}
+.lang{display:inline-flex;align-items:center;justify-content:center;border:1px solid #6f624f;background:none;color:#fff;border-radius:999px;min-width:42px;height:38px;padding:0 12px;font:700 10px Cairo,sans-serif;text-decoration:none}
+.track-main{max-width:1080px;margin:0 auto;padding:58px 24px 96px}
+.track-hero{text-align:center;max-width:760px;margin:0 auto}
+.eyebrow{margin:0 0 12px;color:var(--gold);font-size:10px;font-weight:800;letter-spacing:4px}
+.track-title{margin:0;font:500 clamp(42px,6vw,70px)/1.05 'Playfair Display',serif}
+.track-lead{max-width:620px;margin:15px auto 0;color:var(--muted);font-size:13px;line-height:2}
+.track-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,.75fr);gap:20px;align-items:start;margin-top:34px}
+.track-card{border:1px solid var(--line);border-radius:26px;background:var(--paper);box-shadow:0 18px 48px rgba(41,29,16,.07)}
+.track-form-card{padding:24px}
+.track-card-kicker{margin:0;color:var(--gold);font-size:9px;font-weight:800;letter-spacing:3px}
+.track-form-card h2{margin:7px 0 15px;font:500 30px/1.2 'Playfair Display',serif}
+.track-form{display:grid;gap:12px}
+.track-form label{display:grid;gap:6px;color:#5f584f;font-size:11px}
+.track-form input,.track-form select{width:100%;height:46px;border:1px solid var(--line);border-radius:13px;background:#fff;padding:0 13px;font:inherit;font-size:12px;outline:0}
+.track-form input:focus,.track-form select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,148,85,.1)}
+.track-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.track-submit{min-height:49px;border:0;border-radius:999px;background:#111;color:#fff;font:inherit;font-weight:800;cursor:pointer;margin-top:3px}
+.track-submit:hover{background:#27221c}
+.track-submit:disabled{opacity:.55;cursor:wait}
+.track-note{margin:0;color:var(--muted);font-size:10px;line-height:1.8}
+.track-error{min-height:18px;margin:0;color:var(--danger);font-size:11px;line-height:1.6}
+.track-result{padding:24px}
+.result-empty{min-height:420px;display:grid;place-items:center;text-align:center}
+.result-empty-icon{width:72px;height:72px;display:grid;place-items:center;margin:0 auto 18px;border-radius:50%;background:var(--soft);color:var(--gold);font-size:28px}
+.result-empty h2{margin:0;font:500 29px/1.2 'Playfair Display',serif}
+.result-empty p{max-width:330px;margin:9px auto 0;color:var(--muted);font-size:11px;line-height:1.9}
+.result-loaded{display:grid;gap:14px}
+.result-top{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;padding-bottom:15px;border-bottom:1px solid var(--line)}
+.result-kicker{margin:0;color:var(--gold);font-size:9px;font-weight:800;letter-spacing:3px}
+.result-id{margin:6px 0 0;font:500 31px/1 'Playfair Display',serif}
+.result-pill{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;background:#f3eadb;color:#7d612f;font-size:10px;font-weight:800}
+.result-pill i{width:7px;height:7px;border-radius:50%;background:var(--gold);display:block}
+.result-total{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 0}
+.result-total span{color:var(--muted);font-size:11px}.result-total strong{color:var(--gold);font:600 27px/1 'Playfair Display',serif}
+.track-updated{margin:0;color:var(--muted);font-size:9px}
+.timeline{display:grid;gap:8px}
+.step{display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid #eee7dc;border-radius:13px;background:#fff}
+.step-badge{width:29px;height:29px;display:grid;place-items:center;flex:0 0 29px;border-radius:50%;background:#eee8df;color:#777;font-size:11px;font-weight:800}
+.step.done .step-badge,.step.active .step-badge{background:var(--gold);color:#fff}
+.step strong{display:block;font-size:11px}.step small{display:block;margin-top:2px;color:var(--muted);font-size:9px}
+.items{display:grid;margin-top:2px}.item{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #eee7dc;font-size:11px}.item small{color:#8e6f38}
+.result-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:5px}.refresh{border:1px solid var(--line);border-radius:999px;background:#fff;padding:8px 12px;font:inherit;font-size:10px;cursor:pointer}.refresh:hover{border-color:var(--gold)}
+.last-order{display:none;margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:15px;background:#fff}
+.last-order.show{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.last-order span{color:var(--muted);font-size:10px}.last-order strong{display:block;margin-top:2px;font-size:12px}
+.last-order button{border:0;border-radius:999px;background:#111;color:#fff;padding:8px 12px;font:inherit;font-size:10px;font-weight:800;cursor:pointer}
+.track-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:9px;margin-top:22px}
+.action-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 18px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink);text-decoration:none;font-size:11px;font-weight:800}
+.action-link.primary{background:#111;color:#fff;border-color:#111}
+footer{background:#080808;color:#fff;padding:48px 8vw;display:flex;align-items:center;gap:14px}
+footer strong{font-family:'Playfair Display',serif;font-size:27px}footer span{color:var(--gold2)}footer small{margin-right:auto;color:#777}
+@media(max-width:900px){.nav{padding:0 20px}.nav nav{display:none}.track-layout{grid-template-columns:1fr}}
+@media(max-width:620px){.track-main{padding:36px 14px 65px}.track-grid{grid-template-columns:1fr}.track-form-card,.track-result{padding:18px}.result-empty{min-height:300px}.result-top{flex-direction:column}.result-pill{align-self:flex-start}.last-order.show{align-items:flex-start;flex-direction:column}footer{flex-wrap:wrap}footer small{width:100%;margin:12px 0 0}}
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="brand">ARABISK<span>RESTAURANT & CAFE</span></div>
+  <nav>
+    <a href="/">الرئيسية</a>
+    <a href="/menu">استكشف المنيو</a>
+    <a href="/events">الفعاليات</a>
+    <a href="/reservation">حجز طاولة</a>
+    <a href="/track-order" aria-current="page">متابعة الطلب</a>
+  </nav>
+  <a class="lang" href="/cart" aria-label="العودة إلى السلة">السلة</a>
+</header>
+
+<main class="track-main">
+  <section class="track-hero">
+    <p class="eyebrow">ARABISK ORDER TRACKING</p>
+    <h1 class="track-title">متابعة الطلب</h1>
+    <p class="track-lead">أدخل رقم طلبك وبيانات التحقق لعرض الحالة الحالية، مراحل التنفيذ، تفاصيل الأصناف، وآخر تحديث مباشرة من نظام ARABISK.</p>
+  </section>
+
+  <section class="track-layout" aria-label="متابعة الطلب">
+    <article class="track-card track-form-card">
+      <p class="track-card-kicker">ORDER LOOKUP</p>
+      <h2>بيانات الطلب</h2>
+      <form id="track-form" class="track-form">
+        <label>رقم الطلب
+          <input id="track-id" maxlength="20" inputmode="text" autocomplete="off" placeholder="مثال: O00012" required>
+        </label>
+        <label>نوع الطلب
+          <select id="track-type">
+            <option value="dine_in">داخل المطعم</option>
+            <option value="pickup">استلام من المطعم</option>
+          </select>
+        </label>
+        <div class="track-grid">
+          <label id="track-table-wrap">رقم الطاولة
+            <input id="track-table" maxlength="30" inputmode="numeric" autocomplete="off" placeholder="مثال: 12">
+          </label>
+          <label id="track-phone-wrap" hidden>رقم الهاتف
+            <input id="track-phone" maxlength="40" inputmode="tel" autocomplete="tel">
+          </label>
+        </div>
+        <button id="track-submit" class="track-submit" type="submit">عرض حالة الطلب</button>
+        <p id="track-error" class="track-error" role="alert" aria-live="polite"></p>
+        <p class="track-note">للطلب داخل المطعم استخدم رقم الطاولة. لطلبات الاستلام استخدم رقم الهاتف الذي تم إدخاله وقت الطلب.</p>
+      </form>
+      <div id="last-order" class="last-order">
+        <div><span>آخر طلب محفوظ على هذا الجهاز</span><strong id="last-order-id">—</strong></div>
+        <button id="last-order-open" type="button">فتح الطلب</button>
+      </div>
+    </article>
+
+    <article class="track-card track-result">
+      <div id="result-empty" class="result-empty">
+        <div>
+          <div class="result-empty-icon">◷</div>
+          <h2>طلبك هنا</h2>
+          <p>بعد إدخال البيانات سيظهر لك وضع الطلب الحالي ومراحله وتفاصيله في هذه الصفحة.</p>
+        </div>
+      </div>
+      <div id="result-loaded" class="result-loaded" hidden>
+        <div class="result-top">
+          <div><p class="result-kicker">CURRENT ORDER</p><h2 id="result-id" class="result-id">O00000</h2></div>
+          <span id="result-pill" class="result-pill"><i></i><span>حالة الطلب</span></span>
+        </div>
+        <div class="result-total"><span>الإجمالي</span><strong id="result-total">AED 0</strong></div>
+        <p id="track-updated" class="track-updated"></p>
+        <div id="timeline" class="timeline"></div>
+        <div id="items" class="items"></div>
+        <div class="result-foot"><strong id="result-foot-total">الإجمالي AED 0</strong><button id="track-refresh" class="refresh" type="button">تحديث الآن</button></div>
+      </div>
+    </article>
+  </section>
+
+  <div class="track-actions">
+    <a class="action-link primary" href="/menu">اختيار المزيد من الأصناف</a>
+    <a class="action-link" href="/cart">العودة إلى السلة</a>
+  </div>
+</main>
+
+<footer><strong>ARABISK</strong><span>Restaurant & Cafe</span><small>© 2026 ARABISK. All rights reserved.</small></footer>
+
+<script>
+(() => {
+'use strict';
+const LAST_ORDER_KEY='arabisk-last-order-v1';
+const $=selector=>document.querySelector(selector);
+const readLast=()=>{try{const value=JSON.parse(localStorage.getItem(LAST_ORDER_KEY)||'null');return value&&value.id?value:null}catch{return null}};
+const writeLast=value=>{try{localStorage.setItem(LAST_ORDER_KEY,JSON.stringify(value))}catch{}};
+const statusMeta={pending:{label:'تم استلام الطلب',step:1},confirmed:{label:'تم تأكيد الطلب',step:2},preparing:{label:'جاري التحضير',step:3},ready:{label:'الطلب جاهز',step:4},completed:{label:'تم إكمال الطلب',step:5},cancelled:{label:'تم إلغاء الطلب',step:0}};
+const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+const money=value=>'AED '+Number(value||0).toFixed(0);
+let timer=null;
+
+function syncType(){
+  const pickup=$('#track-type')?.value==='pickup';
+  const tableWrap=$('#track-table-wrap');const phoneWrap=$('#track-phone-wrap');
+  const table=$('#track-table');const phone=$('#track-phone');
+  if(tableWrap)tableWrap.hidden=pickup;
+  if(phoneWrap)phoneWrap.hidden=!pickup;
+  if(table)table.required=!pickup;
+  if(phone)phone.required=pickup;
+}
+function fillFromLast(last){
+  if(!last)return;
+  $('#track-id').value=last.id||'';
+  $('#track-type').value=last.orderType||'dine_in';
+  $('#track-table').value=last.tableNumber||'';
+  $('#track-phone').value=last.phone||'';
+  syncType();
+}
+function renderData(data){
+  const meta=statusMeta[data?.status]||{label:'حالة غير معروفة',step:0};
+  $('#result-empty').hidden=true;$('#result-loaded').hidden=false;
+  $('#result-id').textContent=data?.id||'—';
+  $('#result-total').textContent=money(data?.total);
+  $('#result-foot-total').textContent='الإجمالي '+money(data?.total);
+  $('#result-pill span').textContent=meta.label;
+  $('#track-updated').textContent=data?.updatedAt?'آخر تحديث: '+new Date(data.updatedAt).toLocaleString('ar-AE',{dateStyle:'medium',timeStyle:'short'}):'';
+  const steps=[['pending','استلام الطلب'],['confirmed','تأكيد الطلب'],['preparing','التحضير'],['ready','جاهز للاستلام'],['completed','مكتمل']];
+  $('#timeline').innerHTML=steps.map(([key,label],index)=>{
+    const done=data?.status!=='cancelled'&&meta.step>=index+1;
+    const active=data?.status===key;
+    return '<div class="step '+(done?'done ':'')+(active?'active':'')+'"><span class="step-badge">'+(done?'✓':index+1)+'</span><div><strong>'+label+'</strong><small>'+(active?'الحالة الحالية':done?'تم':'بانتظار التحديث')+'</small></div></div>';
+  }).join('')+(data?.status==='cancelled'?'<div class="step active"><span class="step-badge">!</span><div><strong>تم إلغاء الطلب</strong><small>يرجى التواصل مع المطعم.</small></div></div>':'');
+  $('#items').innerHTML=Array.isArray(data?.items)?data.items.map(item=>'<div class="item"><span>'+esc(item.nameAr||item.nameEn||'صنف')+' × '+Number(item.quantity||0)+'</span><small>'+money(item.lineTotal??((Number(item.unitPrice)||0)*(Number(item.quantity)||0)))+'</small></div>').join(''):'';
+}
+async function load(showError=true){
+  const orderId=String($('#track-id')?.value||'').trim().toUpperCase();
+  const type=$('#track-type')?.value||'dine_in';
+  const tableNumber=String($('#track-table')?.value||'').trim();
+  const phone=String($('#track-phone')?.value||'').trim();
+  const error=$('#track-error');
+  if(!/^O\d{5}$/.test(orderId)){if(showError)error.textContent='أدخل رقم الطلب بالشكل الصحيح.';return false}
+  if(type==='dine_in'&&!tableNumber){if(showError)error.textContent='أدخل رقم الطاولة.';return false}
+  if(type==='pickup'&&(phone.length<5||phone.length>40)){if(showError)error.textContent='أدخل رقم الهاتف المستخدم عند الاستلام.';return false}
+  $('#track-submit').disabled=true;
+  if(showError)error.textContent='جاري تحديث حالة الطلب…';
+  try{
+    const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),10000);
+    let response;
+    try{response=await fetch('/api/orders/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(type==='dine_in'?{orderId,tableNumber}:{orderId,phone}),signal:controller.signal})}finally{clearTimeout(timeout)}
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.message||'تعذر العثور على الطلب.');
+    renderData(data);
+    writeLast({...readLast(),id:data.id,orderType:type,tableNumber:type==='dine_in'?tableNumber:'',phone:type==='pickup'?phone:'',total:Number(data.total||0),status:data.status,updatedAt:data.updatedAt||new Date().toISOString()});
+    error.textContent='';
+    return true;
+  }catch(err){error.textContent=err.name==='AbortError'?'انتهت مهلة الاتصال.':(err.message||'تعذر تحديث حالة الطلب.');return false}
+  finally{$('#track-submit').disabled=false}
+}
+function startPolling(){clearInterval(timer);timer=setInterval(()=>{if($('#result-loaded')&&!$('#result-loaded').hidden)void load(false)},20000)}
+const url=new URLSearchParams(location.search);
+const queryOrder=url.get('order')||url.get('id')||'';
+const last=readLast();
+if(queryOrder){$('#track-id').value=queryOrder}
+else if(last){fillFromLast(last)}
+const lastBox=$('#last-order');
+if(last){$('#last-order-id').textContent=last.id;if(!queryOrder)lastBox.classList.add('show');else lastBox.classList.add('show')}
+$('#track-type').addEventListener('change',syncType);
+$('#track-form').addEventListener('submit',event=>{event.preventDefault();void load(true).then(ok=>{if(ok){startPolling();location.hash='status'}})});
+$('#track-refresh').addEventListener('click',()=>{void load(true)});
+$('#last-order-open').addEventListener('click',()=>{fillFromLast(readLast());lastBox.classList.add('show');void load(true).then(ok=>{if(ok)startPolling()})});
+syncType();
+if($('#track-id').value&&((($('#track-type').value==='dine_in')&&$('#track-table').value)||($('#track-type').value==='pickup'&&$('#track-phone').value)))void load(false).then(ok=>{if(ok)startPolling()});
+})();
+</script>
+</body>
+</html>
