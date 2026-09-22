@@ -80,6 +80,8 @@ function writeSmartFields(product={}){
 
 function resetSmartFields(){writeSmartFields({spiceLevel:0,tags:[],dietary:[],chefChoice:false,isNew:false,smart:{popular:false}});}
 
+if(!window.__ARABISK_SMART_PRODUCT_FETCH_PATCHED__){
+window.__ARABISK_SMART_PRODUCT_FETCH_PATCHED__=true;
 const originalFetch=window.fetch.bind(window);
 window.fetch=async(input,init={})=>{
   const url=typeof input==='string'?input:(input?.url||'');
@@ -89,6 +91,7 @@ window.fetch=async(input,init={})=>{
   }
   return originalFetch(input,init);
 };
+}
 
 document.addEventListener('click',event=>{
   if(event.target.closest('#add-product')){setTimeout(resetSmartFields,0);return;}
