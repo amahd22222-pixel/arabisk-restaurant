@@ -217,9 +217,12 @@ export function registerRevenueRoutes(app, {
   orders = [],
   products = []
 }) {
+  const REVENUE_PERSIST_DEBOUNCE_MS = 250;
   const events = [];
   const campaigns = [];
   let persistQueue = Promise.resolve();
+  let persistTimer = null;
+  let persistRequested = false;
 
   async function restoreRevenue() {
     if (!storageReady) return;
@@ -228,10 +231,25 @@ export function registerRevenueRoutes(app, {
     if (saved && Array.isArray(saved.campaigns)) campaigns.splice(0, campaigns.length, ...saved.campaigns.slice(-MAX_CAMPAIGNS));
   }
 
-  function persistRevenue() {
-    if (!storageReady) return Promise.resolve(false);
+  function flushPersistRevenue() {
+    if (persistTimer) {
+      clearTimeout(persistTimer);
+      persistTimer = null;
+    }
+    if (!storageReady || !persistRequested) return persistQueue;
+    persistRequested = false;
     const snapshot = { version: 2, events: events.slice(-MAX_EVENTS), campaigns: campaigns.slice(-MAX_CAMPAIGNS) };
     persistQueue = persistQueue.catch(() => {}).then(() => writeJson(REVENUE_STATE_KEY, snapshot));
+    return persistQueue;
+  }
+
+  function persistRevenue() {
+    if (!storageReady) return Promise.resolve(false);
+    persistRequested = true;
+    if (!persistTimer) {
+      persistTimer = setTimeout(() => { void flushPersistRevenue(); }, REVENUE_PERSIST_DEBOUNCE_MS);
+      persistTimer.unref();
+    }
     return persistQueue;
   }
 
@@ -2244,5 +2262,5 @@ export function registerRevenueRoutes(app, {
 
   app.get('/api/revenue/customers/:id/360', requireAdminApiKey, (req, res) => { const profile = customer360(req.params.id); if (!profile) return res.status(404).json({ message: 'Customer not found.' }); return res.json(profile); });
 
-  return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, executeAbandonedCartRecovery, executeInactiveCustomerRecovery, executeReturningCustomerRecovery, getRecoveryCart, recordRecoveryOrder, updateCampaignOutcome, updateCampaignTask, campaignSummary, customer360, customerSegments };
+  return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, executeAbandonedCartRecovery, executeInactiveCustomerRecovery, executeReturningCustomerRecovery, getRecoveryCart, recordRecoveryOrder, updateCampaignOutcome, updateCampaignTask, campaignSummary, customer360, customerSegments, flushPersistRevenue };
 }
