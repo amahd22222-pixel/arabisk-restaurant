@@ -409,6 +409,8 @@ async function loadRevenue(){
     const measured=document.querySelector('#rev-measured-revenue');if(measured)measured.textContent=revMoney(campaigns.counts?.measuredRevenue);
     const taskLabels={unassigned:'غير مسندة',assigned:'مسندة',in_progress:'قيد التنفيذ',blocked:'محجوبة',overdue:'متأخرة',escalated:'تصعيد مطلوب',done:'مكتملة'};
     const campaignRows=campaigns.recent||[];
+    window.__ARABISK_REVENUE_CAMPAIGNS__=campaignRows;
+    window.dispatchEvent(new CustomEvent('arabisk:revenue-state-updated'));
     document.querySelector('#revenue-campaigns-body').innerHTML=campaignRows.map(row=>{
       const task=row.task||{};
       const dueAt=task.dueAt||row.dueAt||'';
