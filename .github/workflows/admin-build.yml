@@ -95,4 +95,9 @@ jobs:
           curl -fsSI http://127.0.0.1:4176/health | grep -qi '^X-Request-Id:'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4176/api/orders)" = "503"
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{' http://127.0.0.1:4176/api/orders)" = "400"
+          python - <<'PY'
+          from pathlib import Path
+          Path('/tmp/oversized-login.json').write_text('{"username":"' + ('x' * 300000) + '","password":"x"}')
+          PY
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data-binary @/tmp/oversized-login.json http://127.0.0.1:4175/auth/check)" = "413"
           cat /tmp/arabisk-web.log
