@@ -3,7 +3,52 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ARABISK — لوحة التحكم</title><link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./kitchen.css"><link rel="stylesheet" href="./revenue.css"></head>
 <body class="dashboard-page">
 <div id="app-shell">
-  <aside><div class="logo">ARABISK<small>ADMIN</small></div><a data-section="dashboard" class="active" href="#dashboard">نظرة عامة</a><a data-section="products" href="#products">الأصناف</a><a data-section="categories" href="#categories">الأقسام</a><a data-section="experiences" href="#experiences">الفعاليات والتجارب</a><a data-section="studio" href="#studio">ARABISK Studio — العروض</a><a data-section="reservations" href="#reservations">حجوزات الطاولات</a><a data-section="orders" href="#orders">الطلبات</a><a data-section="revenue" href="#revenue">فرص الإيراد</a><a data-section="memories" href="#memories">ذكريات</a><a data-section="kitchen" href="#kitchen">شاشة المطبخ</a><a data-section="customers" href="#customers">العملاء</a><a data-section="settings" href="#settings">إعدادات الموقع</a><div class="user">أدمن المطعم<br><small>إدارة ARABISK</small></div></aside>
+  <aside class="admin-sidebar" id="admin-sidebar">
+    <div class="sidebar-brand">
+      <div class="logo">ARABISK<small>ADMIN</small></div>
+      <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="طي القائمة" aria-expanded="true" title="طي القائمة">
+        <span aria-hidden="true">‹</span>
+      </button>
+    </div>
+    <div class="sidebar-context">
+      <span class="sidebar-context-dot"></span>
+      <div><strong>لوحة التشغيل</strong><small>إدارة المطعم</small></div>
+    </div>
+    <nav class="sidebar-nav" aria-label="التنقل الرئيسي">
+      <div class="sidebar-group">
+        <span class="sidebar-group-title">الرئيسية</span>
+        <a data-section="dashboard" href="#dashboard" title="نظرة عامة"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-label">نظرة عامة</span></a>
+      </div>
+      <div class="sidebar-group">
+        <span class="sidebar-group-title">المطعم</span>
+        <a data-section="products" href="#products" title="الأصناف"><span class="nav-icon" aria-hidden="true">◈</span><span class="nav-label">الأصناف</span></a>
+        <a data-section="categories" href="#categories" title="الأقسام"><span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label">الأقسام</span></a>
+        <a data-section="experiences" href="#experiences" title="الفعاليات والتجارب"><span class="nav-icon" aria-hidden="true">✦</span><span class="nav-label">الفعاليات والتجارب</span></a>
+        <a data-section="studio" href="#studio" title="ARABISK Studio — العروض"><span class="nav-icon" aria-hidden="true">◫</span><span class="nav-label">ARABISK Studio</span></a>
+      </div>
+      <div class="sidebar-group">
+        <span class="sidebar-group-title">التشغيل</span>
+        <a data-section="reservations" href="#reservations" title="حجوزات الطاولات"><span class="nav-icon" aria-hidden="true">◷</span><span class="nav-label">حجوزات الطاولات</span><b class="sidebar-badge" data-sidebar-count="reservations">0</b></a>
+        <a data-section="orders" href="#orders" title="الطلبات"><span class="nav-icon" aria-hidden="true">▤</span><span class="nav-label">الطلبات</span><b class="sidebar-badge" data-sidebar-count="orders">0</b></a>
+        <a data-section="kitchen" href="#kitchen" title="شاشة المطبخ"><span class="nav-icon" aria-hidden="true">◉</span><span class="nav-label">شاشة المطبخ</span></a>
+      </div>
+      <div class="sidebar-group">
+        <span class="sidebar-group-title">النمو</span>
+        <a data-section="revenue" href="#revenue" title="فرص الإيراد"><span class="nav-icon" aria-hidden="true">↗</span><span class="nav-label">فرص الإيراد</span></a>
+        <a data-section="customers" href="#customers" title="العملاء"><span class="nav-icon" aria-hidden="true">◎</span><span class="nav-label">العملاء</span></a>
+        <a data-section="memories" href="#memories" title="ذكريات"><span class="nav-icon" aria-hidden="true">▣</span><span class="nav-label">ذكريات</span></a>
+      </div>
+      <div class="sidebar-group sidebar-group-last">
+        <span class="sidebar-group-title">النظام</span>
+        <a data-section="settings" href="#settings" title="إعدادات الموقع"><span class="nav-icon" aria-hidden="true">⚙</span><span class="nav-label">إعدادات الموقع</span></a>
+      </div>
+    </nav>
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">A</div>
+      <div class="sidebar-user-copy"><strong>أدمن المطعم</strong><small>إدارة ARABISK</small></div>
+      <span class="sidebar-user-state" title="الحساب متصل"></span>
+    </div>
+  </aside>
   <main>
   <header id="dashboard"><div><span>لوحة التحكم</span><h1 id="page-title">إدارة ARABISK</h1></div><div class="header-actions"><span id="connection" class="disconnected">جارٍ الاتصال…</span><button id="logout" type="button" class="small-action">تسجيل الخروج</button><button id="add-product">+ إضافة صنف</button></div></header><div id="error" class="error"></div>
   <section class="stats" id="dashboard-stats"><article><span>إجمالي الأصناف</span><b id="count-products">—</b></article><article><span>الأقسام</span><b id="count-categories">—</b></article><article><span>الأصناف المتاحة</span><b id="count-available">—</b></article><article><span>حجوزات الطاولات</span><b id="count-reservations">—</b></article><article><span>الطلبات</span><b id="count-orders">—</b></article></section>
