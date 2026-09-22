@@ -179,7 +179,9 @@ function renderRevenueTaskRouting(){
   if(!body)return;
   body.innerHTML=(routing.recommendations||[]).map(row=>{
     const due=row.dueAt?new Date(row.dueAt).toLocaleString('ar-AE',{dateStyle:'short',timeStyle:'short'}):'بدون SLA';
-    return '<tr><td><strong>'+revEsc(row.title)+'</strong><small>'+revEsc(row.id)+'</small></td><td class="price">'+revMoney(row.potentialValue)+'</td><td>'+revEsc(row.suggestedOwner)+'</td><td>'+Number(row.suggestedOwnerOpenTasks||0)+' مفتوحة — '+Number(row.suggestedOwnerOverdueTasks||0)+' متأخرة<small>'+revEsc(due)+'</small></td><td><button class="small-action revenue-route-apply" data-route-task="'+revEsc(row.id)+'" data-route-owner="'+revEsc(row.suggestedOwner)+'" data-route-due="'+revEsc(row.dueAt||'')+'" type="button">تطبيق الاقتراح</button></td></tr>';
+    const perf=row.suggestedOwnerOnTimeRate===null||row.suggestedOwnerOnTimeRate===undefined?'لا توجد بيانات SLA كافية':Number(row.suggestedOwnerOnTimeRate).toFixed(1)+'% في الموعد';
+    const sla=row.suggestedSlaHours?row.suggestedSlaHours+' ساعة مقترحة':'—';
+    return '<tr><td><strong>'+revEsc(row.title)+'</strong><small>'+revEsc(row.taskType||row.type||'مهمة إيرادات')+'</small><small>'+revEsc(row.id)+'</small></td><td class="price">'+revMoney(row.potentialValue)+'</td><td><strong>'+revEsc(row.suggestedOwner)+'</strong><small>'+revEsc(perf)+'</small></td><td><span class="routing-sla">'+revEsc(sla)+'</span><small>'+revEsc(due)+'</small></td><td><small>'+revEsc(row.reason)+'</small><button class="small-action revenue-route-apply" data-route-task="'+revEsc(row.id)+'" data-route-owner="'+revEsc(row.suggestedOwner)+'" data-route-due="'+revEsc(row.dueAt||'')+'" type="button">تطبيق الاقتراح</button></td></tr>';
   }).join('')||'<tr><td colspan="5" class="empty">لا توجد مهام غير مسندة تحتاج اقتراح توزيع حاليًا.</td></tr>';
 }
 
