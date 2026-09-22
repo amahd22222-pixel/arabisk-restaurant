@@ -1182,17 +1182,6 @@ export function registerRevenueRoutes(app, {
         orderId:item.orderId||item.attribution?.orderId||'',
         updatedAt:item.updatedAt||item.createdAt||''
       }));
-    const opportunityTimeline = opportunities.slice(0, 20).map(item => ({
-      type: 'opportunity',
-      label: 'فرصة',
-      title: clean(item.reason || item.recommendedAction || 'فرصة مرتبطة بالعميل', 160),
-      details: clean(item.recommendedAction || '', 240),
-      status: clean(item.priority || '', 40),
-      value: number(item.potentialValue),
-      at: new Date().toISOString(),
-      reference: clean(item.id || item.reference || '', 120),
-      opportunityType: clean(item.type || '', 40)
-    }));
     const orderTimeline = validOrders.slice().map(order => ({
       type: 'order',
       label: 'طلب',
@@ -1243,7 +1232,7 @@ export function registerRevenueRoutes(app, {
         eventName: clean(item.eventName, 40)
       };
     });
-    const timeline = [...opportunityTimeline, ...actionTimeline, ...orderTimeline, ...reservationTimeline, ...eventTimeline]
+    const timeline = [...actionTimeline, ...orderTimeline, ...reservationTimeline, ...eventTimeline]
       .filter(item => item.at)
       .sort((a, b) => Date.parse(b.at || '') - Date.parse(a.at || ''))
       .slice(0, 60);
