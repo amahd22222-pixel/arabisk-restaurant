@@ -148,7 +148,7 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
 
   <section class="cart-layout" aria-label="السلة وإتمام الطلب">
     <article class="cart-card cart-items-card">
-      <div class="cart-card-head"><div><h2>الأصناف المختارة</h2><span id="cart-count-label" class="cart-count">لا توجد أصناف</span></div><div class="cart-head-actions"><button id="cart-track-last" class="cart-head-btn" type="button" hidden>متابعة آخر طلب</button><button id="cart-clear" class="cart-head-btn danger" type="button" hidden>إفراغ السلة</button></div></div>
+      <div class="cart-card-head"><div><h2>الأصناف المختارة</h2><span id="cart-count-label" class="cart-count">لا توجد أصناف</span></div><div class="cart-head-actions"><a id="cart-track-last" class="cart-head-btn" href="/track-order" hidden>متابعة آخر طلب</a><button id="cart-clear" class="cart-head-btn danger" type="button" hidden>إفراغ السلة</button></div></div>
       <div id="cart-items" class="cart-items"></div>
     </article>
     <aside id="cart-summary" class="cart-card cart-summary">
@@ -196,17 +196,7 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
     <h3>تم استلام طلبك</h3>
     <p>تم إرسال الطلب بنجاح إلى المطعم. احتفظ برقم الطلب لمتابعة حالته.</p>
     <div class="cart-order-meta"><div><small>رقم الطلب</small><strong id="success-order-id">—</strong></div><div><small>الإجمالي</small><strong id="success-order-total">AED 0</strong></div></div>
-    <div class="cart-modal-actions"><button id="success-track" class="cart-secondary" type="button">متابعة الطلب</button><div style="grid-column:1/-1;text-align:center;margin-top:10px"><a href="/track-order" style="color:#8e6f38;font-size:10px;text-decoration:none">فتح صفحة متابعة الطلب المستقلة ←</a></div><a class="cart-primary" href="/menu">اختيار المزيد</a></div>
-  </div>
-</div>
-
-<div id="cart-track" class="cart-track" role="dialog" aria-modal="true">
-  <div class="cart-modal">
-    <div class="cart-track-head"><div><p class="cart-modal-eyebrow">ARABISK TRACKING</p><h3 id="track-title">متابعة الطلب</h3></div><button id="track-close" class="cart-close" type="button" aria-label="إغلاق">×</button></div>
-    <form id="track-form" class="cart-track-form"><label>رقم الطلب<input id="track-id" maxlength="20" placeholder="مثال: O00012" required></label><label>نوع الطلب<select id="track-type"><option value="dine_in">داخل المطعم</option><option value="pickup">استلام من المطعم</option></select></label><label id="track-table-wrap">رقم الطاولة<input id="track-table" maxlength="30" inputmode="numeric" placeholder="مثال: 12"></label><label id="track-phone-wrap" hidden>رقم الهاتف<input id="track-phone" maxlength="40" inputmode="tel" autocomplete="tel"></label><button type="submit">تحديث حالة الطلب</button><p id="track-error" class="cart-track-error"></p></form>
-    <div id="track-status" class="cart-track-status"><strong>حالة الطلب</strong><span>أدخل بيانات الطلب لعرض الحالة الحالية.</span></div>
-    <small id="track-updated" class="cart-track-updated"></small><div id="track-timeline" class="cart-track-timeline"></div><div id="track-items" class="cart-track-items"></div>
-    <div class="cart-track-foot"><strong id="track-total">الإجمالي AED 0</strong><button id="track-refresh" class="cart-track-refresh" type="button">تحديث الآن</button></div>
+    <div class="cart-modal-actions"><a id="success-track" class="cart-secondary" href="/track-order">متابعة الطلب</a><div style="grid-column:1/-1;text-align:center;margin-top:10px"><a href="/track-order" style="color:#8e6f38;font-size:10px;text-decoration:none">فتح صفحة متابعة الطلب المستقلة ←</a></div><a class="cart-primary" href="/menu">اختيار المزيد</a></div>
   </div>
 </div>
 
