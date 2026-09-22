@@ -23,9 +23,14 @@ function renderCustomerSegmentMembers(segment){
   wrap.hidden=false;
   wrap.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
-async function loadCustomerSegments(){
+let customerSegmentsLoaded=false;
+async function loadCustomerSegments(force=false){
+  if(customerSegmentsLoaded&&!force){renderCustomerSegments();return;}
   const result=await request('/api/revenue/customer-segments');
   customerSegments=Array.isArray(result.segments)?result.segments:[];
+  customerSegmentsLoaded=true;
+  window.__ARABISK_CUSTOMER_SEGMENTS__=customerSegments;
+  window.dispatchEvent(new CustomEvent('arabisk:customer-state-updated'));
   renderCustomerSegments();
 }
 function renderCustomers(){
@@ -39,8 +44,8 @@ function openModal(product=null){editingId=product?.id||null;$('#modal-title').t
 function closeModal(){$('#modal').classList.remove('show');$('#modal').setAttribute('aria-hidden','true');editingId=null;}
 function updateVideoPreview(url){const wrap=$('#video-preview'),player=$('#video-preview-player');if(!url){wrap.hidden=true;player.removeAttribute('src');player.load();return}player.src=url;wrap.hidden=false;}
 function updateImagePreview(url){const wrap=$('#image-preview'),image=$('#image-preview-player');if(!url){wrap.hidden=true;image.removeAttribute('src');return}image.src=url;wrap.hidden=false;}
-function showSection(sectionId){document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('section-visible'));document.querySelectorAll('[data-section]').forEach(link=>link.classList.toggle('active',link.dataset.section===sectionId));const titleMap={dashboard:'إدارة ARABISK',products:'إدارة الأصناف',categories:'إدارة الأقسام',studio:'ARABISK Studio — العروض',experiences:'الفعاليات والتجارب',reservations:'حجوزات الطاولات',orders:'الطلبات',revenue:'فرص الإيراد',memories:'ذكريات',customers:'العملاء',settings:'إعدادات الموقع'};$('#page-title').textContent=titleMap[sectionId]||'إدارة ARABISK';$('#dashboard-stats').style.display=sectionId==='dashboard'?'grid':'none';const section=document.getElementById(sectionId==='dashboard'?'products':sectionId);if(section)section.classList.add('section-visible');if(sectionId==='dashboard')document.getElementById('products').classList.add('section-visible');}
-async function load(){ $('#connection').textContent='جارٍ الاتصال…';try{const results=await Promise.all([request('/api/categories'),request('/api/products'),request('/api/orders'),request('/api/customers'),request('/api/reservations')]);[categories,products,orders,customers,reservations]=results;renderStats();renderProducts();renderCategories();renderOrders();renderCustomers();renderReservations();void loadCustomerSegments().catch(()=>{});$('#connection').textContent='متصل';$('#connection').className='connected';$('#error').textContent='';}catch(error){$('#connection').textContent='غير متصل';$('#connection').className='disconnected';$('#error').textContent=`${error.message}. تحقق من رابط الـAPI في الإعدادات.`;}}
+function showSection(sectionId){if(sectionId==='customers')void loadCustomerSegments().catch(()=>{});document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('section-visible'));document.querySelectorAll('[data-section]').forEach(link=>link.classList.toggle('active',link.dataset.section===sectionId));const titleMap={dashboard:'إدارة ARABISK',products:'إدارة الأصناف',categories:'إدارة الأقسام',studio:'ARABISK Studio — العروض',experiences:'الفعاليات والتجارب',reservations:'حجوزات الطاولات',orders:'الطلبات',revenue:'فرص الإيراد',memories:'ذكريات',customers:'العملاء',settings:'إعدادات الموقع'};$('#page-title').textContent=titleMap[sectionId]||'إدارة ARABISK';$('#dashboard-stats').style.display=sectionId==='dashboard'?'grid':'none';const section=document.getElementById(sectionId==='dashboard'?'products':sectionId);if(section)section.classList.add('section-visible');if(sectionId==='dashboard')document.getElementById('products').classList.add('section-visible');}
+async function load(){ $('#connection').textContent='جارٍ الاتصال…';try{const results=await Promise.all([request('/api/categories'),request('/api/products'),request('/api/orders'),request('/api/customers'),request('/api/reservations')]);[categories,products,orders,customers,reservations]=results;window.__ARABISK_CUSTOMERS__=customers;window.dispatchEvent(new CustomEvent('arabisk:customer-state-updated'));renderStats();renderProducts();renderCategories();renderOrders();renderCustomers();renderReservations();$('#connection').textContent='متصل';$('#connection').className='connected';$('#error').textContent='';}catch(error){$('#connection').textContent='غير متصل';$('#connection').className='disconnected';$('#error').textContent=`${error.message}. تحقق من رابط الـAPI في الإعدادات.`;}}
 function loadSettings(){$('#api-base').value=apiBase();$('#site-name').value=localStorage.getItem('ARABISK_SITE_NAME')||'ARABISK';$('#site-description').value=localStorage.getItem('ARABISK_SITE_DESCRIPTION')||'مطعم وكافيه بطابع عربي عصري.';}
 async function uploadFile(endpoint,productId,file,onProgress,errorText){const prepared=await request(endpoint,{method:'POST',body:JSON.stringify({productId,fileName:file.name,contentType:file.type,size:file.size})});await new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('PUT',prepared.uploadUrl);xhr.setRequestHeader('Content-Type',file.type||'application/octet-stream');xhr.upload.onprogress=event=>{if(event.lengthComputable&&onProgress)onProgress(Math.round(event.loaded/event.total*100))};xhr.onload=()=>xhr.status>=200&&xhr.status<300?resolve():reject(new Error(errorText));xhr.onerror=()=>reject(new Error('تعذر الاتصال بتخزين الوسائط.'));xhr.send(file)});return prepared.key;}
 async function deleteVideo(productId){const prepared=await request('/api/videos/delete-presign',{method:'POST',body:JSON.stringify({productId})});if(prepared.url){const response=await fetch(prepared.url,{method:'DELETE'});if(!response.ok)throw new Error('تعذر حذف الفيديو من التخزين.')}await request(`/api/products/${productId}`,{method:'PATCH',body:JSON.stringify({videoKey:''})});}
@@ -154,7 +159,7 @@ async function createSegmentActionDraft(segmentKey){
     const state=$('#customers-state'); if(state)state.textContent=data.reused?`المهمة الخاصة بـ${segment.label} موجودة بالفعل ومفتوحة (${draft.id}) — لم يتم إنشاء نسخة مكررة.`:`تم إنشاء مسودة إجراء لـ${segment.label} (${draft.id}). التنفيذ يدوي وبعد التحقق من الموافقة.`;
   }catch(error){const state=$('#customers-state');if(state)state.textContent=error.message;}
 }
-document.querySelector('#customer-segments-refresh')?.addEventListener('click',()=>void loadCustomerSegments());
+document.querySelector('#customer-segments-refresh')?.addEventListener('click',()=>void loadCustomerSegments(true));
 document.addEventListener('click',event=>{const actionButton=event.target.closest('[data-segment-action]');if(actionButton){event.stopPropagation();void createSegmentActionDraft(actionButton.dataset.segmentAction);}});
 document.querySelector('#customer-segment-close')?.addEventListener('click',()=>{const wrap=$('#customer-segment-members');if(wrap)wrap.hidden=true;});
 document.addEventListener('click',event=>{
