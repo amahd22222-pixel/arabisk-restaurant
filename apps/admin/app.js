@@ -38,15 +38,30 @@ function renderCustomers(){
   const state=$('#customers-state');
   const body=$('#customers-body');
   const search=$('#customers-search');
+  const filter=$('#customers-filter');
+  const sort=$('#customers-sort');
   if(!customers.length){if(state)state.textContent='لا توجد بيانات عملاء مسجلة حاليًا.';if(body)body.innerHTML='';return;}
   const query=(search?.value||'').trim().toLowerCase();
-  const filtered=query
-    ? customers.filter(customer=>`${customer.name||''} ${customer.phone||''}`.toLowerCase().includes(query))
-    : customers;
-  if(state)state.textContent=query
-    ? `عرض ${filtered.length} من ${customers.length} عميل.`
-    : `${customers.length} عميل مسجل.`;
-  if(body)body.innerHTML=filtered.map(customer=>`<tr><td><strong>${escapeHtml(customer.name||'عميل')}</strong><small dir="ltr">${escapeHtml(customer.phone||'')}</small></td><td>${Number(customer.orderCount||0)}</td><td>${Number(customer.reservationCount||0)}</td><td>${customer.lastOrderAt?new Date(customer.lastOrderAt).toLocaleDateString('ar-AE'):'—'}</td><td class="actions"><button class="small-action" data-customer-360="${escapeHtml(customer.id)}" type="button">فتح الملف</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا يوجد عميل يطابق البحث.</td></tr>';
+  const mode=filter?.value||'';
+  const order=sort?.value||'recent';
+  let filtered=customers.filter(customer=>{
+    if(query&&!\`${customer.name||''} ${customer.phone||''}\`.toLowerCase().includes(query))return false;
+    if(mode==='orders'&&Number(customer.orderCount||0)<=0)return false;
+    if(mode==='reservations'&&Number(customer.reservationCount||0)<=0)return false;
+    return true;
+  });
+  filtered=filtered.slice().sort((left,right)=>{
+    if(order==='orders')return Number(right.orderCount||0)-Number(left.orderCount||0);
+    if(order==='reservations')return Number(right.reservationCount||0)-Number(left.reservationCount||0);
+    if(order==='name')return String(left.name||'').localeCompare(String(right.name||''),'ar');
+    const leftTime=left.lastOrderAt?Date.parse(left.lastOrderAt):0;
+    const rightTime=right.lastOrderAt?Date.parse(right.lastOrderAt):0;
+    return rightTime-leftTime;
+  });
+  if(state)state.textContent=(query||mode)
+    ? \`عرض ${filtered.length} من ${customers.length} عميل.\`
+    : \`${customers.length} عميل مسجل — مرتب حسب الأحدث طلبًا.\`;
+  if(body)body.innerHTML=filtered.map(customer=>\`<tr><td><strong>${escapeHtml(customer.name||'عميل')}</strong><small dir="ltr">${escapeHtml(customer.phone||'')}</small></td><td>${Number(customer.orderCount||0)}</td><td>${Number(customer.reservationCount||0)}</td><td>${customer.lastOrderAt?new Date(customer.lastOrderAt).toLocaleDateString('ar-AE'):'—'}</td><td class="actions"><button class="small-action" data-customer-360="${escapeHtml(customer.id)}" type="button">فتح الملف</button></td></tr>\`).join('')||'<tr><td colspan="5" class="empty">لا يوجد عميل يطابق التصفية الحالية.</td></tr>';
 }
 function openModal(product=null){editingId=product?.id||null;$('#modal-title').textContent=editingId?'تعديل الصنف':'إضافة صنف جديد';$('#name-ar').value=product?.nameAr||'';$('#name-en').value=product?.nameEn||'';$('#price').value=product?.price??'';$('#image-url').value=product?.imageUrl&&!product.imageKey?product.imageUrl:'';$('#description-ar').value=product?.descriptionAr||'';$('#category').innerHTML=categories.map(c=>`<option value="${escapeHtml(c.id)}" ${product?.categoryId===c.id?'selected':''}>${escapeHtml(c.nameAr)}</option>`).join('');$('#available').checked=product?.available??true;$('#video-file').value='';$('#selected-file').textContent='';$('#remove-video').hidden=!product?.videoKey;updateVideoPreview(product?.videoUrl||'');$('#image-file').value='';$('#selected-image').textContent='';$('#remove-image').hidden=!product?.imageKey;updateImagePreview(product?.imageUrl||'');$('#modal').classList.add('show');$('#modal').setAttribute('aria-hidden','false');$('#name-ar').focus();}
 function closeModal(){$('#modal').classList.remove('show');$('#modal').setAttribute('aria-hidden','true');editingId=null;}
@@ -59,7 +74,7 @@ async function uploadFile(endpoint,productId,file,onProgress,errorText){const pr
 async function deleteVideo(productId){const prepared=await request('/api/videos/delete-presign',{method:'POST',body:JSON.stringify({productId})});if(prepared.url){const response=await fetch(prepared.url,{method:'DELETE'});if(!response.ok)throw new Error('تعذر حذف الفيديو من التخزين.')}await request(`/api/products/${productId}`,{method:'PATCH',body:JSON.stringify({videoKey:''})});}
 async function deleteImage(productId){const prepared=await request('/api/images/delete-presign',{method:'POST',body:JSON.stringify({productId})});if(prepared.url){const response=await fetch(prepared.url,{method:'DELETE'});if(!response.ok)throw new Error('تعذر حذف الصورة من التخزين.')}await request(`/api/products/${productId}`,{method:'PATCH',body:JSON.stringify({imageKey:''})});}
 document.querySelectorAll('[data-section]').forEach(link=>link.addEventListener('click',()=>setTimeout(()=>showSection(link.dataset.section),0)));
-$('#customers-search')?.addEventListener('input',renderCustomers);
+['customers-search','customers-filter','customers-sort'].forEach(id=>document.querySelector('#'+id)?.addEventListener(id==='customers-search'?'input':'change',renderCustomers));
 $('#add-product').addEventListener('click',()=>openModal());$('#cancel').addEventListener('click',closeModal);$('#search').addEventListener('input',renderProducts);$('#refresh-reservations').addEventListener('click',load);$('#refresh-orders').addEventListener('click',load);$('#modal').addEventListener('click',event=>{if(event.target.id==='modal')closeModal()});
 $('#video-file').addEventListener('change',()=>{const file=$('#video-file').files[0];if(!file){$('#selected-file').textContent='';return}$('#selected-file').textContent=`${file.name} — ${(file.size/1024/1024).toFixed(1)} MB`;if($('#video-preview-player').src.startsWith('blob:'))URL.revokeObjectURL($('#video-preview-player').src);updateVideoPreview(URL.createObjectURL(file));$('#remove-video').hidden=false});
 $('#image-file').addEventListener('change',()=>{const file=$('#image-file').files[0];if(!file){$('#selected-image').textContent='';return}$('#selected-image').textContent=`${file.name} — ${(file.size/1024/1024).toFixed(1)} MB`;updateImagePreview(URL.createObjectURL(file));$('#remove-image').hidden=false});
