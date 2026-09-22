@@ -16,6 +16,8 @@ const webApiBase = String(process.env.ARABISK_WEB_API_URL || '').trim().replace(
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const AUTH_RATE_WINDOW_MS = 10 * 60 * 1000;
 const AUTH_RATE_LIMIT = 6;
+const UPSTREAM_API_TIMEOUT_MS = 15000;
+const MAX_UPSTREAM_RESPONSE_BYTES = 2 * 1024 * 1024;
 const sessions = new Map();
 const authRate = new Map();
 const serverStartedAt = Date.now();
@@ -264,9 +266,37 @@ async function proxyApiRequest(req, res) {
     }
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_API_TIMEOUT_MS);
   try {
-    const upstream = await fetch(upstreamUrl, { method: req.method, headers, body });
-    const responseBody = await upstream.text();
+    const upstream = await fetch(upstreamUrl, { method: req.method, headers, body, signal: controller.signal });
+    const contentLength = Number(upstream.headers.get('content-length'));
+    if (Number.isFinite(contentLength) && contentLength > MAX_UPSTREAM_RESPONSE_BYTES) {
+      return res.writeHead(502, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'})
+        .end(JSON.stringify({ message: 'Web API response is too large.' }));
+    }
+    const reader = upstream.body?.getReader();
+    let responseBody = '';
+    let receivedBytes = 0;
+    if (reader) {
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          responseBody += decoder.decode();
+          break;
+        }
+        receivedBytes += value.byteLength;
+        if (receivedBytes > MAX_UPSTREAM_RESPONSE_BYTES) {
+          await reader.cancel();
+          return res.writeHead(502, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'})
+            .end(JSON.stringify({ message: 'Web API response is too large.' }));
+        }
+        responseBody += decoder.decode(value, { stream: true });
+      }
+    } else {
+      responseBody = await upstream.text();
+    }
     const responseHeaders = {
       'Content-Type': upstream.headers.get('content-type') || 'application/json; charset=utf-8',
       'Cache-Control': 'no-store',
@@ -275,9 +305,16 @@ async function proxyApiRequest(req, res) {
     res.writeHead(upstream.status, responseHeaders);
     return res.end(responseBody);
   } catch (error) {
-    console.error('ARABISK admin proxy error:', error);
-    res.writeHead(502, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'});
-    return res.end(JSON.stringify({ message: 'Unable to reach the web API.' }));
+    const timedOut = error?.name === 'AbortError';
+    console.error(JSON.stringify({
+      event: 'admin_proxy_error',
+      requestId: String(res.getHeader('X-Request-Id') || requestId(req)),
+      message: timedOut ? 'upstream_timeout' : String(error?.message || error)
+    }));
+    res.writeHead(timedOut ? 504 : 502, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'});
+    return res.end(JSON.stringify({ message: timedOut ? 'The web API took too long to respond.' : 'Unable to reach the web API.' }));
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
