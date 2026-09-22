@@ -1582,31 +1582,101 @@ export function registerRevenueRoutes(app, {
       }))
       .sort((a,b) => a.loadScore - b.loadScore || a.open - b.open || a.overdue - b.overdue || a.owner.localeCompare(b.owner, 'ar'));
 
+    const ownerPerformanceMap = new Map(
+      byOwner
+        .filter(row => Number(row.completed || 0) > 0)
+        .map(row => [row.owner, row])
+    );
+    const ownerTypePerformance = new Map();
+    for (const item of completedTasks) {
+      const owner = clean(item.owner, 80);
+      if (!owner) continue;
+      const sourceType = clean(item.sourceType || 'revenue_opportunity', 50);
+      const sourceKey = clean(item.sourceKey || item.type || item.reference || 'unknown', 120);
+      const key = owner + ':' + sourceType + ':' + sourceKey;
+      const current = ownerTypePerformance.get(key) || { owner, completed:0, slaMeasured:0, onTime:0, durations:[] };
+      current.completed += 1;
+      const dueAt = Date.parse(item.dueAt || '');
+      const completedAt = Date.parse(item.completedAt || '');
+      if (Number.isFinite(dueAt) && Number.isFinite(completedAt)) {
+        current.slaMeasured += 1;
+        if (completedAt <= dueAt) current.onTime += 1;
+      }
+      const startedAt = Date.parse(item.startedAt || item.assignedAt || '');
+      if (Number.isFinite(startedAt) && Number.isFinite(completedAt)) current.durations.push(Math.max(0, (completedAt - startedAt) / 3600000));
+      ownerTypePerformance.set(key, current);
+    }
+    const routingTaskType = row => ({
+      abandoned_cart:'استرجاع سلة',
+      inactive_customer:'إعادة تنشيط عميل',
+      returning_customer:'إعادة طلب لعميل عائد',
+      upcoming_reservation:'تجهيز Pre-order للحجز',
+      product_interest:'متابعة اهتمام منتج',
+      segment_action:'إجراء شريحة',
+      alert_action:'معالجة تنبيه إيرادات'
+    }[clean(row.type, 50)] || clean(row.task?.label || 'مهمة إيرادات', 80));
+    const routingSlaHours = (row, owner, typePerf) => {
+      const dueAt = Date.parse(row.dueAt || '');
+      if (Number.isFinite(dueAt)) return Math.max(1, Math.round((dueAt - now) / 3600000));
+      const avg = typePerf?.durations?.length
+        ? typePerf.durations.reduce((sum, value) => sum + value, 0) / typePerf.durations.length
+        : owner ? Number(owner.averageCompletionHours || 0) : 0;
+      if (avg > 0) return Math.max(4, Math.min(48, Math.ceil(avg * 1.5)));
+      return number(row.potentialValue) >= 300 ? 8 : 24;
+    };
+    const routingOwnersWithPerformance = routingOwners.map(owner => {
+      const performance = ownerPerformanceMap.get(owner.owner);
+      const onTimeRate = performance?.onTimeRate;
+      const performancePenalty = onTimeRate === null || onTimeRate === undefined ? 0 : Math.max(0, Math.min(8, (100 - Number(onTimeRate)) / 12.5));
+      return {
+        ...owner,
+        onTimeRate,
+        completed: Number(performance?.completed || 0),
+        performancePenalty
+      };
+    });
     const routingRecommendations = [];
-    const virtualOwners = routingOwners.map(row => ({ ...row }));
+    const virtualOwners = routingOwnersWithPerformance.map(row => ({ ...row }));
     for (const row of openTaskRows.filter(item => !item.owner).sort((a,b) => number(b.potentialValue) - number(a.potentialValue))) {
-      virtualOwners.sort((a,b) => a.loadScore - b.loadScore || a.open - b.open || a.overdue - b.overdue || a.owner.localeCompare(b.owner, 'ar'));
-      const suggestion = virtualOwners[0];
-      if (!suggestion) break;
+      const eligible = virtualOwners.slice().map(owner => {
+        const exactKey = owner.owner + ':' + clean(row.sourceType || 'revenue_opportunity', 50) + ':' + clean(row.sourceKey || row.type || row.reference || 'unknown', 120);
+        const typePerf = ownerTypePerformance.get(exactKey);
+        const historicalRate = typePerf?.slaMeasured ? Math.round((typePerf.onTime / typePerf.slaMeasured) * 1000) / 10 : owner.onTimeRate;
+        const fitPenalty = typePerf?.slaMeasured >= 3
+          ? Math.max(0, Math.min(10, (100 - Number(historicalRate || 0)) / 10))
+          : owner.performancePenalty;
+        return { owner, typePerf, historicalRate, routeScore: owner.loadScore + fitPenalty };
+      }).sort((a,b) => a.routeScore - b.routeScore || a.owner.open - b.owner.open || a.owner.overdue - b.owner.overdue || a.owner.owner.localeCompare(b.owner.owner, 'ar'));
+      const chosen = eligible[0];
+      if (!chosen) break;
+      const suggestion = chosen.owner;
+      const slaHours = routingSlaHours(row, ownerPerformanceMap.get(suggestion.owner), chosen.typePerf);
+      const historical = chosen.historicalRate !== null && chosen.historicalRate !== undefined
+        ? `الأداء التاريخي على SLA: ${Number(chosen.historicalRate).toFixed(1)}%.`
+        : 'لا توجد بيانات SLA تاريخية كافية لهذا المسؤول.';
       routingRecommendations.push({
         id: row.id,
         title: row.title,
+        type: row.type || '',
+        taskType: routingTaskType(row),
         potentialValue: Math.round(Math.max(0, number(row.potentialValue)) * 100) / 100,
         dueAt: row.dueAt || '',
+        suggestedSlaHours: slaHours,
         status: row.task.key,
         statusLabel: row.task.label,
         suggestedOwner: suggestion.owner,
         suggestedOwnerOpenTasks: suggestion.open,
         suggestedOwnerOverdueTasks: suggestion.overdue,
-        reason: `اقتراح مبدئي لأن ${suggestion.owner} لديه حاليًا ${suggestion.open} مهام مفتوحة و${suggestion.overdue} متأخرة.`,
-        note: 'الاقتراح يعتمد على عبء العمل الحالي فقط، ويظل قرار التعيين بيد المدير.'
+        suggestedOwnerOnTimeRate: chosen.historicalRate ?? null,
+        reason: `اقتراح مبدئي يجمع بين عبء العمل الحالي و${historical}`,
+        note: 'الاقتراح لا يعيّن المهمة تلقائيًا؛ يعتمد على البيانات الحالية والأداء التاريخي المتاح فقط، ويظل قرار التعيين بيد المدير.'
       });
       suggestion.open += 1;
       suggestion.loadScore += 1;
     }
     const taskRouting = {
       generatedAt: new Date(now).toISOString(),
-      availableOwners: routingOwners.map(row => ({
+      availableOwners: routingOwnersWithPerformance.map(row => ({
         owner: row.owner,
         open: row.open,
         blocked: row.blocked,
@@ -1614,13 +1684,15 @@ export function registerRevenueRoutes(app, {
         overdue: row.overdue,
         escalated: row.escalated,
         dueSoon: row.dueSoon,
-        loadScore: Math.round(row.loadScore * 10) / 10
+        completed: row.completed,
+        onTimeRate: row.onTimeRate,
+        loadScore: Math.round((row.loadScore + row.performancePenalty) * 10) / 10
       })),
       recommendations: routingRecommendations,
       unassignedCount: workloadRows.filter(item => !item.owner).length,
       blockedCount: workloadRows.filter(item => item.task.key === 'blocked').length,
       note: routingOwners.length
-        ? 'الاقتراحات مرتبة باستخدام عبء العمل الحالي فقط؛ لا يتم نقل أو تعيين أي مهمة تلقائيًا.'
+        ? 'الاقتراحات تجمع بين عبء العمل الحالي والأداء التاريخي المتاح لكل مسؤول ونوع المهمة، ولا يتم التعيين تلقائيًا.'
         : 'لا يوجد مسؤول نشط معروف من المهام الحالية لتوليد اقتراح توزيع.'
     };
 
