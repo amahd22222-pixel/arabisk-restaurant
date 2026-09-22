@@ -131,6 +131,7 @@ app.patch('/api/products/:id',requireAdminApiKey,(req,res)=>{const product=produ
 app.delete('/api/products/:id',requireAdminApiKey,(req,res)=>{const index=products.findIndex(product=>product.id===req.params.id);if(index===-1)return res.status(404).json({message:'Product not found'});const [removed]=products.splice(index,1);if(storageReady){if(removed.imageKey)void deleteObject(removed.imageKey);if(removed.videoKey)void deleteObject(removed.videoKey);}persistState();return res.json({ok:true,removed});});
 
 app.get('/cart',(req,res)=>res.sendFile(path.join(__dirname,'cart-page.html')));
+app.get('/track-order',(req,res)=>res.sendFile(path.join(__dirname,'order-tracking.html')));
 app.get('/events',(req,res)=>res.sendFile(path.join(__dirname,'events.html')));
 app.get('/memories',(req,res)=>{res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');res.setHeader('Pragma','no-cache');res.setHeader('Expires','0');res.sendFile(path.join(__dirname,'memories.html'));});
 app.get(/^\/events\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'event-page.html')));
