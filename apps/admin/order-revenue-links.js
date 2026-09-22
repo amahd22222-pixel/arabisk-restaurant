@@ -2,6 +2,8 @@ const linkEsc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'
 const getCampaigns=()=>Array.isArray(window.__ARABISK_REVENUE_CAMPAIGNS__)?window.__ARABISK_REVENUE_CAMPAIGNS__:[];
 const campaignOrderId=row=>String(row?.attribution?.orderId||row?.orderId||'').trim();
 const campaignStatus=row=>({draft:'مسودة',executed:'تم التنفيذ',converted:'تحولت إلى طلب',ignored:'تم التجاهل'})[row?.status]||row?.status||'إجراء';
+const outcomeReasonLabel=row=>({converted_to_order:'تحول إلى طلب فعلي',manual_conversion:'تحول مسجل يدويًا',completed_no_conversion:'تم التنفيذ بدون تحول',customer_unresponsive:'لم يرد العميل',not_interested:'غير مهتم',not_relevant:'العرض غير مناسب',operational_issue:'عائق تشغيلي',timing:'التوقيت غير مناسب',duplicate:'مكرر / تمت معالجته سابقًا',other:'سبب آخر',unclassified:'غير مصنف'})[row?.outcomeReason]||'';
+const campaignRevenue=row=>Number(row?.resultRevenue||row?.revenue||0);
 
 async function openOrderRevenueAction(campaignId){
   const id=String(campaignId||'').trim();
@@ -42,15 +44,25 @@ function renderOrderRevenueLinks(){
       host?.remove();
       return;
     }
-    const signature=linked.map(row=>String(row.id||'')).join('|');
+    const signature=linked.map(row=>[row.id,row.status,campaignRevenue(row),row.outcomeReason,row.outcomeReasonNote].join(':')).join('|');
     if(host?.dataset.signature===signature)return;
     host?.remove();
     host=document.createElement('div');
     host.className='order-revenue-links';
     host.dataset.signature=signature;
-    host.innerHTML='<span>مرتبط بالإيرادات</span>'+
-      linked.slice(0,3).map(row=>'<button type="button" class="small-action order-revenue-link" data-order-revenue-action="'+linkEsc(row.id||'')+'">فتح '+linkEsc(campaignStatus(row))+'</button>').join('')+
-      (linked.length>3?'<small>+'+(linked.length-3)+' إجراءات أخرى</small>':'');
+    const measuredRevenue=linked.reduce((sum,row)=>sum+campaignRevenue(row),0);
+    const convertedCount=linked.filter(row=>row.status==='converted').length;
+    const summary=measuredRevenue>0?'إيراد مقاس: AED '+measuredRevenue.toFixed(0):'لا يوجد إيراد مقاس';
+    host.innerHTML='<span class="order-revenue-heading">مرتبط بالإيرادات — '+linked.length+' إجراء</span>'+
+      '<div class="order-revenue-summary"><b>'+linkEsc(summary)+'</b><small>'+convertedCount+' تحول مسجل</small></div>'+
+      '<div class="order-revenue-actions">'+
+      linked.slice(0,3).map(row=>{
+        const reason=outcomeReasonLabel(row);
+        const note=String(row.outcomeReasonNote||'').trim();
+        return '<div class="order-revenue-item"><div class="order-revenue-item-main"><strong>'+linkEsc(row.title||'إجراء إيرادات')+'</strong><span>'+linkEsc(campaignStatus(row))+(campaignRevenue(row)>0?' — AED '+campaignRevenue(row).toFixed(0):'')+'</span>'+(reason?'<small>'+linkEsc(reason)+(note?' — '+linkEsc(note):'')+'</small>':'')+'</div><button type="button" class="small-action order-revenue-link" data-order-revenue-action="'+linkEsc(row.id||'')+'">فتح</button></div>';
+      }).join('')+
+      '</div>'+
+      (linked.length>3?'<small>+'+(linked.length-3)+' إجراءات أخرى مرتبطة بنفس الطلب</small>':'');
     actionsCell.appendChild(host);
   });
 }
