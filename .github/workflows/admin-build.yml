@@ -1,0 +1,40 @@
+name: Admin build guard
+
+on:
+  pull_request:
+    paths:
+      - 'apps/admin/**'
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/admin-build.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/admin/**'
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/admin-build.yml'
+
+jobs:
+  admin-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build admin
+        run: npm run build --workspace apps/admin
