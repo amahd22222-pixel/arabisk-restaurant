@@ -537,7 +537,7 @@ document.querySelector('#revenue-task-owner-filter')?.addEventListener('change',
 document.querySelector('#revenue-task-status-filter')?.addEventListener('change',renderRevenueTaskBoard);
 document.querySelector('#revenue-refresh')?.addEventListener('click',()=>void loadRevenue());
 document.querySelector('[data-section="revenue"]')?.addEventListener('click',()=>void loadRevenue());
-void loadRevenue();
+if(location.hash==='#revenue')void loadRevenue();
 
 async function executeReturningCustomerRecovery(reference,button){
   if(!reference)return;
