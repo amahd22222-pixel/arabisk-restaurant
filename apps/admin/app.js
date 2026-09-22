@@ -107,8 +107,7 @@ async function openCustomer360(customerId){
       order:'order',
       reservation:'reservation',
       action:'action',
-      event:'event',
-      opportunity:'opportunity'
+      event:'event'
     }[value] || 'event');
     const timeline=(profile.timeline||[]).map(item=>{
       const value=Number(item.value||0);
@@ -116,7 +115,7 @@ async function openCustomer360(customerId){
       const status=timelineStatus(item.status);
       const statusHtml=status?'<span class="customer360-timeline-status">'+escapeHtml(status)+'</span>':'';
       const scheduled=item.scheduledAt?'<small>موعد الزيارة: '+escapeHtml(item.scheduledAt)+'</small>':'';
-      return '<article class="customer360-timeline-item '+timelineTypeClass(item.type)+'">'+
+      return '<article class="customer360-timeline-item '+timelineTypeClass(item.type)+'" data-timeline-type="'+escapeHtml(item.type||'event')+'">'+
         '<div class="customer360-timeline-dot" aria-hidden="true"></div>'+
         '<div class="customer360-timeline-content">'+
           '<div class="customer360-timeline-meta"><span>'+escapeHtml(item.label||'نشاط')+'</span><time>'+escapeHtml(item.at?new Date(item.at).toLocaleString('ar-AE'):'')+'</time></div>'+
@@ -133,10 +132,17 @@ async function openCustomer360(customerId){
       '<div class="customer360-stats"><article><span>الطلبات</span><b>'+Number(customer.orderCount||0)+'</b></article><article><span>قيمة الطلبات</span><b>'+money(summary.totalOrderValue)+'</b></article><article><span>متوسط الطلب</span><b>'+money(summary.averageOrderValue)+'</b></article><article><span>آخر طلب</span><b class="customer360-date">'+(summary.daysSinceLastOrder===null?'—':Number(summary.daysSinceLastOrder)+' يوم')+'</b></article><article><span>متوسط العودة</span><b class="customer360-date">'+(summary.averageReturnDays===null?'—':Number(summary.averageReturnDays)+' يوم')+'</b></article><article><span>آخر طلب بقيمة</span><b>'+money(summary.lastOrderValue)+'</b></article><article><span>الحجوزات</span><b>'+Number(summary.totalReservations||0)+'</b></article><article><span>آخر نشاط</span><b class="customer360-date">'+(summary.lastActivityAt?new Date(summary.lastActivityAt).toLocaleString('ar-AE'):'—')+'</b></article></div>'+
       '<div class="customer360-next"><span>الإجراء التالي المقترح</span><strong>'+escapeHtml(profile.nextAction||'راجع العميل وحدد الإجراء المناسب.')+'</strong><small>'+escapeHtml(consentLabel)+'</small></div>'+
       '<div class="customer360-behavior"><div><h3>الأصناف الأكثر تكرارًا</h3><div class="customer360-chip-list">'+favorites+'</div></div><div><h3>آخر طلب</h3><div class="customer360-chip-list">'+lastItems+'</div></div><div><h3>نشاط العميل</h3><div class="customer360-chip-list">'+eventSummary+'</div></div></div>'+
-      '<div class="customer360-timeline"><div class="customer360-timeline-head"><div><h3>الخط الزمني للعميل</h3><p>الطلبات والحجوزات والأحداث والإجراءات والفرص في مسار واحد.</p></div><span>آخر 60 نشاطًا</span></div><div class="customer360-timeline-list">'+timeline+'</div></div>'+
+      '<div class="customer360-timeline"><div class="customer360-timeline-head"><div><h3>الخط الزمني للعميل</h3><p>الطلبات والحجوزات والأحداث والإجراءات في مسار زمني واحد.</p></div><span>آخر 60 نشاطًا</span></div><div class="customer360-timeline-filters" role="tablist" aria-label="تصفية الخط الزمني"><button type="button" class="active" data-timeline-filter="all">الكل</button><button type="button" data-timeline-filter="order">الطلبات</button><button type="button" data-timeline-filter="reservation">الحجوزات</button><button type="button" data-timeline-filter="event">التفاعل</button><button type="button" data-timeline-filter="action">إجراءات الإيراد</button></div><div class="customer360-timeline-list">'+timeline+'</div></div>'+
       '<div class="customer360-columns"><div><h3>الطلبات</h3><div class="table-wrap"><table><thead><tr><th>الطلب</th><th>القيمة</th><th>الحالة</th></tr></thead><tbody>'+orders+'</tbody></table></div></div><div><h3>الحجوزات</h3><div class="table-wrap"><table><thead><tr><th>الموعد</th><th>الأشخاص</th><th>الحالة</th></tr></thead><tbody>'+reservations+'</tbody></table></div></div></div>'+
       '<div class="customer360-opportunities"><h3>الفرص المرتبطة</h3>'+opps+'</div>'+
       '<div class="customer360-actions"><h3>سجل الإجراءات</h3><div class="table-wrap"><table><thead><tr><th>الإجراء</th><th>الحالة</th><th>الإيراد</th><th>الطلب</th></tr></thead><tbody>'+actions+'</tbody></table></div></div>';
+    body.querySelectorAll('[data-timeline-filter]').forEach(button=>button.addEventListener('click',()=>{
+      const filter=button.dataset.timelineFilter||'all';
+      body.querySelectorAll('[data-timeline-filter]').forEach(item=>item.classList.toggle('active',item===button));
+      body.querySelectorAll('[data-timeline-type]').forEach(item=>{
+        item.hidden=filter!=='all'&&item.dataset.timelineType!==filter;
+      });
+    }));
     body.querySelectorAll('[data-customer-opportunity]').forEach(button=>button.addEventListener('click',async()=>{
       button.disabled=true;
       try{
