@@ -1189,7 +1189,8 @@ export function registerRevenueRoutes(app, {
       details: clean(order.orderType || '', 80),
       status: clean(order.status || '', 40),
       value: number(order.total),
-      at: order.createdAt || order.updatedAt || ''
+      at: order.createdAt || order.updatedAt || '',
+      reference: clean(order.id, 40)
     }));
     const reservationTimeline = customerReservations.slice().map(item => ({
       type: 'reservation',
@@ -1199,6 +1200,7 @@ export function registerRevenueRoutes(app, {
       status: clean(item.status || '', 40),
       value: 0,
       at: item.createdAt || '',
+      reference: clean(item.id, 40),
       scheduledAt: [clean(item.date, 30), clean(item.time, 20)].filter(Boolean).join(' ')
     }));
     const actionTimeline = relatedActions.map(item => ({
