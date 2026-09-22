@@ -205,16 +205,12 @@ async function load(last,showError=true){
 }
 function startPolling(){clearInterval(timer);timer=setInterval(()=>{if($('#result-loaded')&&!$('#result-loaded').hidden)void load(false)},20000)}
 const last=readLast();
-const error=$('#track-error');
 if(last){
-  $('#last-order-id').textContent=last.id;
-  const lastBox=$('#last-order');
-  if(lastBox)lastBox.classList.add('show');
   void load(last,false).then(ok=>{if(ok)startPolling()});
 }else{
   $('#result-empty').hidden=false;
-  $('#result-empty h2').textContent='لا يوجد طلب نشط';
-  $('#result-empty p').textContent='بمجرد إرسال طلب من ARABISK، ستظهر حالته هنا تلقائيًا.';
+  $('#result-empty h2').textContent='لا يوجد طلب محفوظ';
+  $('#result-empty p').textContent='بعد إرسال طلب من ARABISK، ستفتح هذه الصفحة تلقائيًا على آخر طلب محفوظ.';
 }
 })();
 </script>
