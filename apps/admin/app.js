@@ -90,7 +90,7 @@ async function openCustomer360(customerId){
     const favorites=(behavior.favoriteProducts||[]).map(item=>'<span class="customer360-chip">'+escapeHtml(item.name)+' <b>'+Number(item.quantity||0)+'×</b></span>').join('')||'<span class="customer360-muted">لا توجد مشتريات كافية لتحديد نمط واضح.</span>';
     const lastItems=(behavior.lastOrderItems||[]).map(item=>'<span class="customer360-chip">'+escapeHtml(item.nameAr||item.productId)+' <b>'+Number(item.quantity||0)+'×</b></span>').join('')||'<span class="customer360-muted">لا يوجد طلب سابق متاح.</span>';
     const eventSummary=Object.entries(behavior.eventCounts||{}).slice(0,5).map(([key,count])=>'<span class="customer360-chip">'+escapeHtml(key)+' <b>'+Number(count||0)+'</b></span>').join('')||'<span class="customer360-muted">لا توجد أحداث مرتبطة.</span>';
-    const actions=(profile.relatedActions||[]).map(item=>'<tr><td>'+escapeHtml(item.title||item.type)+'</td><td>'+escapeHtml(item.status)+'</td><td>'+money(item.resultRevenue)+'</td><td>'+escapeHtml(item.orderId||'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty">لا توجد إجراءات مرتبطة بالعميل.</td></tr>';
+    const actions=(profile.relatedActions||[]).map(item=>'<tr><td><strong>'+escapeHtml(item.title||item.type)+'</strong><small>'+escapeHtml(item.id||'')+'</small></td><td>'+escapeHtml(item.status)+'</td><td>'+money(item.resultRevenue)+'</td><td>'+escapeHtml(item.orderId||'—')+'</td><td><button class="small-action" type="button" data-campaign-jump="'+escapeHtml(item.id||'')+'">فتح الإجراء</button></td></tr>').join('')||'<tr><td colspan="5" class="empty">لا توجد إجراءات مرتبطة بالعميل.</td></tr>';
     const timelineStatus = value => ({
       draft:'مسودة',
       executed:'تم التنفيذ',
@@ -141,7 +141,18 @@ async function openCustomer360(customerId){
       '<div class="customer360-timeline"><div class="customer360-timeline-head"><div><h3>الخط الزمني للعميل</h3><p>الطلبات والحجوزات والأحداث والإجراءات في مسار زمني واحد.</p></div><span>آخر 60 نشاطًا</span></div><div class="customer360-timeline-filters" role="tablist" aria-label="تصفية الخط الزمني"><button type="button" class="active" data-timeline-filter="all">الكل</button><button type="button" data-timeline-filter="order">الطلبات</button><button type="button" data-timeline-filter="reservation">الحجوزات</button><button type="button" data-timeline-filter="event">التفاعل</button><button type="button" data-timeline-filter="action">إجراءات الإيراد</button></div><div class="customer360-timeline-list">'+timeline+'</div></div>'+
       '<div class="customer360-columns"><div><h3>الطلبات</h3><div class="table-wrap"><table><thead><tr><th>الطلب</th><th>القيمة</th><th>الحالة</th></tr></thead><tbody>'+orders+'</tbody></table></div></div><div><h3>الحجوزات</h3><div class="table-wrap"><table><thead><tr><th>الموعد</th><th>الأشخاص</th><th>الحالة</th></tr></thead><tbody>'+reservations+'</tbody></table></div></div></div>'+
       '<div class="customer360-opportunities"><h3>الفرص المرتبطة</h3>'+opps+'</div>'+
-      '<div class="customer360-actions"><h3>سجل الإجراءات</h3><div class="table-wrap"><table><thead><tr><th>الإجراء</th><th>الحالة</th><th>الإيراد</th><th>الطلب</th></tr></thead><tbody>'+actions+'</tbody></table></div></div>';
+      '<div class="customer360-actions"><h3>سجل الإجراءات</h3><div class="table-wrap"><table><thead><tr><th>الإجراء</th><th>الحالة</th><th>الإيراد</th><th>الطلب</th><th></th></tr></thead><tbody>'+actions+'</tbody></table></div></div>';
+    body.querySelectorAll('[data-campaign-jump]').forEach(button=>button.addEventListener('click',async()=>{
+      const id=button.dataset.campaignJump||'';
+      showSection('revenue');
+      if(window.ARABISK_LOAD_REVENUE)await window.ARABISK_LOAD_REVENUE();
+      const row=document.querySelector('[data-campaign-id="'+CSS.escape(id)+'"]');
+      if(row){
+        row.classList.add('customer360-highlight-row');
+        row.scrollIntoView({behavior:'smooth',block:'center'});
+        setTimeout(()=>row.classList.remove('customer360-highlight-row'),2200);
+      }
+    }));
     body.querySelectorAll('[data-timeline-jump]').forEach(button=>button.addEventListener('click',()=>{
       const section=button.dataset.timelineJump;
       const reference=button.dataset.timelineRef||'';
