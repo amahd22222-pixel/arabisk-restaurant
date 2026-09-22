@@ -115,6 +115,11 @@ async function openCustomer360(customerId){
       const status=timelineStatus(item.status);
       const statusHtml=status?'<span class="customer360-timeline-status">'+escapeHtml(status)+'</span>':'';
       const scheduled=item.scheduledAt?'<small>موعد الزيارة: '+escapeHtml(item.scheduledAt)+'</small>':'';
+      const targetSection=item.type==='order'?'orders':item.type==='reservation'?'reservations':'';
+      const targetRef=escapeHtml(item.reference||'');
+      const actionHtml=targetSection&&item.reference
+        ? '<button class="small-action customer360-timeline-jump" type="button" data-timeline-jump="'+targetSection+'" data-timeline-ref="'+targetRef+'">فتح في لوحة '+(item.type==='order'?'الطلبات':'الحجوزات')+'</button>'
+        : '';
       return '<article class="customer360-timeline-item '+timelineTypeClass(item.type)+'" data-timeline-type="'+escapeHtml(item.type||'event')+'">'+
         '<div class="customer360-timeline-dot" aria-hidden="true"></div>'+
         '<div class="customer360-timeline-content">'+
@@ -122,7 +127,7 @@ async function openCustomer360(customerId){
           '<strong>'+escapeHtml(item.title||'نشاط العميل')+'</strong>'+
           (item.details?'<p>'+escapeHtml(item.details)+'</p>':'')+
           scheduled+
-          '<div class="customer360-timeline-foot">'+statusHtml+valueHtml+'</div>'+
+          '<div class="customer360-timeline-foot">'+statusHtml+valueHtml+actionHtml+'</div>'+
         '</div>'+
       '</article>';
     }).join('')||'<div class="empty">لا يوجد نشاط كافٍ لبناء الخط الزمني.</div>';
@@ -136,6 +141,21 @@ async function openCustomer360(customerId){
       '<div class="customer360-columns"><div><h3>الطلبات</h3><div class="table-wrap"><table><thead><tr><th>الطلب</th><th>القيمة</th><th>الحالة</th></tr></thead><tbody>'+orders+'</tbody></table></div></div><div><h3>الحجوزات</h3><div class="table-wrap"><table><thead><tr><th>الموعد</th><th>الأشخاص</th><th>الحالة</th></tr></thead><tbody>'+reservations+'</tbody></table></div></div></div>'+
       '<div class="customer360-opportunities"><h3>الفرص المرتبطة</h3>'+opps+'</div>'+
       '<div class="customer360-actions"><h3>سجل الإجراءات</h3><div class="table-wrap"><table><thead><tr><th>الإجراء</th><th>الحالة</th><th>الإيراد</th><th>الطلب</th></tr></thead><tbody>'+actions+'</tbody></table></div></div>';
+    body.querySelectorAll('[data-timeline-jump]').forEach(button=>button.addEventListener('click',()=>{
+      const section=button.dataset.timelineJump;
+      const reference=button.dataset.timelineRef||'';
+      showSection(section);
+      setTimeout(()=>{
+        const row=section==='orders'
+          ? document.querySelector('select[data-order-status="'+CSS.escape(reference)+'"]')?.closest('tr')
+          : document.querySelector('[data-id="'+CSS.escape(reference)+'"]')?.closest('tr');
+        if(row){
+          row.classList.add('customer360-highlight-row');
+          row.scrollIntoView({behavior:'smooth',block:'center'});
+          setTimeout(()=>row.classList.remove('customer360-highlight-row'),2200);
+        }
+      },80);
+    }));
     body.querySelectorAll('[data-timeline-filter]').forEach(button=>button.addEventListener('click',()=>{
       const filter=button.dataset.timelineFilter||'all';
       body.querySelectorAll('[data-timeline-filter]').forEach(item=>item.classList.toggle('active',item===button));
