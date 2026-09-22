@@ -8,6 +8,18 @@ const accessKey = String(env('AWS_' + 'ACCESS_KEY_ID') || '').trim();
 const secretKey = String(env('AWS_' + 'SECRET_' + 'ACCESS_KEY') || '').trim();
 
 export const storageReady = Boolean(bucket && accessKey && secretKey);
+const STORAGE_READ_TIMEOUT_MS = 8000;
+const STORAGE_WRITE_TIMEOUT_MS = 10000;
+
+async function storageFetch(url, options = {}, timeoutMs = STORAGE_READ_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex');
 const hmac = (key, value, encoding) => crypto.createHmac('sha256', key).update(value).digest(encoding);
@@ -45,7 +57,7 @@ export function presign(method, key, expires = 900) {
 export async function readJson(key, fallback = null) {
   if (!storageReady) return fallback;
   try {
-    const response = await fetch(presign('GET', key, 900));
+    const response = await storageFetch(presign('GET', key, 900), {}, STORAGE_READ_TIMEOUT_MS);
     if (!response.ok) return fallback;
     return await response.json();
   } catch (error) {
@@ -57,11 +69,11 @@ export async function readJson(key, fallback = null) {
 export async function writeJson(key, value) {
   if (!storageReady) return false;
   try {
-    const response = await fetch(presign('PUT', key, 900), {
+    const response = await storageFetch(presign('PUT', key, 900), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
       body: JSON.stringify(value)
-    });
+    }, STORAGE_WRITE_TIMEOUT_MS);
     if (!response.ok) throw new Error(`Storage write returned ${response.status}`);
     return true;
   } catch (error) {
@@ -73,7 +85,7 @@ export async function writeJson(key, value) {
 export async function deleteObject(key) {
   if (!storageReady || !key) return true;
   try {
-    const response = await fetch(presign('DELETE', key, 900), { method: 'DELETE' });
+    const response = await storageFetch(presign('DELETE', key, 900), { method: 'DELETE' }, STORAGE_WRITE_TIMEOUT_MS);
     if (!response.ok && response.status !== 404) throw new Error(`Storage delete returned ${response.status}`);
     return true;
   } catch (error) {
