@@ -120,7 +120,7 @@ const reservationRateLimit=createRateLimit(reservationRate,RESERVATION_RATE_WIND
 const orderRateLimit=createRateLimit(orderRate,ORDER_RATE_WINDOW_MS,ORDER_RATE_LIMIT,'Too many order requests. Please try again later.');
 const orderStatusRateLimit=createRateLimit(orderStatusRate,ORDER_STATUS_RATE_WINDOW_MS,ORDER_STATUS_RATE_LIMIT,'Too many order status requests. Please try again later.');
 const analyticsRateLimit=createRateLimit(analyticsRate,10*60*1000,180,'Too many analytics events. Please try again later.');
-setInterval(()=>{const now=Date.now();for(const [key,entry] of reservationRate)if(now-entry.startedAt>RESERVATION_RATE_WINDOW_MS*2)reservationRate.delete(key);for(const [key,entry] of orderRate)if(now-entry.startedAt>ORDER_RATE_WINDOW_MS*2)orderRate.delete(key);for(const [key,entry] of orderStatusRate)if(now-entry.startedAt>ORDER_STATUS_RATE_WINDOW_MS*2)orderStatusRate.delete(key)},Math.min(RESERVATION_RATE_WINDOW_MS,ORDER_RATE_WINDOW_MS,ORDER_STATUS_RATE_WINDOW_MS)).unref();
+setInterval(()=>{const now=Date.now();for(const [key,entry] of reservationRate)if(now-entry.startedAt>RESERVATION_RATE_WINDOW_MS*2)reservationRate.delete(key);for(const [key,entry] of orderRate)if(now-entry.startedAt>ORDER_RATE_WINDOW_MS*2)orderRate.delete(key);for(const [key,entry] of orderStatusRate)if(now-entry.startedAt>ORDER_STATUS_RATE_WINDOW_MS*2)orderStatusRate.delete(key);for(const [key,entry] of analyticsRate)if(now-entry.startedAt>20*60*1000)analyticsRate.delete(key)},Math.min(RESERVATION_RATE_WINDOW_MS,ORDER_RATE_WINDOW_MS,ORDER_STATUS_RATE_WINDOW_MS)).unref();
 
 const SMART_SNAPSHOT_CACHE_MS=30*1000;
 let smartSnapshotCache=null;
