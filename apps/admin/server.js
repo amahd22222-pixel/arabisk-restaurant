@@ -202,7 +202,8 @@ async function proxyApiRequest(req, res) {
   const upstreamUrl = new URL(`${upstreamPath}${incoming.search}`, `${webApiBase}/`).toString();
   const headers = {
     Accept: 'application/json',
-    'X-Arabisk-Admin-Key': adminApiKey
+    'X-Arabisk-Admin-Key': adminApiKey,
+    'X-Request-Id': String(res.getHeader('X-Request-Id') || requestId(req))
   };
   if (req.headers['content-type']) headers['Content-Type'] = req.headers['content-type'];
 
@@ -234,7 +235,20 @@ async function proxyApiRequest(req, res) {
 
 const server = http.createServer(async (req, res) => {
   const id = requestId(req);
+  const startedAt = process.hrtime.bigint();
   res.setHeader('X-Request-Id', id);
+  res.on('finish', () => {
+    if (res.statusCode < 500) return;
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+    console.error(JSON.stringify({
+      event: 'admin_http_server_error',
+      requestId: id,
+      method: req.method,
+      route: (req.url || '/').startsWith('/proxy/') ? '/proxy' : (req.url || '/').split('?')[0],
+      status: res.statusCode,
+      durationMs: Math.round(durationMs * 100) / 100
+    }));
+  });
   setSecurityHeaders(res, req);
   const requestPath = (req.url || '/').split('?')[0];
 
