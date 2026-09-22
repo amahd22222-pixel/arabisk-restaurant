@@ -203,7 +203,8 @@ async function load(last,showError=true){
     return false;
   }
 }
-function startPolling(){clearInterval(timer);timer=setInterval(()=>{if($('#result-loaded')&&!$('#result-loaded').hidden)void load(false)},20000)}
+function startPolling(){clearInterval(timer);timer=setInterval(()=>{if($('#result-loaded')&&!$('#result-loaded').hidden){const current=readLast();if(current)void load(current,false)}},20000)}
+$('#track-refresh').addEventListener('click',()=>{const current=readLast();if(current)void load(current,true)});
 const last=readLast();
 if(last){
   void load(last,false).then(ok=>{if(ok)startPolling()});
