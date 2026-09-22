@@ -152,6 +152,23 @@ const taskWorkflow = (campaign, now = Date.now()) => {
   };
 };
 
+const outcomeLearningSignal = (learning, sourceType, sourceKey) => {
+  const rows = Array.isArray(learning?.rows) ? learning.rows : [];
+  const row = rows.find(item => item.sourceType === sourceType && item.sourceKey === sourceKey) || null;
+  if (!row || Number(row.sampleSize || row.total || 0) < 3) return null;
+  return {
+    key: row.key,
+    signalKey: row.signalKey || 'early',
+    signalLabel: row.signalLabel || 'إشارة مبكرة',
+    sampleSize: Number(row.sampleSize || row.total || 0),
+    conversionRate: Number(row.conversionRate || 0),
+    topReasonKey: clean(row.topReasonKey || 'unclassified', 40),
+    topReason: clean(row.topReason || 'غير مصنف', 100),
+    learningAction: clean(row.learningAction || '', 320),
+    measuredRevenue: number(row.measuredRevenue)
+  };
+};
+
 export function registerRevenueRoutes(app, {
   readJson,
   writeJson,
@@ -743,6 +760,9 @@ export function registerRevenueRoutes(app, {
       potentialValue: 0
     } : (summary.topActions || []).find(item => item.type === type && item.reference === reference);
     if (!action) return null;
+    const sourceType = alert ? 'revenue_alert' : segment ? 'customer_segment' : 'revenue_opportunity';
+    const sourceKey = alert?.key || segment?.key || type;
+    const learningSignal = outcomeLearningSignal(summary.outcomeLearning, sourceType, sourceKey);
 
     let customerId = '';
     let customerName = '';
@@ -791,6 +811,7 @@ export function registerRevenueRoutes(app, {
                 ? clean(action.recommendedAction, 500)
                 : `مسودة اقتراح Pre-order للحجز: ${clean(action.title.replace('حجز قريب: ', ''), 70)}.`,
       status: 'draft',
+      learningGuidance: learningSignal?.learningAction || '',
       consentRequired: true,
       sendable: false,
       executionNote: 'V1 لا يرسل الرسائل تلقائيًا. يجب تنفيذ التواصل خارج النظام فقط بعد التحقق من موافقة العميل.',
@@ -810,8 +831,19 @@ export function registerRevenueRoutes(app, {
       recoveryPath: '',
       audienceCount: segment ? Number(segment.count || 0) : 0,
       historicalSegmentRevenue: segment ? number(segment.totalRevenue) : 0,
-      sourceType: alert ? 'revenue_alert' : segment ? 'customer_segment' : 'revenue_opportunity',
-      sourceKey: alert?.key || segment?.key || type,
+      sourceType,
+      sourceKey,
+      learningSignal: learningSignal ? {
+        signalKey: learningSignal.signalKey,
+        signalLabel: learningSignal.signalLabel,
+        sampleSize: learningSignal.sampleSize,
+        conversionRate: learningSignal.conversionRate,
+        topReasonKey: learningSignal.topReasonKey,
+        topReason: learningSignal.topReason,
+        measuredRevenue: learningSignal.measuredRevenue,
+        learningAction: learningSignal.learningAction,
+        applied: true
+      } : null,
       alertSeverity: alert?.severity || '',
       customerId,
       customerName,
@@ -1265,6 +1297,9 @@ export function registerRevenueRoutes(app, {
       opportunity: timeline.filter(item => item.type === 'opportunity').length
     };
     const primaryOpportunity=opportunities.slice().sort((a,b)=>number(b.priorityScore)-number(a.priorityScore))[0]||null;
+    const primaryLearning=primaryOpportunity
+      ? outcomeLearningSignal(summary.outcomeLearning, 'revenue_opportunity', clean(primaryOpportunity.type || '', 50))
+      : null;
     const openActions=relatedActions.filter(item=>item.status==='draft');
     const blockedActions=openActions.filter(item=>item.workflowStatus==='blocked');
     const overdueActions=openActions.filter(item=>item.workflowStatus==='overdue'||item.workflowStatus==='escalated');
@@ -1278,8 +1313,11 @@ export function registerRevenueRoutes(app, {
           key: primaryOpportunity.type || 'opportunity',
           label: primaryOpportunity.type==='upcoming_reservation' ? 'حجز قادم' : primaryOpportunity.type==='inactive_customer' ? 'إعادة تنشيط' : primaryOpportunity.type==='returning_customer' ? 'موعد عودة محتمل' : 'فرصة عميل',
           reason: clean(primaryOpportunity.reason || '', 220),
-          recommendedAction: clean(primaryOpportunity.recommendedAction || '', 300),
+          recommendedAction: clean(primaryLearning?.learningAction || primaryOpportunity.recommendedAction || '', 320),
           potentialValue: number(primaryOpportunity.potentialValue),
+          learningSignal: primaryLearning
+            ? { signalKey: primaryLearning.signalKey, signalLabel: primaryLearning.signalLabel, sampleSize: primaryLearning.sampleSize, conversionRate: primaryLearning.conversionRate, topReason: primaryLearning.topReason, measuredRevenue: primaryLearning.measuredRevenue, applied: true }
+            : null,
           stateKey: !customer.marketingOptIn ? 'needs_consent' : blockedActions.length ? 'blocked' : overdueActions.length ? 'overdue' : openActions.length ? 'open' : 'observe',
           ready: customer.marketingOptIn && blockedActions.length===0 && overdueActions.length===0,
           consentRequired: !customer.marketingOptIn,
@@ -1312,6 +1350,8 @@ export function registerRevenueRoutes(app, {
           ? 'راجع المهمة المتأخرة وحدّث حالتها أو سجّل النتيجة قبل إنشاء إجراء جديد.'
           : nextOpenAction
             ? 'تابع الإجراء المفتوح: ' + clean(nextOpenAction.title || 'مهمة الإيراد', 140)
+            : primaryLearning
+            ? 'طبّق التعلم المسجل لهذا النوع من الفرص: ' + clean(primaryLearning.learningAction, 260)
             : (primaryOpportunity?.recommendedAction||'راجع آخر نشاط للعميل وحدد الإجراء المناسب.');
     return {
       customer: {
