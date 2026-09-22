@@ -95,6 +95,7 @@ async function loadCustomerIntelligence(showLoading=false){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-  loadCustomerIntelligence();
+  const isCustomersSection=()=>location.hash.replace('#','')==='customers';
+  if(isCustomersSection())void loadCustomerIntelligence();
   document.querySelector('[data-section="customers"]')?.addEventListener('click',()=>void loadCustomerIntelligence());
 });
