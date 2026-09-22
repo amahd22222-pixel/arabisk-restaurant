@@ -244,7 +244,7 @@ async function executeAbandonedCartRecovery(reference,button){
   }catch(error){alert(error.message||'تعذر تنفيذ الفرصة.');}
   finally{button.disabled=false;}
 }
-async function loadRevenue(){
+async function loadRevenueUnsafe(){
   const state=document.querySelector('#revenue-state');
   if(state)state.textContent='جارٍ تحليل فرص الإيراد…';
   const setMetric=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
@@ -687,4 +687,19 @@ document.querySelector('#revenue-alerts-list')?.addEventListener('click',async e
   }catch(error){alert(error.message);button.disabled=false;}
 });
 
+let revenueLoadInFlight=null;
+async function loadRevenue(){
+  if(revenueLoadInFlight)return revenueLoadInFlight;
+  const startedAt=performance.now();
+  revenueLoadInFlight=(async()=>{
+    try{return await loadRevenueUnsafe();}
+    finally{
+      const elapsed=Math.max(0,Math.round(performance.now()-startedAt));
+      const state=document.querySelector('#revenue-state');
+      if(state)state.dataset.loadMs=String(elapsed);
+      revenueLoadInFlight=null;
+    }
+  })();
+  return revenueLoadInFlight;
+}
 window.ARABISK_LOAD_REVENUE=loadRevenue;
