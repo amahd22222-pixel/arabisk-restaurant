@@ -1184,6 +1184,9 @@ export function registerRevenueRoutes(app, {
         blockerReason:item.blockerReason||'',
         resultRevenue:number(item.resultRevenue),
         orderId:item.orderId||item.attribution?.orderId||'',
+        outcomeReason:item.outcomeReason||'',
+        outcomeReasonNote:item.outcomeReasonNote||'',
+        completedAt:item.completedAt||'',
         updatedAt:item.updatedAt||item.createdAt||''
       }));
     const opportunityTimeline = opportunities.slice(0, 20).map(item => ({
