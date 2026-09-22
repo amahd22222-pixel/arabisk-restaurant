@@ -317,7 +317,7 @@ export function registerRevenueRoutes(app, {
 
     const ordersByPhone = new Map();
     for (const order of orders) {
-      if (!order.phone || order.status === 'cancelled') continue;
+      if (!order.phone || order.status !== 'completed') continue;
       const phoneOrders = ordersByPhone.get(order.phone) || [];
       phoneOrders.push(order);
       ordersByPhone.set(order.phone, phoneOrders);
@@ -410,21 +410,23 @@ export function registerRevenueRoutes(app, {
       .slice(0, 50);
 
     const inactiveCustomers = customers
-      .filter(customer => number(customer.orderCount) >= 2)
       .map(customer => {
-        const daysSinceLastOrder = Math.floor((now - Date.parse(customer.lastOrderAt || '')) / 86400000);
-        const lastOrder = (ordersByPhone.get(customer.phone) || [])[0] || null;
+        const completedOrders = ordersByPhone.get(customer.phone) || [];
+        if (completedOrders.length < 2) return null;
+        const lastOrder = completedOrders[0] || null;
+        const lastOrderAt = lastOrder?.updatedAt || lastOrder?.createdAt || '';
+        const daysSinceLastOrder = Math.floor((now - Date.parse(lastOrderAt)) / 86400000);
         const cartItems = Array.isArray(lastOrder?.items)
           ? lastOrder.items.map(item => ({
               productId: clean(item.productId, 50),
               quantity: Math.max(1, Math.min(20, Math.round(number(item.quantity, 1))))
             })).filter(item => item.productId)
           : [];
-        return { ...customer, daysSinceLastOrder, lastOrder, cartItems };
+        return { ...customer, orderCount: completedOrders.length, lastOrderAt, daysSinceLastOrder, lastOrder, cartItems };
       })
-      .filter(customer => Number.isFinite(customer.daysSinceLastOrder) && customer.daysSinceLastOrder >= 21 && customer.cartItems.length > 0)
+      .filter(customer => customer && Number.isFinite(customer.daysSinceLastOrder) && customer.daysSinceLastOrder >= 21 && customer.cartItems.length > 0)
       .map(customer => {
-        const score = clamp(25 + Math.min(35, Math.floor(customer.daysSinceLastOrder / 2)) + Math.min(35, number(customer.orderCount) * 5));
+        const score = clamp(25 + Math.min(35, Math.floor(customer.daysSinceLastOrder / 2)) + Math.min(35, customer.orderCount * 5));
         const p = priority(score);
         return {
           id: customer.id,
@@ -1284,7 +1286,7 @@ export function registerRevenueRoutes(app, {
     const id = clean(customerId, 100);
     const customer = customers.find(item => item.id === id);
     if (!customer) return null;
-    const customerOrders = orders.filter(order => order.phone && customer.phone && order.phone === customer.phone);
+    const customerOrders = orders.filter(order => order.status === 'completed' && order.phone && customer.phone && order.phone === customer.phone);
     const customerReservations = reservations.filter(item => item.phone && customer.phone && item.phone === customer.phone);
     const customerEvents = events.filter(item => item.customerId === id).sort((a,b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 40);
     const summary = buildSummary();
