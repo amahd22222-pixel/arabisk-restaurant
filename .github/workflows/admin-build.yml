@@ -36,8 +36,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Validate server syntax
+        run: |
+          node --check apps/admin/server.js
+          node --check apps/admin/login.js
+          node --check apps/web/server.js
+
       - name: Build admin
         run: npm run build --workspace apps/admin
+
+      - name: Build web
+        run: npm run build --workspace apps/web
 
       - name: Admin runtime smoke test
         shell: bash
@@ -59,3 +68,23 @@ jobs:
           curl -fsS http://127.0.0.1:4175/health | grep -q '"ok":true'
           curl -fsS -o /dev/null http://127.0.0.1:4175/login
           cat /tmp/arabisk-admin.log
+
+      - name: Web runtime smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          PORT=4176 npm run start --workspace apps/web > /tmp/arabisk-web.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4176/health > /tmp/web-health.json; then
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat /tmp/arabisk-web.log
+              exit 1
+            fi
+            sleep 0.5
+          done
+          curl -fsS http://127.0.0.1:4176/health | grep -q '"ok":true'
+          cat /tmp/arabisk-web.log
