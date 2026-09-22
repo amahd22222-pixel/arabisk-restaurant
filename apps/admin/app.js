@@ -24,15 +24,24 @@ function renderCustomerSegmentMembers(segment){
   wrap.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 let customerSegmentsLoaded=false;
+let customerSegmentsLoadInFlight=null;
 async function loadCustomerSegments(force=false){
   if(customerSegmentsLoaded&&!force){renderCustomerSegments();window.__ARABISK_CUSTOMER_SEGMENTS__=customerSegments;window.__ARABISK_CUSTOMER_STATE_READY__=true;window.dispatchEvent(new CustomEvent('arabisk:customer-state-updated'));return;}
-  const result=await request('/api/revenue/customer-segments');
-  customerSegments=Array.isArray(result.segments)?result.segments:[];
-  customerSegmentsLoaded=true;
-  window.__ARABISK_CUSTOMER_SEGMENTS__=customerSegments;
-  window.__ARABISK_CUSTOMER_STATE_READY__=true;
-  window.dispatchEvent(new CustomEvent('arabisk:customer-state-updated'));
-  renderCustomerSegments();
+  if(customerSegmentsLoadInFlight)return customerSegmentsLoadInFlight;
+  customerSegmentsLoadInFlight=(async()=>{
+    try{
+      const result=await request('/api/revenue/customer-segments');
+      customerSegments=Array.isArray(result.segments)?result.segments:[];
+      customerSegmentsLoaded=true;
+      window.__ARABISK_CUSTOMER_SEGMENTS__=customerSegments;
+      window.__ARABISK_CUSTOMER_STATE_READY__=true;
+      window.dispatchEvent(new CustomEvent('arabisk:customer-state-updated'));
+      renderCustomerSegments();
+    }finally{
+      customerSegmentsLoadInFlight=null;
+    }
+  })();
+  return customerSegmentsLoadInFlight;
 }
 function renderCustomers(){
   const state=$('#customers-state');
