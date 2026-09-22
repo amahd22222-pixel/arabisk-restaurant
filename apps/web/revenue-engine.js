@@ -1287,9 +1287,15 @@ export function registerRevenueRoutes(app, {
           overdueActions: overdueActions.length,
           nextOpenActionId: nextOpenAction?.id || ''
         };
-    const nextAction=customer.marketingOptIn
-      ? (primaryOpportunity?.recommendedAction||'راجع آخر نشاط للعميل وحدد الإجراء المناسب.')
-      : 'تحقق من موافقة التواصل قبل تنفيذ أي إجراء موجه للعميل.';
+    const nextAction=!customer.marketingOptIn
+      ? 'تحقق من موافقة التواصل قبل تنفيذ أي إجراء موجه للعميل.'
+      : blockedActions.length
+        ? 'حل العائق التشغيلي المسجل في الإجراء المفتوح، ثم أعد المهمة إلى مسندة أو قيد التنفيذ.'
+        : overdueActions.length
+          ? 'راجع المهمة المتأخرة وحدّث حالتها أو سجّل النتيجة قبل إنشاء إجراء جديد.'
+          : nextOpenAction
+            ? 'تابع الإجراء المفتوح: ' + clean(nextOpenAction.title || 'مهمة الإيراد', 140)
+            : (primaryOpportunity?.recommendedAction||'راجع آخر نشاط للعميل وحدد الإجراء المناسب.');
     return {
       customer: {
         id: customer.id,
