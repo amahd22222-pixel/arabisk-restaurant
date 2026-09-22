@@ -319,9 +319,6 @@ async function loadRevenue(){
 
     const upcoming=data.opportunities?.upcomingReservations||[];
     document.querySelector('#revenue-reservation-body').innerHTML=upcoming.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name)}</strong><small dir="ltr">${revEsc(row.phone)}</small></td><td>${revEsc(row.date)}<small>${revEsc(row.time)}</small></td><td>${Number(row.guests||0)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد حجوزات خلال 48 ساعة.</td></tr>';
-    const returning=data.opportunities?.returnCustomers||[];
-    const returningBody=document.querySelector('#revenue-returning-body');
-    if(returningBody)returningBody.innerHTML=returning.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name||'عميل')}</strong><small dir="ltr">${revEsc(row.phone||'')}</small></td><td>${Number(row.orderCount||0)}</td><td>${Number(row.averageGapDays||0).toFixed(0)} يوم</td><td>${Number(row.daysSinceLastOrder||0)} يوم</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد عملاء حان موعد عودتهم حاليًا.</td></tr>';
     window.revenueTaskRouting=data.taskRouting||{};
     renderRevenueTaskRouting();
     const workload=data.taskWorkload||{};
