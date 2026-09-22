@@ -11,7 +11,7 @@
     "vite": "8.3.0"
   },
   "dependencies": {
-    "cors": "latest",
-    "express": "latest"
+    "cors": "2.8.6",
+    "express": "5.2.1"
   }
 }
