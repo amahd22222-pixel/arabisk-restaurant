@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 
 const configuredKey = String(process.env.ARABISK_ADMIN_API_KEY || '').trim();
+const runtimeEnvironment = String(process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_ENVIRONMENT || '').trim().toLowerCase();
+const isProductionRuntime = process.env.NODE_ENV === 'production' || runtimeEnvironment === 'production';
 
 function constantTimeMatch(provided, expected) {
   const providedBuffer = Buffer.from(provided);
@@ -10,14 +12,14 @@ function constantTimeMatch(provided, expected) {
 }
 
 export function isAdminApiKeyValid(req) {
-  if (!configuredKey) return process.env.NODE_ENV !== 'production';
+  if (!configuredKey) return !isProductionRuntime;
   const providedKey = String(req.headers['x-arabisk-admin-key'] || '').trim();
   return constantTimeMatch(providedKey, configuredKey);
 }
 
 export function requireAdminApiKey(req, res, next) {
   if (!configuredKey) {
-    if (process.env.NODE_ENV !== 'production') return next();
+    if (!isProductionRuntime) return next();
     return res.status(503).json({ message: 'Admin API authentication is not configured.' });
   }
 

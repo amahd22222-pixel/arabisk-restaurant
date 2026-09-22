@@ -77,7 +77,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PORT=4176 npm run start --workspace apps/web > /tmp/arabisk-web.log 2>&1 &
+          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production PORT=4176 npm run start --workspace apps/web > /tmp/arabisk-web.log 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true' EXIT
           for i in {1..30}; do
@@ -93,6 +93,6 @@ jobs:
           curl -fsS http://127.0.0.1:4176/health | grep -q '"ok":true'
           curl -fsSI http://127.0.0.1:4176/health | grep -qi '^X-Content-Type-Options: nosniff'
           curl -fsSI http://127.0.0.1:4176/health | grep -qi '^X-Request-Id:'
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4176/api/orders)" = "403"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4176/api/orders)" = "503"
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{' http://127.0.0.1:4176/api/orders)" = "400"
           cat /tmp/arabisk-web.log
