@@ -64,6 +64,15 @@ a{text-decoration:none;color:inherit}
 .field-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:7px;color:var(--muted);font-size:10px}
 .char-count{font-variant-numeric:tabular-nums}
 .identity{margin-top:8px}
+.memory-context{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.memory-context label{display:grid;gap:5px;font-size:10px;color:var(--muted);font-weight:800}
+.memory-context select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:13px;outline:0;background:var(--surface-2);color:var(--ink)}
+.memory-context select:focus{border-color:#d4bc91;box-shadow:0 0 0 3px rgba(184,138,59,.08)}
+.memory-context span{font-size:10px}
+.memory-tags{display:flex;flex-wrap:wrap;gap:7px;padding:0 18px 14px}
+.memory-context-tag{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border:1px solid var(--line);border-radius:999px;background:#faf6ee;color:#776651;font-size:10px;font-weight:800}
+.memory-context-tag a{color:inherit}
+@media(max-width:640px){.memory-context{grid-template-columns:1fr}.memory-tags{padding:0 15px 13px}}
 .identity input{
   width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:13px;
   outline:0;background:var(--surface-2)
@@ -239,6 +248,10 @@ a{text-decoration:none;color:inherit}
     <textarea id="text" maxlength="1200" placeholder="اكتب ذكرى أو لحظة جميلة من ARABISK…"></textarea>
     <div class="field-meta"><span>الحد الأقصى 1200 حرف</span><span id="textCount" class="char-count" aria-live="polite">0 / 1200</span></div>
     <div class="identity"><input id="name" maxlength="80" placeholder="اسمك أو اسم مستعار — اتركه فارغًا ليظهر «مجهول»"></div>
+    <div class="memory-context">
+      <label><span>اربط الذكرى بطبق</span><select id="productLink"><option value="">بدون طبق مرتبط</option></select></label>
+      <label><span>اربط الذكرى بفعالية</span><select id="experienceLink"><option value="">بدون فعالية مرتبطة</option></select></label>
+    </div>
   </div>
   <div id="mediaDrop" class="media-drop">
     <strong>أضف وسائط للمنشور</strong>
@@ -287,9 +300,30 @@ a{text-decoration:none;color:inherit}
 <script>
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-let sort='latest',page=0,hasMore=false,busy=false,selectedObjectUrl='';
+let sort='latest',page=0,hasMore=false,busy=false,selectedObjectUrl='',memoryProducts=new Map(),memoryExperiences=new Map();
 const NAME_KEY='arabisk_memories_display_name';
 const LIKED_KEY='arabisk_memories_liked_ids';
+async function loadMemoryContextOptions(){
+  try{
+    const [productsResult,experiencesResult]=await Promise.all([
+      fetch('/api/products?limit=200',{cache:'no-store'}).then(r=>r.json()),
+      fetch('/api/experiences',{cache:'no-store'}).then(r=>r.json())
+    ]);
+    const products=Array.isArray(productsResult)?productsResult:(productsResult.products||[]);
+    const experiences=Array.isArray(experiencesResult)?experiencesResult:(experiencesResult.experiences||[]);
+    memoryProducts=new Map(products.map(item=>[item.id,item.nameAr||item.nameEn||item.id]));
+    memoryExperiences=new Map(experiences.map(item=>[item.slug||item.id,item.titleAr||item.titleEn||item.title||item.slug||item.id]));
+    const productSelect=$('#productLink'),experienceSelect=$('#experienceLink');
+    if(productSelect)productSelect.insertAdjacentHTML('beforeend',products.slice(0,200).map(item=>'<option value="'+esc(item.id)+'">'+esc(item.nameAr||item.nameEn||item.id)+'</option>').join(''));
+    if(experienceSelect)experienceSelect.insertAdjacentHTML('beforeend',experiences.filter(item=>item.status!=='archived').slice(0,100).map(item=>'<option value="'+esc(item.slug||item.id)+'">'+esc(item.titleAr||item.titleEn||item.title||item.slug||item.id)+'</option>').join(''));
+  }catch{}
+}
+function memoryContextHtml(m){
+  const parts=[];
+  if(m.productId)parts.push('<span class="memory-context-tag">طبق: '+esc(memoryProducts.get(m.productId)||m.productId)+'</span>');
+  if(m.experienceSlug)parts.push('<span class="memory-context-tag"><a href="/events/'+encodeURIComponent(m.experienceSlug)+'">فعالية: '+esc(memoryExperiences.get(m.experienceSlug)||m.experienceSlug)+'</a></span>');
+  return parts.length?'<div class="memory-tags">'+parts.join('')+'</div>':'';
+}
 let likedIds=new Set();
 
 function api(url,opt={}){
@@ -367,6 +401,7 @@ function postHtml(m){
   return '<article class="memory" id="memory-'+esc(m.id)+'" data-memory-id="'+esc(m.id)+'">'+
     '<div class="post-head"><div class="publisher"><div class="mini-avatar">'+esc(initial(m.displayName))+'</div><div><span class="name">'+esc(m.displayName||'مجهول')+'</span><span class="date" title="'+esc(new Date(m.createdAt).toLocaleString('ar-AE'))+'">'+relativeTime(m.createdAt)+'</span>'+postBadge(m)+'</div></div><button class="more" type="button" data-action="report" data-id="'+esc(m.id)+'" aria-label="إبلاغ">⋯</button></div>'+
     media+
+    memoryContextHtml(m)+
     (m.text?'<div class="text">'+esc(m.text)+'</div>':'')+
     '<div class="meta-row"><div class="reactions"><span data-stat="likes">'+icon('like')+' '+Number(m.likes||0)+'</span><span data-stat="comments">'+icon('comment')+' '+Number(m.commentsCount||comments.length)+'</span></div><span data-stat="shares">'+Number(m.shareCount||0)+' مشاركة</span></div>'+
     '<div class="actions">'+
@@ -465,7 +500,8 @@ async function publish(){
       if(!put.ok)throw Error('فشل رفع الوسائط.');
       if(upload.data.kind==='image')imageKey=upload.data.key;else videoKey=upload.data.key;
     }
-    await api('/api/memories',{method:'POST',body:JSON.stringify({text,displayName:name,imageKey,videoKey})});
+    await api('/api/memories',{method:'POST',body:JSON.stringify({text,displayName:name,imageKey,videoKey,productId:$('#productLink').value,experienceSlug:$('#experienceLink').value})});
+    $('#productLink').value='';$('#experienceLink').value='';
     $('#text').value='';updateTextCount();saveName();clearMedia();setMessage('تم نشر الذكرى بنجاح.','ok');showToast('تم نشر الذكرى');
     await loadSavedName();loadLikedIds();updateTextCount();loadFeed(true);window.scrollTo({top:360,behavior:'smooth'});
   }catch(e){setMessage(e.message,'error')}finally{b.disabled=false}
