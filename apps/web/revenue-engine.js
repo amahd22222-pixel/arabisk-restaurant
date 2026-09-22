@@ -1307,7 +1307,9 @@ export function registerRevenueRoutes(app, {
         reservationCount: customerReservations.filter(item => item.status !== 'cancelled').length,
         lastOrderAt: customer.lastOrderAt || lastOrder?.createdAt || '',
         lastReservationAt: customer.lastReservationAt || '',
-        marketingOptIn: Boolean(customer.marketingOptIn)
+        marketingOptIn: Boolean(customer.marketingOptIn),
+        internalNotes: clean(customer.internalNotes || '', 2000),
+        internalNotesUpdatedAt: clean(customer.internalNotesUpdatedAt || '', 40)
       },
       summary: {
         totalOrderValue: Math.round(totalOrderValue * 100) / 100,
