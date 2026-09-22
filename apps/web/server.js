@@ -92,6 +92,22 @@ const nextReservationId=()=>`R${String(reservations.length+1).padStart(4,'0')}`;
 app.get('/health',(_req,res)=>res.json({ok:true,service:'arabisk-web',storageReady,persistentStorage:storageReady,menuVersion:MENU_VERSION,productCount:products.length,categoryCount:categories.length,orderCount:orders.length}));
 app.get('/api/orders',requireAdminApiKey,(_req,res)=>res.json(orders));
 app.get('/api/customers',requireAdminApiKey,(_req,res)=>res.json(customers));
+app.patch('/api/customers/:id',requireAdminApiKey,(req,res)=>{
+  const customer=customers.find(item=>item.id===req.params.id);
+  if(!customer)return res.status(404).json({message:'Customer not found'});
+  if(req.body?.internalNotes!==undefined){
+    customer.internalNotes=cleanText(req.body.internalNotes,2000);
+    customer.internalNotesUpdatedAt=new Date().toISOString();
+  }
+  persistState();
+  return res.json({
+    id:customer.id,
+    name:customer.name||'',
+    phone:customer.phone||'',
+    internalNotes:customer.internalNotes||'',
+    internalNotesUpdatedAt:customer.internalNotesUpdatedAt||''
+  });
+});
 app.get('/api/reservations',requireAdminApiKey,(_req,res)=>res.json(reservations));
 const ORDER_STATUS_TRANSITIONS={pending:new Set(['confirmed','cancelled']),confirmed:new Set(['preparing','cancelled']),preparing:new Set(['ready','cancelled']),ready:new Set(['completed','cancelled']),completed:new Set([]),cancelled:new Set([])};
 app.patch('/api/orders/:id',requireAdminApiKey,(req,res)=>{const order=orders.find(item=>item.id===req.params.id);if(!order)return res.status(404).json({message:'Order not found'});if(req.body?.status!==undefined){const nextStatus=String(req.body.status);if(!ORDER_STATUS_TRANSITIONS[order.status]?.has(nextStatus))return res.status(409).json({message:`Invalid order status transition: ${order.status} -> ${nextStatus}`});order.status=nextStatus;}if(req.body?.notes!==undefined)order.notes=cleanText(req.body.notes,300);order.updatedAt=new Date().toISOString();persistState();return res.json(order);});
