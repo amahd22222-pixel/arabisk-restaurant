@@ -31,9 +31,15 @@ function openNextRevenueAction(id){
 
 async function createNextRevenueAction(decision){
   if(!decision?.actionType||!decision?.actionReference)return;
-  const response=await fetch(nextActionApiBase()+'/api/revenue/campaign-drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:decision.actionType,reference:decision.actionReference})});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.message||'تعذر إنشاء الإجراء المقترح.');
+  const apiRequest=window.ARABISK_ADMIN_REQUEST;
+  const data=apiRequest
+    ? await apiRequest('/api/revenue/campaign-drafts',{method:'POST',body:JSON.stringify({type:decision.actionType,reference:decision.actionReference})})
+    : await (async()=>{
+        const response=await fetch(nextActionApiBase()+'/api/revenue/campaign-drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:decision.actionType,reference:decision.actionReference})});
+        const payload=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(payload.message||'تعذر إنشاء الإجراء المقترح.');
+        return payload;
+      })();
   const campaignId=data.id||data.campaignId||'';
   if(campaignId)openNextRevenueAction(campaignId);
 }
