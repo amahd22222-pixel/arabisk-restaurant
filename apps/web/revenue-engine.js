@@ -1117,9 +1117,9 @@ export function registerRevenueRoutes(app, {
     const customerEvents = events.filter(item => item.customerId === id).sort((a,b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 40);
     const summary = buildSummary();
     const opportunities = [
-      ...(summary.opportunities?.inactiveCustomers || []).filter(item => item.id === id),
-      ...(summary.opportunities?.returnCustomers || []).filter(item => item.id === id),
-      ...(summary.opportunities?.upcomingReservations || []).filter(item => item.phone === customer.phone)
+      ...(summary.opportunities?.inactiveCustomers || []).filter(item => item.id === id).map(item => ({...item,type:'inactive_customer'})),
+      ...(summary.opportunities?.returnCustomers || []).filter(item => item.id === id).map(item => ({...item,type:'returning_customer'})),
+      ...(summary.opportunities?.upcomingReservations || []).filter(item => item.phone === customer.phone).map(item => ({...item,type:'upcoming_reservation'}))
     ];
     const validOrders = customerOrders.filter(order => order.status !== 'cancelled');
     const totalOrderValue = validOrders.reduce((sum, order) => sum + number(order.total), 0);
