@@ -302,13 +302,16 @@ async function loadRevenue(){
     const note=document.querySelector('#rev-attribution-note');if(note)note.textContent=measurement.attributionNote||'قياس ارتباطي فقط، وليس إثباتًا سببيًا.';
 
     const actions=data.topActions||[];
-    document.querySelector('#revenue-actions-body').innerHTML=actions.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)}</td><td><strong>${revEsc(row.title)}</strong><small>${revEsc(row.reason)}</small></td><td>${revEsc(row.recommendedAction)}</td><td class="price">${row.potentialValue?revMoney(row.potentialValue):'—'}</td><td>${row.type==='abandoned_cart'?'<button class="small-action" data-recovery-execute data-reference="'+revEsc(row.reference)+'" type="button">استرجاع السلة</button>':row.type==='inactive_customer'?'<button class="small-action" data-inactive-recovery-execute data-reference="'+revEsc(row.reference)+'" type="button">إعادة الطلب</button>':'<span class="status pending">التنفيذ لاحقًا</span>'}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد فرص حالية.</td></tr>';
+    document.querySelector('#revenue-actions-body').innerHTML=actions.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)}</td><td><strong>${revEsc(row.title)}</strong><small>${revEsc(row.reason)}</small></td><td>${revEsc(row.recommendedAction)}</td><td class="price">${row.potentialValue?revMoney(row.potentialValue):'—'}</td><td>${row.type==='abandoned_cart'?'<button class="small-action" data-recovery-execute data-reference="'+revEsc(row.reference)+'" type="button">استرجاع السلة</button>':row.type==='inactive_customer'?'<button class="small-action" data-inactive-recovery-execute data-reference="'+revEsc(row.reference)+'" type="button">إعادة الطلب</button>':row.type==='returning_customer'?'<button class="small-action" data-returning-recovery-execute data-reference="'+revEsc(row.reference)+'" type="button">إعادة الطلب</button>':'<span class="status pending">التنفيذ لاحقًا</span>'}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد فرص حالية.</td></tr>';
 
     const abandoned=data.opportunities?.abandonedCarts||[];
     document.querySelector('#revenue-abandoned-body').innerHTML=abandoned.map(row=>`<tr><td><strong>${revEsc(row.sessionId.slice(0,12))}</strong><small>${new Date(row.lastActivityAt).toLocaleString('ar-AE')}</small></td><td>${revEsc(row.productId||'—')}</td><td>${revPriority(row.priorityKey,row.priority)}</td><td class="price">${revMoney(row.cartValue)}</td><td><button class="small-action" data-recovery-execute data-reference="${revEsc(row.sessionId)}" type="button" ${row.cartItems?.length?'':'disabled'}>${row.cartItems?.length?'استرجاع السلة':'غير متاح'}</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد سلات متروكة مؤهلة حاليًا.</td></tr>';
 
     const inactive=data.opportunities?.inactiveCustomers||[];
     document.querySelector('#revenue-inactive-body').innerHTML=inactive.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name||'عميل')}</strong><small dir="ltr">${revEsc(row.phone||'')}</small></td><td>${Number(row.orderCount||0)}</td><td>${Number(row.daysSinceLastOrder||0)} يوم</td><td class="price">${row.lastOrderValue?revMoney(row.lastOrderValue):'—'}</td><td><button class="small-action" data-inactive-recovery-execute data-reference="${revEsc(row.id)}" type="button" ${row.cartItems?.length?'':'disabled'}>${row.cartItems?.length?'إعادة الطلب':'غير متاح'}</button></td></tr>`).join('')||'<tr><td colspan="5" class="empty">لا توجد فرص إعادة تنشيط قابلة للتنفيذ حاليًا.</td></tr>';
+    const returning=data.opportunities?.returnCustomers||[];
+    const returningBody=document.querySelector('#revenue-returning-body');
+    if(returningBody)returningBody.innerHTML=returning.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name||'عميل')}</strong><small dir="ltr">${revEsc(row.phone||'')}</small></td><td>${Number(row.orderCount||0)}</td><td>${Number(row.averageGapDays||0).toFixed(0)} يوم</td><td>${Number(row.daysSinceLastOrder||0)} يوم</td><td class="price">${row.lastOrderValue?revMoney(row.lastOrderValue):'—'}</td><td><button class="small-action" data-returning-recovery-execute data-reference="${revEsc(row.id)}" type="button" ${row.cartItems?.length?'':'disabled'}>${row.cartItems?.length?'إعادة الطلب':'غير متاح'}</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">لا توجد فرص عودة قابلة للتنفيذ حاليًا.</td></tr>';
 
     const productInterest=data.opportunities?.productInterest||[];
     const productInterestBody=document.querySelector('#revenue-product-interest-body');
@@ -316,9 +319,6 @@ async function loadRevenue(){
 
     const upcoming=data.opportunities?.upcomingReservations||[];
     document.querySelector('#revenue-reservation-body').innerHTML=upcoming.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name)}</strong><small dir="ltr">${revEsc(row.phone)}</small></td><td>${revEsc(row.date)}<small>${revEsc(row.time)}</small></td><td>${Number(row.guests||0)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد حجوزات خلال 48 ساعة.</td></tr>';
-    const returning=data.opportunities?.returnCustomers||[];
-    const returningBody=document.querySelector('#revenue-returning-body');
-    if(returningBody)returningBody.innerHTML=returning.map(row=>`<tr><td>${revPriority(row.priorityKey,row.priority)} <strong>${revEsc(row.name||'عميل')}</strong><small dir="ltr">${revEsc(row.phone||'')}</small></td><td>${Number(row.orderCount||0)}</td><td>${Number(row.averageGapDays||0).toFixed(0)} يوم</td><td>${Number(row.daysSinceLastOrder||0)} يوم</td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد عملاء حان موعد عودتهم حاليًا.</td></tr>';
     window.revenueTaskRouting=data.taskRouting||{};
     renderRevenueTaskRouting();
     const workload=data.taskWorkload||{};
@@ -539,6 +539,22 @@ document.querySelector('#revenue-refresh')?.addEventListener('click',()=>void lo
 document.querySelector('[data-section="revenue"]')?.addEventListener('click',()=>void loadRevenue());
 void loadRevenue();
 
+async function executeReturningCustomerRecovery(reference,button){
+  if(!reference)return;
+  button.disabled=true;
+  try{
+    const response=await fetch(revenueApiBase()+'/api/revenue/returning-customers/'+encodeURIComponent(reference)+'/execute',{method:'POST',headers:{'Content-Type':'application/json'}});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.message||'تعذر تنفيذ إعادة الطلب.');
+    const fullUrl=window.location.origin+'/revenue-recovery?token='+encodeURIComponent(data.recoveryToken||'');
+    const result=document.querySelector('#revenue-recovery-result');
+    const input=document.querySelector('#revenue-recovery-url');
+    if(result&&input){input.value=fullUrl;result.hidden=false;result.scrollIntoView({behavior:'smooth',block:'nearest'});}
+    try{await navigator.clipboard?.writeText(fullUrl)}catch{}
+    alert(data.reused?'رابط إعادة الطلب موجود بالفعل وتم نسخه.':'تم إنشاء رابط إعادة الطلب وتم نسخه.');
+  }catch(error){alert(error.message||'تعذر تنفيذ إعادة الطلب.');}
+  finally{button.disabled=false;}
+}
 async function executeInactiveCustomerRecovery(reference,button){
   if(!reference)return;
   button.disabled=true;
@@ -559,7 +575,9 @@ document.querySelector('#revenue')?.addEventListener('click',event=>{
   const button=event.target.closest('[data-recovery-execute]');
   if(button&&!button.disabled){void executeAbandonedCartRecovery(button.dataset.reference,button);return;}
   const inactiveButton=event.target.closest('[data-inactive-recovery-execute]');
-  if(inactiveButton&&!inactiveButton.disabled){void executeInactiveCustomerRecovery(inactiveButton.dataset.reference,inactiveButton);}
+  if(inactiveButton&&!inactiveButton.disabled){void executeInactiveCustomerRecovery(inactiveButton.dataset.reference,inactiveButton);return;}
+  const returningButton=event.target.closest('[data-returning-recovery-execute]');
+  if(returningButton&&!returningButton.disabled){void executeReturningCustomerRecovery(returningButton.dataset.reference,returningButton);}
 });
 document.querySelector('#revenue-recovery-copy')?.addEventListener('click',async()=>{
   const input=document.querySelector('#revenue-recovery-url');
