@@ -132,11 +132,27 @@ async function openCustomer360(customerId){
         '</div>'+
       '</article>';
     }).join('')||'<div class="empty">لا يوجد نشاط كافٍ لبناء الخط الزمني.</div>';
+    const decision=profile.decision||{};
+    const readinessLabel=decision.consentRequired
+      ? 'تحتاج مراجعة موافقة التواصل'
+      : decision.blockedActions>0
+        ? 'يوجد عائق تشغيلي'
+        : decision.overdueActions>0
+          ? 'توجد مهمة متأخرة'
+          : decision.openActions>0
+            ? 'يوجد إجراء مفتوح'
+            : 'لا يوجد إجراء مفتوح';
+    const decisionAction=decision.nextOpenActionId
+      ? '<button type="button" class="small-action customer360-decision-action" data-campaign-jump="'+escapeHtml(decision.nextOpenActionId)+'">فتح الإجراء المفتوح</button>'
+      : '';
+    const decisionPotential=Number(decision.potentialValue||0)>0
+      ? '<b class="customer360-decision-value">'+money(decision.potentialValue)+'</b>'
+      : '';
     const consentLabel=customer.marketingOptIn?'يمكن تنفيذ الإجراء بعد المراجعة':'الموافقة التسويقية غير موجودة؛ الإجراء يبقى يدويًا بعد التحقق';
     body.innerHTML=
       '<div class="customer360-head"><div><span>Customer 360</span><h2>'+escapeHtml(customer.name||'عميل')+'</h2><small dir="ltr">'+escapeHtml(customer.phone||'')+'</small></div><span class="status '+(customer.marketingOptIn?'on':'pending')+'">'+(customer.marketingOptIn?'موافقة تواصل موجودة':'لا توجد موافقة تسويقية')+'</span></div>'+
       '<div class="customer360-stats"><article><span>الطلبات</span><b>'+Number(customer.orderCount||0)+'</b></article><article><span>قيمة الطلبات</span><b>'+money(summary.totalOrderValue)+'</b></article><article><span>متوسط الطلب</span><b>'+money(summary.averageOrderValue)+'</b></article><article><span>آخر طلب</span><b class="customer360-date">'+(summary.daysSinceLastOrder===null?'—':Number(summary.daysSinceLastOrder)+' يوم')+'</b></article><article><span>متوسط العودة</span><b class="customer360-date">'+(summary.averageReturnDays===null?'—':Number(summary.averageReturnDays)+' يوم')+'</b></article><article><span>آخر طلب بقيمة</span><b>'+money(summary.lastOrderValue)+'</b></article><article><span>الحجوزات</span><b>'+Number(summary.totalReservations||0)+'</b></article><article><span>آخر نشاط</span><b class="customer360-date">'+(summary.lastActivityAt?new Date(summary.lastActivityAt).toLocaleString('ar-AE'):'—')+'</b></article></div>'+
-      '<div class="customer360-next"><span>الإجراء التالي المقترح</span><strong>'+escapeHtml(profile.nextAction||'راجع العميل وحدد الإجراء المناسب.')+'</strong><small>'+escapeHtml(consentLabel)+'</small></div>'+
+      '<div class="customer360-decision"><div class="customer360-decision-head"><div><span>مركز قرار العميل</span><h3>'+escapeHtml(decision.label||'حالة العميل')+'</h3><p>'+escapeHtml(decision.reason||'لا توجد إشارة تشغيلية إضافية.')+'</p></div><span class="customer360-decision-state">'+escapeHtml(readinessLabel)+'</span></div><div class="customer360-decision-meta"><span>مهام مفتوحة: <b>'+Number(decision.openActions||0)+'</b></span><span>محجوبة: <b>'+Number(decision.blockedActions||0)+'</b></span><span>متأخرة: <b>'+Number(decision.overdueActions||0)+'</b></span>'+decisionPotential+'</div><div class="customer360-decision-foot"><strong>'+escapeHtml(decision.recommendedAction||profile.nextAction||'راجع العميل وحدد الإجراء المناسب.')+'</strong><small>'+escapeHtml(consentLabel)+'</small>'+decisionAction+'</div></div>'+
       '<div class="customer360-behavior"><div><h3>الأصناف الأكثر تكرارًا</h3><div class="customer360-chip-list">'+favorites+'</div></div><div><h3>آخر طلب</h3><div class="customer360-chip-list">'+lastItems+'</div></div><div><h3>نشاط العميل</h3><div class="customer360-chip-list">'+eventSummary+'</div></div></div>'+
       '<div class="customer360-timeline"><div class="customer360-timeline-head"><div><h3>الخط الزمني للعميل</h3><p>الطلبات والحجوزات والأحداث والإجراءات في مسار زمني واحد.</p></div><span>آخر 60 نشاطًا</span></div><div class="customer360-timeline-filters" role="tablist" aria-label="تصفية الخط الزمني"><button type="button" class="active" data-timeline-filter="all">الكل <b data-timeline-count="all">0</b></button><button type="button" data-timeline-filter="order">الطلبات <b data-timeline-count="order">0</b></button><button type="button" data-timeline-filter="reservation">الحجوزات <b data-timeline-count="reservation">0</b></button><button type="button" data-timeline-filter="event">التفاعل <b data-timeline-count="event">0</b></button><button type="button" data-timeline-filter="action">إجراءات الإيراد <b data-timeline-count="action">0</b></button></div><div class="customer360-timeline-list">'+timeline+'</div></div>'+
       '<div class="customer360-columns"><div><h3>الطلبات</h3><div class="table-wrap"><table><thead><tr><th>الطلب</th><th>القيمة</th><th>الحالة</th></tr></thead><tbody>'+orders+'</tbody></table></div></div><div><h3>الحجوزات</h3><div class="table-wrap"><table><thead><tr><th>الموعد</th><th>الأشخاص</th><th>الحالة</th></tr></thead><tbody>'+reservations+'</tbody></table></div></div></div>'+
