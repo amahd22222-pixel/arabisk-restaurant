@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin.log 2>&1 &
+          ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY=ci PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin.log 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true' EXIT
           for i in {1..20}; do
@@ -102,5 +102,7 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data-binary @/tmp/oversized-login.json http://127.0.0.1:4175/auth/check)" = "413"
 
           echo "Admin proxy must fail closed when its upstream URL is absent."
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4175/proxy/api/orders)" = "401"
+          curl -fsS -c /tmp/arabisk-admin.cookies -H 'Content-Type: application/json' --data '{"username":"ci","password":"ci"}' http://127.0.0.1:4175/auth/check > /tmp/admin-login.json
+          grep -q '"ok":true' /tmp/admin-login.json
+          test "$(curl -s -o /dev/null -w '%{http_code}' -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/orders)" = "503"
           cat /tmp/arabisk-web.log
