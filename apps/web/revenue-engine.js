@@ -1192,20 +1192,50 @@ export function registerRevenueRoutes(app, {
   }
   function customerSegments() {
     const now = Date.now();
+    const ordersByPhone = new Map();
+    for (const order of orders) {
+      if (!order.phone || order.status === 'cancelled') continue;
+      const rows = ordersByPhone.get(order.phone) || [];
+      rows.push(order);
+      ordersByPhone.set(order.phone, rows);
+    }
+
+    const reservationsByPhone = new Map();
+    for (const reservation of reservations) {
+      if (!reservation.phone || reservation.status === 'cancelled') continue;
+      reservationsByPhone.set(reservation.phone, (reservationsByPhone.get(reservation.phone) || 0) + 1);
+    }
+
+    const actionMetricsBySegment = new Map();
+    for (const action of campaigns) {
+      if (action.type !== 'segment_action') continue;
+      const key = clean(action.reference, 80);
+      if (!key) continue;
+      const current = actionMetricsBySegment.get(key) || { drafts: 0, executed: 0, converted: 0, ignored: 0, attributedOrders: 0, measuredRevenue: 0 };
+      current[action.status === 'draft' || action.status === 'executed' || action.status === 'converted' || action.status === 'ignored' ? action.status : 'draft'] += 1;
+      if (action.status === 'converted' && action.attribution?.matchedOrder) current.attributedOrders += 1;
+      current.measuredRevenue += Math.max(0, number(action.resultRevenue));
+      actionMetricsBySegment.set(key, current);
+    }
+
     const rows = customers.map(customer => {
-      const customerOrders = orders.filter(order => order.phone && customer.phone && order.phone === customer.phone);
-      const validOrders = customerOrders.filter(order => order.status !== 'cancelled');
-      const totalRevenue = validOrders.reduce((sum, order) => sum + number(order.total), 0);
-      const lastOrderAt = validOrders.map(order => order.updatedAt || order.createdAt).filter(Boolean).sort().pop() || customer.lastOrderAt || '';
+      const customerOrders = ordersByPhone.get(customer.phone) || [];
+      let totalRevenue = 0;
+      let lastOrderAt = customer.lastOrderAt || '';
+      for (const order of customerOrders) {
+        totalRevenue += number(order.total);
+        const candidate = order.updatedAt || order.createdAt || '';
+        if (candidate && (!lastOrderAt || candidate > lastOrderAt)) lastOrderAt = candidate;
+      }
       const daysSinceLastOrder = lastOrderAt ? Math.floor((now - Date.parse(lastOrderAt)) / 86400000) : null;
-      const reservationCount = reservations.filter(item => item.phone && customer.phone && item.phone === customer.phone && item.status !== 'cancelled').length;
+      const reservationCount = reservationsByPhone.get(customer.phone) || 0;
       return {
         id: customer.id,
         name: clean(customer.name || 'عميل', 80),
         phone: clean(customer.phone, 40),
-        orderCount: validOrders.length,
+        orderCount: customerOrders.length,
         totalRevenue: Math.round(totalRevenue * 100) / 100,
-        averageOrderValue: validOrders.length ? Math.round((totalRevenue / validOrders.length) * 100) / 100 : 0,
+        averageOrderValue: customerOrders.length ? Math.round((totalRevenue / customerOrders.length) * 100) / 100 : 0,
         lastOrderAt,
         daysSinceLastOrder,
         reservationCount
@@ -1235,14 +1265,14 @@ export function registerRevenueRoutes(app, {
         actionRequiresConsent: true,
         actionSendable: false,
         actionMetrics: (() => {
-          const actions = campaigns.filter(item => item.type === 'segment_action' && item.reference === definition.key);
+          const metrics = actionMetricsBySegment.get(definition.key) || { drafts: 0, executed: 0, converted: 0, ignored: 0, attributedOrders: 0, measuredRevenue: 0 };
           return {
-            drafts: actions.length,
-            executed: actions.filter(item => item.status === 'executed').length,
-            converted: actions.filter(item => item.status === 'converted').length,
-            ignored: actions.filter(item => item.status === 'ignored').length,
-            attributedOrders: actions.filter(item => item.status === 'converted' && item.attribution?.matchedOrder).length,
-            measuredRevenue: Math.round(actions.reduce((sum, item) => sum + number(item.resultRevenue), 0) * 100) / 100
+            drafts: metrics.drafts,
+            executed: metrics.executed,
+            converted: metrics.converted,
+            ignored: metrics.ignored,
+            attributedOrders: metrics.attributedOrders,
+            measuredRevenue: Math.round(metrics.measuredRevenue * 100) / 100
           };
         })(),
         members: members.slice(0, 100)
