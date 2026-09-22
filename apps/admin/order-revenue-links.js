@@ -75,10 +75,31 @@ document.addEventListener('click',event=>{
     .catch(error=>alert(error.message||'تعذر فتح الإجراء المرتبط.'))
     .finally(()=>{button.disabled=false;});
 });
-window.addEventListener('arabisk:revenue-state-updated',renderOrderRevenueLinks);
-renderOrderRevenueLinks();
+let orderRevenueRenderFrame=0;
+let orderRevenueRenderPending=false;
+function scheduleOrderRevenueRender(){
+  if(orderRevenueRenderPending)return;
+  orderRevenueRenderPending=true;
+  const run=()=>{
+    orderRevenueRenderPending=false;
+    orderRevenueRenderFrame=0;
+    renderOrderRevenueLinks();
+  };
+  orderRevenueRenderFrame=requestAnimationFrame(run);
+}
+window.addEventListener('arabisk:revenue-state-updated',scheduleOrderRevenueRender);
+scheduleOrderRevenueRender();
 const orderBody=document.querySelector('#orders-body');
 if(orderBody){
-  const observer=new MutationObserver(renderOrderRevenueLinks);
+  const observer=new MutationObserver(mutations=>{
+    if(mutations.every(mutation=>{
+      const target=mutation.target instanceof Element?mutation.target:null;
+      const nodes=[...mutation.addedNodes,...mutation.removedNodes];
+      return !!target?.closest('.order-revenue-links') || nodes.every(node=>node instanceof Element && node.closest('.order-revenue-links'));
+    }))return;
+    scheduleOrderRevenueRender();
+  });
   observer.observe(orderBody,{childList:true,subtree:true});
+  window.__ARABISK_ORDER_REVENUE_RENDER_FRAME__=()=>orderRevenueRenderFrame;
+  window.__ARABISK_ORDER_REVENUE_OBSERVER__=observer;
 }
