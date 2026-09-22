@@ -1182,6 +1182,71 @@ export function registerRevenueRoutes(app, {
         orderId:item.orderId||item.attribution?.orderId||'',
         updatedAt:item.updatedAt||item.createdAt||''
       }));
+    const opportunityTimeline = opportunities.slice(0, 20).map(item => ({
+      type: 'opportunity',
+      label: 'فرصة',
+      title: clean(item.reason || item.recommendedAction || 'فرصة مرتبطة بالعميل', 160),
+      details: clean(item.recommendedAction || '', 240),
+      status: clean(item.priority || '', 40),
+      value: number(item.potentialValue),
+      at: new Date().toISOString(),
+      reference: clean(item.id || item.reference || '', 120),
+      opportunityType: clean(item.type || '', 40)
+    }));
+    const orderTimeline = validOrders.slice().map(order => ({
+      type: 'order',
+      label: 'طلب',
+      title: 'طلب #' + clean(order.id, 40),
+      details: clean(order.orderType || '', 80),
+      status: clean(order.status || '', 40),
+      value: number(order.total),
+      at: order.createdAt || order.updatedAt || ''
+    }));
+    const reservationTimeline = customerReservations.slice().map(item => ({
+      type: 'reservation',
+      label: 'حجز',
+      title: 'حجز لـ ' + Number(item.guests || 0) + ' أشخاص',
+      details: [clean(item.date, 30), clean(item.time, 20)].filter(Boolean).join(' · '),
+      status: clean(item.status || '', 40),
+      value: 0,
+      at: item.createdAt || '',
+      scheduledAt: [clean(item.date, 30), clean(item.time, 20)].filter(Boolean).join(' ')
+    }));
+    const actionTimeline = relatedActions.map(item => ({
+      type: 'action',
+      label: 'إجراء إيراد',
+      title: clean(item.title || item.type || 'إجراء', 160),
+      details: item.orderId ? 'مرتبط بالطلب #' + clean(item.orderId, 40) : '',
+      status: clean(item.status || '', 40),
+      value: number(item.resultRevenue),
+      at: item.updatedAt || ''
+    }));
+    const eventLabels = {
+      menu_view: 'شاهد المنيو',
+      item_view: 'شاهد منتجًا',
+      add_to_cart: 'أضاف للسلة',
+      cart_updated: 'حدّث السلة',
+      checkout_started: 'بدأ الدفع',
+      order_completed: 'أكمل الطلب',
+      reservation_created: 'أنشأ حجزًا'
+    };
+    const eventTimeline = customerEvents.map(item => {
+      const product = item.productId ? products.find(row => row.id === item.productId) : null;
+      return {
+        type: 'event',
+        label: eventLabels[item.eventName] || item.eventName,
+        title: product ? clean(product.nameAr || product.nameEn || product.id, 120) : clean(eventLabels[item.eventName] || item.eventName, 120),
+        details: item.productId ? 'منتج مرتبط: ' + clean(item.productId, 50) : '',
+        status: '',
+        value: number(item.orderValue || item.cartValue),
+        at: item.createdAt || '',
+        eventName: clean(item.eventName, 40)
+      };
+    });
+    const timeline = [...opportunityTimeline, ...actionTimeline, ...orderTimeline, ...reservationTimeline, ...eventTimeline]
+      .filter(item => item.at)
+      .sort((a, b) => Date.parse(b.at || '') - Date.parse(a.at || ''))
+      .slice(0, 60);
     const primaryOpportunity=opportunities.slice().sort((a,b)=>number(b.priorityScore)-number(a.priorityScore))[0]||null;
     const nextAction=customer.marketingOptIn
       ? (primaryOpportunity?.recommendedAction||'راجع آخر نشاط للعميل وحدد الإجراء المناسب.')
