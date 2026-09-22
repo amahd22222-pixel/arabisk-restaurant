@@ -22,6 +22,7 @@ export default defineConfig({
         tags: [
           { tag: 'link', attrs: { rel: 'stylesheet', href: '/revenue-command-center.css' }, injectTo: 'head' },
           { tag: 'link', attrs: { rel: 'stylesheet', href: '/customer-intelligence.css' }, injectTo: 'head' },
+          { tag: 'link', attrs: { rel: 'stylesheet', href: '/customer360-enhanced.css' }, injectTo: 'head' },
           { tag: 'script', attrs: { type: 'module', src: '/revenue-command-center.js' }, injectTo: 'body' },
           { tag: 'script', attrs: { type: 'module', src: '/customer-intelligence.js' }, injectTo: 'body' }
         ]

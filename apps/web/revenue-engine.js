@@ -1114,28 +1114,80 @@ export function registerRevenueRoutes(app, {
     if (!customer) return null;
     const customerOrders = orders.filter(order => order.phone && customer.phone && order.phone === customer.phone);
     const customerReservations = reservations.filter(item => item.phone && customer.phone && item.phone === customer.phone);
-    const customerEvents = events.filter(item => item.customerId === id).sort((a,b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 30);
+    const customerEvents = events.filter(item => item.customerId === id).sort((a,b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 40);
     const summary = buildSummary();
     const opportunities = [
-      ...(summary.opportunities?.inactiveCustomers || []).filter(item => item.id === id),
-      ...(summary.opportunities?.upcomingReservations || []).filter(item => item.phone === customer.phone)
+      ...(summary.opportunities?.inactiveCustomers || []).filter(item => item.id === id).map(item => ({...item,type:'inactive_customer'})),
+      ...(summary.opportunities?.returnCustomers || []).filter(item => item.id === id).map(item => ({...item,type:'returning_customer'})),
+      ...(summary.opportunities?.upcomingReservations || []).filter(item => item.phone === customer.phone).map(item => ({...item,type:'upcoming_reservation'}))
     ];
+    const validOrders = customerOrders.filter(order => order.status !== 'cancelled');
+    const totalOrderValue = validOrders.reduce((sum, order) => sum + number(order.total), 0);
+    const orderTimes = validOrders.map(order => Date.parse(order.updatedAt || order.createdAt || '')).filter(Number.isFinite).sort((a,b)=>a-b);
+    const gaps = [];
+    for(let index=1; index<orderTimes.length; index+=1){
+      const gapDays=(orderTimes[index]-orderTimes[index-1])/86400000;
+      if(gapDays>=1&&gapDays<=120)gaps.push(gapDays);
+    }
+    const averageReturnDays=gaps.length?Math.round((gaps.reduce((sum,value)=>sum+value,0)/gaps.length)*10)/10:null;
+    const lastOrder=validOrders.slice().sort((a,b)=>Date.parse(b.createdAt||'')-Date.parse(a.createdAt||''))[0]||null;
+    const daysSinceLastOrder=lastOrder?Math.max(0,Math.floor((Date.now()-Date.parse(lastOrder.updatedAt||lastOrder.createdAt||''))/86400000)):null;
+    const productMap=new Map();
+    for(const order of validOrders){
+      for(const item of Array.isArray(order.items)?order.items:[]){
+        const productId=clean(item.productId,50);
+        if(!productId)continue;
+        const current=productMap.get(productId)||{productId,quantity:0,orders:0};
+        current.quantity+=Math.max(1,Math.min(20,Math.round(number(item.quantity,1))));
+        current.orders+=1;
+        productMap.set(productId,current);
+      }
+    }
+    const favoriteProducts=[...productMap.values()].sort((a,b)=>b.quantity-a.quantity||b.orders-a.orders).slice(0,5).map(item=>{
+      const product=products.find(row=>row.id===item.productId)||{};
+      return {productId:item.productId,name:clean(product.nameAr||product.nameEn||item.productId,100),quantity:item.quantity,orders:item.orders};
+    });
+    const eventCounts={};
+    for(const event of customerEvents)eventCounts[event.eventName]=(eventCounts[event.eventName]||0)+1;
+    const relatedActions=campaigns
+      .filter(item=>item.customerId===id||(['inactive_customer','returning_customer'].includes(item.type)&&item.reference===id))
+      .sort((a,b)=>Date.parse(b.updatedAt||b.createdAt||'')-Date.parse(a.updatedAt||a.createdAt||''))
+      .slice(0,20)
+      .map(item=>({
+        id:item.id,type:item.type,title:item.title,status:item.status,
+        resultRevenue:number(item.resultRevenue),
+        orderId:item.orderId||item.attribution?.orderId||'',
+        updatedAt:item.updatedAt||item.createdAt||''
+      }));
+    const primaryOpportunity=opportunities.slice().sort((a,b)=>number(b.priorityScore)-number(a.priorityScore))[0]||null;
+    const nextAction=customer.marketingOptIn
+      ? (primaryOpportunity?.recommendedAction||'راجع آخر نشاط للعميل وحدد الإجراء المناسب.')
+      : 'تحقق من موافقة التواصل قبل تنفيذ أي إجراء موجه للعميل.';
     return {
       customer: {
         id: customer.id,
         name: customer.name || 'عميل',
         phone: customer.phone || '',
-        orderCount: Number(customer.orderCount || 0),
-        reservationCount: Number(customer.reservationCount || 0),
-        lastOrderAt: customer.lastOrderAt || '',
+        orderCount: Number(validOrders.length),
+        reservationCount: customerReservations.filter(item => item.status !== 'cancelled').length,
+        lastOrderAt: customer.lastOrderAt || lastOrder?.createdAt || '',
         lastReservationAt: customer.lastReservationAt || '',
         marketingOptIn: Boolean(customer.marketingOptIn)
       },
       summary: {
-        totalOrderValue: Math.round(customerOrders.reduce((sum, order) => sum + number(order.total), 0) * 100) / 100,
+        totalOrderValue: Math.round(totalOrderValue * 100) / 100,
+        averageOrderValue: validOrders.length ? Math.round((totalOrderValue / validOrders.length) * 100) / 100 : 0,
         completedOrders: customerOrders.filter(order => order.status === 'completed').length,
         totalReservations: customerReservations.filter(item => item.status !== 'cancelled').length,
+        daysSinceLastOrder,
+        averageReturnDays,
+        lastOrderValue: number(lastOrder?.total),
         lastActivityAt: [...customerOrders.map(item => item.updatedAt || item.createdAt), ...customerReservations.map(item => item.createdAt), ...customerEvents.map(item => item.createdAt)].filter(Boolean).sort().pop() || ''
+      },
+      behavior: {
+        favoriteProducts,
+        lastOrderItems: Array.isArray(lastOrder?.items) ? lastOrder.items.slice(0,20).map(item=>({productId:clean(item.productId,50),nameAr:clean(item.nameAr||'',120),quantity:Math.max(1,Math.min(20,Math.round(number(item.quantity,1)))),unitPrice:number(item.unitPrice),lineTotal:number(item.lineTotal)})) : [],
+        eventCounts
       },
       orders: customerOrders.slice().sort((a,b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 30).map(order => ({
         id: order.id,
@@ -1150,7 +1202,9 @@ export function registerRevenueRoutes(app, {
       recentEvents: customerEvents.map(item => ({
         eventName:item.eventName, productId:item.productId, orderId:item.orderId, createdAt:item.createdAt
       })),
-      opportunities
+      opportunities,
+      relatedActions,
+      nextAction
     };
   }
 

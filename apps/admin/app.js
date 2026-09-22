@@ -69,12 +69,42 @@ async function openCustomer360(customerId){
     const profile=await request('/api/revenue/customers/'+encodeURIComponent(customerId)+'/360');
     const customer=profile.customer||{};
     const summary=profile.summary||{};
+    const behavior=profile.behavior||{};
     const money=value=>'AED '+Number(value||0).toFixed(0);
-    const opps=(profile.opportunities||[]).map(item=>`<div class="customer360-opportunity"><strong>${escapeHtml(item.priority||'—')}</strong><span>${escapeHtml(item.reason||item.recommendedAction||'فرصة مرتبطة بالعميل')}</span></div>`).join('')||'<div class="empty">لا توجد فرص مرتبطة حاليًا.</div>';
-    const orders=(profile.orders||[]).map(order=>`<tr><td><strong>${escapeHtml(order.id)}</strong><small>${new Date(order.createdAt).toLocaleString('ar-AE')}</small></td><td class="price">${money(order.total)}</td><td>${escapeHtml(order.status)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد طلبات.</td></tr>';
-    const reservations=(profile.reservations||[]).map(item=>`<tr><td>${escapeHtml(item.date)}<small>${escapeHtml(item.time)}</small></td><td>${Number(item.guests||0)}</td><td>${escapeHtml(item.status)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">لا توجد حجوزات.</td></tr>';
-    body.innerHTML=`<div class="customer360-head"><div><span>Customer 360</span><h2>${escapeHtml(customer.name||'عميل')}</h2><small dir="ltr">${escapeHtml(customer.phone||'')}</small></div><span class="status ${customer.marketingOptIn?'on':'pending'}">${customer.marketingOptIn?'موافقة تواصل موجودة':'لا توجد موافقة تسويقية'}</span></div><div class="customer360-stats"><article><span>الطلبات</span><b>${Number(customer.orderCount||0)}</b></article><article><span>قيمة الطلبات</span><b>${money(summary.totalOrderValue)}</b></article><article><span>الحجوزات</span><b>${Number(summary.totalReservations||0)}</b></article><article><span>آخر نشاط</span><b class="customer360-date">${summary.lastActivityAt?new Date(summary.lastActivityAt).toLocaleString('ar-AE'):'—'}</b></article></div><div class="customer360-columns"><div><h3>الطلبات</h3><div class="table-wrap"><table><thead><tr><th>الطلب</th><th>القيمة</th><th>الحالة</th></tr></thead><tbody>${orders}</tbody></table></div></div><div><h3>الحجوزات</h3><div class="table-wrap"><table><thead><tr><th>الموعد</th><th>الأشخاص</th><th>الحالة</th></tr></thead><tbody>${reservations}</tbody></table></div></div></div><div class="customer360-opportunities"><h3>الفرص المرتبطة</h3>${opps}</div>`;
-  }catch(error){body.innerHTML=`<p class="empty">${escapeHtml(error.message)}</p>`;}
+    const opportunityRows=(profile.opportunities||[]).slice(0,6);
+    const opps=opportunityRows.map(item=>{
+      const action=item.recommendedAction||item.reason||'فرصة مرتبطة بالعميل';
+      const actionButton=customer.marketingOptIn&&item.id
+        ? '<button class="small-action" type="button" data-customer-opportunity="'+escapeHtml(item.id)+'" data-opportunity-type="'+escapeHtml(item.type||'')+'">إنشاء إجراء</button>'
+        : '';
+      return '<div class="customer360-opportunity"><div><strong>'+escapeHtml(item.priority||'فرصة')+'</strong><span>'+escapeHtml(item.reason||'فرصة مرتبطة بالعميل')+'</span><small>'+escapeHtml(action)+'</small></div>'+actionButton+'</div>';
+    }).join('')||'<div class="empty">لا توجد فرص مرتبطة حاليًا.</div>';
+    const orders=(profile.orders||[]).map(order=>'<tr><td><strong>'+escapeHtml(order.id)+'</strong><small>'+new Date(order.createdAt).toLocaleString('ar-AE')+'</small></td><td class="price">'+money(order.total)+'</td><td>'+escapeHtml(order.status)+'</td></tr>').join('')||'<tr><td colspan="3" class="empty">لا توجد طلبات.</td></tr>';
+    const reservations=(profile.reservations||[]).map(item=>'<tr><td>'+escapeHtml(item.date)+'<small>'+escapeHtml(item.time)+'</small></td><td>'+Number(item.guests||0)+'</td><td>'+escapeHtml(item.status)+'</td></tr>').join('')||'<tr><td colspan="3" class="empty">لا توجد حجوزات.</td></tr>';
+    const favorites=(behavior.favoriteProducts||[]).map(item=>'<span class="customer360-chip">'+escapeHtml(item.name)+' <b>'+Number(item.quantity||0)+'×</b></span>').join('')||'<span class="customer360-muted">لا توجد مشتريات كافية لتحديد نمط واضح.</span>';
+    const lastItems=(behavior.lastOrderItems||[]).map(item=>'<span class="customer360-chip">'+escapeHtml(item.nameAr||item.productId)+' <b>'+Number(item.quantity||0)+'×</b></span>').join('')||'<span class="customer360-muted">لا يوجد طلب سابق متاح.</span>';
+    const eventSummary=Object.entries(behavior.eventCounts||{}).slice(0,5).map(([key,count])=>'<span class="customer360-chip">'+escapeHtml(key)+' <b>'+Number(count||0)+'</b></span>').join('')||'<span class="customer360-muted">لا توجد أحداث مرتبطة.</span>';
+    const actions=(profile.relatedActions||[]).map(item=>'<tr><td>'+escapeHtml(item.title||item.type)+'</td><td>'+escapeHtml(item.status)+'</td><td>'+money(item.resultRevenue)+'</td><td>'+escapeHtml(item.orderId||'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty">لا توجد إجراءات مرتبطة بالعميل.</td></tr>';
+    const consentLabel=customer.marketingOptIn?'يمكن تنفيذ الإجراء بعد المراجعة':'الموافقة التسويقية غير موجودة؛ الإجراء يبقى يدويًا بعد التحقق';
+    body.innerHTML=
+      '<div class="customer360-head"><div><span>Customer 360</span><h2>'+escapeHtml(customer.name||'عميل')+'</h2><small dir="ltr">'+escapeHtml(customer.phone||'')+'</small></div><span class="status '+(customer.marketingOptIn?'on':'pending')+'">'+(customer.marketingOptIn?'موافقة تواصل موجودة':'لا توجد موافقة تسويقية')+'</span></div>'+
+      '<div class="customer360-stats"><article><span>الطلبات</span><b>'+Number(customer.orderCount||0)+'</b></article><article><span>قيمة الطلبات</span><b>'+money(summary.totalOrderValue)+'</b></article><article><span>متوسط الطلب</span><b>'+money(summary.averageOrderValue)+'</b></article><article><span>آخر طلب</span><b class="customer360-date">'+(summary.daysSinceLastOrder===null?'—':Number(summary.daysSinceLastOrder)+' يوم')+'</b></article><article><span>متوسط العودة</span><b class="customer360-date">'+(summary.averageReturnDays===null?'—':Number(summary.averageReturnDays)+' يوم')+'</b></article><article><span>آخر طلب بقيمة</span><b>'+money(summary.lastOrderValue)+'</b></article><article><span>الحجوزات</span><b>'+Number(summary.totalReservations||0)+'</b></article><article><span>آخر نشاط</span><b class="customer360-date">'+(summary.lastActivityAt?new Date(summary.lastActivityAt).toLocaleString('ar-AE'):'—')+'</b></article></div>'+
+      '<div class="customer360-next"><span>الإجراء التالي المقترح</span><strong>'+escapeHtml(profile.nextAction||'راجع العميل وحدد الإجراء المناسب.')+'</strong><small>'+escapeHtml(consentLabel)+'</small></div>'+
+      '<div class="customer360-behavior"><div><h3>الأصناف الأكثر تكرارًا</h3><div class="customer360-chip-list">'+favorites+'</div></div><div><h3>آخر طلب</h3><div class="customer360-chip-list">'+lastItems+'</div></div><div><h3>نشاط العميل</h3><div class="customer360-chip-list">'+eventSummary+'</div></div></div>'+
+      '<div class="customer360-columns"><div><h3>الطلبات</h3><div class="table-wrap"><table><thead><tr><th>الطلب</th><th>القيمة</th><th>الحالة</th></tr></thead><tbody>'+orders+'</tbody></table></div></div><div><h3>الحجوزات</h3><div class="table-wrap"><table><thead><tr><th>الموعد</th><th>الأشخاص</th><th>الحالة</th></tr></thead><tbody>'+reservations+'</tbody></table></div></div></div>'+
+      '<div class="customer360-opportunities"><h3>الفرص المرتبطة</h3>'+opps+'</div>'+
+      '<div class="customer360-actions"><h3>سجل الإجراءات</h3><div class="table-wrap"><table><thead><tr><th>الإجراء</th><th>الحالة</th><th>الإيراد</th><th>الطلب</th></tr></thead><tbody>'+actions+'</tbody></table></div></div>';
+    body.querySelectorAll('[data-customer-opportunity]').forEach(button=>button.addEventListener('click',async()=>{
+      button.disabled=true;
+      try{
+        const type=button.dataset.opportunityType||'';
+        const reference=button.dataset.customerOpportunity;
+        const response=await request('/api/revenue/campaign-drafts',{method:'POST',body:JSON.stringify({type,reference})});
+        button.textContent=response.reused?'موجودة بالفعل':'تم إنشاء الإجراء';
+        await loadCustomerSegments();
+      }catch(error){alert(error.message)}finally{button.disabled=false;}
+    }));
+  }catch(error){body.innerHTML='<p class="empty">'+escapeHtml(error.message)+'</p>';}
 }
 function closeCustomer360(){const modal=$('#customer360-modal');if(!modal)return;modal.classList.remove('show');modal.setAttribute('aria-hidden','true');}
 document.addEventListener('click',event=>{const segmentButton=event.target.closest('[data-segment-key]');if(segmentButton){const segment=customerSegments.find(item=>item.key===segmentButton.dataset.segmentKey);renderCustomerSegmentMembers(segment);}});
