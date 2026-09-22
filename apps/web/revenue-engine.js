@@ -215,7 +215,8 @@ export function registerRevenueRoutes(app, {
   customers,
   reservations,
   orders = [],
-  products = []
+  products = [],
+  analyticsRateLimit
 }) {
   const REVENUE_PERSIST_DEBOUNCE_MS = 250;
   const events = [];
@@ -2274,7 +2275,7 @@ export function registerRevenueRoutes(app, {
     });
   });
 
-  app.post('/api/events', (req, res) => {
+  app.post('/api/events', analyticsRateLimit, (req, res) => {
     const event = recordEvent(req.body || {});
     if (!event) return res.status(400).json({ message: 'Unsupported event.' });
     return res.status(202).json({ accepted: true, id: event.id });

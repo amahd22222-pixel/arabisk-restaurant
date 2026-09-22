@@ -79,7 +79,7 @@ const SMART_TAGS=new Set(['spicy']);
 const DIETARY_TAGS=new Set(['vegetarian','vegan','gluten-free']);
 
 const orders=[]; const customers=[]; const reservations=[];
-const reservationRate=new Map(); const orderRate=new Map(); const orderStatusRate=new Map();
+const reservationRate=new Map(); const orderRate=new Map(); const orderStatusRate=new Map(); const analyticsRate=new Map();
 const MAX_RATE_KEYS=5000;
 const RESERVATION_RATE_WINDOW_MS=10*60*1000; const RESERVATION_RATE_LIMIT=8;
 const ORDER_RATE_WINDOW_MS=10*60*1000; const ORDER_RATE_LIMIT=10;
@@ -119,7 +119,8 @@ const createRateLimit=(store,windowMs,limit,message)=>(req,res,next)=>{
 const reservationRateLimit=createRateLimit(reservationRate,RESERVATION_RATE_WINDOW_MS,RESERVATION_RATE_LIMIT,'Too many reservation requests. Please try again later.');
 const orderRateLimit=createRateLimit(orderRate,ORDER_RATE_WINDOW_MS,ORDER_RATE_LIMIT,'Too many order requests. Please try again later.');
 const orderStatusRateLimit=createRateLimit(orderStatusRate,ORDER_STATUS_RATE_WINDOW_MS,ORDER_STATUS_RATE_LIMIT,'Too many order status requests. Please try again later.');
-setInterval(()=>{const now=Date.now();for(const [key,entry] of reservationRate)if(now-entry.startedAt>RESERVATION_RATE_WINDOW_MS*2)reservationRate.delete(key);for(const [key,entry] of orderRate)if(now-entry.startedAt>ORDER_RATE_WINDOW_MS*2)orderRate.delete(key);for(const [key,entry] of orderStatusRate)if(now-entry.startedAt>ORDER_STATUS_RATE_WINDOW_MS*2)orderStatusRate.delete(key)},Math.min(RESERVATION_RATE_WINDOW_MS,ORDER_RATE_WINDOW_MS,ORDER_STATUS_RATE_WINDOW_MS)).unref();
+const analyticsRateLimit=createRateLimit(analyticsRate,10*60*1000,180,'Too many analytics events. Please try again later.');
+setInterval(()=>{const now=Date.now();for(const [key,entry] of reservationRate)if(now-entry.startedAt>RESERVATION_RATE_WINDOW_MS*2)reservationRate.delete(key);for(const [key,entry] of orderRate)if(now-entry.startedAt>ORDER_RATE_WINDOW_MS*2)orderRate.delete(key);for(const [key,entry] of orderStatusRate)if(now-entry.startedAt>ORDER_STATUS_RATE_WINDOW_MS*2)orderStatusRate.delete(key);for(const [key,entry] of analyticsRate)if(now-entry.startedAt>20*60*1000)analyticsRate.delete(key)},Math.min(RESERVATION_RATE_WINDOW_MS,ORDER_RATE_WINDOW_MS,ORDER_STATUS_RATE_WINDOW_MS)).unref();
 
 const SMART_SNAPSHOT_CACHE_MS=30*1000;
 let smartSnapshotCache=null;
@@ -194,7 +195,7 @@ const persistState=()=>{
   }
   return persistQueue;
 };
-const revenue=registerRevenueRoutes(app,{readJson,writeJson,storageReady,requireAdminApiKey,customers,reservations,orders,products});
+const revenue=registerRevenueRoutes(app,{readJson,writeJson,storageReady,requireAdminApiKey,customers,reservations,orders,products,analyticsRateLimit});
 const restoreCategories=registerCategoryRoutes(app,{categories,products,storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey,isAdminApiKeyValid});
 const restoreStudio=registerStudioRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey});
 const restoreExperiences=registerExperienceRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey,isAdminApiKeyValid});
