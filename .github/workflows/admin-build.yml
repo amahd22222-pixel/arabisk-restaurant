@@ -71,6 +71,11 @@ jobs:
           curl -fsSI http://127.0.0.1:4175/login | grep -qi '^Content-Security-Policy:'
           curl -fsSI http://127.0.0.1:4175/login | grep -qi '^X-Request-Id:'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4175/proxy/api/orders)" = "401"
+          python - <<'PY'
+          from pathlib import Path
+          Path('/tmp/oversized-login.json').write_text('{"username":"' + ('x' * 300000) + '","password":"x"}')
+          PY
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data-binary @/tmp/oversized-login.json http://127.0.0.1:4175/auth/check)" = "413"
           cat /tmp/arabisk-admin.log
 
       - name: Web runtime smoke test
@@ -95,12 +100,6 @@ jobs:
           curl -fsSI http://127.0.0.1:4176/health | grep -qi '^X-Request-Id:'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4176/api/orders)" = "503"
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{' http://127.0.0.1:4176/api/orders)" = "400"
-          python - <<'PY'
-          from pathlib import Path
-          Path('/tmp/oversized-login.json').write_text('{"username":"' + ('x' * 300000) + '","password":"x"}')
-          PY
-          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data-binary @/tmp/oversized-login.json http://127.0.0.1:4175/auth/check)" = "413"
-
           echo "Admin proxy must fail closed when its upstream URL is absent."
           curl -fsS -c /tmp/arabisk-admin.cookies -H 'Content-Type: application/json' --data '{"username":"ci","password":"ci"}' http://127.0.0.1:4175/auth/check > /tmp/admin-login.json
           grep -q '"ok":true' /tmp/admin-login.json
