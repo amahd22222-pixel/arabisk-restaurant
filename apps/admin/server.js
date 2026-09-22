@@ -18,6 +18,7 @@ const AUTH_RATE_WINDOW_MS = 10 * 60 * 1000;
 const AUTH_RATE_LIMIT = 6;
 const sessions = new Map();
 const authRate = new Map();
+const serverStartedAt = Date.now();
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -60,6 +61,26 @@ function consumeAuthAttempt(req, res) {
 
 function isSecureRequest(req) {
   return req.headers['x-forwarded-proto'] === 'https' || process.env.NODE_ENV === 'production';
+}
+
+function setSecurityHeaders(res, req) {
+  const headers = {
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'X-DNS-Prefetch-Control': 'off',
+    'X-Permitted-Cross-Domain-Policies': 'none',
+    'Content-Security-Policy': "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https:; font-src 'self' data:"
+  };
+  if (isSecureRequest(req)) headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
+  for (const [name, value] of Object.entries(headers)) res.setHeader(name, value);
+}
+
+function requestId(req) {
+  const incoming = String(req.headers['x-request-id'] || '').trim();
+  return /^[A-Za-z0-9._-]{1,80}$/.test(incoming) ? incoming : crypto.randomUUID();
 }
 
 function sessionCookie(token, req, maxAge = Math.floor(SESSION_TTL_MS / 1000)) {
@@ -199,6 +220,9 @@ async function proxyApiRequest(req, res) {
 }
 
 const server = http.createServer(async (req, res) => {
+  const id = requestId(req);
+  res.setHeader('X-Request-Id', id);
+  setSecurityHeaders(res, req);
   const requestPath = (req.url || '/').split('?')[0];
 
   if (req.method === 'POST' && requestPath === '/auth/check') {
@@ -246,7 +270,7 @@ const server = http.createServer(async (req, res) => {
 
   if (requestPath === '/health') {
     res.writeHead(200, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','X-Frame-Options':'SAMEORIGIN','Permissions-Policy':'camera=(), microphone=(), geolocation=()'});
-    return res.end(JSON.stringify({ ok: true, service: 'arabisk-admin', authenticationConfigured: Boolean(adminUsername && adminPassword), apiProxyConfigured: Boolean(adminApiKey && webApiBase), activeSessions: sessions.size }));
+    return res.end(JSON.stringify({ ok: true, service: 'arabisk-admin', uptimeSeconds: Math.floor((Date.now() - serverStartedAt) / 1000) }));
   }
 
   if (requestPath === '/' || requestPath === '/login' || requestPath === '/login/') return sendFile(res, path.join(dist, 'login.html'));
@@ -266,4 +290,11 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
+const shutdown = (signal) => {
+  console.log(`ARABISK admin received ${signal}; shutting down gracefully`);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 10000).unref();
+};
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 server.listen(port, host, () => console.log(`ARABISK admin listening on ${host}:${port} — session authentication and server-side API proxy enabled`));

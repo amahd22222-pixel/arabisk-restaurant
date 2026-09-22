@@ -8,7 +8,7 @@
     "start": "npm run build && node server.js"
   },
   "devDependencies": {
-    "vite": "latest"
+    "vite": "8.3.0"
   },
   "dependencies": {
     "cors": "latest",
