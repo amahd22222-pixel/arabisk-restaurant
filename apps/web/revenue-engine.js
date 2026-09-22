@@ -276,6 +276,37 @@ export function registerRevenueRoutes(app, {
       return Number.isFinite(time) && time >= thirtyDaysAgo;
     });
 
+    const eventsBySession = new Map();
+    const productViewSessions = new Map();
+    const productAddSessions = new Map();
+    for (const row of recent) {
+      if (row.sessionId) {
+        const sessionRows = eventsBySession.get(row.sessionId) || [];
+        sessionRows.push(row);
+        eventsBySession.set(row.sessionId, sessionRows);
+      }
+      if (row.productId && (row.eventName === 'item_view' || row.eventName === 'add_to_cart')) {
+        const target = row.eventName === 'item_view' ? productViewSessions : productAddSessions;
+        const sessions = target.get(row.productId) || new Set();
+        sessions.add(row.sessionId || row.id);
+        target.set(row.productId, sessions);
+      }
+    }
+    for (const rows of eventsBySession.values()) {
+      rows.sort((a, b) => Date.parse(a.createdAt || '') - Date.parse(b.createdAt || ''));
+    }
+
+    const ordersByPhone = new Map();
+    for (const order of orders) {
+      if (!order.phone || order.status === 'cancelled') continue;
+      const phoneOrders = ordersByPhone.get(order.phone) || [];
+      phoneOrders.push(order);
+      ordersByPhone.set(order.phone, phoneOrders);
+    }
+    for (const phoneOrders of ordersByPhone.values()) {
+      phoneOrders.sort((a, b) => Date.parse(b.updatedAt || b.createdAt || '') - Date.parse(a.updatedAt || a.createdAt || ''));
+    }
+
     const funnel = {
       menuViews: uniqueSessions(recent, 'menu_view'),
       itemViews: uniqueSessions(recent, 'item_view'),
@@ -363,9 +394,7 @@ export function registerRevenueRoutes(app, {
       .filter(customer => number(customer.orderCount) >= 2)
       .map(customer => {
         const daysSinceLastOrder = Math.floor((now - Date.parse(customer.lastOrderAt || '')) / 86400000);
-        const lastOrder = orders
-          .filter(order => order.phone && customer.phone && order.phone === customer.phone && order.status !== 'cancelled')
-          .sort((a,b) => Date.parse(b.updatedAt || b.createdAt || '') - Date.parse(a.updatedAt || a.createdAt || ''))[0] || null;
+        const lastOrder = (ordersByPhone.get(customer.phone) || [])[0] || null;
         const cartItems = Array.isArray(lastOrder?.items)
           ? lastOrder.items.map(item => ({
               productId: clean(item.productId, 50),
@@ -400,8 +429,8 @@ export function registerRevenueRoutes(app, {
 
     const productInterest = [...new Set(recent.map(row => row.productId).filter(Boolean))]
       .map(productId => {
-        const views = new Set(recent.filter(row => row.eventName === 'item_view' && row.productId === productId).map(row => row.sessionId || row.id)).size;
-        const adds = new Set(recent.filter(row => row.eventName === 'add_to_cart' && row.productId === productId).map(row => row.sessionId || row.id)).size;
+        const views = productViewSessions.get(productId)?.size || 0;
+        const adds = productAddSessions.get(productId)?.size || 0;
         if (views < 5) return null;
         const addRate = views ? Math.round((adds / views) * 1000) / 10 : 0;
         if (addRate >= 35) return null;
@@ -429,9 +458,9 @@ export function registerRevenueRoutes(app, {
 
     const returnCustomers = customers
       .map(customer => {
-        const customerOrders = orders
-          .filter(order => order.phone && customer.phone && order.phone === customer.phone && order.status !== 'cancelled')
-          .sort((a,b) => Date.parse(a.updatedAt || a.createdAt || '') - Date.parse(b.updatedAt || b.createdAt || ''));
+        const customerOrders = [...(ordersByPhone.get(customer.phone) || [])].sort(
+          (a,b) => Date.parse(a.updatedAt || a.createdAt || '') - Date.parse(b.updatedAt || b.createdAt || '')
+        );
         if (customerOrders.length < 3) return null;
         const orderTimes = customerOrders
           .map(order => Date.parse(order.updatedAt || order.createdAt || ''))
@@ -509,7 +538,7 @@ export function registerRevenueRoutes(app, {
     const intentSessions = [...bySession.keys()].length;
     const intentConversions = [];
     for (const [sessionId] of bySession) {
-      const rows = recent.filter(row => row.sessionId === sessionId).sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+      const rows = eventsBySession.get(sessionId) || [];
       let intent = null;
       for (const row of rows) {
         if (row.eventName === 'add_to_cart' || row.eventName === 'checkout_started') {
