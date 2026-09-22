@@ -153,7 +153,9 @@ async function openCustomer360(customerId){
     );
     const decisionAction=decision.nextOpenActionId
       ? '<button type="button" class="small-action customer360-decision-action" data-campaign-jump="'+escapeHtml(decision.nextOpenActionId)+'">فتح الإجراء المفتوح</button>'
-      : '';
+      : decision.actionType&&decision.actionReference
+        ? '<button type="button" class="small-action customer360-decision-action" data-decision-create data-decision-type="'+escapeHtml(decision.actionType)+'" data-decision-reference="'+escapeHtml(decision.actionReference)+'">إنشاء إجراء</button>'
+        : '';
     const decisionPotential=Number(decision.potentialValue||0)>0
       ? '<b class="customer360-decision-value">'+money(decision.potentialValue)+'</b>'
       : '';
@@ -201,6 +203,16 @@ async function openCustomer360(customerId){
       body.querySelectorAll('[data-timeline-type]').forEach(item=>{
         item.hidden=filter!=='all'&&item.dataset.timelineType!==filter;
       });
+    }));
+    body.querySelectorAll('[data-decision-create]').forEach(button=>button.addEventListener('click',async()=>{
+      button.disabled=true;
+      try{
+        const response=await request('/api/revenue/campaign-drafts',{method:'POST',body:JSON.stringify({type:button.dataset.decisionType||'',reference:button.dataset.decisionReference||''})});
+        if(!response)throw new Error('تعذر إنشاء الإجراء.');
+        button.textContent=response.reused?'الإجراء موجود بالفعل':'تم إنشاء الإجراء';
+        button.dataset.campaignJump=response.id||response.campaignId||'';
+        if(button.dataset.campaignJump){button.removeAttribute('data-decision-create');button.setAttribute('data-campaign-jump',button.dataset.campaignJump);setTimeout(()=>button.click(),250);}
+      }catch(error){alert(error.message||'تعذر إنشاء الإجراء.')}finally{button.disabled=false;}
     }));
     body.querySelectorAll('[data-customer-opportunity]').forEach(button=>button.addEventListener('click',async()=>{
       button.disabled=true;
