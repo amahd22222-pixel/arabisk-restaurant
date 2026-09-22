@@ -222,14 +222,16 @@ function updateCommandCenter(){
 }
 
 function boot(){
+  if(window.__ARABISK_RCC_BOOTED__)return;
+  window.__ARABISK_RCC_BOOTED__=true;
   buildCommandCenter();
   updateCommandCenter();
   const revenue=document.getElementById('revenue');
   if(!revenue)return;
   const observer=new MutationObserver(()=>updateCommandCenter());
   observer.observe(revenue,{subtree:true,childList:true,characterData:true});
-  setTimeout(()=>observer.disconnect(),180000);
-  setInterval(updateCommandCenter,3000);
+  window.__ARABISK_RCC_OBSERVER__=observer;
+  window.__ARABISK_RCC_INTERVAL__=setInterval(updateCommandCenter,3000);
   window.addEventListener('arabisk:revenue-state-updated',updateCommandCenter);
 }
 
