@@ -115,10 +115,29 @@ function smartMeta(product,snapshot){
 const withMediaUrls=(product,snapshot=smartSnapshot())=>({...product,imageUrl:product.imageKey&&storageReady?presign('GET',product.imageKey,900):(product.imageUrl||''),videoUrl:product.videoKey&&storageReady?presign('GET',product.videoKey,900):'',smart:smartMeta(product,snapshot)});
 
 async function restoreState(){ if(!storageReady) return; const saved=await readJson(STATE_KEY,null); if(!saved||typeof saved!=='object') return; if(saved.menuVersion===MENU_VERSION&&Array.isArray(saved.products)&&saved.products.length) products.splice(0,products.length,...saved.products); if(Array.isArray(saved.orders)) orders.splice(0,orders.length,...saved.orders); if(Array.isArray(saved.customers)) customers.splice(0,customers.length,...saved.customers); if(Array.isArray(saved.reservations)) reservations.splice(0,reservations.length,...saved.reservations); }
+const PERSIST_DEBOUNCE_MS=250;
 let persistQueue=Promise.resolve();
-const persistState=()=>{
+let persistTimer=null;
+let persistRequested=false;
+
+const flushPersistState=()=>{
+  if(persistTimer){
+    clearTimeout(persistTimer);
+    persistTimer=null;
+  }
+  if(!persistRequested)return persistQueue;
+  persistRequested=false;
   const snapshot=structuredClone({menuVersion:MENU_VERSION,products,orders,customers,reservations});
   persistQueue=persistQueue.catch(()=>{}).then(()=>writeJson(STATE_KEY,snapshot));
+  return persistQueue;
+};
+
+const persistState=()=>{
+  persistRequested=true;
+  if(!persistTimer){
+    persistTimer=setTimeout(()=>flushPersistState(),PERSIST_DEBOUNCE_MS);
+    persistTimer.unref();
+  }
   return persistQueue;
 };
 const revenue=registerRevenueRoutes(app,{readJson,writeJson,storageReady,requireAdminApiKey,customers,reservations,orders,products});
@@ -189,10 +208,22 @@ app.use(express.static(dist));app.use((_req,res)=>res.sendFile(path.join(dist,'i
 
 await restoreState();await restoreCategories();await restoreStudio();await restoreExperiences();await memories.restore();await revenue.restoreRevenue();if(storageReady)persistState();
 const server=app.listen(port,()=>console.log(`ARABISK web listening on ${port} — ${products.length} menu items, ${categories.length} categories`));
+let shuttingDown=false;
 const shutdown=(signal)=>{
+  if(shuttingDown)return;
+  shuttingDown=true;
   console.log(`ARABISK web received ${signal}; shutting down gracefully`);
-  server.close(()=>process.exit(0));
-  setTimeout(()=>process.exit(1),10000).unref();
+  const forceExit=setTimeout(()=>process.exit(1),10000);
+  forceExit.unref();
+  server.close(async()=>{
+    clearTimeout(forceExit);
+    try{
+      await flushPersistState();
+    }catch(error){
+      console.error('State flush failed during shutdown:',error);
+    }
+    process.exit(0);
+  });
 };
 process.on('SIGTERM',()=>shutdown('SIGTERM'));
 process.on('SIGINT',()=>shutdown('SIGINT'));
