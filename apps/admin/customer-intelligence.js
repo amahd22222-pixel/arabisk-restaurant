@@ -77,15 +77,20 @@ async function loadCustomerIntelligence(showLoading=false){
     const status=panel.querySelector('#customer-intelligence-status');
     if(status)status.textContent='جاري التحديث…';
   }
+  const customers=Array.isArray(window.__ARABISK_CUSTOMERS__)?window.__ARABISK_CUSTOMERS__:[];
+  const segments=Array.isArray(window.__ARABISK_CUSTOMER_SEGMENTS__)?window.__ARABISK_CUSTOMER_SEGMENTS__:[];
+  if(customers.length||segments.length||window.__ARABISK_CUSTOMER_STATE_READY__){
+    renderCustomerIntel({customers,segments});
+    return;
+  }
   try{
     const [customersData,segmentsData]=await Promise.all([
       customerIntelRequest('/api/customers'),
       customerIntelRequest('/api/revenue/customer-segments')
     ]);
-    renderCustomerIntel({
-      customers:Array.isArray(customersData)?customersData:(Array.isArray(customersData.customers)?customersData.customers:[]),
-      segments:Array.isArray(segmentsData?.segments)?segmentsData.segments:[]
-    });
+    const resolvedCustomers=Array.isArray(customersData)?customersData:(Array.isArray(customersData.customers)?customersData.customers:[]);
+    const resolvedSegments=Array.isArray(segmentsData?.segments)?segmentsData.segments:[];
+    renderCustomerIntel({customers:resolvedCustomers,segments:resolvedSegments});
   }catch(error){
     if(panel){
       const status=panel.querySelector('#customer-intelligence-status');
@@ -93,9 +98,11 @@ async function loadCustomerIntelligence(showLoading=false){
     }
   }
 }
-
+window.addEventListener('arabisk:customer-state-updated',()=>{
+  if(location.hash.replace('#','')==='customers')loadCustomerIntelligence();
+});
 document.addEventListener('DOMContentLoaded',()=>{
   const isCustomersSection=()=>location.hash.replace('#','')==='customers';
-  if(isCustomersSection())void loadCustomerIntelligence();
-  document.querySelector('[data-section="customers"]')?.addEventListener('click',()=>void loadCustomerIntelligence());
+  if(isCustomersSection())setTimeout(()=>void loadCustomerIntelligence(),0);
+  document.querySelector('[data-section="customers"]')?.addEventListener('click',()=>setTimeout(()=>void loadCustomerIntelligence(),0));
 });
