@@ -39,7 +39,6 @@ app.use((req,res,next)=>{
   res.setHeader('X-Permitted-Cross-Domain-Policies','none');
   if(req.secure||process.env.NODE_ENV==='production')res.setHeader('Strict-Transport-Security','max-age=31536000; includeSubDomains');
   if(req.path==='/health'||req.path.startsWith('/api/'))res.setHeader('Cache-Control','no-store');
-  res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');
   next();
 });
 app.use(express.json({limit:'1mb',strict:true}));
