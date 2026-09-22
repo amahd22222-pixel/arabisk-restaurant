@@ -37,7 +37,8 @@ function parseCookies(header = '') {
 }
 
 function getClientKey(req) {
-  return String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim().slice(0, 120) || 'unknown';
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',').map((value) => value.trim()).filter(Boolean);
+  return String(forwarded.at(-1) || req.socket?.remoteAddress || 'unknown').slice(0, 120) || 'unknown';
 }
 
 function consumeAuthAttempt(req, res) {
@@ -132,8 +133,20 @@ function parseBody(req) {
   });
 }
 
+function constantTimeTextMatch(provided, expected) {
+  const providedBuffer = Buffer.from(String(provided));
+  const expectedBuffer = Buffer.from(String(expected));
+  if (providedBuffer.length !== expectedBuffer.length) return false;
+  return crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+}
+
 function credentialsMatch(username, password) {
-  return Boolean(adminUsername && adminPassword && username === adminUsername && password === adminPassword);
+  return Boolean(
+    adminUsername &&
+    adminPassword &&
+    constantTimeTextMatch(username, adminUsername) &&
+    constantTimeTextMatch(password, adminPassword)
+  );
 }
 
 function unauthorized(res, message = 'Authentication required') {
