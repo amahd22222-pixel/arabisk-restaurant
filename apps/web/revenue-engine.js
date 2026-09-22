@@ -1238,6 +1238,13 @@ export function registerRevenueRoutes(app, {
       .filter(item => item.at)
       .sort((a, b) => Date.parse(b.at || '') - Date.parse(a.at || ''))
       .slice(0, 60);
+    const timelineCounts = {
+      all: timeline.length,
+      order: timeline.filter(item => item.type === 'order').length,
+      reservation: timeline.filter(item => item.type === 'reservation').length,
+      event: timeline.filter(item => item.type === 'event').length,
+      action: timeline.filter(item => item.type === 'action').length
+    };
     const primaryOpportunity=opportunities.slice().sort((a,b)=>number(b.priorityScore)-number(a.priorityScore))[0]||null;
     const nextAction=customer.marketingOptIn
       ? (primaryOpportunity?.recommendedAction||'راجع آخر نشاط للعميل وحدد الإجراء المناسب.')
@@ -1278,6 +1285,7 @@ export function registerRevenueRoutes(app, {
       reservations: customerReservations.slice().sort((a,b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 30).map(item => ({
         id:item.id, date:item.date, time:item.time, guests:Number(item.guests||0), status:item.status, eventSlug:item.eventSlug || ''
       })),
+      timelineCounts,
       recentEvents: customerEvents.map(item => ({
         eventName:item.eventName, productId:item.productId, orderId:item.orderId, createdAt:item.createdAt
       })),
