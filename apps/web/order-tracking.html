@@ -25,12 +25,12 @@ button,input,select{font:inherit}
 .track-hero:after{content:"";position:absolute;top:-130px;left:-120px;width:320px;height:320px;border:1px solid rgba(255,255,255,.06);border-radius:50%}
 .hero-content{position:relative;z-index:1;max-width:820px}.eyebrow{margin:0 0 10px;color:var(--gold2);font-size:10px;font-weight:800;letter-spacing:4px}.track-title{margin:0;font:500 clamp(44px,6vw,74px)/1.02 'Playfair Display',serif}.track-lead{max-width:710px;margin:17px 0 0;color:#cfc7bb;font-size:13px;line-height:2}
 .hero-meta{position:relative;z-index:1;display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-top:24px}.hero-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(255,255,255,.06);color:#ddd3c5;font-size:10px}.hero-chip i{width:7px;height:7px;border-radius:50%;background:var(--gold2);display:block}.hero-chip.live i{box-shadow:0 0 0 5px rgba(210,177,109,.11)}
-.layout{display:grid;grid-template-columns:minmax(310px,.76fr) minmax(0,1.45fr);gap:20px;align-items:start;margin-top:20px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start;margin-top:14px}
 .card{border:1px solid var(--line);border-radius:26px;background:var(--paper);box-shadow:var(--shadow)}
-.lookup{padding:24px;position:sticky;top:104px}.card-eyebrow{margin:0;color:var(--gold);font-size:9px;font-weight:800;letter-spacing:3px}.lookup h2{margin:7px 0 15px;font:500 30px/1.15 'Playfair Display',serif}
-.form{display:grid;gap:12px}.form label{display:grid;gap:6px;color:#5e564c;font-size:11px}.form input,.form select{width:100%;height:46px;border:1px solid var(--line);border-radius:13px;background:#fff;padding:0 13px;outline:none;font-size:12px}.form input:focus,.form select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,148,85,.1)}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.form-actions{display:grid;gap:9px;margin-top:3px}.primary-btn{min-height:49px;border:0;border-radius:999px;background:#111;color:#fff;cursor:pointer;font-weight:800}.primary-btn:hover{background:#27221b}.primary-btn:disabled{opacity:.55;cursor:wait}
-.form-note{margin:2px 0 0;color:var(--muted);font-size:9px;line-height:1.8}.form-error{min-height:17px;margin:0;color:var(--danger);font-size:10px;line-height:1.6}
+.lookup-bar{padding:16px 18px;border:1px solid var(--line);border-radius:22px;background:rgba(255,253,248,.92);box-shadow:0 14px 38px rgba(42,30,14,.05);margin-top:18px}.card-eyebrow{margin:0;color:var(--gold);font-size:9px;font-weight:800;letter-spacing:3px}.lookup-bar-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.lookup-bar-title{margin:0;font-size:14px}.lookup-bar-caption{color:var(--muted);font-size:9px}
+.form{display:grid;grid-template-columns:1.2fr .9fr 1fr auto;gap:10px;align-items:end}.form label{display:grid;gap:6px;color:#5e564c;font-size:11px}.form input,.form select{width:100%;height:46px;border:1px solid var(--line);border-radius:13px;background:#fff;padding:0 13px;outline:none;font-size:12px}.form input:focus,.form select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,148,85,.1)}
+.form-grid{display:grid;grid-template-columns:1fr}.form-actions{display:grid;gap:6px}.primary-btn{min-height:49px;border:0;border-radius:999px;background:#111;color:#fff;cursor:pointer;font-weight:800}.primary-btn:hover{background:#27221b}.primary-btn:disabled{opacity:.55;cursor:wait}
+.form-note{grid-column:1/-1;margin:0;color:var(--muted);font-size:9px;line-height:1.7}.form-error{min-height:17px;margin:0;color:var(--danger);font-size:10px;line-height:1.6}
 .last-order{display:none;margin-top:17px;padding-top:17px;border-top:1px solid var(--line)}.last-order.show{display:grid;gap:10px}.last-caption{color:var(--muted);font-size:9px}.last-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;border:1px solid var(--line);border-radius:14px;background:#fff}.last-row strong{font-size:14px}.last-open{border:1px solid #dbd0c0;border-radius:999px;background:#fff;padding:7px 11px;cursor:pointer;font-size:9px;font-weight:800}.last-open:hover{border-color:var(--gold)}
 .result{padding:0;overflow:hidden}.result-empty{min-height:560px;display:grid;place-items:center;text-align:center;padding:50px}.empty-icon{width:88px;height:88px;margin:0 auto 18px;display:grid;place-items:center;border:1px solid #e0d5c6;border-radius:50%;background:var(--soft);color:var(--gold);font-size:31px}.result-empty h2{margin:0;font:500 33px/1.15 'Playfair Display',serif}.result-empty p{max-width:380px;margin:10px auto 0;color:var(--muted);font-size:11px;line-height:1.9}
 .loaded{display:grid}
@@ -45,8 +45,8 @@ button,input,select{font:inherit}
 .result-foot{display:flex;align-items:center;justify-content:space-between;gap:12px}.result-foot strong{font:600 25px/1 'Playfair Display',serif}.refresh{border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink);padding:9px 13px;cursor:pointer;font-size:9px;font-weight:800}.refresh:hover{border-color:var(--gold)}
 .actions{display:flex;justify-content:center;flex-wrap:wrap;gap:9px;padding:22px 0}.action-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 18px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink);text-decoration:none;font-size:10px;font-weight:800}.action-link.primary{background:#111;color:#fff;border-color:#111}
 footer{background:#080808;color:#fff;padding:48px 8vw;display:flex;align-items:center;gap:14px}footer strong{font-family:'Playfair Display',serif;font-size:27px}footer span{color:var(--gold2)}footer small{margin-right:auto;color:#777}
-@media(max-width:980px){.layout{grid-template-columns:1fr}.lookup{position:static}.status-body{grid-template-columns:1fr 120px}}
-@media(max-width:680px){.nav{padding:0 18px}.nav nav{display:none}.track-main{padding:26px 14px 66px}.track-hero{padding:28px 22px;border-radius:24px}.track-title{font-size:48px}.track-lead{font-size:11px}.track-layout{margin-top:14px}.lookup,.content-section{padding:19px}.status-hero{padding:22px 19px}.status-body{grid-template-columns:1fr;gap:18px}.progress-ring{width:102px;height:102px}.form-grid,.meta-grid{grid-template-columns:1fr}.timeline{display:grid;grid-template-columns:1fr;gap:9px;padding:0}.timeline:before{display:none}.step{display:flex;align-items:center;justify-items:initial;text-align:right;gap:10px;padding:10px 11px;border:1px solid #eee7dc;border-radius:13px;background:#fff}.step strong{font-size:10px}.step small{margin-right:auto}.step-dot{flex:0 0 29px}.status-top{flex-direction:column}.status-badge{align-self:flex-start}.result-empty{min-height:380px;padding:34px 20px}.result-empty h2{font-size:28px}.result-foot strong{font-size:21px}footer{flex-wrap:wrap}footer small{width:100%;margin:12px 0 0}}
+@media(max-width:980px){.status-body{grid-template-columns:1fr 120px}.form{grid-template-columns:1fr 1fr}.form-note{grid-column:1/-1}.form-actions{grid-column:1/-1}}
+@media(max-width:680px){.nav{padding:0 18px}.nav nav{display:none}.track-main{padding:26px 14px 66px}.track-hero{padding:28px 22px;border-radius:24px}.track-title{font-size:48px}.track-lead{font-size:11px}.track-layout{margin-top:12px}.lookup-bar{padding:15px;border-radius:19px}.lookup-bar-head{align-items:flex-start;flex-direction:column;gap:4px}.form{grid-template-columns:1fr}.form-grid,.meta-grid{grid-template-columns:1fr}.form-actions,.form-note{grid-column:auto}.status-hero{padding:22px 19px}.status-body{grid-template-columns:1fr;gap:18px}.progress-ring{width:102px;height:102px}.timeline{display:grid;grid-template-columns:1fr;gap:9px;padding:0}.timeline:before{display:none}.step{display:flex;align-items:center;justify-items:initial;text-align:right;gap:10px;padding:10px 11px;border:1px solid #eee7dc;border-radius:13px;background:#fff}.step strong{font-size:10px}.step small{margin-right:auto}.step-dot{flex:0 0 29px}.status-top{flex-direction:column}.status-badge{align-self:flex-start}.result-empty{min-height:380px;padding:34px 20px}.result-empty h2{font-size:28px}.result-foot strong{font-size:21px}footer{flex-wrap:wrap}footer small{width:100%;margin:12px 0 0}}
 </style>
 </head>
 <body>
@@ -78,40 +78,39 @@ footer{background:#080808;color:#fff;padding:48px 8vw;display:flex;align-items:c
     </div>
   </section>
 
-  <section class="layout" aria-label="مركز متابعة الطلب">
-    <aside class="card lookup">
-      <p class="card-eyebrow">ORDER LOOKUP</p>
-      <h2>اعثر على طلبك</h2>
-      <form id="track-form" class="form">
-        <label>رقم الطلب
-          <input id="track-id" maxlength="20" inputmode="text" autocomplete="off" placeholder="مثال: O00012" required>
+  <section class="lookup-bar" aria-label="بيانات الطلب">
+    <div class="lookup-bar-head"><div><p class="card-eyebrow">ORDER LOOKUP</p><h2 class="lookup-bar-title">بيانات الطلب</h2></div><span class="lookup-bar-caption">أدخل رقم الطلب وبيانات التحقق لعرض حالته</span></div>
+    <form id="track-form" class="form">
+      <label>رقم الطلب
+        <input id="track-id" maxlength="20" inputmode="text" autocomplete="off" placeholder="مثال: O00012" required>
+      </label>
+      <label>نوع الطلب
+        <select id="track-type">
+          <option value="dine_in">داخل المطعم</option>
+          <option value="pickup">استلام من المطعم</option>
+        </select>
+      </label>
+      <div class="form-grid">
+        <label id="track-table-wrap">رقم الطاولة
+          <input id="track-table" maxlength="30" inputmode="numeric" autocomplete="off" placeholder="مثال: 12">
         </label>
-        <label>نوع الطلب
-          <select id="track-type">
-            <option value="dine_in">داخل المطعم</option>
-            <option value="pickup">استلام من المطعم</option>
-          </select>
+        <label id="track-phone-wrap" hidden>رقم الهاتف
+          <input id="track-phone" maxlength="40" inputmode="tel" autocomplete="tel">
         </label>
-        <div class="form-grid">
-          <label id="track-table-wrap">رقم الطاولة
-            <input id="track-table" maxlength="30" inputmode="numeric" autocomplete="off" placeholder="مثال: 12">
-          </label>
-          <label id="track-phone-wrap" hidden>رقم الهاتف
-            <input id="track-phone" maxlength="40" inputmode="tel" autocomplete="tel">
-          </label>
-        </div>
-        <div class="form-actions">
-          <button id="track-submit" class="primary-btn" type="submit">عرض حالة الطلب</button>
-          <p id="track-error" class="form-error" role="alert" aria-live="polite"></p>
-        </div>
-        <p class="form-note">داخل المطعم: رقم الطلب + رقم الطاولة. الاستلام: رقم الطلب + رقم الهاتف الذي استخدمته عند الطلب.</p>
-      </form>
-      <div id="last-order" class="last-order">
-        <span class="last-caption">آخر طلب محفوظ على هذا الجهاز</span>
-        <div class="last-row"><strong id="last-order-id">—</strong><button id="last-order-open" class="last-open" type="button">فتح الطلب</button></div>
       </div>
-    </aside>
+      <div class="form-actions">
+        <button id="track-submit" class="primary-btn" type="submit">عرض حالة الطلب</button>
+        <p id="track-error" class="form-error" role="alert" aria-live="polite"></p>
+      </div>
+      <p class="form-note">داخل المطعم: رقم الطلب + رقم الطاولة. الاستلام: رقم الطلب + رقم الهاتف الذي استخدمته عند الطلب.</p>
+    </form>
+    <div id="last-order" class="last-order">
+      <span class="last-caption">آخر طلب محفوظ على هذا الجهاز</span>
+      <div class="last-row"><strong id="last-order-id">—</strong><button id="last-order-open" class="last-open" type="button">فتح الطلب</button></div>
+    </div>
+  </section>
 
+  <section class="layout" aria-label="نتيجة متابعة الطلب">
     <article class="card result">
       <div id="result-empty" class="result-empty">
         <div>
