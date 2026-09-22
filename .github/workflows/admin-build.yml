@@ -70,6 +70,7 @@ jobs:
           curl -fsSI http://127.0.0.1:4175/login | grep -qi '^X-Content-Type-Options: nosniff'
           curl -fsSI http://127.0.0.1:4175/login | grep -qi '^Content-Security-Policy:'
           curl -fsSI http://127.0.0.1:4175/login | grep -qi '^X-Request-Id:'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4175/proxy/api/orders)" = "401"
           cat /tmp/arabisk-admin.log
 
       - name: Web runtime smoke test
@@ -92,4 +93,6 @@ jobs:
           curl -fsS http://127.0.0.1:4176/health | grep -q '"ok":true'
           curl -fsSI http://127.0.0.1:4176/health | grep -qi '^X-Content-Type-Options: nosniff'
           curl -fsSI http://127.0.0.1:4176/health | grep -qi '^X-Request-Id:'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4176/api/orders)" = "403"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{' http://127.0.0.1:4176/api/orders)" = "400"
           cat /tmp/arabisk-web.log
