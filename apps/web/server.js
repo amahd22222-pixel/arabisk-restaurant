@@ -150,7 +150,23 @@ function smartMeta(product,snapshot){
   const spiceLevel=Math.max(0,Math.min(3,Number(product.spiceLevel)||0));
   return {popular:snapshot.popularIds.has(product.id),isNew,chefChoice,spicy:tags.includes('spicy')||spiceLevel>0,vegetarian:dietary.includes('vegetarian'),vegan:dietary.includes('vegan'),glutenFree:dietary.includes('gluten-free'),spiceLevel,tags,dietary};
 }
-const withMediaUrls=(product,snapshot=smartSnapshot())=>({...product,imageUrl:product.imageKey&&storageReady?presign('GET',product.imageKey,900):(product.imageUrl||''),videoUrl:product.videoKey&&storageReady?presign('GET',product.videoKey,900):'',smart:smartMeta(product,snapshot)});
+const MEDIA_URL_CACHE_MS=60*1000;
+const MAX_MEDIA_URL_CACHE=1000;
+const mediaUrlCache=new Map();
+const cachedMediaUrl=(method,key)=>{
+  const cacheKey=method+':'+key;
+  const now=Date.now();
+  const cached=mediaUrlCache.get(cacheKey);
+  if(cached&&now-cached.createdAt<MEDIA_URL_CACHE_MS)return cached.url;
+  const url=presign(method,key,900);
+  if(!cached&&mediaUrlCache.size>=MAX_MEDIA_URL_CACHE){
+    const oldestKey=mediaUrlCache.keys().next().value;
+    if(oldestKey!==undefined)mediaUrlCache.delete(oldestKey);
+  }
+  mediaUrlCache.set(cacheKey,{createdAt:now,url});
+  return url;
+};
+const withMediaUrls=(product,snapshot=smartSnapshot())=>({...product,imageUrl:product.imageKey&&storageReady?cachedMediaUrl('GET',product.imageKey):(product.imageUrl||''),videoUrl:product.videoKey&&storageReady?cachedMediaUrl('GET',product.videoKey):'',smart:smartMeta(product,snapshot)});
 
 async function restoreState(){ if(!storageReady) return; const saved=await readJson(STATE_KEY,null); if(!saved||typeof saved!=='object') return; if(saved.menuVersion===MENU_VERSION&&Array.isArray(saved.products)&&saved.products.length) products.splice(0,products.length,...saved.products); if(Array.isArray(saved.orders)) orders.splice(0,orders.length,...saved.orders); if(Array.isArray(saved.customers)) customers.splice(0,customers.length,...saved.customers); if(Array.isArray(saved.reservations)) reservations.splice(0,reservations.length,...saved.reservations); }
 const PERSIST_DEBOUNCE_MS=250;
