@@ -428,8 +428,9 @@ async function loadRevenue(){
           ? '<span class="status pending">محجوبة — حل العائق أولًا</span><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>'
           : '<button class="small-action" data-campaign-outcome="executed" data-id="'+revEsc(row.id)+'" type="button">تم التنفيذ</button><button class="small-action" data-campaign-outcome="converted" data-id="'+revEsc(row.id)+'" type="button">سجل التحول</button><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>')
         : '<span class="status on">تم تسجيل النتيجة</span><button class="small-action" data-campaign-detail data-id="'+revEsc(row.id)+'" type="button">التفاصيل</button>';
-      return '<tr><td><strong>'+revEsc(row.id)+'</strong><small>'+revEsc(row.title)+'</small></td><td>'+revEsc({draft:'مسودة',executed:'تم التنفيذ',converted:'تحولت',ignored:'تم التجاهل'}[row.status]||row.status)+'</td><td><div class="task-meta"><span class="rev-task '+revEsc(taskClass)+'">'+revEsc(taskLabel)+'</span><strong>'+revEsc(owner)+'</strong><small>'+revEsc(dueText)+'</small></div></td><td class="price">'+(row.resultRevenue?revMoney(row.resultRevenue):'—')+'</td><td class="campaign-actions">'+(actionButtons||'—')+'</td><td>'+outcomeButtons+'</td></tr>';
-    }).join('')||'<tr><td colspan="6" class="empty">لا توجد مسودات حتى الآن.</td></tr>';
+      const customerContext=row.customerName ? '<div class="task-meta"><button class="small-action revenue-customer-link" data-customer-context="'+revEsc(row.customerId||'')+'" type="button">'+revEsc(row.customerName)+'</button><small dir="ltr">'+revEsc(row.customerPhone||'')+'</small><span>'+revEsc(row.type||'')+'</span></div>' : '<span class="status pending">سياق غير محدد</span>';
+      return '<tr><td><strong>'+revEsc(row.id)+'</strong><small>'+revEsc(row.title)+'</small></td><td>'+revEsc({draft:'مسودة',executed:'تم التنفيذ',converted:'تحولت',ignored:'تم التجاهل'}[row.status]||row.status)+'</td><td>'+customerContext+'</td><td><div class="task-meta"><span class="rev-task '+revEsc(taskClass)+'">'+revEsc(taskLabel)+'</span><strong>'+revEsc(owner)+'</strong><small>'+revEsc(dueText)+'</small></div></td><td class="price">'+(row.resultRevenue?revMoney(row.resultRevenue):'—')+'</td><td class="campaign-actions">'+(actionButtons||'—')+'</td><td>'+outcomeButtons+'</td></tr>';
+    }).join('')||'<tr><td colspan="7" class="empty">لا توجد مسودات حتى الآن.</td></tr>';
     if(state)state.textContent=`آخر تحديث: ${new Date(data.generatedAt).toLocaleString('ar-AE')} — نافذة التحليل ${data.windowDays} يوم`;
   }catch(error){ if(state)state.textContent=error.message; }
 }
@@ -599,6 +600,15 @@ document.querySelector('#revenue-actions-body')?.addEventListener('click',async 
     alert(data.reused ? 'المهمة موجودة بالفعل ومفتوحة لنفس الفرصة؛ لم يتم إنشاء نسخة مكررة.' : 'تم إنشاء المسودة. لا يوجد إرسال تلقائي في هذه النسخة.');
     await loadRevenue();
   }catch(error){alert(error.message)}finally{button.disabled=false;}
+});
+document.querySelector('#revenue-campaigns-body')?.addEventListener('click',event=>{
+  const customerButton=event.target.closest('[data-customer-context]');
+  if(!customerButton)return;
+  const customerId=customerButton.dataset.customerContext;
+  if(!customerId)return;
+  const target=document.querySelector('[data-customer-360="'+CSS.escape(customerId)+'"]');
+  if(target){target.click();return;}
+  document.querySelector('[data-section="customers"]')?.click();
 });
 document.querySelector('#revenue-campaigns-body')?.addEventListener('click',async event=>{
   const detailButton=event.target.closest('[data-campaign-detail]');

@@ -744,6 +744,26 @@ export function registerRevenueRoutes(app, {
     } : (summary.topActions || []).find(item => item.type === type && item.reference === reference);
     if (!action) return null;
 
+    let customerId = '';
+    let customerName = '';
+    let customerPhone = '';
+    if (['inactive_customer','returning_customer'].includes(type)) {
+      const customer = customers.find(item => item.id === reference);
+      if (customer) {
+        customerId = clean(customer.id, 100);
+        customerName = clean(customer.name || 'عميل', 80);
+        customerPhone = clean(customer.phone, 40);
+      }
+    } else if (type === 'upcoming_reservation') {
+      const reservation = reservations.find(item => item.id === reference);
+      if (reservation) {
+        const customer = customers.find(item => item.phone && reservation.phone && item.phone === reservation.phone);
+        customerId = clean(customer?.id || '', 100);
+        customerName = clean(customer?.name || reservation.name || 'عميل', 80);
+        customerPhone = clean(customer?.phone || reservation.phone || '', 40);
+      }
+    }
+
     const existing = campaigns.find(item =>
       item.status === 'draft' &&
       item.type === type &&
@@ -793,6 +813,9 @@ export function registerRevenueRoutes(app, {
       sourceType: alert ? 'revenue_alert' : segment ? 'customer_segment' : 'revenue_opportunity',
       sourceKey: alert?.key || segment?.key || type,
       alertSeverity: alert?.severity || '',
+      customerId,
+      customerName,
+      customerPhone,
       owner: '',
       dueAt: '',
       workflowStatus: 'unassigned',
