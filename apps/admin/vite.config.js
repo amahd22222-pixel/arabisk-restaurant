@@ -12,5 +12,18 @@ export default defineConfig({
         dashboard: resolve(root, 'dashboard.html')
       }
     }
-  }
+  },
+  plugins: [{
+    name: 'arabisk-revenue-command-center',
+    transformIndexHtml(html) {
+      if (!html.includes('id="revenue"')) return html;
+      return {
+        html,
+        tags: [
+          { tag: 'link', attrs: { rel: 'stylesheet', href: '/revenue-command-center.css' }, injectTo: 'head' },
+          { tag: 'script', attrs: { type: 'module', src: '/revenue-command-center.js' }, injectTo: 'body' }
+        ]
+      };
+    }
+  }]
 });
