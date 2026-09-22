@@ -35,7 +35,7 @@ function buildCommandCenter(){
       '<button type="button" data-target="revenue-value-realization"><b>03</b><span>قِس</span><small>القيمة المتحققة</small></button><i>←</i>'+
       '<button type="button" data-target="revenue-outcome-learning"><b>04</b><span>تعلّم</span><small>نتائج الإجراءات</small></button>'+
     '</div>'+
-    '<div class="rcc-priority" id="rcc-priority"><div><strong>الأولوية الآن</strong><span id="rcc-priority-text">جارٍ قراءة حالة التشغيل…</span></div><button type="button" class="small-action" id="rcc-open-priority">انتقال</button></div>'+
+    '<div class="rcc-priority" id="rcc-priority"><div><strong>الأولوية الآن</strong><span id="rcc-priority-text">جارٍ قراءة حالة التشغيل…</span></div><button type="button" class="small-action" id="rcc-open-priority">انتقال</button></div><section class="rcc-priority-queue" aria-label="قائمة الأولويات"><div class="rcc-priority-head"><div><span>PRIORITY QUEUE</span><h3>أهم الإجراءات الآن</h3><small>ترتيب تشغيلي يعتمد على حالة المهمة، الـSLA والقيمة المحتملة.</small></div><strong id="rcc-priority-count">0</strong></div><div id="rcc-priority-list" class="rcc-priority-list"><div class="empty">لا توجد إجراءات تحتاج ترتيبًا حاليًا.</div></div></section>'+
     '<section class="rcc-linked" aria-label="الإجراءات المرتبطة"><div class="rcc-linked-head"><div><span>LINKED OPERATIONS</span><h3>الإجراء ↔ العميل ↔ الطلب</h3><small>تنقل مباشر من الإجراء إلى سياق العميل والطلب المرتبط، بدون البحث اليدوي.</small></div><strong id="rcc-linked-count">0 إجراء</strong></div><div class="rcc-link-list" id="rcc-link-list"><div class="empty">لم يتم تحميل الإجراءات بعد.</div></div></section>';
   const first=revenue.querySelector('.panelhead');
   revenue.insertBefore(panel,first||revenue.firstChild);
@@ -59,6 +59,67 @@ function rccScroll(id){
   setTimeout(()=>el.classList.remove('rcc-focus'),1200);
 }
 
+function rccPriorityScore(row){
+  const state=String(row?.workflowStatus||'').toLowerCase();
+  const status=String(row?.status||'').toLowerCase();
+  if(status!=='draft') return -1;
+  let score=20;
+  if(state==='escalated')score+=90;
+  else if(state==='overdue')score+=75;
+  else if(state==='blocked')score+=65;
+  else if(state==='in_progress')score+=45;
+  else if(state==='assigned')score+=35;
+  const dueAt=Date.parse(row?.dueAt||'');
+  if(Number.isFinite(dueAt)){
+    const hours=(dueAt-Date.now())/3600000;
+    if(hours<=0)score+=25;
+    else if(hours<=4)score+=20;
+    else if(hours<=24)score+=12;
+    else if(hours<=48)score+=6;
+  }
+  const potential=Number(row?.potentialValue||row?.opportunityValue||row?.estimatedValue||0);
+  score+=Math.min(25,Math.max(0,potential/100));
+  return Math.round(score*10)/10;
+}
+function rccPriorityReason(row){
+  const state=String(row?.workflowStatus||'').toLowerCase();
+  if(state==='escalated')return 'متأخرة وتحتاج تصعيدًا.';
+  if(state==='overdue')return 'تجاوزت موعدها وتحتاج متابعة الآن.';
+  if(state==='blocked')return 'محجوبة بعائق تشغيلي.';
+  if(state==='in_progress')return 'قيد التنفيذ وتحتاج إغلاق النتيجة.';
+  if(state==='assigned')return 'مسندة ولم يبدأ تنفيذها بعد.';
+  const dueAt=Date.parse(row?.dueAt||'');
+  if(Number.isFinite(dueAt)&&dueAt-Date.now()<=24*3600000)return 'الـSLA قريب ويستحق المتابعة.';
+  return 'إجراء مفتوح يحتاج بدء التنفيذ.';
+}
+function rccDueLabel(iso){
+  const due=Date.parse(iso||'');
+  if(!Number.isFinite(due))return 'بدون موعد محدد';
+  const hours=Math.round((due-Date.now())/3600000);
+  if(hours<0)return 'متأخرة '+Math.abs(hours)+' س';
+  if(hours<1)return 'أقل من ساعة';
+  if(hours<24)return 'خلال '+hours+' س';
+  return 'خلال '+Math.ceil(hours/24)+' يوم';
+}
+function renderPriorityQueue(){
+  const panel=document.getElementById('revenue-command-center');
+  const list=document.getElementById('rcc-priority-list');
+  const count=document.getElementById('rcc-priority-count');
+  if(!panel||!list)return;
+  const campaigns=Array.isArray(window.__ARABISK_REVENUE_CAMPAIGNS__)?window.__ARABISK_REVENUE_CAMPAIGNS__:[];
+  const rows=campaigns.filter(row=>String(row?.status||'').toLowerCase()==='draft')
+    .map(row=>({...row,_rccPriorityScore:rccPriorityScore(row)}))
+    .sort((a,b)=>b._rccPriorityScore-a._rccPriorityScore)
+    .slice(0,5);
+  if(count)count.textContent=rows.length+' مهمة';
+  const html=rows.length?rows.map((row,index)=>{
+    const customer=row.customerName||'عميل غير محدد';
+    const orderId=row.attribution?.orderId||row.orderId||'';
+    const potential=Number(row.potentialValue||row.opportunityValue||row.estimatedValue||0);
+    return '<article class="rcc-priority-item"><div class="rcc-priority-rank">'+String(index+1).padStart(2,'0')+'</div><div class="rcc-priority-main"><div class="rcc-priority-title"><strong>'+esc(row.title||'إجراء إيرادات')+'</strong><span>'+esc(customer)+'</span></div><div class="rcc-priority-meta"><span>'+esc(rccPriorityReason(row))+'</span><b>'+esc(rccDueLabel(row.dueAt))+'</b>'+(potential>0?'<b>'+rccMoney(potential)+'</b>':'')+(orderId?'<i dir="ltr">#'+esc(orderId)+'</i>':'')+'</div></div><button type="button" class="small-action" data-rcc-priority-open="'+esc(row.id||'')+'">فتح</button></article>';
+  }).join(''):'<div class="empty">لا توجد إجراءات مسودة تحتاج ترتيبًا حاليًا.</div>';
+  if(list.innerHTML!==html)list.innerHTML=html;
+}
 function renderLinkedOperations(){
   const panel=document.getElementById('revenue-command-center');
   const list=document.getElementById('rcc-link-list');
@@ -85,6 +146,21 @@ function renderLinkedOperations(){
 }
 
 function handleRccLinks(event){
+  const priorityButton=event.target.closest('[data-rcc-priority-open]');
+  if(priorityButton){
+    const id=priorityButton.dataset.rccPriorityOpen||'';
+    const row=document.querySelector('[data-campaign-id="'+CSS.escape(id)+'"]');
+    if(row){
+      row.scrollIntoView({behavior:'smooth',block:'center'});
+      row.classList.add('customer360-highlight-row');
+      setTimeout(()=>row.classList.remove('customer360-highlight-row'),2200);
+      row.querySelector('[data-campaign-detail]')?.click();
+    }else{
+      rccScroll('revenue-campaigns');
+    }
+    return;
+  }
+
   const campaignButton=event.target.closest('[data-rcc-open-campaign]');
   if(campaignButton){
     const id=campaignButton.dataset.rccOpenCampaign||'';
@@ -131,6 +207,7 @@ function updateCommandCenter(){
     if(strong&&strong.textContent!==value)strong.textContent=value;
   });
   renderLinkedOperations();
+  renderPriorityQueue();
   const actions=Number.parseInt(rccValue('rev-actions-count'),10)||0;
   const overdue=Number.parseInt(rccValue('rev-overdue-tasks'),10)||0;
   const returning=Number.parseInt(rccValue('rev-returning'),10)||0;
