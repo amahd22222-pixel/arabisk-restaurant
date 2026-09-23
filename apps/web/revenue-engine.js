@@ -1388,6 +1388,7 @@ export function registerRevenueRoutes(app, {
       add_to_cart: 'أضاف للسلة',
       cart_updated: 'حدّث السلة',
       checkout_started: 'بدأ الدفع',
+      order_created: 'أنشأ طلبًا',
       order_completed: 'أكمل الطلب',
       reservation_created: 'أنشأ حجزًا'
     };
