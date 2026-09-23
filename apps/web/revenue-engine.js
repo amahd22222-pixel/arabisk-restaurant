@@ -1212,7 +1212,7 @@ export function registerRevenueRoutes(app, {
     if (segmentsCache && now - segmentsCacheAt < REVENUE_SEGMENTS_CACHE_MS) return segmentsCache;
     const ordersByPhone = new Map();
     for (const order of orders) {
-      if (!order.phone || order.status === 'cancelled') continue;
+      if (!order.phone || order.status !== 'completed') continue;
       const rows = ordersByPhone.get(order.phone) || [];
       rows.push(order);
       ordersByPhone.set(order.phone, rows);
@@ -1295,9 +1295,12 @@ export function registerRevenueRoutes(app, {
         })(),
         members: members.slice(0, 100)
       };
+    });
     segmentsCache = result;
     segmentsCacheAt = now;
     return result;
+  }
+
   function customer360(customerId) {
     const id = clean(customerId, 100);
     const customer = customers.find(item => item.id === id);
