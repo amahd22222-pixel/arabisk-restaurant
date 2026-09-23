@@ -170,5 +170,7 @@ jobs:
           PY
           after_completed="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4177/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
           test "$after_completed" = "1"
+          customer_count="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4177/api/customers | python -c 'import json,sys; print(sum(1 for row in json.load(sys.stdin) if row.get("orderCount")==0))')"
+          test "$customer_count" = "0"
 
           cat /tmp/arabisk-web.log /tmp/arabisk-admin-web-smoke.log /tmp/arabisk-web-revenue.log
