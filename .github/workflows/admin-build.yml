@@ -170,16 +170,7 @@ jobs:
           PY
           after_completed="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4177/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
           test "$after_completed" = "1"
-          customer_stats="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4177/api/customers | python - <<'PY'
-          import json, sys
-          rows=json.load(sys.stdin)
-          matches=[row for row in rows if row.get('phone')=='0500000001']
-          assert len(matches)==1, 'CI customer should exist'
-          assert matches[0].get('orderCount')==1, 'customer orderCount must increment on completion'
-          assert matches[0].get('lastOrderAt'), 'customer lastOrderAt must be set on completion'
-          print('ok')
-          PY
-          )"
+          customer_stats="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4177/api/customers | python -c 'import json,sys; rows=json.load(sys.stdin); matches=[row for row in rows if row.get("phone")=="0500000001"]; assert len(matches)==1, "CI customer should exist"; assert matches[0].get("orderCount")==1, "customer orderCount must increment on completion"; assert matches[0].get("lastOrderAt"), "customer lastOrderAt must be set on completion"; print("ok")')"
           test "$customer_stats" = "ok"
 
           cat /tmp/arabisk-web.log /tmp/arabisk-admin-web-smoke.log /tmp/arabisk-web-revenue.log
