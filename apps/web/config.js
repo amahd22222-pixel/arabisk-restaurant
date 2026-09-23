@@ -31,6 +31,8 @@ export const port = Number(process.env.PORT || 3000);
 export const stateKey = 'data/arabisk-state.json';
 export const menuVersion = 2;
 export const maxVideoBytes = 120 * 1024 * 1024;
+export const smartPopularWindowMs = 30 * 24 * 60 * 60 * 1000;
+export const smartNewWindowMs = 14 * 24 * 60 * 60 * 1000;
 
 export const videoTypes = new Set([
   'video/mp4',
