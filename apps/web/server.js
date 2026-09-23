@@ -28,6 +28,7 @@ const corsOptions = { origin(origin, callback){ if(!origin || allowedCorsOrigins
 app.disable('x-powered-by');
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+const requestId=(req)=>String(req.get('X-Request-Id')||crypto.randomUUID()).slice(0,80);
 const errorRouteForLog=(req)=>{
   const matchedRoute=req.route?.path;
   if(matchedRoute)return String(matchedRoute).slice(0,160);
