@@ -348,7 +348,7 @@ export function registerRevenueRoutes(app, {
     );
     for (const order of orders) {
       if (order.status !== 'completed') continue;
-      const completedAt = Date.parse(order.updatedAt || order.createdAt || '');
+      const completedAt = Date.parse(order.completedAt || order.createdAt || '');
       if (!Number.isFinite(completedAt) || completedAt < thirtyDaysAgo || completedAt > now) continue;
       completedSessions.add(order.sessionId || order.id);
     }
