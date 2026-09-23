@@ -77,7 +77,7 @@ const ORDER_RATE_WINDOW_MS=10*60*1000; const ORDER_RATE_LIMIT=10;
 const ORDER_STATUS_RATE_WINDOW_MS=10*60*1000; const ORDER_STATUS_RATE_LIMIT=60;
 const SMART_POPULAR_WINDOW_MS=7*24*60*60*1000;
 const SMART_NEW_WINDOW_MS=30*24*60*60*1000;
-const getClientKey=(req)=>String(req.ip||'unknown').trim().slice(0,120)||'unknown';
+const getClientKey=(req)=>String(req.ip||req.socket?.remoteAddress||'unknown').trim().slice(0,120)||'unknown';
 const requestId=(req)=>{const incoming=String(req.headers['x-request-id']||'').trim();return /^[A-Za-z0-9._-]{1,80}$/.test(incoming)?incoming:crypto.randomUUID()};
 const rememberRateKey=(store,key,entry,windowMs)=>{
   const now=Date.now();
@@ -211,7 +211,7 @@ const nextProductId=()=>{const max=products.reduce((highest,product)=>Math.max(h
 const nextOrderId=()=>`O${String(orders.length+1).padStart(5,'0')}`;
 const nextReservationId=()=>`R${String(reservations.length+1).padStart(4,'0')}`;
 
-app.get('/health',(_req,res)=>res.json({ok:true,service:'arabisk-web',uptimeSeconds:Math.floor((Date.now()-serverStartedAt)/1000)}));
+app.get('/health',(_req,res)=>res.json({ok:true,service:'arabisk-web',uptimeSeconds:Math.floor((Date.now()-serverStartedAt)/1000),storageConfigured:storageReady,environment:isProductionRuntime?'production':'development'}));
 app.get('/api/orders',requireAdminApiKey,(_req,res)=>res.json(orders));
 app.get('/api/customers',requireAdminApiKey,(_req,res)=>res.json(customers));
 app.patch('/api/customers/:id',requireAdminApiKey,(req,res)=>{
