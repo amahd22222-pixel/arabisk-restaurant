@@ -66,17 +66,17 @@ jobs:
             fi
             sleep 0.5
           done
-          curl -fsS http://127.0.0.1:4175/health | grep -q '"ok":true'
-          curl -fsS -o /dev/null http://127.0.0.1:4175/login
-          curl -fsSI http://127.0.0.1:4175/login | grep -qi '^X-Content-Type-Options: nosniff'
-          curl -fsSI http://127.0.0.1:4175/login | grep -qi '^Content-Security-Policy:'
-          curl -fsSI http://127.0.0.1:4175/login | grep -qi '^X-Request-Id:'
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4175/proxy/api/orders)" = "401"
+          curl -fsS http://127.0.0.1:4185/health | grep -q '"ok":true'
+          curl -fsS -o /dev/null http://127.0.0.1:4185/login
+          curl -fsSI http://127.0.0.1:4185/login | grep -qi '^X-Content-Type-Options: nosniff'
+          curl -fsSI http://127.0.0.1:4185/login | grep -qi '^Content-Security-Policy:'
+          curl -fsSI http://127.0.0.1:4185/login | grep -qi '^X-Request-Id:'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4185/proxy/api/orders)" = "401"
           python - <<'PY'
           from pathlib import Path
           Path('/tmp/oversized-login.json').write_text('{"username":"' + ('x' * 300000) + '","password":"x"}')
           PY
-          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data-binary @/tmp/oversized-login.json http://127.0.0.1:4175/auth/check)" = "413"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data-binary @/tmp/oversized-login.json http://127.0.0.1:4185/auth/check)" = "413"
           cat /tmp/arabisk-admin.log
 
       - name: Web runtime smoke test
@@ -101,17 +101,17 @@ jobs:
             fi
             sleep 0.5
           done
-          curl -fsS http://127.0.0.1:4176/health | grep -q '"ok":true'
-          curl -fsSI http://127.0.0.1:4176/health | grep -qi '^X-Content-Type-Options: nosniff'
-          curl -fsSI http://127.0.0.1:4176/health | grep -qi '^X-Request-Id:'
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4176/api/orders)" = "503"
-          test -z "$(curl -s -D - -o /dev/null -H 'Origin: http://localhost:5173' http://127.0.0.1:4176/health | grep -i '^Access-Control-Allow-Origin:')"
-          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{' http://127.0.0.1:4176/api/orders)" = "400"
+          curl -fsS http://127.0.0.1:4186/health | grep -q '"ok":true'
+          curl -fsSI http://127.0.0.1:4186/health | grep -qi '^X-Content-Type-Options: nosniff'
+          curl -fsSI http://127.0.0.1:4186/health | grep -qi '^X-Request-Id:'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4186/api/orders)" = "503"
+          test -z "$(curl -s -D - -o /dev/null -H 'Origin: http://localhost:5173' http://127.0.0.1:4186/health | grep -i '^Access-Control-Allow-Origin:')"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{' http://127.0.0.1:4186/api/orders)" = "400"
 
           for i in {1..180}; do
             test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{"event":"menu_view","sessionId":"ci-rate-limit"}' http://127.0.0.1:4187/api/events)" = "202"
           done
-          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{"event":"menu_view","sessionId":"ci-rate-limit"}' http://127.0.0.1:4177/api/events)" = "429"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{"event":"menu_view","sessionId":"ci-rate-limit"}' http://127.0.0.1:4187/api/events)" = "429"
           echo "Admin proxy must fail closed when its upstream URL is absent."
           curl -fsS -c /tmp/arabisk-admin.cookies -H 'Content-Type: application/json' --data '{"username":"ci","password":"ci"}' http://127.0.0.1:4175/auth/check > /tmp/admin-login.json
           grep -q '"ok":true' /tmp/admin-login.json
@@ -128,7 +128,7 @@ jobs:
             done
           done
 
-          curl -fsS http://127.0.0.1:4177/api/products > /tmp/ci-products.json
+          curl -fsS http://127.0.0.1:4187/api/products > /tmp/ci-products.json
           product_id="$(python - <<'PY'
           import json
           with open('/tmp/ci-products.json') as f:
@@ -149,17 +149,17 @@ jobs:
           }))
           PY
           )"
-          curl -fsS -H 'Content-Type: application/json' --data "$order_json" http://127.0.0.1:4177/api/orders > /tmp/ci-order.json
+          curl -fsS -H 'Content-Type: application/json' --data "$order_json" http://127.0.0.1:4187/api/orders > /tmp/ci-order.json
           order_id="$(python - <<'PY'
           import json
           print(json.load(open('/tmp/ci-order.json'))['id'])
           PY
           )"
-          before_completed="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4177/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
+          before_completed="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4187/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
           test "$before_completed" = "0"
 
           for status in confirmed preparing ready completed; do
-            curl -fsS -H 'Content-Type: application/json' -H 'X-Arabisk-Admin-Key: ci' --data "$(python -c "import json; print(json.dumps({'status':'$status'}))")" -X PATCH "http://127.0.0.1:4177/api/orders/$order_id" >/tmp/ci-order-status.json
+            curl -fsS -H 'Content-Type: application/json' -H 'X-Arabisk-Admin-Key: ci' --data "$(python -c "import json; print(json.dumps({'status':'$status'}))")" -X PATCH "http://127.0.0.1:4187/api/orders/$order_id" >/tmp/ci-order-status.json
           done
 
           python - <<'PY'
@@ -168,9 +168,9 @@ jobs:
           assert payload['status']=='completed'
           assert payload.get('completedAt'), 'completedAt must be recorded when an order completes'
           PY
-          after_completed="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4177/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
+          after_completed="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4187/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
           test "$after_completed" = "1"
-          customer_stats="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4177/api/customers | python -c 'import json,sys; rows=json.load(sys.stdin); matches=[row for row in rows if row.get("phone")=="0500000001"]; assert len(matches)==1, "CI customer should exist"; assert matches[0].get("orderCount")==1, "customer orderCount must increment on completion"; assert matches[0].get("lastOrderAt"), "customer lastOrderAt must be set on completion"; print("ok")')"
+          customer_stats="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4187/api/customers | python -c 'import json,sys; rows=json.load(sys.stdin); matches=[row for row in rows if row.get("phone")=="0500000001"]; assert len(matches)==1, "CI customer should exist"; assert matches[0].get("orderCount")==1, "customer orderCount must increment on completion"; assert matches[0].get("lastOrderAt"), "customer lastOrderAt must be set on completion"; print("ok")')"
           test "$customer_stats" = "ok"
 
           cat /tmp/arabisk-web.log /tmp/arabisk-admin-web-smoke.log /tmp/arabisk-web-revenue.log

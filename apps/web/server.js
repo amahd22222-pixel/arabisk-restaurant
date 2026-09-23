@@ -15,6 +15,7 @@ import { registerRevenueRoutes } from './revenue-engine.js';
 import { createStateRepository } from './repositories/state-repository.js';
 import { registerOrderRoutes } from './services/order-service.js';
 import { registerCustomerRoutes } from './services/customer-service.js';
+import { registerProductRoutes } from './routes/product-routes.js';
 import { registerReservationRoutes } from './services/reservation-service.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES } from './config.js';
@@ -199,6 +200,26 @@ const memories=registerMemoriesRoutes(app,{storageReady,presign,readJson,writeJs
 const nextProductId=()=>{const max=products.reduce((highest,product)=>Math.max(highest,Number(String(product.id).replace(/^P/,''))||0),0);return `P${String(max+1).padStart(3,'0')}`};
 
 app.get('/health',(_req,res)=>res.json({ok:true,service:'arabisk-web',uptimeSeconds:Math.floor((Date.now()-serverStartedAt)/1000),storageConfigured:storageReady,environment:isProductionRuntime?'production':'development'}));
+registerProductRoutes(app, {
+  products,
+  categories,
+  storageReady,
+  presign,
+  deleteObject,
+  isAdminApiKeyValid,
+  cleanText,
+  cleanKey,
+  cleanUrl,
+  normalizeList,
+  smartSnapshot,
+  withMediaUrls,
+  persistState,
+  invalidateSmartSnapshot,
+  nextProductId,
+  maxVideoBytes: MAX_VIDEO_BYTES,
+  videoTypes: VIDEO_TYPES
+});
+
 const stateRepository = createStateRepository({ orders, customers, reservations, persist: persistState });
 
 registerOrderRoutes(app, {
@@ -238,15 +259,6 @@ registerReservationRoutes(app, {
 });
 
 registerMediaRoutes(app,{products,storageReady,presign,requireAdminApiKey});
-app.post('/api/videos/presign',requireAdminApiKey,(req,res)=>{if(!storageReady)return res.status(503).json({message:'Video storage is not configured on the web service.'});const productId=cleanText(req.body?.productId,40),fileName=cleanText(req.body?.fileName,160).replace(/[^a-zA-Z0-9._-]/g,'-'),contentType=cleanText(req.body?.contentType,80).toLowerCase(),size=Number(req.body?.size);if(!products.some(product=>product.id===productId))return res.status(404).json({message:'Product not found'});if(!fileName||!VIDEO_TYPES.has(contentType))return res.status(400).json({message:'Only MP4, WebM and MOV videos are supported.'});if(!Number.isFinite(size)||size<1||size>MAX_VIDEO_BYTES)return res.status(400).json({message:'Maximum video size is 120 MB.'});const key=`products/${productId}/${crypto.randomUUID()}-${fileName}`;try{return res.json({key,uploadUrl:presign('PUT',key,900),expiresIn:900});}catch(error){console.error(error);return res.status(503).json({message:'Unable to prepare video upload.'});}});
-app.post('/api/videos/delete-presign',requireAdminApiKey,(req,res)=>{if(!storageReady)return res.status(503).json({message:'Video storage is not configured on the web service.'});const productId=cleanText(req.body?.productId,40),product=products.find(item=>item.id===productId);if(!product)return res.status(404).json({message:'Product not found'});if(!product.videoKey)return res.json({url:'',key:''});try{return res.json({url:presign('DELETE',product.videoKey,900),key:product.videoKey});}catch(error){console.error(error);return res.status(503).json({message:'Unable to prepare video deletion.'});}});
-
-app.get('/api/products',(req,res)=>{const category=cleanText(req.query.category,80),search=cleanText(req.query.search,80).toLowerCase();let result=category?products.filter(product=>product.categoryId===category):products;if(search)result=result.filter(product=>`${product.nameAr} ${product.nameEn}`.toLowerCase().includes(search));if(!isAdminApiKeyValid(req))result=result.filter(product=>product.available!==false);const snapshot=smartSnapshot();return res.json(result.map(product=>withMediaUrls(product,snapshot)));});
-app.get('/api/products/:id',(req,res)=>{const product=products.find(item=>item.id===req.params.id);if(!product)return res.status(404).json({message:'Product not found'});if(product.available===false&&!isAdminApiKeyValid(req))return res.status(404).json({message:'Product not found'});return res.json(withMediaUrls(product));});
-app.post('/api/products',requireAdminApiKey,(req,res)=>{const {categoryId,nameAr,nameEn,descriptionAr='',descriptionEn='',imageUrl='',imageKey='',price,available=true,videoKey='',tags=[],dietary=[],spiceLevel=0,chefChoice=false,isNew=false}=req.body||{};if(!categoryId||!nameAr||!nameEn||!Number.isFinite(Number(price)))return res.status(400).json({message:'categoryId, nameAr, nameEn and numeric price are required'});if(!categories.some(category=>category.id===categoryId))return res.status(400).json({message:'Unknown category'});const product={id:nextProductId(),categoryId,nameAr:cleanText(nameAr),nameEn:cleanText(nameEn),descriptionAr:cleanText(descriptionAr),descriptionEn:cleanText(descriptionEn),imageUrl:cleanUrl(imageUrl),imageKey:cleanKey(imageKey),price:Number(price),available:Boolean(available),videoKey:cleanKey(videoKey),tags:normalizeList(tags,SMART_TAGS),dietary:normalizeList(dietary,DIETARY_TAGS),spiceLevel:Math.max(0,Math.min(3,Number(spiceLevel)||0)),chefChoice:Boolean(chefChoice),isNew:Boolean(isNew),createdAt:new Date().toISOString(),sortOrder:products.length+1};products.push(product);persistState();return res.status(201).json(withMediaUrls(product));});
-app.patch('/api/products/:id',requireAdminApiKey,(req,res)=>{const product=products.find(item=>item.id===req.params.id);if(!product)return res.status(404).json({message:'Product not found'});const b=req.body||{};const oldImageKey=product.imageKey;const oldVideoKey=product.videoKey;if(b.categoryId!==undefined){if(!categories.some(category=>category.id===b.categoryId))return res.status(400).json({message:'Unknown category'});product.categoryId=b.categoryId;}if(b.nameAr!==undefined)product.nameAr=cleanText(b.nameAr);if(b.nameEn!==undefined)product.nameEn=cleanText(b.nameEn);if(b.descriptionAr!==undefined)product.descriptionAr=cleanText(b.descriptionAr);if(b.descriptionEn!==undefined)product.descriptionEn=cleanText(b.descriptionEn);if(b.imageUrl!==undefined){const nextUrl=cleanUrl(b.imageUrl);product.imageUrl=nextUrl;if(nextUrl&&product.imageKey){const oldKey=product.imageKey;product.imageKey='';if(storageReady)void deleteObject(oldKey);}}if(b.imageKey!==undefined)product.imageKey=cleanKey(b.imageKey);if(b.price!==undefined){if(!Number.isFinite(Number(b.price)))return res.status(400).json({message:'Price must be numeric'});product.price=Number(b.price);}if(b.available!==undefined)product.available=Boolean(b.available);if(b.videoKey!==undefined)product.videoKey=cleanKey(b.videoKey);if(b.tags!==undefined)product.tags=normalizeList(b.tags,SMART_TAGS);if(b.dietary!==undefined)product.dietary=normalizeList(b.dietary,DIETARY_TAGS);if(b.spiceLevel!==undefined)product.spiceLevel=Math.max(0,Math.min(3,Number(b.spiceLevel)||0));if(b.chefChoice!==undefined)product.chefChoice=Boolean(b.chefChoice);if(b.isNew!==undefined)product.isNew=Boolean(b.isNew);if(storageReady&&b.imageKey!==undefined&&oldImageKey&&oldImageKey!==product.imageKey)void deleteObject(oldImageKey);if(storageReady&&b.videoKey!==undefined&&oldVideoKey&&oldVideoKey!==product.videoKey)void deleteObject(oldVideoKey);persistState();return res.json(withMediaUrls(product));});
-app.delete('/api/products/:id',requireAdminApiKey,(req,res)=>{const index=products.findIndex(product=>product.id===req.params.id);if(index===-1)return res.status(404).json({message:'Product not found'});const [removed]=products.splice(index,1);if(storageReady){if(removed.imageKey)void deleteObject(removed.imageKey);if(removed.videoKey)void deleteObject(removed.videoKey);}persistState();return res.json({ok:true,removed});});
-
 app.get('/cart',(req,res)=>res.sendFile(path.join(__dirname,'cart-page.html')));
 app.get('/track-order',(req,res)=>res.sendFile(path.join(__dirname,'order-tracking.html')));
 app.get('/events',(req,res)=>res.sendFile(path.join(__dirname,'events.html')));
