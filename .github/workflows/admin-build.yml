@@ -53,11 +53,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY=ci PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin.log 2>&1 &
+          ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY=ci PORT=4185 npm run start --workspace apps/admin > /tmp/arabisk-admin.log 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true' EXIT
           for i in {1..20}; do
-            if curl -fsS http://127.0.0.1:4175/health > /tmp/health.json; then
+            if curl -fsS http://127.0.0.1:4185/health > /tmp/health.json; then
               break
             fi
             if ! kill -0 "$pid" 2>/dev/null; then
@@ -83,16 +83,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production PORT=4176 npm run start --workspace apps/web > /tmp/arabisk-web.log 2>&1 &
+          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production PORT=4186 npm run start --workspace apps/web > /tmp/arabisk-web.log 2>&1 &
           web_pid=$!
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY=ci PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin-web-smoke.log 2>&1 &
           admin_pid=$!
-          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_API_KEY=ci PORT=4177 npm run start --workspace apps/web > /tmp/arabisk-web-revenue.log 2>&1 &
+          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_API_KEY=ci PORT=4187 npm run start --workspace apps/web > /tmp/arabisk-web-revenue.log 2>&1 &
           revenue_pid=$!
-          trap 'kill "$web_pid" "$admin_pid" "$revenue_pid" 2>/dev/null || true' EXIT
+          cleanup() { status=$?; kill "$web_pid" "$admin_pid" "$revenue_pid" 2>/dev/null || true; if [ "$status" -ne 0 ]; then cat /tmp/arabisk-web.log /tmp/arabisk-admin-web-smoke.log /tmp/arabisk-web-revenue.log 2>/dev/null || true; fi; exit "$status"; }; trap cleanup EXIT
           pid=$web_pid
           for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:4176/health > /tmp/web-health.json; then
+            if curl -fsS http://127.0.0.1:4186/health > /tmp/web-health.json; then
               break
             fi
             if ! kill -0 "$pid" 2>/dev/null; then
@@ -109,7 +109,7 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{' http://127.0.0.1:4176/api/orders)" = "400"
 
           for i in {1..180}; do
-            test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{"event":"menu_view","sessionId":"ci-rate-limit"}' http://127.0.0.1:4177/api/events)" = "202"
+            test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{"event":"menu_view","sessionId":"ci-rate-limit"}' http://127.0.0.1:4187/api/events)" = "202"
           done
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{"event":"menu_view","sessionId":"ci-rate-limit"}' http://127.0.0.1:4177/api/events)" = "429"
           echo "Admin proxy must fail closed when its upstream URL is absent."
@@ -117,7 +117,7 @@ jobs:
           grep -q '"ok":true' /tmp/admin-login.json
           test "$(curl -s -o /dev/null -w '%{http_code}' -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/orders)" = "503"
 
-          for port in 4175 4177; do
+          for port in 4185 4187; do
             for i in {1..30}; do
               if curl -fsS http://127.0.0.1:$port/health >/dev/null; then break; fi
               if ! kill -0 "$([ "$port" = "4175" ] && echo "$admin_pid" || echo "$revenue_pid")" 2>/dev/null; then
