@@ -67,16 +67,30 @@ function renderCustomerSegmentMembers(segment){
 let customerSegmentsLoaded=false;
 let customerSegmentsLoadInFlight=null;
 async function loadCustomerSegments(force=false){
-  if(customerSegmentsLoaded&&!force){renderCustomerSegments();window.__ARABISK_CUSTOMER_SEGMENTS__=customerSegments;window.__ARABISK_CUSTOMER_STATE_READY__=true;window.dispatchEvent(new CustomEvent('arabisk:customer-state-updated'));return;}
+  if(customerSegmentsLoaded&&!force){
+    renderCustomers();
+    renderCustomerSegments();
+    window.__ARABISK_CUSTOMERS__=customers;
+    window.__ARABISK_CUSTOMER_SEGMENTS__=customerSegments;
+    window.__ARABISK_CUSTOMER_STATE_READY__=true;
+    window.dispatchEvent(new CustomEvent('arabisk:customer-state-updated'));
+    return;
+  }
   if(customerSegmentsLoadInFlight)return customerSegmentsLoadInFlight;
   customerSegmentsLoadInFlight=(async()=>{
     try{
-      const result=await request('/api/revenue/customer-segments');
-      customerSegments=Array.isArray(result.segments)?result.segments:[];
+      const [customersResult,segmentsResult]=await Promise.all([
+        request('/api/customers'),
+        request('/api/revenue/customer-segments')
+      ]);
+      customers=Array.isArray(customersResult)?customersResult:(Array.isArray(customersResult.customers)?customersResult.customers:[]);
+      customerSegments=Array.isArray(segmentsResult?.segments)?segmentsResult.segments:[];
       customerSegmentsLoaded=true;
+      window.__ARABISK_CUSTOMERS__=customers;
       window.__ARABISK_CUSTOMER_SEGMENTS__=customerSegments;
       window.__ARABISK_CUSTOMER_STATE_READY__=true;
       window.dispatchEvent(new CustomEvent('arabisk:customer-state-updated'));
+      renderCustomers();
       renderCustomerSegments();
     }finally{
       customerSegmentsLoadInFlight=null;
@@ -129,7 +143,7 @@ function syncSidebarState(){
   }
 }
 function showSection(sectionId){if(sectionId==='customers')void loadCustomerSegments().catch(()=>{});document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('section-visible'));document.querySelectorAll('[data-section]').forEach(link=>link.classList.toggle('active',link.dataset.section===sectionId));const titleMap={dashboard:'إدارة ARABISK',products:'إدارة الأصناف',categories:'إدارة الأقسام',studio:'ARABISK Studio — العروض',experiences:'الفعاليات والتجارب',reservations:'حجوزات الطاولات',orders:'الطلبات',revenue:'فرص الإيراد',memories:'ذكريات',customers:'العملاء',settings:'إعدادات الموقع'};$('#page-title').textContent=titleMap[sectionId]||'إدارة ARABISK';$('#dashboard-stats').style.display=sectionId==='dashboard'?'grid':'none';const section=document.getElementById(sectionId==='dashboard'?'products':sectionId);if(section)section.classList.add('section-visible');if(sectionId==='dashboard')document.getElementById('products').classList.add('section-visible');}
-async function load(){ $('#connection').textContent='جارٍ الاتصال…';try{const results=await Promise.all([request('/api/categories'),request('/api/products'),request('/api/orders'),request('/api/customers'),request('/api/reservations')]);[categories,products,orders,customers,reservations]=results;window.__ARABISK_CUSTOMERS__=customers;window.dispatchEvent(new CustomEvent('arabisk:customer-state-updated'));renderStats();renderProducts();renderCategories();renderOrders();renderCustomers();renderReservations();$('#connection').textContent='متصل';$('#connection').className='connected';$('#error').textContent='';}catch(error){$('#connection').textContent='غير متصل';$('#connection').className='disconnected';$('#error').textContent=`${error.message}. تحقق من رابط الـAPI في الإعدادات.`;}}
+async function load(){ $('#connection').textContent='جارٍ الاتصال…';try{const results=await Promise.all([request('/api/categories'),request('/api/products'),request('/api/orders'),request('/api/reservations')]);[categories,products,orders,reservations]=results;renderStats();renderProducts();renderCategories();renderOrders();renderReservations();$('#connection').textContent='متصل';$('#connection').className='connected';$('#error').textContent='';if(location.hash.replace('#','')==='customers')void loadCustomerSegments().catch(error=>{if($('#error'))$('#error').textContent=error.message;});}catch(error){$('#connection').textContent='غير متصل';$('#connection').className='disconnected';$('#error').textContent=error.message+' . تحقق من رابط الـAPI في الإعدادات.';}}
 function loadSettings(){$('#api-base').value=apiBase();$('#site-name').value=localStorage.getItem('ARABISK_SITE_NAME')||'ARABISK';$('#site-description').value=localStorage.getItem('ARABISK_SITE_DESCRIPTION')||'مطعم وكافيه بطابع عربي عصري.';}
 async function uploadFile(endpoint,productId,file,onProgress,errorText){const prepared=await request(endpoint,{method:'POST',body:JSON.stringify({productId,fileName:file.name,contentType:file.type,size:file.size})});await new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('PUT',prepared.uploadUrl);xhr.setRequestHeader('Content-Type',file.type||'application/octet-stream');xhr.upload.onprogress=event=>{if(event.lengthComputable&&onProgress)onProgress(Math.round(event.loaded/event.total*100))};xhr.onload=()=>xhr.status>=200&&xhr.status<300?resolve():reject(new Error(errorText));xhr.onerror=()=>reject(new Error('تعذر الاتصال بتخزين الوسائط.'));xhr.send(file)});return prepared.key;}
 async function deleteVideo(productId){const prepared=await request('/api/videos/delete-presign',{method:'POST',body:JSON.stringify({productId})});if(prepared.url){const response=await fetch(prepared.url,{method:'DELETE'});if(!response.ok)throw new Error('تعذر حذف الفيديو من التخزين.')}await request(`/api/products/${productId}`,{method:'PATCH',body:JSON.stringify({videoKey:''})});}
