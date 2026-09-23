@@ -26,6 +26,7 @@ const ageMinutes = (now, iso) => {
   return Number.isFinite(age) ? Math.max(0, Math.floor(age / 60000)) : 0;
 };
 const ageLabel = minutes => minutes < 60 ? `${minutes} دقيقة` : minutes < 1440 ? `${Math.floor(minutes / 60)} ساعة` : `${Math.floor(minutes / 1440)} يوم`;
+const orderCompletionTimestamp = order => order?.completedAt || order?.updatedAt || order?.createdAt || '';
 const OUTCOME_REASON_DEFINITIONS = {
   converted_to_order: 'تحول إلى طلب فعلي',
   manual_conversion: 'تحول مسجل يدويًا',
@@ -338,7 +339,7 @@ export function registerRevenueRoutes(app, {
       ordersByPhone.set(order.phone, phoneOrders);
     }
     for (const phoneOrders of ordersByPhone.values()) {
-      phoneOrders.sort((a, b) => Date.parse(b.updatedAt || b.createdAt || '') - Date.parse(a.updatedAt || a.createdAt || ''));
+      phoneOrders.sort((a, b) => Date.parse(orderCompletionTimestamp(b)) - Date.parse(orderCompletionTimestamp(a)));
     }
 
     const completedSessions = new Set(
@@ -449,7 +450,7 @@ export function registerRevenueRoutes(app, {
         const completedOrders = ordersByPhone.get(customer.phone) || [];
         if (completedOrders.length < 2) return null;
         const lastOrder = completedOrders[0] || null;
-        const lastOrderAt = lastOrder?.updatedAt || lastOrder?.createdAt || '';
+        const lastOrderAt = orderCompletionTimestamp(lastOrder);
         const daysSinceLastOrder = Math.floor((now - Date.parse(lastOrderAt)) / 86400000);
         const cartItems = Array.isArray(lastOrder?.items)
           ? lastOrder.items.map(item => ({
@@ -519,7 +520,7 @@ export function registerRevenueRoutes(app, {
         );
         if (customerOrders.length < 3) return null;
         const orderTimes = customerOrders
-          .map(order => Date.parse(order.updatedAt || order.createdAt || ''))
+          .map(order => Date.parse(orderCompletionTimestamp(order)))
           .filter(time => Number.isFinite(time));
         if (orderTimes.length < 3) return null;
         const gaps = [];
@@ -530,7 +531,7 @@ export function registerRevenueRoutes(app, {
         if (gaps.length < 2) return null;
         const averageGap = gaps.reduce((sum, value) => sum + value, 0) / gaps.length;
         const lastOrder = customerOrders[customerOrders.length - 1];
-        const lastOrderAt = Date.parse(lastOrder.updatedAt || lastOrder.createdAt || '');
+        const lastOrderAt = Date.parse(orderCompletionTimestamp(lastOrder));
         const daysSinceLastOrder = Math.floor((now - lastOrderAt) / 86400000);
         if (daysSinceLastOrder < Math.max(5, Math.floor(averageGap * 0.8)) || daysSinceLastOrder > Math.ceil(averageGap * 1.5)) return null;
         const cartItems = Array.isArray(lastOrder.items)
@@ -1265,12 +1266,13 @@ export function registerRevenueRoutes(app, {
     const rows = customers.map(customer => {
       const customerOrders = ordersByPhone.get(customer.phone) || [];
       let totalRevenue = 0;
-      let lastOrderAt = customer.lastOrderAt || '';
+      let lastOrderAt = '';
       for (const order of customerOrders) {
         totalRevenue += number(order.total);
-        const candidate = order.updatedAt || order.createdAt || '';
+        const candidate = orderCompletionTimestamp(order);
         if (candidate && (!lastOrderAt || candidate > lastOrderAt)) lastOrderAt = candidate;
       }
+      if (!lastOrderAt) lastOrderAt = customer.lastOrderAt || '';
       const daysSinceLastOrder = lastOrderAt ? Math.floor((now - Date.parse(lastOrderAt)) / 86400000) : null;
       const reservationCount = reservationsByPhone.get(customer.phone) || 0;
       return {
@@ -1342,15 +1344,15 @@ export function registerRevenueRoutes(app, {
     ];
     const validOrders = customerOrders.filter(order => order.status !== 'cancelled');
     const totalOrderValue = validOrders.reduce((sum, order) => sum + number(order.total), 0);
-    const orderTimes = validOrders.map(order => Date.parse(order.updatedAt || order.createdAt || '')).filter(Number.isFinite).sort((a,b)=>a-b);
+    const orderTimes = validOrders.map(order => Date.parse(orderCompletionTimestamp(order))).filter(Number.isFinite).sort((a,b)=>a-b);
     const gaps = [];
     for(let index=1; index<orderTimes.length; index+=1){
       const gapDays=(orderTimes[index]-orderTimes[index-1])/86400000;
       if(gapDays>=1&&gapDays<=120)gaps.push(gapDays);
     }
     const averageReturnDays=gaps.length?Math.round((gaps.reduce((sum,value)=>sum+value,0)/gaps.length)*10)/10:null;
-    const lastOrder=validOrders.slice().sort((a,b)=>Date.parse(b.createdAt||'')-Date.parse(a.createdAt||''))[0]||null;
-    const daysSinceLastOrder=lastOrder?Math.max(0,Math.floor((Date.now()-Date.parse(lastOrder.updatedAt||lastOrder.createdAt||''))/86400000)):null;
+    const lastOrder=validOrders.slice().sort((a,b)=>Date.parse(orderCompletionTimestamp(b))-Date.parse(orderCompletionTimestamp(a)))[0]||null;
+    const daysSinceLastOrder=lastOrder?Math.max(0,Math.floor((Date.now()-Date.parse(orderCompletionTimestamp(lastOrder)))/86400000)):null;
     const productMap=new Map();
     for(const order of validOrders){
       for(const item of Array.isArray(order.items)?order.items:[]){
