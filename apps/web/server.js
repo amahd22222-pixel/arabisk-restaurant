@@ -207,7 +207,10 @@ registerOrderRoutes(app, {
   orderRateLimit,
   orderStatusRateLimit,
   cleanText,
-  nextOrderId: () => `O${String(orders.length + 1).padStart(5, '0')}`,
+  nextOrderId: () => {
+    const max = orders.reduce((highest, order) => Math.max(highest, Number(String(order.id).replace(/^O/, '')) || 0), 0);
+    return `O${String(max + 1).padStart(5, '0')}`;
+  },
   invalidateSmartSnapshot,
   revenue,
   crypto
@@ -224,7 +227,10 @@ registerReservationRoutes(app, {
   requireAdminApiKey,
   reservationRateLimit,
   cleanText,
-  nextReservationId: () => `R${String(reservations.length + 1).padStart(4, '0')}`,
+  nextReservationId: () => {
+    const max = reservations.reduce((highest, reservation) => Math.max(highest, Number(String(reservation.id).replace(/^R/, '')) || 0), 0);
+    return `R${String(max + 1).padStart(4, '0')}`;
+  },
   experiences,
   revenue,
   crypto
