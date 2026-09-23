@@ -41,6 +41,7 @@ jobs:
           node --check apps/admin/server.js
           node --check apps/admin/login.js
           node --check apps/web/server.js
+          node --check apps/web/revenue-engine.js
 
       - name: Build admin
         run: npm run build --workspace apps/admin
