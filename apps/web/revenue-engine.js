@@ -219,11 +219,23 @@ export function registerRevenueRoutes(app, {
   analyticsRateLimit
 }) {
   const REVENUE_PERSIST_DEBOUNCE_MS = 250;
+  const REVENUE_SUMMARY_CACHE_MS = 3000;
+  const REVENUE_SEGMENTS_CACHE_MS = 5000;
   const events = [];
   const campaigns = [];
   let persistQueue = Promise.resolve();
   let persistTimer = null;
   let persistRequested = false;
+  let summaryCache = null;
+  let summaryCacheAt = 0;
+  let segmentsCache = null;
+  let segmentsCacheAt = 0;
+  const invalidateRevenueCaches = () => {
+    summaryCache = null;
+    summaryCacheAt = 0;
+    segmentsCache = null;
+    segmentsCacheAt = 0;
+  };
 
   async function restoreRevenue() {
     if (!storageReady) return;
@@ -280,6 +292,7 @@ export function registerRevenueRoutes(app, {
     };
     events.push(row);
     if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+    invalidateRevenueCaches();
     void persistRevenue();
     return row;
   }
@@ -290,6 +303,7 @@ export function registerRevenueRoutes(app, {
 
   function buildSummary() {
     const now = Date.now();
+    if (summaryCache && now - summaryCacheAt < REVENUE_SUMMARY_CACHE_MS) return summaryCache;
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
     const recent = events.filter(row => {
       const time = Date.parse(row.createdAt || '');
@@ -789,7 +803,7 @@ export function registerRevenueRoutes(app, {
       bestMeasuredSegment
     };
 
-    return {
+    const result = {
       generatedAt: new Date().toISOString(),
       windowDays: 30,
       funnel,
@@ -816,6 +830,9 @@ export function registerRevenueRoutes(app, {
         attributionNote: 'الإيراد مرتبط بطلب حدث بعد نية شراء داخل الجلسة، وليس إثباتًا سببيًا بأن الفرصة أنشأت الطلب.'
       }
     };
+    summaryCache = result;
+    summaryCacheAt = now;
+    return result;
   }
 
   function appendCampaignActivity(campaign, type, details = {}, actor = 'لوحة الإيرادات') {
@@ -958,6 +975,7 @@ export function registerRevenueRoutes(app, {
     appendCampaignActivity(draft, 'created', { title: draft.title, sourceType: draft.sourceType, sourceKey: draft.sourceKey, learningPolicy: learningPolicy?.key || 'none', alternativeAction: learningPolicy?.avoidRepeat ? learningPolicy.alternativeAction : '' });
     campaigns.push(draft);
     if (campaigns.length > MAX_CAMPAIGNS) campaigns.splice(0, campaigns.length - MAX_CAMPAIGNS);
+    invalidateRevenueCaches();
     void persistRevenue();
     return draft;
   }
@@ -1096,6 +1114,7 @@ export function registerRevenueRoutes(app, {
       orderId,
       matchedOrder: campaign.attribution?.matchedOrder ? 'yes' : 'no'
     }, actor);
+    invalidateRevenueCaches();
     void persistRevenue();
     return campaign;
   }
@@ -1190,11 +1209,13 @@ export function registerRevenueRoutes(app, {
       previousDueAt,
       previousStatus
     }, actor);
+    invalidateRevenueCaches();
     void persistRevenue();
     return { ...campaign, task: taskWorkflow(campaign) };
   }
   function customerSegments() {
     const now = Date.now();
+    if (segmentsCache && now - segmentsCacheAt < REVENUE_SEGMENTS_CACHE_MS) return segmentsCache;
     const ordersByPhone = new Map();
     for (const order of orders) {
       if (!order.phone || order.status === 'cancelled') continue;
@@ -1253,7 +1274,7 @@ export function registerRevenueRoutes(app, {
       { key:'reservation_led', label:'عملاء مرتبطون بالحجوزات', description:'عملاء لديهم حجز نشط مرتبط بهويتهم.', action:'جهّز اقتراح Pre-order أو إضافة مناسبة قبل الزيارة، مع التحقق من الموافقة قبل التواصل.', match:item => item.reservationCount > 0 }
     ];
 
-    return definitions.map(definition => {
+    const result = definitions.map(definition => {
       const members = rows.filter(definition.match).sort((a,b) => b.totalRevenue - a.totalRevenue || b.orderCount - a.orderCount);
       return {
         key: definition.key,
@@ -1281,6 +1302,9 @@ export function registerRevenueRoutes(app, {
         members: members.slice(0, 100)
       };
     });
+    segmentsCache = result;
+    segmentsCacheAt = now;
+    return result;
   }
 
   function customer360(customerId) {
