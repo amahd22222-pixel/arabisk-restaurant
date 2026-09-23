@@ -10,6 +10,16 @@ const secretKey = String(env('AWS_' + 'SECRET_' + 'ACCESS_KEY') || '').trim();
 export const storageReady = Boolean(bucket && accessKey && secretKey);
 const STORAGE_READ_TIMEOUT_MS = 8000;
 const STORAGE_WRITE_TIMEOUT_MS = 10000;
+const MAX_KEY_LENGTH = 500;
+
+function normalizeKey(key) {
+  const value = String(key ?? '').trim();
+  if (!value || value.length > MAX_KEY_LENGTH) return null;
+  if (value.includes('\\') || value.includes('..') || value.startsWith('/') || value.includes('\0')) return null;
+  const segments = value.split('/');
+  if (segments.some(segment => !segment || segment === '.' || segment === '..')) return null;
+  return value;
+}
 
 async function storageFetch(url, options = {}, timeoutMs = STORAGE_READ_TIMEOUT_MS) {
   const controller = new AbortController();
@@ -33,7 +43,10 @@ const signingKey = (date) => {
 };
 
 export function presign(method, key, expires = 900) {
+  const normalizedKey = normalizeKey(key);
   if (!storageReady) throw new Error('Storage is not configured');
+  if (!normalizedKey) throw new Error('Invalid storage key');
+  const safeExpires = Math.max(1, Math.min(3600, Number(expires) || 900));
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
   const date = amzDate.slice(0, 8);
@@ -43,15 +56,15 @@ export function presign(method, key, expires = 900) {
     'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
     'X-Amz-Credential': credential,
     'X-Amz-Date': amzDate,
-    'X-Amz-Expires': String(expires),
+    'X-Amz-Expires': String(safeExpires),
     'X-Amz-SignedHeaders': 'host'
   });
   const canonicalQuery = [...query.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${encode(k)}=${encode(v)}`).join('&');
-  const canonicalRequest = [method, uri(key), canonicalQuery, `host:${host}\n`, 'host', 'UNSIGNED-PAYLOAD'].join('\n');
+  const canonicalRequest = [method, uri(normalizedKey), canonicalQuery, `host:${host}\n`, 'host', 'UNSIGNED-PAYLOAD'].join('\n');
   const scope = `${date}/${region}/s3/aws4_request`;
   const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, sha256(canonicalRequest)].join('\n');
   query.set('X-Amz-Signature', hmac(signingKey(date), stringToSign, 'hex'));
-  return `${endpoint}${uri(key)}?${query.toString()}`;
+  return `${endpoint}${uri(normalizedKey)}?${query.toString()}`;
 }
 
 export async function readJson(key, fallback = null) {
