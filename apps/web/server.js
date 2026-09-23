@@ -18,7 +18,7 @@ import { registerCustomerRoutes } from './services/customer-service.js';
 import { registerProductRoutes } from './routes/product-routes.js';
 import { registerReservationRoutes } from './services/reservation-service.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
-import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES } from './config.js';
+import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS } from './config.js';
 
 const app = express();
 const serverStartedAt = Date.now();
@@ -218,7 +218,9 @@ registerProductRoutes(app, {
   invalidateSmartSnapshot,
   nextProductId,
   maxVideoBytes: MAX_VIDEO_BYTES,
-  videoTypes: VIDEO_TYPES
+  videoTypes: VIDEO_TYPES,
+  smartPopularWindowMs: SMART_POPULAR_WINDOW_MS,
+  smartNewWindowMs: SMART_NEW_WINDOW_MS
 });
 
 const stateRepository = createStateRepository({ orders, customers, reservations, persist: persistState });
