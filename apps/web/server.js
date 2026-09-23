@@ -206,6 +206,7 @@ registerProductRoutes(app, {
   storageReady,
   presign,
   deleteObject,
+  requireAdminApiKey,
   isAdminApiKeyValid,
   cleanText,
   cleanKey,
