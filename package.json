@@ -5,8 +5,7 @@
   "scripts": {
     "dev:web": "npm --workspace apps/web run dev",
     "dev:admin": "npm --workspace apps/admin run dev",
-    "build": "npm run build --workspaces",
-    "architecture:check": "node scripts/architecture-check.mjs"
+    "build": "npm run build --workspaces"
   },
   "engines": {
     "node": ">=20"
