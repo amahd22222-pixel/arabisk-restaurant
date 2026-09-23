@@ -341,12 +341,27 @@ export function registerRevenueRoutes(app, {
       phoneOrders.sort((a, b) => Date.parse(b.updatedAt || b.createdAt || '') - Date.parse(a.updatedAt || a.createdAt || ''));
     }
 
+    const completedSessions = new Set(
+      recent
+        .filter(row => row.eventName === 'order_completed')
+        .map(row => row.sessionId || row.orderId || row.id)
+    );
+    for (const order of orders) {
+      if (order.status !== 'completed') continue;
+      const completedAt = Date.parse(order.completedAt || order.createdAt || '');
+      if (!Number.isFinite(completedAt) || completedAt < thirtyDaysAgo || completedAt > now) continue;
+      completedSessions.add(order.sessionId || order.id);
+    }
+    const funnelSessionCount = eventName => eventName === 'order_completed'
+      ? completedSessions.size
+      : uniqueSessions(recent, eventName);
+
     const funnel = {
-      menuViews: uniqueSessions(recent, 'menu_view'),
-      itemViews: uniqueSessions(recent, 'item_view'),
-      addToCart: uniqueSessions(recent, 'add_to_cart'),
-      checkoutStarted: uniqueSessions(recent, 'checkout_started'),
-      completedOrders: uniqueSessions(recent, 'order_completed')
+      menuViews: funnelSessionCount('menu_view'),
+      itemViews: funnelSessionCount('item_view'),
+      addToCart: funnelSessionCount('add_to_cart'),
+      checkoutStarted: funnelSessionCount('checkout_started'),
+      completedOrders: funnelSessionCount('order_completed')
     };
 
     const funnelPairs = [
@@ -356,8 +371,8 @@ export function registerRevenueRoutes(app, {
       ['checkout_started', 'order_completed', 'الدفع → الطلب']
     ];
     const funnelRates = funnelPairs.map(([from,to,label]) => {
-      const fromCount = uniqueSessions(recent, from);
-      const toCount = uniqueSessions(recent, to);
+      const fromCount = funnelSessionCount(from);
+      const toCount = funnelSessionCount(to);
       const rate = fromCount ? Math.round((Math.min(100, (toCount / fromCount) * 100)) * 10) / 10 : null;
       return { from, to, label, fromCount, toCount, rate, lossRate: rate === null ? null : Math.round((100 - rate) * 10) / 10 };
     });
@@ -393,6 +408,11 @@ export function registerRevenueRoutes(app, {
       }
       if (row.eventName === 'order_completed') current.completed = true;
       bySession.set(row.sessionId, current);
+    }
+
+    for (const sessionId of completedSessions) {
+      const session = bySession.get(sessionId);
+      if (session) session.completed = true;
     }
 
     const abandoned = [...bySession.values()]

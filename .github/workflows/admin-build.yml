@@ -159,9 +159,15 @@ jobs:
           test "$before_completed" = "0"
 
           for status in confirmed preparing ready completed; do
-            curl -fsS -H 'Content-Type: application/json' -H 'X-Arabisk-Admin-Key: ci' --data "$(python -c "import json; print(json.dumps({'status':'$status'}))")" -X PATCH "http://127.0.0.1:4177/api/orders/$order_id" >/dev/null
+            curl -fsS -H 'Content-Type: application/json' -H 'X-Arabisk-Admin-Key: ci' --data "$(python -c "import json; print(json.dumps({'status':'$status'}))")" -X PATCH "http://127.0.0.1:4177/api/orders/$order_id" >/tmp/ci-order-status.json
           done
 
+          python - <<'PY'
+          import json
+          payload=json.load(open('/tmp/ci-order-status.json'))
+          assert payload['status']=='completed'
+          assert payload.get('completedAt'), 'completedAt must be recorded when an order completes'
+          PY
           after_completed="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4177/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
           test "$after_completed" = "1"
 
