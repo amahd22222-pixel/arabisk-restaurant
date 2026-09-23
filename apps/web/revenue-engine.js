@@ -230,6 +230,12 @@ export function registerRevenueRoutes(app, {
   let summaryCacheAt = 0;
   let segmentsCache = null;
   let segmentsCacheAt = 0;
+  const invalidateRevenueCaches = () => {
+    summaryCache = null;
+    summaryCacheAt = 0;
+    segmentsCache = null;
+    segmentsCacheAt = 0;
+  };
 
   async function restoreRevenue() {
     if (!storageReady) return;
@@ -286,10 +292,7 @@ export function registerRevenueRoutes(app, {
     };
     events.push(row);
     if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
-    summaryCache = null;
-    segmentsCache = null;
-    summaryCacheAt = 0;
-    segmentsCacheAt = 0;
+    invalidateRevenueCaches();
     void persistRevenue();
     return row;
   }
@@ -972,6 +975,7 @@ export function registerRevenueRoutes(app, {
     appendCampaignActivity(draft, 'created', { title: draft.title, sourceType: draft.sourceType, sourceKey: draft.sourceKey, learningPolicy: learningPolicy?.key || 'none', alternativeAction: learningPolicy?.avoidRepeat ? learningPolicy.alternativeAction : '' });
     campaigns.push(draft);
     if (campaigns.length > MAX_CAMPAIGNS) campaigns.splice(0, campaigns.length - MAX_CAMPAIGNS);
+    invalidateRevenueCaches();
     void persistRevenue();
     return draft;
   }
@@ -1110,6 +1114,7 @@ export function registerRevenueRoutes(app, {
       orderId,
       matchedOrder: campaign.attribution?.matchedOrder ? 'yes' : 'no'
     }, actor);
+    invalidateRevenueCaches();
     void persistRevenue();
     return campaign;
   }
@@ -1204,6 +1209,7 @@ export function registerRevenueRoutes(app, {
       previousDueAt,
       previousStatus
     }, actor);
+    invalidateRevenueCaches();
     void persistRevenue();
     return { ...campaign, task: taskWorkflow(campaign) };
   }
