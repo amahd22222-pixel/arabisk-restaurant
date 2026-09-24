@@ -643,6 +643,7 @@ export function createRevenueService({
           recommendedAction: item.recommendedAction, potentialValue: 0, reference: item.id
         }))
       ].sort((a, b) => b.priorityScore - a.priorityScore).slice(0, 12);
+      const rankedTopActions = topActions;
   
       const segmentPerformance = customerSegments().map(segment => {
         const metrics = segment.actionMetrics || {};
@@ -2167,47 +2168,6 @@ export function createRevenueService({
         rows: outcomeLearningRows,
         note: 'التعلم هنا مبني على نتائج الفريق المسجلة يدويًا؛ لا يثبت أن السبب وحده هو الذي أدى إلى النتيجة.'
       };
-  
-      const learningByOpportunity = new Map(
-        outcomeLearningRows
-          .filter(row => row.sourceType === 'revenue_opportunity')
-          .map(row => [row.sourceKey, row])
-      );
-      const rankedTopActions = topActions
-        .map(action => {
-          const learning = learningByOpportunity.get(action.type) || null;
-          const sampleSize = Number(learning?.sampleSize || 0);
-          if (!learning || sampleSize < 3) {
-            return {
-              ...action,
-              learningAdjustment: 0,
-              learningSignal: null,
-              learningApplied: false
-            };
-          }
-          const conversionRate = Number(learning.conversionRate || 0);
-          const smoothedRate = ((Number(learning.converted || 0) + 2) / (sampleSize + 4)) * 100;
-          const adjustment = Math.max(-10, Math.min(10, Math.round(((smoothedRate - 40) * 0.18) * 10) / 10));
-          const learningSignal = {
-            signalKey: learning.signalKey,
-            signalLabel: learning.signalLabel,
-            sampleSize,
-            conversionRate,
-            smoothedConversionRate: Math.round(smoothedRate * 10) / 10,
-            topReason: learning.topReason,
-            topReasonKey: learning.topReasonKey,
-            measuredRevenue: number(learning.measuredRevenue)
-          };
-          return {
-            ...action,
-            priorityScore: Math.round((number(action.priorityScore) + adjustment) * 10) / 10,
-            learningAdjustment: adjustment,
-            learningSignal,
-            learningApplied: adjustment !== 0
-          };
-        })
-        .sort((a,b) => number(b.priorityScore) - number(a.priorityScore) || number(b.potentialValue) - number(a.potentialValue))
-        .slice(0, 12);
   
       return {
         counts: {
