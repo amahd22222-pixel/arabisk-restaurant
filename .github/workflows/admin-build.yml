@@ -53,6 +53,8 @@ jobs:
           node --check apps/web/routes/customer-routes.js
           node --check apps/web/services/reservation-service.js
           node --check apps/web/routes/reservation-routes.js
+          node --check apps/web/services/media-service.js
+          node --check apps/web/routes/media-routes.js
           node --check apps/web/services/customer-service.js
           node --check apps/web/services/reservation-service.js
           node --check apps/web/services/revenue-service.js
