@@ -59,7 +59,7 @@ export function createCategoryService({categories,products,storageReady,presign,
     try{return {key,uploadUrl:presign('PUT',key,900),expiresIn:900};}catch(error){console.error(error);throw new CategoryServiceError('Unable to prepare category image upload.',503);}
   }
   function presignImageDelete(body){
-    if(!storageReady)throw new CategoryServiceError('Image storage is not configured on the web service.');
+    if(!storageReady)throw new CategoryServiceError('Image storage is not configured on the web service.',503);
     const category=getOrThrow(cleanText(body?.categoryId,40));if(!category.imageKey)return {url:'',key:''};
     try{return {url:presign('DELETE',category.imageKey,900),key:category.imageKey};}catch(error){console.error(error);throw new CategoryServiceError('Unable to prepare category image deletion.',503);}
   }
