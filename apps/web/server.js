@@ -17,6 +17,7 @@ import { createStateStore } from './repositories/state-store.js';
 import { registerOrderRoutes } from './services/order-service.js';
 import { registerCustomerRoutes } from './services/customer-service.js';
 import { registerProductRoutes } from './routes/product-routes.js';
+import { createSmartMenuService } from './services/smart-menu-service.js';
 import { registerReservationRoutes } from './services/reservation-service.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS } from './config.js';
@@ -104,52 +105,15 @@ const rateLimitCleanupTimer=setInterval(() => {
 }, 10*60*1000);
 rateLimitCleanupTimer.unref();
 
-const SMART_SNAPSHOT_CACHE_MS=30*1000;
-let smartSnapshotCache=null;
-let smartSnapshotCachedAt=0;
-function smartSnapshot(force=false){
-  const now=Date.now();
-  if(!force&&smartSnapshotCache&&now-smartSnapshotCachedAt<SMART_SNAPSHOT_CACHE_MS)return smartSnapshotCache;
-  const cutoff=now-SMART_POPULAR_WINDOW_MS;
-  const sales=new Map();
-  for(const order of orders){
-    if(order.status==='cancelled') continue;
-    const created=Date.parse(order.createdAt||'');
-    if(!Number.isFinite(created)||created<cutoff) continue;
-    for(const item of Array.isArray(order.items)?order.items:[]) sales.set(item.productId,(sales.get(item.productId)||0)+Number(item.quantity||0));
-  }
-  const popularIds=new Set([...sales.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6).map(([id])=>id));
-  smartSnapshotCache={sales,popularIds};
-  smartSnapshotCachedAt=now;
-  return smartSnapshotCache;
-}
-const invalidateSmartSnapshot=()=>{smartSnapshotCache=null;smartSnapshotCachedAt=0};
-function smartMeta(product,snapshot){
-  const tags=normalizeList(product.tags,SMART_TAGS);
-  const dietary=normalizeList(product.dietary,DIETARY_TAGS);
-  const created=Date.parse(product.createdAt||'');
-  const isNew=Boolean(product.isNew)||(Number.isFinite(created)&&Date.now()-created<=SMART_NEW_WINDOW_MS);
-  const chefChoice=Boolean(product.chefChoice);
-  const spiceLevel=Math.max(0,Math.min(3,Number(product.spiceLevel)||0));
-  return {popular:snapshot.popularIds.has(product.id),isNew,chefChoice,spicy:tags.includes('spicy')||spiceLevel>0,vegetarian:dietary.includes('vegetarian'),vegan:dietary.includes('vegan'),glutenFree:dietary.includes('gluten-free'),spiceLevel,tags,dietary};
-}
-const MEDIA_URL_CACHE_MS=60*1000;
-const MAX_MEDIA_URL_CACHE=1000;
-const mediaUrlCache=new Map();
-const cachedMediaUrl=(method,key)=>{
-  const cacheKey=method+':'+key;
-  const now=Date.now();
-  const cached=mediaUrlCache.get(cacheKey);
-  if(cached&&now-cached.createdAt<MEDIA_URL_CACHE_MS)return cached.url;
-  const url=presign(method,key,900);
-  if(!cached&&mediaUrlCache.size>=MAX_MEDIA_URL_CACHE){
-    const oldestKey=mediaUrlCache.keys().next().value;
-    if(oldestKey!==undefined)mediaUrlCache.delete(oldestKey);
-  }
-  mediaUrlCache.set(cacheKey,{createdAt:now,url});
-  return url;
-};
-const withMediaUrls=(product,snapshot=smartSnapshot())=>({...product,imageUrl:product.imageKey&&storageReady?cachedMediaUrl('GET',product.imageKey):(product.imageUrl||''),videoUrl:product.videoKey&&storageReady?cachedMediaUrl('GET',product.videoKey):'',smart:smartMeta(product,snapshot)});
+const smartMenu = createSmartMenuService({
+  orders,
+  normalizeList,
+  presign,
+  storageReady,
+  smartPopularWindowMs: SMART_POPULAR_WINDOW_MS,
+  smartNewWindowMs: SMART_NEW_WINDOW_MS
+});
+const { smartSnapshot, withMediaUrls, invalidateSmartSnapshot } = smartMenu;
 
 const stateStore = createStateStore({
   readJson,
