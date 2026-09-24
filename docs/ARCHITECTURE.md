@@ -5,7 +5,15 @@ This repository is treated as a production monorepo.
 ## Boundaries
 
 - `apps/web`: public web application and HTTP API.
+  - `routes/*`: HTTP transport and response mapping only.
+  - `services/*`: business/domain logic and orchestration.
+  - `repositories/*`: state access and persistence boundaries.
+  - `middleware/*`: cross-cutting request controls.
 - `apps/admin`: authenticated administration application.
+  - `server.js`: composition root only.
+  - `auth-service.js`: session and login state.
+  - `proxy-service.js`: upstream API proxy boundary.
+  - `http-utils.js`: shared HTTP safety utilities.
 - `packages/*`: shared code only when a real cross-app dependency exists.
 
 ## Server rules
