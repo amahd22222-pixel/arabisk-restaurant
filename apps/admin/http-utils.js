@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
+import { MAX_ADMIN_BODY_BYTES } from './config.js';
+
 export function isSecureRequest(req) {
   return req.headers['x-forwarded-proto'] === 'https' || process.env.NODE_ENV === 'production';
 }
@@ -63,4 +65,63 @@ export function sendFile(res, filePath) {
 export function redirect(res, location) {
   res.writeHead(302, { Location: location, 'Cache-Control': 'no-store' });
   res.end();
+}
+
+export function parseJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    let receivedBytes = 0;
+    let settled = false;
+    const contentLength = Number(req.headers['content-length']);
+
+    const fail = (message, status = 400) => {
+      const error = new Error(message);
+      error.status = status;
+      reject(error);
+    };
+
+    const cleanup = () => {
+      req.off('data', onData);
+      req.off('end', onEnd);
+      req.off('error', onError);
+    };
+
+    const onData = (chunk) => {
+      if (settled) return;
+      const chunkBytes = Buffer.byteLength(chunk, 'utf8');
+      if (receivedBytes + chunkBytes > MAX_ADMIN_BODY_BYTES) {
+        settled = true;
+        cleanup();
+        req.resume();
+        return fail('Request body too large.', 413);
+      }
+      receivedBytes += chunkBytes;
+      body += chunk;
+    };
+
+    const onEnd = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      try { resolve(body ? JSON.parse(body) : {}); } catch { fail('Invalid JSON request.'); }
+    };
+
+    const onError = (error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+
+    if (Number.isFinite(contentLength) && contentLength > MAX_ADMIN_BODY_BYTES) {
+      settled = true;
+      req.resume();
+      return fail('Request body too large.', 413);
+    }
+
+    req.setEncoding('utf8');
+    req.on('data', onData);
+    req.on('end', onEnd);
+    req.on('error', onError);
+  });
 }
