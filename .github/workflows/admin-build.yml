@@ -46,6 +46,11 @@ jobs:
           node --check apps/web/admin-auth.js
           node --check apps/web/repositories/state-repository.js
           node --check apps/web/services/order-service.js
+          node --check apps/web/routes/order-routes.js
+          node --check apps/web/services/customer-service.js
+          node --check apps/web/routes/customer-routes.js
+          node --check apps/web/services/reservation-service.js
+          node --check apps/web/routes/reservation-routes.js
           node --check apps/web/services/customer-service.js
           node --check apps/web/services/reservation-service.js
           node --check apps/web/services/revenue-service.js
