@@ -108,7 +108,17 @@ const analyticsRateLimit=createRateLimiter({
   limit:180,
   message:'Too many analytics events. Please try again later.'
 });
-const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit];
+const memoryUploadRateLimit=createRateLimiter({
+  windowMs:10*60*1000,
+  limit:20,
+  message:'Too many media uploads. Please try again later.'
+});
+const memoryMutationRateLimit=createRateLimiter({
+  windowMs:10*60*1000,
+  limit:60,
+  message:'Too many community actions. Please try again later.'
+});
+const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,memoryUploadRateLimit,memoryMutationRateLimit];
 const rateLimitCleanupTimer=setInterval(() => {
   for (const limiter of rateLimiters) limiter.cleanup();
 }, 10*60*1000);
@@ -149,7 +159,7 @@ const experienceService=createExperienceService({storageReady,presign,readJson,w
 registerExperienceRoutes(app,{service:experienceService,requireAdminApiKey});
 const restoreExperiences=experienceService.restore;
 const memoryService=createMemoryService({storageReady,presign,readJson,writeJson,deleteObject});
-registerMemoriesRoutes(app,{service:memoryService,requireAdminApiKey});
+registerMemoriesRoutes(app,{service:memoryService,requireAdminApiKey,memoryUploadRateLimit,memoryMutationRateLimit});
 const memories=memoryService;
 const nextProductId=()=>{const max=products.reduce((highest,product)=>Math.max(highest,Number(String(product.id).replace(/^P/,''))||0),0);return `P${String(max+1).padStart(3,'0')}`};
 
