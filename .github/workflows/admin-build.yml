@@ -20,6 +20,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/admin-build.yml'
+      - 'tests/**'
 
 jobs:
   admin-build:
