@@ -1,4 +1,4 @@
-name: Admin build guard
+name: Production quality gate
 
 on:
   pull_request:
@@ -34,14 +34,22 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Validate server syntax
         run: |
           node --check apps/admin/server.js
           node --check apps/admin/login.js
           node --check apps/web/server.js
-          node --check apps/web/revenue-engine.js
+          node --check apps/web/config.js
+          node --check apps/web/storage.js
+          node --check apps/web/admin-auth.js
+          node --check apps/web/repositories/state-repository.js
+          node --check apps/web/services/order-service.js
+          node --check apps/web/services/customer-service.js
+          node --check apps/web/services/reservation-service.js
+          node --check apps/web/services/revenue-service.js
+          node --check apps/web/routes/revenue-routes.js
 
       - name: Build admin
         run: npm run build --workspace apps/admin
@@ -117,7 +125,7 @@ jobs:
           grep -q '"ok":true' /tmp/admin-login.json
           test "$(curl -s -o /dev/null -w '%{http_code}' -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/orders)" = "503"
 
-          for port in 4185 4187; do
+          for port in 4175 4187; do
             for i in {1..30}; do
               if curl -fsS http://127.0.0.1:$port/health >/dev/null; then break; fi
               if ! kill -0 "$([ "$port" = "4175" ] && echo "$admin_pid" || echo "$revenue_pid")" 2>/dev/null; then
