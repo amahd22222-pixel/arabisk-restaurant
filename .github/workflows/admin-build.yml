@@ -26,6 +26,8 @@ jobs:
   admin-build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      CI_ADMIN_KEY: ${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -109,8 +111,6 @@ jobs:
 
       - name: Web runtime smoke test
         shell: bash
-        env:
-          CI_ADMIN_KEY: ci-smoke-test-key-123456789012345678901234567890
         run: |
           set -euo pipefail
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production PORT=4186 npm run start --workspace apps/web > /tmp/arabisk-web.log 2>&1 &
