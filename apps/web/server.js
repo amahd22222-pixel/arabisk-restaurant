@@ -15,7 +15,8 @@ import { createRevenueService } from './services/revenue-service.js';
 import { registerRevenueRoutes } from './routes/revenue-routes.js';
 import { createStateRepository } from './repositories/state-repository.js';
 import { createStateStore } from './repositories/state-store.js';
-import { registerOrderRoutes } from './services/order-service.js';
+import { createOrderService } from './services/order-service.js';
+import { registerOrderRoutes } from './routes/order-routes.js';
 import { registerCustomerRoutes } from './services/customer-service.js';
 import { registerProductRoutes } from './routes/product-routes.js';
 import { createSmartMenuService } from './services/smart-menu-service.js';
@@ -175,12 +176,9 @@ registerProductRoutes(app, {
 
 const stateRepository = createStateRepository({ orders, customers, reservations, persist: persistState });
 
-registerOrderRoutes(app, {
+const orderService = createOrderService({
   repository: stateRepository,
   products,
-  requireAdminApiKey,
-  orderRateLimit,
-  orderStatusRateLimit,
   cleanText,
   nextOrderId: () => {
     const max = orders.reduce((highest, order) => Math.max(highest, Number(String(order.id).replace(/^O/, '')) || 0), 0);
@@ -189,6 +187,13 @@ registerOrderRoutes(app, {
   invalidateSmartSnapshot,
   revenue,
   crypto
+});
+
+registerOrderRoutes(app, {
+  service: orderService,
+  requireAdminApiKey,
+  orderRateLimit,
+  orderStatusRateLimit
 });
 
 registerCustomerRoutes(app, {
