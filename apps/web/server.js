@@ -17,10 +17,12 @@ import { createStateRepository } from './repositories/state-repository.js';
 import { createStateStore } from './repositories/state-store.js';
 import { createOrderService } from './services/order-service.js';
 import { registerOrderRoutes } from './routes/order-routes.js';
-import { registerCustomerRoutes } from './services/customer-service.js';
+import { createCustomerService } from './services/customer-service.js';
+import { registerCustomerRoutes } from './routes/customer-routes.js';
 import { registerProductRoutes } from './routes/product-routes.js';
 import { createSmartMenuService } from './services/smart-menu-service.js';
-import { registerReservationRoutes } from './services/reservation-service.js';
+import { createReservationService } from './services/reservation-service.js';
+import { registerReservationRoutes } from './routes/reservation-routes.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS } from './config.js';
 
@@ -196,16 +198,18 @@ registerOrderRoutes(app, {
   orderStatusRateLimit
 });
 
-registerCustomerRoutes(app, {
+const customerService = createCustomerService({
   repository: stateRepository,
-  requireAdminApiKey,
   cleanText
 });
 
-registerReservationRoutes(app, {
+registerCustomerRoutes(app, {
+  service: customerService,
+  requireAdminApiKey
+});
+
+const reservationService = createReservationService({
   repository: stateRepository,
-  requireAdminApiKey,
-  reservationRateLimit,
   cleanText,
   nextReservationId: () => {
     const max = reservations.reduce((highest, reservation) => Math.max(highest, Number(String(reservation.id).replace(/^R/, '')) || 0), 0);
@@ -214,6 +218,12 @@ registerReservationRoutes(app, {
   experiences,
   revenue,
   crypto
+});
+
+registerReservationRoutes(app, {
+  service: reservationService,
+  requireAdminApiKey,
+  reservationRateLimit
 });
 
 registerMediaRoutes(app,{products,storageReady,presign,requireAdminApiKey});
