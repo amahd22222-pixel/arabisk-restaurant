@@ -823,6 +823,7 @@ export function createRevenueService({
         bestMeasuredSegment
       };
   
+      const campaignSummaryResult = campaignSummary();
       const result = {
         generatedAt: new Date().toISOString(),
         windowDays: 30,
@@ -834,8 +835,8 @@ export function createRevenueService({
           upcomingReservations: upcomingReservations.length, topActions: topActions.length
         },
         potentialAbandonedRevenue: abandoned.reduce((sum, item) => sum + number(item.cartValue), 0),
-        campaigns: campaignSummary(),
-        valueRealization,
+        campaigns: campaignSummaryResult,
+        valueRealization: campaignSummaryResult.valueRealization,
         health: { score: healthScore, label: healthLabel, biggestLeak, funnelRates },
         identity: { identifiedCustomers, identifiedEvents, coverageRate: recent.length ? Math.round((identifiedEvents / recent.length) * 1000) / 10 : 0 },
   
@@ -2195,7 +2196,8 @@ export function createRevenueService({
         riskExposure,
         outcomeInsights,
         outcomeLearning,
-        blockerAnalytics
+        blockerAnalytics,
+        valueRealization
       };
     }
 
