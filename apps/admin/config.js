@@ -4,7 +4,6 @@ export const adminUsername = String(process.env.ARABISK_ADMIN_USERNAME || '').tr
 export const adminPassword = String(process.env.ARABISK_ADMIN_PASSWORD || '');
 export const adminApiKey = String(process.env.ARABISK_ADMIN_API_KEY || '').trim();
 export const webApiBase = String(process.env.ARABISK_WEB_API_URL || '').trim().replace(/\/$/, '');
-export const distRoot = new URL('./dist/', import.meta.url);
 export const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 export const AUTH_RATE_WINDOW_MS = 10 * 60 * 1000;
 export const AUTH_RATE_LIMIT = 6;
