@@ -13,6 +13,7 @@ import { registerExperienceRoutes, experiences } from './experience-routes.js';
 import { registerMemoriesRoutes } from './memories-routes.js';
 import { registerRevenueRoutes } from './revenue-engine.js';
 import { createStateRepository } from './repositories/state-repository.js';
+import { createStateStore } from './repositories/state-store.js';
 import { registerOrderRoutes } from './services/order-service.js';
 import { registerCustomerRoutes } from './services/customer-service.js';
 import { registerProductRoutes } from './routes/product-routes.js';
@@ -150,48 +151,19 @@ const cachedMediaUrl=(method,key)=>{
 };
 const withMediaUrls=(product,snapshot=smartSnapshot())=>({...product,imageUrl:product.imageKey&&storageReady?cachedMediaUrl('GET',product.imageKey):(product.imageUrl||''),videoUrl:product.videoKey&&storageReady?cachedMediaUrl('GET',product.videoKey):'',smart:smartMeta(product,snapshot)});
 
-const rebuildCustomerOrderStats=()=>{
-  const statsByPhone=new Map();
-  for(const order of orders){
-    if(order.status!=='completed'||order.orderType!=='pickup'||!order.phone)continue;
-    const current=statsByPhone.get(order.phone)||{count:0,lastOrderAt:''};
-    current.count+=1;
-    const completedAt=order.completedAt||order.createdAt||'';
-    if(completedAt&&(!current.lastOrderAt||completedAt>current.lastOrderAt))current.lastOrderAt=completedAt;
-    statsByPhone.set(order.phone,current);
-  }
-  for(const customer of customers){
-    const stats=statsByPhone.get(customer.phone);
-    customer.orderCount=stats?.count||0;
-    customer.lastOrderAt=stats?.lastOrderAt||'';
-  }
-};
-async function restoreState(){ if(!storageReady) return; const saved=await readJson(STATE_KEY,null); if(!saved||typeof saved!=='object') return; if(saved.menuVersion===MENU_VERSION&&Array.isArray(saved.products)&&saved.products.length) products.splice(0,products.length,...saved.products); if(Array.isArray(saved.orders)) orders.splice(0,orders.length,...saved.orders); if(Array.isArray(saved.customers)) customers.splice(0,customers.length,...saved.customers); if(Array.isArray(saved.reservations)) reservations.splice(0,reservations.length,...saved.reservations); rebuildCustomerOrderStats(); }
-const PERSIST_DEBOUNCE_MS=250;
-let persistQueue=Promise.resolve();
-let persistTimer=null;
-let persistRequested=false;
+const stateStore = createStateStore({
+  readJson,
+  writeJson,
+  storageReady,
+  stateKey: STATE_KEY,
+  menuVersion: MENU_VERSION,
+  products,
+  customers,
+  orders,
+  reservations
+});
+const { persist: persistState, flush: flushPersistState } = stateStore;
 
-const flushPersistState=()=>{
-  if(persistTimer){
-    clearTimeout(persistTimer);
-    persistTimer=null;
-  }
-  if(!persistRequested)return persistQueue;
-  persistRequested=false;
-  const snapshot=structuredClone({menuVersion:MENU_VERSION,products,orders,customers,reservations});
-  persistQueue=persistQueue.catch(()=>{}).then(()=>writeJson(STATE_KEY,snapshot));
-  return persistQueue;
-};
-
-const persistState=()=>{
-  persistRequested=true;
-  if(!persistTimer){
-    persistTimer=setTimeout(()=>flushPersistState(),PERSIST_DEBOUNCE_MS);
-    persistTimer.unref();
-  }
-  return persistQueue;
-};
 const revenue=registerRevenueRoutes(app,{readJson,writeJson,storageReady,requireAdminApiKey,customers,reservations,orders,products,analyticsRateLimit});
 const restoreCategories=registerCategoryRoutes(app,{categories,products,storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey,isAdminApiKeyValid});
 const restoreStudio=registerStudioRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey});
@@ -278,7 +250,7 @@ app.use(express.static(dist));app.use((_req,res)=>res.sendFile(path.join(dist,'i
   if(!res.headersSent)res.status(500).json({message:'Internal server error'});
 });
 
-await restoreState();await restoreCategories();await restoreStudio();await restoreExperiences();await memories.restore();await revenue.restoreRevenue();if(storageReady)persistState();
+await stateStore.restore();await restoreCategories();await restoreStudio();await restoreExperiences();await memories.restore();await revenue.restoreRevenue();if(storageReady)persistState();
 const server=app.listen(port,()=>console.log(`ARABISK web listening on ${port} — ${products.length} menu items, ${categories.length} categories`));
 let shuttingDown=false;
 const shutdown=(signal)=>{
