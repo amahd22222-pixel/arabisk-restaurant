@@ -2259,5 +2259,5 @@ readJson,
     };
   }
 
-return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, executeAbandonedCartRecovery, executeInactiveCustomerRecovery, executeReturningCustomerRecovery, getRecoveryCart, recordRecoveryOrder, updateCampaignOutcome, updateCampaignTask, campaignSummary, customer360, customerSegments, flushPersistRevenue };
+return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, executeAbandonedCartRecovery, executeInactiveCustomerRecovery, executeReturningCustomerRecovery, getRecoveryCart, recordRecoveryOrder, updateCampaignOutcome, updateCampaignTask, getCampaignActivity, campaignSummary, customer360, customerSegments, flushPersistRevenue };
 }
