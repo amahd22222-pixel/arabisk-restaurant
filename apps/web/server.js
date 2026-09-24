@@ -11,7 +11,8 @@ import { registerCategoryRoutes } from './category-routes.js';
 import { registerStudioRoutes } from './studio-routes.js';
 import { registerExperienceRoutes, experiences } from './experience-routes.js';
 import { registerMemoriesRoutes } from './memories-routes.js';
-import { registerRevenueRoutes } from './revenue-engine.js';
+import { createRevenueService } from './services/revenue-service.js';
+import { registerRevenueRoutes } from './routes/revenue-routes.js';
 import { createStateRepository } from './repositories/state-repository.js';
 import { createStateStore } from './repositories/state-store.js';
 import { registerOrderRoutes } from './services/order-service.js';
@@ -128,7 +129,8 @@ const stateStore = createStateStore({
 });
 const { persist: persistState, flush: flushPersistState } = stateStore;
 
-const revenue=registerRevenueRoutes(app,{readJson,writeJson,storageReady,requireAdminApiKey,customers,reservations,orders,products,analyticsRateLimit});
+const revenue=createRevenueService({readJson,writeJson,storageReady,customers,reservations,orders,products});
+registerRevenueRoutes(app,{service:revenue,requireAdminApiKey,analyticsRateLimit});
 const restoreCategories=registerCategoryRoutes(app,{categories,products,storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey,isAdminApiKeyValid});
 const restoreStudio=registerStudioRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey});
 const restoreExperiences=registerExperienceRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey,isAdminApiKeyValid});
