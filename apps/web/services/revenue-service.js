@@ -1709,6 +1709,48 @@ export function createRevenueService({
         }))
         .sort((a,b) => a.loadScore - b.loadScore || a.open - b.open || a.overdue - b.overdue || a.owner.localeCompare(b.owner, 'ar'));
   
+      const completedTasks = campaigns.filter(item => item.status !== 'draft');
+      const measurableTasks = completedTasks.map(item => {
+        const startedAt = Date.parse(item.startedAt || item.assignedAt || '');
+        const completedAt = Date.parse(item.completedAt || '');
+        const dueAt = Date.parse(item.dueAt || '');
+        const durationHours = Number.isFinite(startedAt) && Number.isFinite(completedAt)
+          ? Math.max(0, (completedAt - startedAt) / 3600000)
+          : null;
+        const hadSla = Number.isFinite(dueAt);
+        const onTime = hadSla && Number.isFinite(completedAt) ? completedAt <= dueAt : null;
+        return { item, durationHours, onTime, hadSla };
+      });
+      const slaTasks = measurableTasks.filter(row => row.hadSla && row.onTime !== null);
+      const ownerMap = new Map();
+      for (const row of measurableTasks) {
+        const owner = clean(row.item.owner, 80);
+        if (!owner) continue;
+        const current = ownerMap.get(owner) || { owner, completed:0, slaMeasured:0, onTime:0, overdueCompleted:0, durationHours:[] };
+        current.completed += 1;
+        if (row.onTime !== null) {
+          current.slaMeasured += 1;
+          if (row.onTime) current.onTime += 1;
+          else current.overdueCompleted += 1;
+        }
+        if (row.durationHours !== null) current.durationHours.push(row.durationHours);
+        ownerMap.set(owner, current);
+      }
+      const byOwner = [...ownerMap.values()]
+        .sort((a,b) => b.completed - a.completed || b.slaMeasured - a.slaMeasured)
+        .map(row => ({
+          owner: row.owner,
+          completed: row.completed,
+          slaMeasured: row.slaMeasured,
+          onTime: row.onTime,
+          overdueCompleted: row.overdueCompleted,
+          onTimeRate: row.slaMeasured ? Math.round((row.onTime / row.slaMeasured) * 1000) / 10 : null,
+          averageCompletionHours: row.durationHours.length
+            ? Math.round((row.durationHours.reduce((sum,value) => sum + value, 0) / row.durationHours.length) * 10) / 10
+            : null
+        }));
+      const durationRows = measurableTasks.filter(row => row.durationHours !== null);
+
       const ownerPerformanceMap = new Map(
         byOwner
           .filter(row => Number(row.completed || 0) > 0)
@@ -1923,47 +1965,6 @@ export function createRevenueService({
           .slice(0, 8)
       };
   
-      const completedTasks = campaigns.filter(item => item.status !== 'draft');
-      const measurableTasks = completedTasks.map(item => {
-        const startedAt = Date.parse(item.startedAt || item.assignedAt || '');
-        const completedAt = Date.parse(item.completedAt || '');
-        const dueAt = Date.parse(item.dueAt || '');
-        const durationHours = Number.isFinite(startedAt) && Number.isFinite(completedAt)
-          ? Math.max(0, (completedAt - startedAt) / 3600000)
-          : null;
-        const hadSla = Number.isFinite(dueAt);
-        const onTime = hadSla && Number.isFinite(completedAt) ? completedAt <= dueAt : null;
-        return { item, durationHours, onTime, hadSla };
-      });
-      const slaTasks = measurableTasks.filter(row => row.hadSla && row.onTime !== null);
-      const ownerMap = new Map();
-      for (const row of measurableTasks) {
-        const owner = clean(row.item.owner, 80);
-        if (!owner) continue;
-        const current = ownerMap.get(owner) || { owner, completed:0, slaMeasured:0, onTime:0, overdueCompleted:0, durationHours:[] };
-        current.completed += 1;
-        if (row.onTime !== null) {
-          current.slaMeasured += 1;
-          if (row.onTime) current.onTime += 1;
-          else current.overdueCompleted += 1;
-        }
-        if (row.durationHours !== null) current.durationHours.push(row.durationHours);
-        ownerMap.set(owner, current);
-      }
-      const byOwner = [...ownerMap.values()]
-        .sort((a,b) => b.completed - a.completed || b.slaMeasured - a.slaMeasured)
-        .map(row => ({
-          owner: row.owner,
-          completed: row.completed,
-          slaMeasured: row.slaMeasured,
-          onTime: row.onTime,
-          overdueCompleted: row.overdueCompleted,
-          onTimeRate: row.slaMeasured ? Math.round((row.onTime / row.slaMeasured) * 1000) / 10 : null,
-          averageCompletionHours: row.durationHours.length
-            ? Math.round((row.durationHours.reduce((sum,value) => sum + value, 0) / row.durationHours.length) * 10) / 10
-            : null
-        }));
-      const durationRows = measurableTasks.filter(row => row.durationHours !== null);
       const totalDurationHours = durationRows.reduce((sum,row) => sum + row.durationHours, 0);
       const taskPerformance = {
         completed: completedTasks.length,
