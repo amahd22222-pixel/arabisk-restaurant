@@ -1,0 +1,14 @@
+export const adminPort = Number(process.env.PORT || 4174);
+export const adminHost = '0.0.0.0';
+export const adminUsername = String(process.env.ARABISK_ADMIN_USERNAME || '').trim();
+export const adminPassword = String(process.env.ARABISK_ADMIN_PASSWORD || '');
+export const adminApiKey = String(process.env.ARABISK_ADMIN_API_KEY || '').trim();
+export const webApiBase = String(process.env.ARABISK_WEB_API_URL || '').trim().replace(/\/$/, '');
+export const distRoot = new URL('./dist/', import.meta.url);
+export const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+export const AUTH_RATE_WINDOW_MS = 10 * 60 * 1000;
+export const AUTH_RATE_LIMIT = 6;
+export const MAX_AUTH_RATE_KEYS = 5000;
+export const UPSTREAM_API_TIMEOUT_MS = 15000;
+export const MAX_UPSTREAM_RESPONSE_BYTES = 2 * 1024 * 1024;
+export const MAX_ADMIN_BODY_BYTES = 256 * 1024;
