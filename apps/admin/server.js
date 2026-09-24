@@ -1,4 +1,5 @@
 import http from 'node:http';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -15,7 +16,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const dist = path.join(__dirname, 'dist');
 const serverStartedAt = Date.now();
-const { consumeAuthAttempt, credentialsMatch, getSession, createSession, clearSession } = createAdminAuth();
+const { consumeAuthAttempt, credentialsMatch, getSession, createSession, clearSession, resetAuthAttempts } = createAdminAuth();
 const proxyApiRequest = createProxyApi({ adminApiKey, webApiBase, requestId });
 
 const server = http.createServer(async (req, res) => {
@@ -44,7 +45,7 @@ const server = http.createServer(async (req, res) => {
       const username = String(body.username || '').trim();
       const password = String(body.password || '');
       if (!credentialsMatch(username, password)) return unauthorized(res, 'Invalid credentials');
-      authRate.delete(getClientKey(req));
+      resetAuthAttempts(req);
       createSession(res, req, username);
       res.writeHead(200, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
       return res.end(JSON.stringify({ ok: true }));
