@@ -217,17 +217,7 @@ export function createRevenueService({
   orders = [],
   products = []
 }) {
-  readJson,
-    writeJson,
-    storageReady,
-    requireAdminApiKey,
-    customers,
-    reservations,
-    orders = [],
-    products = [],
-    analyticsRateLimit
-  }) {
-    const REVENUE_PERSIST_DEBOUNCE_MS = 250;
+  const REVENUE_PERSIST_DEBOUNCE_MS = 250;
     const REVENUE_SUMMARY_CACHE_MS = 3000;
     const REVENUE_SEGMENTS_CACHE_MS = 5000;
     const events = [];
