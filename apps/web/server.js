@@ -137,7 +137,19 @@ const restoreExperiences=registerExperienceRoutes(app,{storageReady,presign,read
 const memories=registerMemoriesRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey});
 const nextProductId=()=>{const max=products.reduce((highest,product)=>Math.max(highest,Number(String(product.id).replace(/^P/,''))||0),0);return `P${String(max+1).padStart(3,'0')}`};
 
-app.get('/health',(_req,res)=>res.json({ok:true,service:'arabisk-web',uptimeSeconds:Math.floor((Date.now()-serverStartedAt)/1000),storageConfigured:storageReady,environment:isProductionRuntime?'production':'development'}));
+app.get('/health',(_req,res)=>{
+  const persistence = stateStore.status();
+  const ready = !storageReady || persistence.lastPersistOk !== false;
+  const payload = {
+    ok: ready,
+    service: 'arabisk-web',
+    uptimeSeconds: Math.floor((Date.now()-serverStartedAt)/1000),
+    storageConfigured: storageReady,
+    persistence,
+    environment: isProductionRuntime ? 'production' : 'development'
+  };
+  return res.status(ready ? 200 : 503).json(payload);
+});
 registerProductRoutes(app, {
   products,
   categories,
@@ -216,7 +228,16 @@ app.use(express.static(dist));app.use((_req,res)=>res.sendFile(path.join(dist,'i
   if(!res.headersSent)res.status(500).json({message:'Internal server error'});
 });
 
-await stateStore.restore();await restoreCategories();await restoreStudio();await restoreExperiences();await memories.restore();await revenue.restoreRevenue();if(storageReady)persistState();
+await stateStore.restore();
+await restoreCategories();
+await restoreStudio();
+await restoreExperiences();
+await memories.restore();
+await revenue.restoreRevenue();
+if(storageReady){
+  persistState();
+  await flushPersistState();
+}
 const server=app.listen(port,()=>console.log(`ARABISK web listening on ${port} — ${products.length} menu items, ${categories.length} categories`));
 let shuttingDown=false;
 const shutdown=(signal)=>{
