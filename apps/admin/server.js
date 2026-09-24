@@ -1,15 +1,11 @@
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import crypto from 'node:crypto';
 import {
   adminPort,
   adminHost,
-  adminUsername,
-  adminPassword,
   adminApiKey,
-  webApiBase,
-  distRoot
+  webApiBase
 } from './config.js';
 import { createAdminAuth } from './auth-service.js';
 import { setSecurityHeaders, requestId, unauthorized, safePath, sendFile, redirect } from './http-utils.js';
