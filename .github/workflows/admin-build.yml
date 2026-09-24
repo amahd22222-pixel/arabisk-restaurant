@@ -61,6 +61,8 @@ jobs:
           node --check apps/web/routes/studio-routes.js
           node --check apps/web/services/experience-service.js
           node --check apps/web/routes/experience-routes.js
+          node --check apps/web/services/memory-service.js
+          node --check apps/web/routes/memory-routes.js
           node --check apps/web/services/customer-service.js
           node --check apps/web/services/reservation-service.js
           node --check apps/web/services/revenue-service.js
