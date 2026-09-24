@@ -111,4 +111,4 @@ const shutdown = (signal) => {
 };
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
-server.listen(port, host, () => console.log(`ARABISK admin listening on ${host}:${port} — session authentication and server-side API proxy enabled`));
+server.listen(adminPort, adminHost, () => console.log(`ARABISK admin listening on ${adminHost}:${adminPort} — session authentication and server-side API proxy enabled`));
