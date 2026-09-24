@@ -3,6 +3,10 @@ export function createStateStore({ readJson, writeJson, storageReady, stateKey, 
   let persistQueue = Promise.resolve();
   let persistTimer = null;
   let persistRequested = false;
+  let restoreStatus = 'not_started';
+  let restoredAt = null;
+  let lastPersistAt = null;
+  let lastPersistOk = storageReady ? null : true;
 
   const rebuildCustomerOrderStats = () => {
     const statsByPhone = new Map();
@@ -22,9 +26,17 @@ export function createStateStore({ readJson, writeJson, storageReady, stateKey, 
   };
 
   async function restore() {
-    if (!storageReady) return;
+    restoreStatus = storageReady ? 'reading' : 'storage_not_configured';
+    if (!storageReady) {
+      restoredAt = new Date().toISOString();
+      return;
+    }
     const saved = await readJson(stateKey, null);
-    if (!saved || typeof saved !== 'object') return;
+    if (!saved || typeof saved !== 'object') {
+      restoreStatus = 'no_snapshot';
+      restoredAt = new Date().toISOString();
+      return;
+    }
     if (saved.menuVersion === menuVersion && Array.isArray(saved.products) && saved.products.length) {
       products.splice(0, products.length, ...saved.products);
     }
@@ -32,6 +44,8 @@ export function createStateStore({ readJson, writeJson, storageReady, stateKey, 
     if (Array.isArray(saved.customers)) customers.splice(0, customers.length, ...saved.customers);
     if (Array.isArray(saved.reservations)) reservations.splice(0, reservations.length, ...saved.reservations);
     rebuildCustomerOrderStats();
+    restoreStatus = 'restored';
+    restoredAt = new Date().toISOString();
   }
 
   const flush = () => {
@@ -42,7 +56,12 @@ export function createStateStore({ readJson, writeJson, storageReady, stateKey, 
     if (!persistRequested) return persistQueue;
     persistRequested = false;
     const snapshot = structuredClone({ menuVersion, products, orders, customers, reservations });
-    persistQueue = persistQueue.catch(() => {}).then(() => writeJson(stateKey, snapshot));
+    persistQueue = persistQueue.catch(() => {}).then(async () => {
+      const ok = await writeJson(stateKey, snapshot);
+      lastPersistOk = ok;
+      lastPersistAt = new Date().toISOString();
+      return ok;
+    });
     return persistQueue;
   };
 
@@ -62,6 +81,12 @@ export function createStateStore({ readJson, writeJson, storageReady, stateKey, 
     reservations,
     restore,
     persist,
-    flush
+    flush,
+    status: () => ({
+      restoreStatus,
+      restoredAt,
+      lastPersistAt,
+      lastPersistOk
+    })
   };
 }
