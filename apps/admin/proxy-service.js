@@ -1,65 +1,7 @@
-import { MAX_ADMIN_BODY_BYTES, MAX_UPSTREAM_RESPONSE_BYTES, UPSTREAM_API_TIMEOUT_MS } from './config.js';
+import { MAX_UPSTREAM_RESPONSE_BYTES, UPSTREAM_API_TIMEOUT_MS } from './config.js';
+import { parseJsonBody } from './http-utils.js';
 
 export function createProxyApi({ adminApiKey, webApiBase, requestId }) {
-  function parseBody(req) {
-    return new Promise((resolve, reject) => {
-      let body = '';
-      let receivedBytes = 0;
-      let settled = false;
-      const contentLength = Number(req.headers['content-length']);
-
-      const fail = (message, status = 400) => {
-        const error = new Error(message);
-        error.status = status;
-        reject(error);
-      };
-
-      const cleanup = () => {
-        req.off('data', onData);
-        req.off('end', onEnd);
-        req.off('error', onError);
-      };
-
-      const onData = (chunk) => {
-        if (settled) return;
-        const chunkBytes = Buffer.byteLength(chunk, 'utf8');
-        if (receivedBytes + chunkBytes > MAX_ADMIN_BODY_BYTES) {
-          settled = true;
-          cleanup();
-          req.resume();
-          return fail('Request body too large.', 413);
-        }
-        receivedBytes += chunkBytes;
-        body += chunk;
-      };
-
-      const onEnd = () => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        try { resolve(body ? JSON.parse(body) : {}); } catch { fail('Invalid JSON request.'); }
-      };
-
-      const onError = (error) => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        reject(error);
-      };
-
-      if (Number.isFinite(contentLength) && contentLength > MAX_ADMIN_BODY_BYTES) {
-        settled = true;
-        req.resume();
-        return fail('Request body too large.', 413);
-      }
-
-      req.setEncoding('utf8');
-      req.on('data', onData);
-      req.on('end', onEnd);
-      req.on('error', onError);
-    });
-  }
-
   return async function proxyApiRequest(req, res) {
     if (!adminApiKey) {
       res.writeHead(503, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'});
@@ -87,7 +29,7 @@ export function createProxyApi({ adminApiKey, webApiBase, requestId }) {
 
     let body;
     if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') {
-      try { body = JSON.stringify(await parseBody(req)); }
+      try { body = JSON.stringify(await parseJsonBody(req)); }
       catch (error) {
         const status = error?.status === 413 ? 413 : 400;
         res.writeHead(status, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'});
