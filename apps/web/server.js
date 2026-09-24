@@ -6,7 +6,8 @@ import { fileURLToPath } from 'url';
 import { presign, storageReady, readJson, writeJson, deleteObject } from './storage.js';
 import { categories, products } from './menu-data.js';
 import { requireAdminApiKey, isAdminApiKeyValid } from './admin-auth.js';
-import { registerMediaRoutes } from './media-routes.js';
+import { createMediaService } from './services/media-service.js';
+import { registerMediaRoutes } from './routes/media-routes.js';
 import { registerCategoryRoutes } from './category-routes.js';
 import { registerStudioRoutes } from './studio-routes.js';
 import { registerExperienceRoutes, experiences } from './experience-routes.js';
@@ -226,7 +227,17 @@ registerReservationRoutes(app, {
   reservationRateLimit
 });
 
-registerMediaRoutes(app,{products,storageReady,presign,requireAdminApiKey});
+const mediaService = createMediaService({
+  products,
+  storageReady,
+  readJson,
+  writeJson,
+  presign
+});
+registerMediaRoutes(app, {
+  service: mediaService,
+  requireAdminApiKey
+});
 app.get('/cart',(req,res)=>res.sendFile(path.join(__dirname,'cart-page.html')));
 app.get('/track-order',(req,res)=>res.sendFile(path.join(__dirname,'order-tracking.html')));
 app.get('/events',(req,res)=>res.sendFile(path.join(__dirname,'events.html')));
