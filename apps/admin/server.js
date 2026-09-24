@@ -8,7 +8,7 @@ import {
   webApiBase
 } from './config.js';
 import { createAdminAuth } from './auth-service.js';
-import { setSecurityHeaders, requestId, unauthorized, safePath, sendFile, redirect } from './http-utils.js';
+import { setSecurityHeaders, requestId, unauthorized, safePath, sendFile, redirect, parseJsonBody } from './http-utils.js';
 import { createProxyApi } from './proxy-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -40,7 +40,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && requestPath === '/auth/check') {
     if (consumeAuthAttempt(req, res)) return;
     try {
-      const body = await parseBody(req);
+      const body = await parseJsonBody(req);
       const username = String(body.username || '').trim();
       const password = String(body.password || '');
       if (!credentialsMatch(username, password)) return unauthorized(res, 'Invalid credentials');
