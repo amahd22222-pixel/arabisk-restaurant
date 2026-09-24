@@ -14,7 +14,8 @@ import { createStudioService } from './services/studio-service.js';
 import { registerStudioRoutes } from './routes/studio-routes.js';
 import { createExperienceService, experiences } from './services/experience-service.js';
 import { registerExperienceRoutes } from './routes/experience-routes.js';
-import { registerMemoriesRoutes } from './memories-routes.js';
+import { createMemoryService } from './services/memory-service.js';
+import { registerMemoriesRoutes } from './routes/memory-routes.js';
 import { createRevenueService } from './services/revenue-service.js';
 import { registerRevenueRoutes } from './routes/revenue-routes.js';
 import { createStateRepository } from './repositories/state-repository.js';
@@ -147,7 +148,9 @@ const restoreStudio=studioService.restore;
 const experienceService=createExperienceService({storageReady,presign,readJson,writeJson,deleteObject,isAdminApiKeyValid});
 registerExperienceRoutes(app,{service:experienceService,requireAdminApiKey});
 const restoreExperiences=experienceService.restore;
-const memories=registerMemoriesRoutes(app,{storageReady,presign,readJson,writeJson,deleteObject,requireAdminApiKey});
+const memoryService=createMemoryService({storageReady,presign,readJson,writeJson,deleteObject});
+registerMemoriesRoutes(app,{service:memoryService,requireAdminApiKey});
+const memories=memoryService;
 const nextProductId=()=>{const max=products.reduce((highest,product)=>Math.max(highest,Number(String(product.id).replace(/^P/,''))||0),0);return `P${String(max+1).padStart(3,'0')}`};
 
 app.get('/health',(_req,res)=>{
