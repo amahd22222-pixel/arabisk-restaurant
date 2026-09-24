@@ -1,6 +1,6 @@
 const sendServiceError=(res,error)=>res.status(Number(error?.status)||500).json({message:error?.message||'Internal server error'});
 
-export function registerMemoriesRoutes(app,{service,requireAdminApiKey}){
+export function registerMemoriesRoutes(app,{service,requireAdminApiKey,memoryUploadRateLimit,memoryMutationRateLimit}){
   app.get('/api/memories',(req,res)=>{
     try{
       const result=service.list(req.query);
@@ -10,27 +10,27 @@ export function registerMemoriesRoutes(app,{service,requireAdminApiKey}){
     }catch(error){return sendServiceError(res,error);}
   });
 
-  app.post('/api/memories/upload',(req,res)=>{
+  app.post('/api/memories/upload',memoryUploadRateLimit,(req,res)=>{
     try{return res.json(service.upload(req.body||{}));}catch(error){return sendServiceError(res,error);}
   });
 
-  app.post('/api/memories',async(req,res)=>{
+  app.post('/api/memories',memoryMutationRateLimit,async(req,res)=>{
     try{return res.status(201).json(await service.create(req.body||{}));}catch(error){return sendServiceError(res,error);}
   });
 
-  app.post('/api/memories/:id/like',async(req,res)=>{
+  app.post('/api/memories/:id/like',memoryMutationRateLimit,async(req,res)=>{
     try{return res.json(await service.like(req.params.id));}catch(error){return sendServiceError(res,error);}
   });
 
-  app.post('/api/memories/:id/share',async(req,res)=>{
+  app.post('/api/memories/:id/share',memoryMutationRateLimit,async(req,res)=>{
     try{return res.json(await service.share(req.params.id));}catch(error){return sendServiceError(res,error);}
   });
 
-  app.post('/api/memories/:id/comments',async(req,res)=>{
+  app.post('/api/memories/:id/comments',memoryMutationRateLimit,async(req,res)=>{
     try{return res.json(await service.comment(req.params.id,req.body||{}));}catch(error){return sendServiceError(res,error);}
   });
 
-  app.post('/api/memories/:id/report',async(req,res)=>{
+  app.post('/api/memories/:id/report',memoryMutationRateLimit,async(req,res)=>{
     try{return res.json(await service.report(req.params.id,req.body||{}));}catch(error){return sendServiceError(res,error);}
   });
 

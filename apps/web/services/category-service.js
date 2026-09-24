@@ -23,14 +23,22 @@ export function createCategoryService({categories,products,storageReady,presign,
     categories.push(category);await persist();return publicCategory(category);
   }
   async function update(id,body){
-    const category=getOrThrow(id);const oldImageKey=category.imageKey||'';
-    if(body.nameAr!==undefined){category.nameAr=cleanText(body.nameAr,100);if(!category.nameAr)throw new CategoryServiceError('Arabic category name cannot be empty');}
-    if(body.nameEn!==undefined){category.nameEn=cleanText(body.nameEn,120);if(!category.nameEn)throw new CategoryServiceError('English category name cannot be empty');}
+    const category=getOrThrow(id);
+    const nextNameAr=body.nameAr!==undefined?cleanText(body.nameAr,100):category.nameAr;
+    const nextNameEn=body.nameEn!==undefined?cleanText(body.nameEn,120):category.nameEn;
+    if(!nextNameAr)throw new CategoryServiceError('Arabic category name cannot be empty');
+    if(!nextNameEn)throw new CategoryServiceError('English category name cannot be empty');
+    if(categories.some(x=>x.id!==category.id&&(x.nameAr===nextNameAr||x.nameEn.toLowerCase()===nextNameEn.toLowerCase())))throw new CategoryServiceError('Category with the same name already exists',409);
+
+    const oldImageKey=category.imageKey||'';
+    const nextImageUrl=body.imageUrl!==undefined?cleanUrl(body.imageUrl):category.imageUrl;
+    const nextImageKey=body.imageKey!==undefined?cleanKey(body.imageKey):category.imageKey;
+    category.nameAr=nextNameAr;
+    category.nameEn=nextNameEn;
     if(body.active!==undefined)category.active=Boolean(body.active);
     if(body.sortOrder!==undefined&&Number.isFinite(Number(body.sortOrder)))category.sortOrder=Math.max(1,Number(body.sortOrder));
-    if(body.imageUrl!==undefined){const nextUrl=cleanUrl(body.imageUrl);category.imageUrl=nextUrl;if(nextUrl&&category.imageKey){const oldKey=category.imageKey;category.imageKey='';if(storageReady)void deleteObject(oldKey);}}
-    if(body.imageKey!==undefined)category.imageKey=cleanKey(body.imageKey);
-    if(categories.some(x=>x.id!==category.id&&(x.nameAr===category.nameAr||x.nameEn.toLowerCase()===category.nameEn.toLowerCase())))throw new CategoryServiceError('Category with the same name already exists',409);
+    if(body.imageUrl!==undefined){category.imageUrl=nextImageUrl;if(nextImageUrl&&category.imageKey){category.imageKey='';if(storageReady)void deleteObject(oldImageKey);}}
+    if(body.imageKey!==undefined)category.imageKey=nextImageKey;
     if(storageReady&&body.imageKey!==undefined&&oldImageKey&&oldImageKey!==category.imageKey)void deleteObject(oldImageKey);
     await persist();return publicCategory(category);
   }
@@ -51,7 +59,7 @@ export function createCategoryService({categories,products,storageReady,presign,
     try{return {key,uploadUrl:presign('PUT',key,900),expiresIn:900};}catch(error){console.error(error);throw new CategoryServiceError('Unable to prepare category image upload.',503);}
   }
   function presignImageDelete(body){
-    if(!storageReady)throw new CategoryServiceError('Image storage is not configured on the web service.');
+    if(!storageReady)throw new CategoryServiceError('Image storage is not configured on the web service.',503);
     const category=getOrThrow(cleanText(body?.categoryId,40));if(!category.imageKey)return {url:'',key:''};
     try{return {url:presign('DELETE',category.imageKey,900),key:category.imageKey};}catch(error){console.error(error);throw new CategoryServiceError('Unable to prepare category image deletion.',503);}
   }
