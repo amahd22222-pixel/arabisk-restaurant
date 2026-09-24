@@ -81,7 +81,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY=ci-smoke-test-key-123456789012345678901234567890 PORT=4185 npm run start --workspace apps/admin > /tmp/arabisk-admin.log 2>&1 &
+          ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4185 npm run start --workspace apps/admin > /tmp/arabisk-admin.log 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true' EXIT
           for i in {1..20}; do
@@ -109,13 +109,15 @@ jobs:
 
       - name: Web runtime smoke test
         shell: bash
+        env:
+          CI_ADMIN_KEY: ci-smoke-test-key-123456789012345678901234567890
         run: |
           set -euo pipefail
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production PORT=4186 npm run start --workspace apps/web > /tmp/arabisk-web.log 2>&1 &
           web_pid=$!
-          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY=ci-smoke-test-key-123456789012345678901234567890 PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin-web-smoke.log 2>&1 &
+          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin-web-smoke.log 2>&1 &
           admin_pid=$!
-          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_API_KEY=ci-smoke-test-key-123456789012345678901234567890 PORT=4187 npm run start --workspace apps/web > /tmp/arabisk-web-revenue.log 2>&1 &
+          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4187 npm run start --workspace apps/web > /tmp/arabisk-web-revenue.log 2>&1 &
           revenue_pid=$!
           cleanup() { status=$?; kill "$web_pid" "$admin_pid" "$revenue_pid" 2>/dev/null || true; if [ "$status" -ne 0 ]; then cat /tmp/arabisk-web.log /tmp/arabisk-admin-web-smoke.log /tmp/arabisk-web-revenue.log 2>/dev/null || true; fi; exit "$status"; }; trap cleanup EXIT
           pid=$web_pid
@@ -183,11 +185,11 @@ jobs:
           print(json.load(open('/tmp/ci-order.json'))['id'])
           PY
           )"
-          before_completed="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4187/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
+          before_completed="$(curl -fsS -H 'X-Arabisk-Admin-Key: $CI_ADMIN_KEY' http://127.0.0.1:4187/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
           test "$before_completed" = "0"
 
           for status in confirmed preparing ready completed; do
-            curl -fsS -H 'Content-Type: application/json' -H 'X-Arabisk-Admin-Key: ci' --data "$(python -c "import json; print(json.dumps({'status':'$status'}))")" -X PATCH "http://127.0.0.1:4187/api/orders/$order_id" >/tmp/ci-order-status.json
+            curl -fsS -H 'Content-Type: application/json' -H 'X-Arabisk-Admin-Key: $CI_ADMIN_KEY' --data "$(python -c "import json; print(json.dumps({'status':'$status'}))")" -X PATCH "http://127.0.0.1:4187/api/orders/$order_id" >/tmp/ci-order-status.json
           done
 
           python - <<'PY'
@@ -196,9 +198,9 @@ jobs:
           assert payload['status']=='completed'
           assert payload.get('completedAt'), 'completedAt must be recorded when an order completes'
           PY
-          after_completed="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4187/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
+          after_completed="$(curl -fsS -H 'X-Arabisk-Admin-Key: $CI_ADMIN_KEY' http://127.0.0.1:4187/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
           test "$after_completed" = "1"
-          customer_stats="$(curl -fsS -H 'X-Arabisk-Admin-Key: ci' http://127.0.0.1:4187/api/customers | python -c 'import json,sys; rows=json.load(sys.stdin); matches=[row for row in rows if row.get("phone")=="0500000001"]; assert len(matches)==1, "CI customer should exist"; assert matches[0].get("orderCount")==1, "customer orderCount must increment on completion"; assert matches[0].get("lastOrderAt"), "customer lastOrderAt must be set on completion"; print("ok")')"
+          customer_stats="$(curl -fsS -H 'X-Arabisk-Admin-Key: $CI_ADMIN_KEY' http://127.0.0.1:4187/api/customers | python -c 'import json,sys; rows=json.load(sys.stdin); matches=[row for row in rows if row.get("phone")=="0500000001"]; assert len(matches)==1, "CI customer should exist"; assert matches[0].get("orderCount")==1, "customer orderCount must increment on completion"; assert matches[0].get("lastOrderAt"), "customer lastOrderAt must be set on completion"; print("ok")')"
           test "$customer_stats" = "ok"
 
           cat /tmp/arabisk-web.log /tmp/arabisk-admin-web-smoke.log /tmp/arabisk-web-revenue.log
