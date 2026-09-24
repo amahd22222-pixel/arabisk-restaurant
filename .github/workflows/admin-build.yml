@@ -33,10 +33,10 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --ignore-scripts --no-audit --no-fund
 
       - name: Validate server syntax
         run: |
@@ -81,7 +81,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY=ci PORT=4185 npm run start --workspace apps/admin > /tmp/arabisk-admin.log 2>&1 &
+          ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY=ci-smoke-test-key-123456789012345678901234567890 PORT=4185 npm run start --workspace apps/admin > /tmp/arabisk-admin.log 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true' EXIT
           for i in {1..20}; do
@@ -113,9 +113,9 @@ jobs:
           set -euo pipefail
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production PORT=4186 npm run start --workspace apps/web > /tmp/arabisk-web.log 2>&1 &
           web_pid=$!
-          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY=ci PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin-web-smoke.log 2>&1 &
+          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY=ci-smoke-test-key-123456789012345678901234567890 PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin-web-smoke.log 2>&1 &
           admin_pid=$!
-          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_API_KEY=ci PORT=4187 npm run start --workspace apps/web > /tmp/arabisk-web-revenue.log 2>&1 &
+          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_API_KEY=ci-smoke-test-key-123456789012345678901234567890 PORT=4187 npm run start --workspace apps/web > /tmp/arabisk-web-revenue.log 2>&1 &
           revenue_pid=$!
           cleanup() { status=$?; kill "$web_pid" "$admin_pid" "$revenue_pid" 2>/dev/null || true; if [ "$status" -ne 0 ]; then cat /tmp/arabisk-web.log /tmp/arabisk-admin-web-smoke.log /tmp/arabisk-web-revenue.log 2>/dev/null || true; fi; exit "$status"; }; trap cleanup EXIT
           pid=$web_pid
