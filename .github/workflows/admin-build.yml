@@ -9,6 +9,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/admin-build.yml'
+      - 'tests/**'
   push:
     branches:
       - main
@@ -19,6 +20,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/admin-build.yml'
+      - 'tests/**'
 
 jobs:
   admin-build:
@@ -61,6 +63,9 @@ jobs:
 
       - name: Build web
         run: npm run build --workspace apps/web
+
+      - name: Domain unit tests
+        run: npm test
 
       - name: Admin runtime smoke test
         shell: bash
