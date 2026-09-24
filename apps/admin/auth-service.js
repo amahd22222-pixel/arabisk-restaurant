@@ -93,6 +93,10 @@ export function createAdminAuth() {
     res.setHeader('Set-Cookie', sessionCookie(token, req));
   }
 
+  function resetAuthAttempts(req) {
+    authRate.delete(getClientKey(req));
+  }
+
   function clearSession(res, req) {
     const cookies = parseCookies(req.headers.cookie || '');
     if (cookies.arabisk_admin_session) sessions.delete(cookies.arabisk_admin_session);
@@ -115,5 +119,5 @@ export function createAdminAuth() {
   }, 15 * 60 * 1000);
   cleanupTimer.unref();
 
-  return { consumeAuthAttempt, credentialsMatch, getSession, createSession, clearSession };
+  return { consumeAuthAttempt, credentialsMatch, getSession, createSession, clearSession, resetAuthAttempts };
 }
