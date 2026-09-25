@@ -35,7 +35,7 @@ export function createProductService({
       return res.json(presentProduct(product, smartSnapshot(), {includePrivate:isAdminApiKeyValid(req)}));
     },
 
-    create(req, res) {
+    async create(req, res) {
       const { categoryId, nameAr, nameEn, descriptionAr = '', descriptionEn = '', imageUrl = '', imageKey = '', price,
         available = true, videoKey = '', tags = [], dietary = [], spiceLevel = 0, chefChoice = false, isNew = false } = req.body || {};
       const normalizedCategoryId = cleanText(categoryId, 40);
@@ -61,11 +61,11 @@ export function createProductService({
       };
       repository.add(product);
       invalidateSmartSnapshot();
-      repository.save();
+      await repository.save();
       return res.status(201).json(withMediaUrls(product));
     },
 
-    update(req, res) {
+    async update(req, res) {
       const product = repository.findById(req.params.id);
       if (!product) return res.status(404).json({ message: 'Product not found' });
       const body = req.body || {};
@@ -116,11 +116,11 @@ export function createProductService({
       if (storageReady && body.imageKey !== undefined && oldImageKey && oldImageKey !== product.imageKey) void deleteObject(oldImageKey);
       if (storageReady && body.videoKey !== undefined && oldVideoKey && oldVideoKey !== product.videoKey) void deleteObject(oldVideoKey);
       invalidateSmartSnapshot();
-      repository.save();
+      await repository.save();
       return res.json(withMediaUrls(product));
     },
 
-    remove(req, res) {
+    async remove(req, res) {
       const removed = repository.removeById(req.params.id);
       if (!removed) return res.status(404).json({ message: 'Product not found' });
       if (storageReady) {
@@ -128,7 +128,7 @@ export function createProductService({
         if (removed.videoKey) void deleteObject(removed.videoKey);
       }
       invalidateSmartSnapshot();
-      repository.save();
+      await repository.save();
       return res.json({ ok: true, removed });
     },
 
