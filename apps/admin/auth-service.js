@@ -20,7 +20,10 @@ function parseCookies(header = '') {
 
 function getClientKey(req) {
   const forwarded = String(req.headers['x-forwarded-for'] || '').split(',').map((value) => value.trim()).filter(Boolean);
-  return String(forwarded.at(-1) || req.socket?.remoteAddress || 'unknown').slice(0, 120) || 'unknown';
+  const remote = String(req.socket?.remoteAddress || 'unknown');
+  // The admin service runs behind Railway's trusted proxy. Use the last forwarded
+  // address so a client cannot prepend an arbitrary value to bypass the limiter.
+  return String(forwarded.at(-1) || remote).slice(0, 120) || 'unknown';
 }
 
 function constantTimeTextMatch(provided, expected) {
