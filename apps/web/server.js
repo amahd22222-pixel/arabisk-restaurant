@@ -3,7 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'url';
 import { presign, storageReady, readJson, readJsonWithStatus, writeJson, deleteObject } from './storage.js';
-import { serviceErrorHandler } from './utils/service-error.js';
+import { serviceErrorHandler, logServiceFailure } from './utils/service-error.js';
 import { cleanText, cleanKey, cleanUrl, normalizeList } from './utils/input.js';
 import { categories, products } from './menu-data.js';
 import { requireAdminApiKey, isAdminApiKeyValid } from './admin-auth.js';
@@ -243,7 +243,7 @@ const shutdown=(signal)=>{
       await flushPersistState();
       await revenue.flushPersistRevenue();
     }catch(error){
-      console.error('State flush failed during shutdown:',error);
+      logServiceFailure(error, { service: 'web', operation: 'shutdown-flush' });
     }
     process.exit(0);
   });
