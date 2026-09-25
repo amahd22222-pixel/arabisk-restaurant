@@ -59,12 +59,19 @@ export function createExperienceService({storageReady,presign,readJsonWithStatus
   }
   async function update(id,body){
     const item=getOrThrow(id);
-    const nextStarts=body.startsAt!==undefined?cleanText(body.startsAt,40):item.startsAt,nextEnds=body.endsAt!==undefined?cleanText(body.endsAt,40):item.endsAt;
+    const before=structuredClone(item);
+    const oldCoverImageKey=item.coverImageKey||'';
+    const oldVideoKey=item.videoKey||'';
+    const nextStarts=body.startsAt!==undefined?cleanText(body.startsAt,40):item.startsAt;
+    const nextEnds=body.endsAt!==undefined?cleanText(body.endsAt,40):item.endsAt;
     if(!isValidDateTime(nextStarts))throw new ExperienceServiceError('startsAt must be a valid date and time.');
     if(nextEnds&&!isValidDateTime(nextEnds))throw new ExperienceServiceError('endsAt must be a valid date and time.');
     if(nextEnds&&Date.parse(nextEnds)<=Date.parse(nextStarts))throw new ExperienceServiceError('endsAt must be later than startsAt.');
     if(body.type!==undefined&&!TYPE_VALUES.has(body.type))throw new ExperienceServiceError('Invalid experience type');
-    const nextCoverImageUrl=body.coverImageUrl!==undefined?cleanUrl(body.coverImageUrl):item.coverImageUrl,nextCoverImageKey=body.coverImageKey!==undefined?cleanText(body.coverImageKey,500):item.coverImageKey,nextVideoUrl=body.videoUrl!==undefined?cleanUrl(body.videoUrl):item.videoUrl,nextVideoKey=body.videoKey!==undefined?cleanText(body.videoKey,500):item.videoKey;
+    const nextCoverImageUrl=body.coverImageUrl!==undefined?cleanUrl(body.coverImageUrl):item.coverImageUrl;
+    const nextCoverImageKey=body.coverImageKey!==undefined?cleanText(body.coverImageKey,500):item.coverImageKey;
+    const nextVideoUrl=body.videoUrl!==undefined?cleanUrl(body.videoUrl):item.videoUrl;
+    const nextVideoKey=body.videoKey!==undefined?cleanText(body.videoKey,500):item.videoKey;
     if(mediaConflict(nextCoverImageUrl,nextCoverImageKey,nextVideoUrl,nextVideoKey))throw new ExperienceServiceError('اختر صورة أو فيديو للفعالية، وليس الاثنين معًا.');
     if(body.titleAr!==undefined)item.titleAr=cleanText(body.titleAr,120);
     if(body.titleEn!==undefined)item.titleEn=cleanText(body.titleEn,140);
@@ -80,13 +87,46 @@ export function createExperienceService({storageReady,presign,readJsonWithStatus
     if(body.status!==undefined){if(!STATUS_VALUES.has(body.status))throw new ExperienceServiceError('Invalid experience status');item.status=body.status;}
     if(body.featured!==undefined)item.featured=Boolean(body.featured);
     if(body.bookingEnabled!==undefined)item.bookingEnabled=Boolean(body.bookingEnabled);
-    if(body.coverImageUrl!==undefined){item.coverImageUrl=nextCoverImageUrl;if(item.coverImageUrl&&item.coverImageKey){const oldKey=item.coverImageKey;item.coverImageKey='';if(storageReady)void deleteObject(oldKey);}}
-    if(body.coverImageKey!==undefined){const oldKey=item.coverImageKey||'';item.coverImageKey=nextCoverImageKey;if(storageReady&&oldKey&&oldKey!==item.coverImageKey)void deleteObject(oldKey);}
-    if(body.videoUrl!==undefined){item.videoUrl=nextVideoUrl;if(item.videoUrl&&item.videoKey){const oldKey=item.videoKey;item.videoKey='';if(storageReady)void deleteObject(oldKey);}}
-    if(body.videoKey!==undefined){const oldKey=item.videoKey||'';item.videoKey=nextVideoKey;if(storageReady&&oldKey&&oldKey!==item.videoKey)void deleteObject(oldKey);}
-    item.updatedAt=new Date().toISOString();await experienceRepository.save();return publicExperience(item);
+    if(body.coverImageUrl!==undefined){item.coverImageUrl=nextCoverImageUrl;if(item.coverImageUrl)item.coverImageKey='';}
+    if(body.coverImageKey!==undefined)item.coverImageKey=nextCoverImageKey;
+    if(body.videoUrl!==undefined){item.videoUrl=nextVideoUrl;if(item.videoUrl)item.videoKey='';}
+    if(body.videoKey!==undefined)item.videoKey=nextVideoKey;
+    item.updatedAt=new Date().toISOString();
+    try{
+      await experienceRepository.save();
+    }catch(error){
+      Object.assign(item,before);
+      throw error;
+    }
+    if(storageReady&&oldCoverImageKey&&oldCoverImageKey!==item.coverImageKey){
+      const deleted=await deleteObject(oldCoverImageKey);
+      if(!deleted)logServiceFailure(new Error('Experience old cover image cleanup failed.'),{service:'experience',operation:'cleanupCoverImage'});
+    }
+    if(storageReady&&oldVideoKey&&oldVideoKey!==item.videoKey){
+      const deleted=await deleteObject(oldVideoKey);
+      if(!deleted)logServiceFailure(new Error('Experience old video cleanup failed.'),{service:'experience',operation:'cleanupVideo'});
+    }
+    return publicExperience(item);
   }
-  async function remove(id){const removed=experienceRepository.removeById(id);if(!removed)throw new ExperienceServiceError('Experience not found',404);if(storageReady){if(removed.coverImageKey)void deleteObject(removed.coverImageKey);if(removed.videoKey)void deleteObject(removed.videoKey);}await experienceRepository.save();return {ok:true,removed};}
+  async function remove(id){
+    const before=experienceRepository.all().slice();
+    const removed=experienceRepository.removeById(id);if(!removed)throw new ExperienceServiceError('Experience not found',404);
+    try{
+      await experienceRepository.save();
+    }catch(error){
+      experienceRepository.replaceAll(before);
+      throw error;
+    }
+    if(storageReady&&removed.coverImageKey){
+      const deleted=await deleteObject(removed.coverImageKey);
+      if(!deleted)logServiceFailure(new Error('Experience cover image cleanup failed.'),{service:'experience',operation:'removeCoverImage'});
+    }
+    if(storageReady&&removed.videoKey){
+      const deleted=await deleteObject(removed.videoKey);
+      if(!deleted)logServiceFailure(new Error('Experience video cleanup failed.'),{service:'experience',operation:'removeVideo'});
+    }
+    return {ok:true,removed};
+  }
   function presignImage(body){if(!storageReady)throw new ExperienceServiceError('Image storage is not configured on the web service.',503);const experienceId=cleanText(body?.experienceId,40),fileName=cleanText(body?.fileName,160).replace(/[^a-zA-Z0-9._-]/g,'-'),contentType=cleanText(body?.contentType,80).toLowerCase(),size=Number(body?.size);if(experienceId&&!experienceRepository.some(item=>item.id===experienceId))throw new ExperienceServiceError('Experience not found',404);if(!fileName||!IMAGE_TYPES.has(contentType))throw new ExperienceServiceError('Only JPG, PNG, WebP and AVIF images are supported.');if(!Number.isFinite(size)||size<1||size>MAX_IMAGE_BYTES)throw new ExperienceServiceError('Maximum experience image size is 15 MB.');const targetId=experienceId||('new-'+crypto.randomUUID()),key='experiences/'+targetId+'/'+crypto.randomUUID()+'-'+fileName;try{return {key,uploadUrl:presign('PUT',key,900),expiresIn:900};}catch(error){logServiceFailure(error,{service:'experience',operation:'presignImage'});throw new ExperienceServiceError('Unable to prepare experience image upload.',503);}}
   function presignVideo(body){if(!storageReady)throw new ExperienceServiceError('Video storage is not configured on the web service.',503);const experienceId=cleanText(body?.experienceId,40),fileName=cleanText(body?.fileName,160).replace(/[^a-zA-Z0-9._-]/g,'-'),contentType=cleanText(body?.contentType,80).toLowerCase(),size=Number(body?.size);if(!experienceId||!experienceRepository.some(item=>item.id===experienceId))throw new ExperienceServiceError('Experience not found',404);if(!fileName||!VIDEO_TYPES.has(contentType))throw new ExperienceServiceError('Only MP4, WebM and MOV videos are supported.');if(!Number.isFinite(size)||size<1||size>MAX_VIDEO_BYTES)throw new ExperienceServiceError('Maximum experience video size is 120 MB.');const key='experiences/'+experienceId+'/videos/'+crypto.randomUUID()+'-'+fileName;try{return {key,uploadUrl:presign('PUT',key,900),expiresIn:900};}catch(error){logServiceFailure(error,{service:'experience',operation:'presignVideo'});throw new ExperienceServiceError('Unable to prepare experience video upload.',503);}}
   function presignVideoDelete(body){if(!storageReady)throw new ExperienceServiceError('Video storage is not configured on the web service.',503);const item=getOrThrow(cleanText(body?.experienceId,40));if(!item.videoKey)return {url:'',key:''};try{return {url:presign('DELETE',item.videoKey,900),key:item.videoKey};}catch(error){logServiceFailure(error,{service:'experience',operation:'presignVideoDelete'});throw new ExperienceServiceError('Unable to prepare experience video deletion.',503);}}
