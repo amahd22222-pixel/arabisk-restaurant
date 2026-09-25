@@ -8,7 +8,7 @@ export function registerExperienceRoutes(app,{service,requireAdminApiKey}){
   });
   app.post('/api/experiences',requireAdminApiKey,async(req,res)=>res.status(201).json(await service.create(req.body||{})));
   app.patch('/api/experiences/:id',requireAdminApiKey,async(req,res)=>res.json(await service.update(req.params.id,req.body||{})));
-  app.delete('/api/experiences/:id',requireAdminApiKey,async(req,res)=>res.json(await service.remove(req.params.id,)));
+  app.delete('/api/experiences/:id',requireAdminApiKey,async(req,res)=>res.json(await service.remove(req.params.id)));
   app.post('/api/experiences/images/presign',requireAdminApiKey,(req,res)=>res.json(service.presignImage(req.body||{})));
   app.post('/api/experiences/videos/presign',requireAdminApiKey,(req,res)=>res.json(service.presignVideo(req.body||{})));
   app.post('/api/experiences/videos/delete-presign',requireAdminApiKey,(req,res)=>res.json(service.presignVideoDelete(req.body||{})));
