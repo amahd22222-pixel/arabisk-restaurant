@@ -104,6 +104,7 @@ const stateStore = createStateStore({
   reservations
 });
 const { persist: persistState, flush: flushPersistState } = stateStore;
+const stateRepository = createStateRepository({ products, orders, customers, reservations, persist: persistState });
 
 const revenue=createRevenueService({readJson,writeJson,storageReady,customers,reservations,orders,products});
 registerRevenueRoutes(app,{service:revenue,requireAdminApiKey,analyticsRateLimit});
@@ -133,7 +134,6 @@ app.get('/health',(_req,res)=>{
   };
   return res.status(ready ? 200 : 503).json(payload);
 });
-const stateRepository = createStateRepository({ products, orders, customers, reservations, persist: persistState });
 
 registerProductRoutes(app, {
   repository: stateRepository.products,
