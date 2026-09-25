@@ -13,12 +13,19 @@ export function createCustomerService({ repository, cleanText }) {
       throw error;
     }
 
+    const before = structuredClone(customer);
+
     if (body?.internalNotes !== undefined) {
       customer.internalNotes = cleanText(body.internalNotes, 2000);
       customer.internalNotesUpdatedAt = new Date().toISOString();
     }
 
-    await customers.save();
+    try {
+      await customers.save();
+    } catch (error) {
+      Object.assign(customer, before);
+      throw error;
+    }
 
     return {
       id: customer.id,
