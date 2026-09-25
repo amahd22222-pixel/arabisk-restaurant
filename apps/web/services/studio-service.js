@@ -5,9 +5,9 @@ const STUDIO_STATE_KEY='data/arabisk-studio.json';
 const MAX_VIDEO_BYTES=120*1024*1024;
 const VIDEO_TYPES=new Set(['video/mp4','video/webm','video/quicktime']);
 class StudioServiceError extends Error{constructor(message,status=400){super(message);this.name='StudioServiceError';this.status=status;}}
-export function createStudioService({storageReady,presign,readJson,writeJson,deleteObject}){
+export function createStudioService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject}){
   const studio=[];const persist=()=>writeJson(STUDIO_STATE_KEY,studio);const studioRepository=createCollectionRepository(studio,{persist});
-  const restore=async()=>{if(!storageReady)return;const saved=await readJson(STUDIO_STATE_KEY,null);if(!Array.isArray(saved))return;const migrated=saved.some(x=>x&&('placement' in x||'categoryId' in x));const cleaned=saved.filter(x=>x&&x.id&&(x.placement||'home')==='home').map(x=>{const {placement,categoryId,...show}=x;return show;});studioRepository.replaceAll(cleaned);if(cleaned.length!==saved.length||migrated)await studioRepository.save();};
+  const restore=async()=>{if(!storageReady)return;const result=await readJsonWithStatus(STUDIO_STATE_KEY);if(!result.ok)throw new Error('Studio state could not be restored from storage.');const saved=result.value;if(!Array.isArray(saved))return;const migrated=saved.some(x=>x&&('placement' in x||'categoryId' in x));const cleaned=saved.filter(x=>x&&x.id&&(x.placement||'home')==='home').map(x=>{const {placement,categoryId,...show}=x;return show;});studioRepository.replaceAll(cleaned);if(cleaned.length!==saved.length||migrated)await studioRepository.save();};
   const getOrThrow=id=>{const item=studioRepository.find(x=>x.id===id);if(!item)throw new StudioServiceError('Studio show not found',404);return item;};
   const nextId=()=>{const max=studioRepository.all().reduce((n,x)=>{const m=String(x.id||'').match(/^S(\d+)$/);return Math.max(n,m?Number(m[1]):0);},0);return 'S'+String(max+1).padStart(3,'0');};
   const publicShow=item=>item?{id:item.id,title:item.title||'',active:item.active!==false,sortOrder:Number(item.sortOrder)||1,desktopVideoUrl:item.desktopVideoKey&&storageReady?presign('GET',item.desktopVideoKey,900):'',mobileVideoUrl:item.mobileVideoKey&&storageReady?presign('GET',item.mobileVideoKey,900):''}:null;
