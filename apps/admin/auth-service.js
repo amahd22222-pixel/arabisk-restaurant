@@ -4,6 +4,7 @@ import {
   adminUsername,
   adminPassword,
   SESSION_TTL_MS,
+  SESSION_ABSOLUTE_TTL_MS,
   AUTH_RATE_WINDOW_MS,
   AUTH_RATE_LIMIT,
   MAX_AUTH_RATE_KEYS,
@@ -80,11 +81,12 @@ export function createAdminAuth() {
     if (!token) return null;
     const session = sessions.get(token);
     if (!session) return null;
-    if (session.expiresAt <= Date.now()) {
+    const now = Date.now();
+    if (session.expiresAt <= now || session.absoluteExpiresAt <= now) {
       sessions.delete(token);
       return null;
     }
-    session.expiresAt = Date.now() + SESSION_TTL_MS;
+    session.expiresAt = Math.min(now + SESSION_TTL_MS, session.absoluteExpiresAt);
     return { token, session };
   }
 
@@ -102,7 +104,7 @@ export function createAdminAuth() {
       }
       if (oldestToken) sessions.delete(oldestToken);
     }
-    sessions.set(token, { username, expiresAt: now + SESSION_TTL_MS });
+    sessions.set(token, { username, expiresAt: now + SESSION_TTL_MS, absoluteExpiresAt: now + SESSION_ABSOLUTE_TTL_MS });
     res.setHeader('Set-Cookie', sessionCookie(token, req));
   }
 
@@ -127,7 +129,7 @@ export function createAdminAuth() {
 
   const cleanupTimer = setInterval(() => {
     const now = Date.now();
-    for (const [token, session] of sessions) if (session.expiresAt <= now) sessions.delete(token);
+    for (const [token, session] of sessions) if (session.expiresAt <= now || session.absoluteExpiresAt <= now) sessions.delete(token);
     for (const [key, entry] of authRate) if (now - entry.startedAt >= AUTH_RATE_WINDOW_MS) authRate.delete(key);
   }, 15 * 60 * 1000);
   cleanupTimer.unref();
