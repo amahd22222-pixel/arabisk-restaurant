@@ -1,14 +1,7 @@
 import { request as api } from './api-client.js';
 const categoryManager = (() => {
   const $ = (selector) => document.querySelector(selector);
-  const apiBase = () => (localStorage.getItem('ARABISK_API_BASE') || (import.meta.env.DEV ? 'http://localhost:3000' : '/proxy')).replace(/\/$/, '');
-  const api = (path, options = {}) => fetch(`${apiBase()}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options
-  }).then(async (response) => {
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.message || 'حدث خطأ أثناء الاتصال بالخادم');
-    return data;
-  });
+
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;' }[char]));
   let categories = [];
   let products = [];
