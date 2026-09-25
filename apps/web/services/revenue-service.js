@@ -212,11 +212,9 @@ export function createRevenueService({
   readJson,
   writeJson,
   storageReady,
-  customers,
-  reservations,
-  orders = [],
-  products = []
+  repository
 }) {
+  const { customers, reservations, orders, products } = repository;
   const REVENUE_PERSIST_DEBOUNCE_MS = 250;
     const REVENUE_SUMMARY_CACHE_MS = 3000;
     const REVENUE_SEGMENTS_CACHE_MS = 5000;
@@ -330,7 +328,7 @@ export function createRevenueService({
       }
   
       const ordersByPhone = new Map();
-      for (const order of orders) {
+      for (const order of orders.all()) {
         if (!order.phone || order.status !== 'completed') continue;
         const phoneOrders = ordersByPhone.get(order.phone) || [];
         phoneOrders.push(order);
@@ -345,7 +343,7 @@ export function createRevenueService({
           .filter(row => row.eventName === 'order_completed')
           .map(row => row.sessionId || row.orderId || row.id)
       );
-      for (const order of orders) {
+      for (const order of orders.all()) {
         if (order.status !== 'completed') continue;
         const completedAt = Date.parse(order.completedAt || order.createdAt || '');
         if (!Number.isFinite(completedAt) || completedAt < thirtyDaysAgo || completedAt > now) continue;
@@ -443,7 +441,7 @@ export function createRevenueService({
         .sort((a, b) => b.priorityScore - a.priorityScore || number(b.cartValue) - number(a.cartValue))
         .slice(0, 50);
   
-      const inactiveCustomers = customers
+      const inactiveCustomers = customers.all()
         .map(customer => {
           const completedOrders = ordersByPhone.get(customer.phone) || [];
           if (completedOrders.length < 2) return null;
@@ -511,7 +509,7 @@ export function createRevenueService({
         .sort((a,b) => b.priorityScore - a.priorityScore || b.views - a.views)
         .slice(0, 50);
   
-      const returnCustomers = customers
+      const returnCustomers = customers.all()
         .map(customer => {
           const customerOrders = [...(ordersByPhone.get(customer.phone) || [])].sort(
             (a,b) => Date.parse(a.updatedAt || a.createdAt || '') - Date.parse(b.updatedAt || b.createdAt || '')
@@ -563,8 +561,7 @@ export function createRevenueService({
         .sort((a,b) => b.priorityScore - a.priorityScore || b.daysSinceLastOrder - a.daysSinceLastOrder)
         .slice(0, 50);
   
-      const upcomingReservations = reservations
-        .filter(reservation => reservation.status !== 'cancelled')
+      const upcomingReservations = reservations.filter(reservation => reservation.status !== 'cancelled')
         .map(reservation => {
           const at = Date.parse(`${reservation.date}T${reservation.time}:00`);
           return { ...reservation, at };
@@ -1091,7 +1088,7 @@ export function createRevenueService({
       const outcome = clean(input.outcome, 30);
       if (!new Set(['executed', 'converted', 'ignored']).has(outcome)) return null;
       const orderId = clean(input.orderId, 30);
-      const linkedOrder = orderId ? orders.find(order => order.id === orderId) : null;
+      const linkedOrder = orderId ? orders.findById(orderId) : null;
       const manualRevenue = Math.max(0, number(input.revenue));
       const actor = clean(input.actor, 80);
       const requestedReason = clean(input.outcomeReason, 40);
@@ -1238,7 +1235,7 @@ export function createRevenueService({
       const now = Date.now();
       if (segmentsCache && now - segmentsCacheAt < REVENUE_SEGMENTS_CACHE_MS) return segmentsCache;
       const ordersByPhone = new Map();
-      for (const order of orders) {
+      for (const order of orders.all()) {
         if (!order.phone || order.status === 'cancelled') continue;
         const rows = ordersByPhone.get(order.phone) || [];
         rows.push(order);
@@ -1263,7 +1260,7 @@ export function createRevenueService({
         actionMetricsBySegment.set(key, current);
       }
   
-      const rows = customers.map(customer => {
+      const rows = customers.all().map(customer => {
         const customerOrders = ordersByPhone.get(customer.phone) || [];
         let totalRevenue = 0;
         let lastOrderAt = '';
@@ -1331,7 +1328,7 @@ export function createRevenueService({
   
     function customer360(customerId) {
       const id = clean(customerId, 100);
-      const customer = customers.find(item => item.id === id);
+      const customer = customers.findById(id);
       if (!customer) return null;
       const customerOrders = orders.filter(order => order.status === 'completed' && order.phone && customer.phone && order.phone === customer.phone);
       const customerReservations = reservations.filter(item => item.phone && customer.phone && item.phone === customer.phone);
