@@ -29,3 +29,36 @@ test('duplicate category update is rejected without mutating the original', asyn
 
   assert.equal(categories[1].nameAr, 'الثانية');
 });
+
+test('category creation normalizes shared input values before persistence', async () => {
+  const categories = [];
+  const categoryRepository = createCollectionRepository(categories);
+  const productRepository = createCollectionRepository([]);
+
+  const service = createCategoryService({
+    categoriesRepository: categoryRepository,
+    productsRepository: productRepository,
+    storageReady: false,
+    presign: () => { throw new Error('presign should not be called'); },
+    readJson: async () => null,
+    writeJson: async () => true,
+    deleteObject: async () => true,
+    isAdminApiKeyValid: () => true
+  });
+
+  const created = await service.create({
+    nameAr: '  الأطباق الرئيسية  ',
+    nameEn: '  Main Dishes  ',
+    imageUrl: '  https://example.com/category.webp  ',
+    imageKey: '/categories/C001/image.webp',
+    active: false
+  });
+
+  assert.equal(created.nameAr, 'الأطباق الرئيسية');
+  assert.equal(created.nameEn, 'Main Dishes');
+  assert.equal(created.imageUrl, 'https://example.com/category.webp');
+  assert.equal(created.imageKey, 'categories/C001/image.webp');
+  assert.equal(created.active, false);
+  assert.equal(categories.length, 1);
+});
+
