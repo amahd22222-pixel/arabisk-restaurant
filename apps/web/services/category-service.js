@@ -9,20 +9,20 @@ const cleanUrl=(v)=>String(v??'').trim().slice(0,1000);
 class CategoryServiceError extends Error{constructor(message,status=400){super(message);this.name='CategoryServiceError';this.status=status;}}
 
 export function createCategoryService({categoriesRepository,productsRepository,storageReady,presign,readJson,writeJson,deleteObject,isAdminApiKeyValid}){
-  const categories = categoriesRepository.all();
-  const products = productsRepository.all();
-  const restore=async()=>{if(!storageReady)return;const saved=await readJson(CATEGORY_STATE_KEY,null);if(Array.isArray(saved)&&saved.length)categories.splice(0,categories.length,...saved);};
-  const persist=()=>writeJson(CATEGORY_STATE_KEY,categories);
-  const nextId=()=>{const max=categories.reduce((n,c)=>{const m=String(c.id||'').match(/^C(\d+)$/);return Math.max(n,m?Number(m[1]):0);},0);return 'C'+String(max+1).padStart(3,'0');};
+  const categories = categoriesRepository;
+  const products = productsRepository;
+  const restore=async()=>{if(!storageReady)return;const saved=await readJson(CATEGORY_STATE_KEY,null);if(Array.isArray(saved)&&saved.length)categories.replaceAll(saved);};
+  const persist=()=>writeJson(CATEGORY_STATE_KEY,categories.all());
+  const nextId=()=>{const max=categories.all().reduce((n,c)=>{const m=String(c.id||'').match(/^C(\d+)$/);return Math.max(n,m?Number(m[1]):0);},0);return 'C'+String(max+1).padStart(3,'0');};
   const publicCategory=c=>({...c,imageUrl:c.imageKey&&storageReady?presign('GET',c.imageKey,900):(c.imageUrl||'')});
   const getOrThrow=id=>{const category=categories.find(c=>c.id===id);if(!category)throw new CategoryServiceError('Category not found',404);return category;};
-  function list(req){const visible=isAdminApiKeyValid(req)?categories:categories.filter(c=>c.active!==false);return visible.map(publicCategory);}
+  function list(req){const visible=isAdminApiKeyValid(req)?categories.all():categories.filter(c=>c.active!==false);return visible.map(publicCategory);}
   async function create(body){
     const nameAr=cleanText(body.nameAr,100),nameEn=cleanText(body.nameEn,120);
     if(!nameAr||!nameEn)throw new CategoryServiceError('nameAr and nameEn are required');
     if(categories.some(c=>c.nameAr===nameAr||c.nameEn.toLowerCase()===nameEn.toLowerCase()))throw new CategoryServiceError('Category with the same name already exists',409);
-    const category={id:nextId(),nameAr,nameEn,imageUrl:cleanUrl(body.imageUrl),imageKey:cleanKey(body.imageKey),sortOrder:categories.length+1,active:body.active!==undefined?Boolean(body.active):true};
-    categories.push(category);await persist();return publicCategory(category);
+    const category={id:nextId(),nameAr,nameEn,imageUrl:cleanUrl(body.imageUrl),imageKey:cleanKey(body.imageKey),sortOrder:categories.all().length+1,active:body.active!==undefined?Boolean(body.active):true};
+    categories.add(category);await persist();return publicCategory(category);
   }
   async function update(id,body){
     const category=getOrThrow(id);
@@ -45,10 +45,11 @@ export function createCategoryService({categoriesRepository,productsRepository,s
     await persist();return publicCategory(category);
   }
   async function remove(id){
-    const index=categories.findIndex(c=>c.id===id);if(index<0)throw new CategoryServiceError('Category not found',404);
-    const category=categories[index];const linked=products.filter(p=>p.categoryId===category.id).length;
+    const category=categories.findById(id);if(!category)throw new CategoryServiceError('Category not found',404);
+    const index=categories.all().findIndex(c=>c.id===id);if(index<0)throw new CategoryServiceError('Category not found',404);
+    const linked=products.filter(p=>p.categoryId===category.id).length;
     if(linked)throw new CategoryServiceError('لا يمكن حذف القسم لأنه يحتوي على '+linked+' صنف. انقل الأصناف إلى قسم آخر أولاً.',409);
-    categories.splice(index,1);if(storageReady&&category.imageKey)void deleteObject(category.imageKey);categories.forEach((x,n)=>x.sortOrder=n+1);await persist();
+    categories.removeById(id);if(storageReady&&category.imageKey)void deleteObject(category.imageKey);categories.all().forEach((x,n)=>x.sortOrder=n+1);await persist();
     return {ok:true,removed:category};
   }
   function presignImage(body){
