@@ -64,6 +64,11 @@ const analyticsRateLimit=createRateLimiter({
   limit:180,
   message:'Too many analytics events. Please try again later.'
 });
+const recoveryRateLimit=createRateLimiter({
+  windowMs:10*60*1000,
+  limit:60,
+  message:'Too many recovery link requests. Please try again later.'
+});
 const memoryUploadRateLimit=createRateLimiter({
   windowMs:10*60*1000,
   limit:20,
@@ -74,7 +79,7 @@ const memoryMutationRateLimit=createRateLimiter({
   limit:60,
   message:'Too many community actions. Please try again later.'
 });
-const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,memoryUploadRateLimit,memoryMutationRateLimit];
+const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,memoryUploadRateLimit,memoryMutationRateLimit];
 const rateLimitCleanupTimer=setInterval(() => {
   for (const limiter of rateLimiters) limiter.cleanup();
 }, 10*60*1000);
@@ -105,7 +110,7 @@ const smartMenu = createSmartMenuService({
 const { smartSnapshot, withMediaUrls, invalidateSmartSnapshot } = smartMenu;
 
 const revenue=createRevenueService({readJson,writeJson,storageReady,repository:stateRepository});
-registerRevenueRoutes(app,{service:revenue,requireAdminApiKey,analyticsRateLimit});
+registerRevenueRoutes(app,{service:revenue,requireAdminApiKey,analyticsRateLimit,recoveryRateLimit});
 const categoryService=createCategoryService({categoriesRepository:stateRepository.categories,productsRepository:stateRepository.products,storageReady,presign,readJson,writeJson,deleteObject,isAdminApiKeyValid});
 registerCategoryRoutes(app,{service:categoryService,requireAdminApiKey});
 const restoreCategories=categoryService.restore;
