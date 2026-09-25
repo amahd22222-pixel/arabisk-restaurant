@@ -140,12 +140,15 @@ test('state store binds each persistence promise to its own queued write', async
   store.flush();
 
   const second = store.persist();
-  await new Promise(resolve => setTimeout(resolve, 300));
   assert.equal(writes, 1);
 
+  let secondSettled = false;
+  second.then(() => { secondSettled = true; });
   resolveFirst();
   assert.equal(await first, true);
-  assert.equal(await new Promise(resolve => setImmediate(() => resolve(writes))), 1);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(secondSettled, false);
+  assert.equal(writes, 1);
 
   await new Promise(resolve => setTimeout(resolve, 300));
   assert.equal(writes, 2);
