@@ -32,9 +32,9 @@ function createFixture() {
   return { service, orders, customers, events };
 }
 
-test('order total is calculated from server-side product price', () => {
+test('order total is calculated from server-side product price', async () => {
   const { service } = createFixture();
-  const order = service.createOrder({
+  const order = await service.createOrder({
     orderType: 'pickup',
     name: 'Ahmed',
     phone: '0500000000',
@@ -45,9 +45,9 @@ test('order total is calculated from server-side product price', () => {
   assert.equal(order.items[0].unitPrice, 25);
 });
 
-test('invalid status transition is rejected', () => {
+test('invalid status transition is rejected', async () => {
   const { service } = createFixture();
-  const order = service.createOrder({
+  const order = await service.createOrder({
     orderType: 'pickup',
     name: 'Ahmed',
     phone: '0500000000',
@@ -60,9 +60,9 @@ test('invalid status transition is rejected', () => {
   );
 });
 
-test('public status requires matching pickup phone', () => {
+test('public status requires matching pickup phone', async () => {
   const { service } = createFixture();
-  const order = service.createOrder({
+  const order = await service.createOrder({
     orderType: 'pickup',
     name: 'Ahmed',
     phone: '0500000000',
