@@ -1,5 +1,4 @@
 import express from 'express';
-import cors from 'cors';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'url';
@@ -29,6 +28,7 @@ import { createSmartMenuService } from './services/smart-menu-service.js';
 import { createReservationService } from './services/reservation-service.js';
 import { registerReservationRoutes } from './routes/reservation-routes.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
+import { configureHttpSecurity } from './middleware/http-security.js';
 import { registerPageRoutes } from './routes/page-routes.js';
 import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS } from './config.js';
 
@@ -37,48 +37,7 @@ const serverStartedAt = Date.now();
 app.set('trust proxy', 1);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.join(__dirname, 'dist');
-const corsOptions = { origin(origin, callback){ if(!origin || allowedCorsOrigins.has(origin)) return callback(null,true); return callback(null,false); }, methods:['GET','POST','PATCH','DELETE','OPTIONS'], allowedHeaders:['Content-Type','X-Arabisk-Admin-Key'] };
-app.disable('x-powered-by');
-app.use(cors(corsOptions));
-app.options(/.*/, cors(corsOptions));
-const requestId=(req)=>String(req.get('X-Request-Id')||crypto.randomUUID()).slice(0,80);
-const errorRouteForLog=(req)=>{
-  const matchedRoute=req.route?.path;
-  if(matchedRoute)return String(matchedRoute).slice(0,160);
-  if(req.path.startsWith('/api/')){
-    const segments=req.path.split('/').filter(Boolean);
-    return '/' + segments.slice(0,2).join('/');
-  }
-  return req.path.slice(0,160);
-};
-
-app.use((req,res,next)=>{
-  const id=requestId(req);
-  res.locals.requestId=id;
-  const startedAt=process.hrtime.bigint();
-  res.on('finish',()=>{
-    if(res.statusCode<500)return;
-    const durationMs=Number(process.hrtime.bigint()-startedAt)/1e6;
-    console.error(JSON.stringify({
-      event:'http_server_error',
-      requestId:id,
-      method:req.method,
-      route:errorRouteForLog(req),
-      status:res.statusCode,
-      durationMs:Math.round(durationMs*100)/100
-    }));
-  });
-  res.setHeader('X-Request-Id',id);
-  res.setHeader('X-Content-Type-Options','nosniff');
-  res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
-  res.setHeader('X-Frame-Options','SAMEORIGIN');
-  res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=(), payment=()');
-  res.setHeader('Cross-Origin-Resource-Policy','same-site');
-  res.setHeader('X-Permitted-Cross-Domain-Policies','none');
-  if(req.secure||process.env.NODE_ENV==='production')res.setHeader('Strict-Transport-Security','max-age=31536000; includeSubDomains');
-  if(req.path==='/health'||req.path.startsWith('/api/'))res.setHeader('Cache-Control','no-store');
-  next();
-});
+configureHttpSecurity(app, { allowedCorsOrigins, isProductionRuntime });
 app.use(express.json({limit:'1mb',strict:true}));
 
 const cleanText=(value,max=180)=>String(value??'').trim().slice(0,max);
