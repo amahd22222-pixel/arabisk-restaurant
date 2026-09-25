@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { cleanText as clean, cleanKey } from '../utils/input.js';
+import { createCollectionRepository } from '../repositories/collection-repository.js';
 
 const STATE_KEY='data/arabisk-memories.json';
 const IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
@@ -21,10 +22,12 @@ export function createMemoryService({storageReady,presign,readJson,writeJson,del
     return queue;
   };
 
+  const memoryRepository=createCollectionRepository(state.memories,{persist});
+
   const restore=async()=>{
     if(!storageReady)return;
     const saved=await readJson(STATE_KEY,null);
-    if(saved&&Array.isArray(saved.memories))state.memories.splice(0,state.memories.length,...saved.memories);
+    if(saved&&Array.isArray(saved.memories))memoryRepository.replaceAll(saved.memories);
   };
 
   const publicMemory=m=>({
@@ -40,7 +43,7 @@ export function createMemoryService({storageReady,presign,readJson,writeJson,del
   });
 
   const get=id=>{
-    const m=state.memories.find(x=>x.id===id);
+    const m=memoryRepository.findById(id);
     if(!m)throw new MemoryServiceError('Memory not found',404);
     return m;
   };
@@ -54,7 +57,7 @@ export function createMemoryService({storageReady,presign,readJson,writeJson,del
     const popular=clean(query?.sort,20)==='popular';
     const page=Math.max(1,Math.min(100,Number.parseInt(query?.page,10)||1));
     const limit=Math.max(1,Math.min(20,Number.parseInt(query?.limit,10)||8));
-    const items=state.memories.filter(m=>m.hidden!==true).map(publicMemory).sort((a,b)=>{
+    const items=memoryRepository.filter(m=>m.hidden!==true).map(publicMemory).sort((a,b)=>{
       const pinned=Number(Boolean(b.pinned))-Number(Boolean(a.pinned));
       if(pinned)return pinned;
       return popular
@@ -82,22 +85,22 @@ export function createMemoryService({storageReady,presign,readJson,writeJson,del
     if(!text&&!imageKey&&!videoKey)throw new MemoryServiceError('أضف نصًا أو صورة أو فيديو.');
     if(imageKey&&videoKey)throw new MemoryServiceError('يمكن نشر صورة أو فيديو واحد مع النص.');
     const memory={id:'M'+crypto.randomUUID().replace(/-/g,'').slice(0,16),text,displayName,imageKey,videoKey,productId:clean(body.productId,50),experienceSlug:clean(body.experienceSlug,90).toLowerCase(),mediaType:imageKey?'image':videoKey?'video':'text',likes:0,shareCount:0,comments:[],reports:[],hidden:false,pinned:false,createdAt:new Date().toISOString()};
-    state.memories.push(memory);await persist();return publicMemory(memory);
+    memoryRepository.add(memory);await memoryRepository.save();return publicMemory(memory);
   }
 
-  async function like(id){const m=getVisible(id);m.likes=Number(m.likes||0)+1;await persist();return {likes:m.likes};}
-  async function share(id){const m=getVisible(id);m.shareCount=Number(m.shareCount||0)+1;await persist();return {shareCount:m.shareCount};}
+  async function like(id){const m=getVisible(id);m.likes=Number(m.likes||0)+1;await memoryRepository.save();return {likes:m.likes};}
+  async function share(id){const m=getVisible(id);m.shareCount=Number(m.shareCount||0)+1;await memoryRepository.save();return {shareCount:m.shareCount};}
   async function comment(id,body){
     const m=getVisible(id),text=clean(body?.text,500),displayName=clean(body?.displayName,80)||'مجهول';
     if(!text)throw new MemoryServiceError('اكتب تعليقًا أولًا.');
     const item={id:crypto.randomUUID(),text,displayName,createdAt:new Date().toISOString()};
-    m.comments.push(item);await persist();return {commentsCount:m.comments.length,comment:item};
+    m.comments.push(item);await memoryRepository.save();return {commentsCount:m.comments.length,comment:item};
   }
   async function report(id,body){
     const m=get(id);m.reports.push({id:crypto.randomUUID(),reason:clean(body?.reason,160)||'محتوى غير مناسب',createdAt:new Date().toISOString()});
-    await persist();return {ok:true};
+    await memoryRepository.save();return {ok:true};
   }
-  function adminList(){return state.memories.map(m=>({...publicMemory(m),hidden:Boolean(m.hidden),reportsCount:Array.isArray(m.reports)?m.reports.length:0,comments:m.comments||[],reports:m.reports||[]})).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));}
+  function adminList(){return memoryRepository.all().map(m=>({...publicMemory(m),hidden:Boolean(m.hidden),reportsCount:Array.isArray(m.reports)?m.reports.length:0,comments:m.comments||[],reports:m.reports||[]})).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));}
   async function adminUpdate(id,body){
     const m=get(id);
     if(body?.text!==undefined)m.text=clean(body.text,1200);
@@ -105,19 +108,18 @@ export function createMemoryService({storageReady,presign,readJson,writeJson,del
     if(body?.hidden!==undefined)m.hidden=Boolean(body.hidden);
     if(body?.pinned!==undefined)m.pinned=Boolean(body.pinned);
     if(body?.clearReports)m.reports=[];
-    await persist();return publicMemory(m);
+    await memoryRepository.save();return publicMemory(m);
   }
   async function adminDeleteComment(id,commentId){
     const m=get(id),index=(m.comments||[]).findIndex(c=>c.id===commentId);
     if(index<0)throw new MemoryServiceError('Comment not found',404);
-    m.comments.splice(index,1);await persist();return {ok:true};
+    m.comments.splice(index,1);await memoryRepository.save();return {ok:true};
   }
   async function adminDelete(id){
-    const index=state.memories.findIndex(x=>x.id===id);
-    if(index<0)throw new MemoryServiceError('Memory not found',404);
-    const m=state.memories.splice(index,1)[0];
+    const m=memoryRepository.removeById(id);
+    if(!m)throw new MemoryServiceError('Memory not found',404);
     if(storageReady){if(m.imageKey)void deleteObject(m.imageKey);if(m.videoKey)void deleteObject(m.videoKey);}
-    await persist();return {ok:true};
+    await memoryRepository.save();return {ok:true};
   }
 
   return {restore,list,upload,create,like,share,comment,report,adminList,adminUpdate,adminDeleteComment,adminDelete};
