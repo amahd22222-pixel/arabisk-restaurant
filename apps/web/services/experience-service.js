@@ -22,6 +22,12 @@ export function createExperienceService({storageReady,presign,readJson,writeJson
   const restore=async()=>{if(!storageReady)return;const saved=await readJson(EXPERIENCE_STATE_KEY,null);if(Array.isArray(saved))experienceRepository.replaceAll(saved);};
   const nextId=()=> 'E'+crypto.randomUUID().slice(0,8).toUpperCase();
   const publicExperience=item=>({...item,coverImageUrl:item.coverImageKey&&storageReady?presign('GET',item.coverImageKey,900):(item.coverImageUrl||''),videoUrl:item.videoKey&&storageReady?presign('GET',item.videoKey,900):(item.videoUrl||'')});
+  const presentExperience=(item,{includePrivate=false}={})=>{
+    const value=publicExperience(item);
+    if(includePrivate)return value;
+    const { coverImageKey: _coverImageKey, videoKey: _videoKey, ...publicValue } = value;
+    return publicValue;
+  };
   const getOrThrow=id=>{const item=experienceRepository.find(entry=>entry.id===id);if(!item)throw new ExperienceServiceError('Experience not found',404);return item;};
   function list(req){const admin=isAdminApiKeyValid(req);return (admin?experienceRepository.all():experienceRepository.filter(item=>item.status==='published')).slice().sort((a,b)=>(Date.parse(a.startsAt||'')||0)-(Date.parse(b.startsAt||'')||0)).map(publicExperience);}
   function get(key){const normalized=cleanText(key,120).toLowerCase();const item=experienceRepository.find(entry=>String(entry.id).toLowerCase()===normalized||String(entry.slug).toLowerCase()===normalized);if(!item)throw new ExperienceServiceError('Experience not found',404);return publicExperience(item);}
