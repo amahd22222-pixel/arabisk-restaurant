@@ -2,7 +2,7 @@ import { createCollectionRepository } from './collection-repository.js';
 
 export function createStateRepository({ products, orders, customers, reservations, persist }) {
   const productRepository = createCollectionRepository(products, { persist });
-  const orderRepository = createCollectionRepository(orders, { persist, persistOnAdd: true });
+  const orderRepository = createCollectionRepository(orders, { persist });
   const customerRepository = createCollectionRepository(customers, { persist });
   const reservationRepository = createCollectionRepository(reservations, { persist });
 
