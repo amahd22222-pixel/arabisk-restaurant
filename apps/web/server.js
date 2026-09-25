@@ -29,6 +29,7 @@ import { createReservationService } from './services/reservation-service.js';
 import { registerReservationRoutes } from './routes/reservation-routes.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { configureHttpSecurity } from './middleware/http-security.js';
+import { createNextPrefixedId } from './utils/id-generator.js';
 import { registerPageRoutes } from './routes/page-routes.js';
 import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS } from './config.js';
 
@@ -117,7 +118,7 @@ registerExperienceRoutes(app,{service:experienceService,requireAdminApiKey});
 const restoreExperiences=experienceService.restore;
 const memoryService=createMemoryService({storageReady,presign,readJson,writeJson,deleteObject});
 registerMemoriesRoutes(app,{service:memoryService,requireAdminApiKey,memoryUploadRateLimit,memoryMutationRateLimit});
-const nextProductId=()=>{const max=products.reduce((highest,product)=>Math.max(highest,Number(String(product.id).replace(/^P/,''))||0),0);return `P${String(max+1).padStart(3,'0')}`};
+const nextProductId = createNextPrefixedId(products, 'P', 3);
 
 app.get('/health',(_req,res)=>{
   const persistence = stateStore.status();
@@ -159,10 +160,7 @@ const orderService = createOrderService({
   repository: stateRepository,
   products,
   cleanText,
-  nextOrderId: () => {
-    const max = orders.reduce((highest, order) => Math.max(highest, Number(String(order.id).replace(/^O/, '')) || 0), 0);
-    return `O${String(max + 1).padStart(5, '0')}`;
-  },
+  nextOrderId: createNextPrefixedId(orders, 'O', 5),
   invalidateSmartSnapshot,
   revenue,
   crypto
@@ -188,10 +186,7 @@ registerCustomerRoutes(app, {
 const reservationService = createReservationService({
   repository: stateRepository,
   cleanText,
-  nextReservationId: () => {
-    const max = reservations.reduce((highest, reservation) => Math.max(highest, Number(String(reservation.id).replace(/^R/, '')) || 0), 0);
-    return `R${String(max + 1).padStart(4, '0')}`;
-  },
+  nextReservationId: createNextPrefixedId(reservations, 'R', 4),
   experiences,
   revenue,
   crypto
