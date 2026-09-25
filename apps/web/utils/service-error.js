@@ -1,8 +1,10 @@
 export function sendServiceError(res, error) {
-  const status = Number.isInteger(Number(error?.status)) ? Number(error.status) : 500;
-  const safeStatus = status >= 400 && status <= 499 ? status : 500;
+  const status = Number(error?.status);
+  const safeStatus = Number.isInteger(status) && status >= 400 && status <= 499 ? status : 500;
   const payload = {
-    message: safeStatus < 500 ? String(error?.message || 'Request could not be completed.') : 'Internal server error.'
+    message: safeStatus < 500
+      ? String(error?.message || 'Request could not be completed.')
+      : 'Internal server error.'
   };
 
   if (safeStatus < 500 && error?.code) {
@@ -23,4 +25,26 @@ export function sendServiceError(res, error) {
   }
 
   return res.status(safeStatus).json(payload);
+}
+
+export function serviceErrorHandler(error, req, res, _next) {
+  if (res.headersSent) return;
+
+  if (error?.type === 'entity.too.large') {
+    return sendServiceError(res, {
+      status: 413,
+      code: 'REQUEST_BODY_TOO_LARGE',
+      message: 'Request body is too large.'
+    });
+  }
+
+  if (error instanceof SyntaxError && error?.status === 400) {
+    return sendServiceError(res, {
+      status: 400,
+      code: 'INVALID_JSON',
+      message: 'Invalid JSON request.'
+    });
+  }
+
+  return sendServiceError(res, error);
 }
