@@ -3,12 +3,12 @@ export function registerOrderRoutes(app, { service, requireAdminApiKey, orderRat
     return res.json(service.listOrders());
   });
 
-  app.patch('/api/orders/:id', requireAdminApiKey, (req, res) => {
-    return res.json(service.updateOrder(req.params.id, req.body || {}));
+  app.patch('/api/orders/:id', requireAdminApiKey, async (req, res) => {
+    return res.json(await service.updateOrder(req.params.id, req.body || {}));
   });
 
-  app.post('/api/orders', orderRateLimit, (req, res) => {
-    const order = service.createOrder(req.body || {});
+  app.post('/api/orders', orderRateLimit, async (req, res) => {
+    const order = await service.createOrder(req.body || {});
     return res.status(201).json({
       id: order.id,
       total: order.total,
