@@ -92,45 +92,88 @@ export function createMemoryService({storageReady,presign,readJsonWithStatus,wri
     if(!text&&!imageKey&&!videoKey)throw new MemoryServiceError('أضف نصًا أو صورة أو فيديو.');
     if(imageKey&&videoKey)throw new MemoryServiceError('يمكن نشر صورة أو فيديو واحد مع النص.');
     const memory={id:'M'+crypto.randomUUID().replace(/-/g,'').slice(0,16),text,displayName,imageKey,videoKey,productId:clean(body.productId,50),experienceSlug:clean(body.experienceSlug,90).toLowerCase(),mediaType:imageKey?'image':videoKey?'video':'text',likes:0,shareCount:0,comments:[],reports:[],hidden:false,pinned:false,createdAt:new Date().toISOString()};
-    memoryRepository.add(memory);await memoryRepository.save();return publicMemory(memory);
+    memoryRepository.add(memory);
+    try{
+      await memoryRepository.save();
+    }catch(error){
+      memoryRepository.removeById(memory.id);
+      throw error;
+    }
+    return publicMemory(memory);
   }
 
-  async function like(id){const m=getVisible(id);m.likes=Number(m.likes||0)+1;await memoryRepository.save();return {likes:m.likes};}
-  async function share(id){const m=getVisible(id);m.shareCount=Number(m.shareCount||0)+1;await memoryRepository.save();return {shareCount:m.shareCount};}
+  async function like(id){
+    const m=getVisible(id);const before=structuredClone(m);m.likes=Number(m.likes||0)+1;
+    try{await memoryRepository.save();}catch(error){Object.assign(m,before);throw error;}
+    return {likes:m.likes};
+  }
+
+  async function share(id){
+    const m=getVisible(id);const before=structuredClone(m);m.shareCount=Number(m.shareCount||0)+1;
+    try{await memoryRepository.save();}catch(error){Object.assign(m,before);throw error;}
+    return {shareCount:m.shareCount};
+  }
+
   async function comment(id,body){
     const m=getVisible(id);
     if((m.comments||[]).length>=maxCommentsPerMemory)throw new MemoryServiceError('This memory has reached its comment limit.',409);
     const text=clean(body?.text,500),displayName=clean(body?.displayName,80)||'مجهول';
     if(!text)throw new MemoryServiceError('اكتب تعليقًا أولًا.');
+    const before=structuredClone(m);
     const item={id:crypto.randomUUID(),text,displayName,createdAt:new Date().toISOString()};
-    m.comments.push(item);await memoryRepository.save();return {commentsCount:m.comments.length,comment:item};
+    m.comments.push(item);
+    try{await memoryRepository.save();}catch(error){Object.assign(m,before);throw error;}
+    return {commentsCount:m.comments.length,comment:item};
   }
+
   async function report(id,body){
     const m=get(id);
     if((m.reports||[]).length>=maxReportsPerMemory)throw new MemoryServiceError('This memory has reached its report limit.',409);
+    const before=structuredClone(m);
     m.reports.push({id:crypto.randomUUID(),reason:clean(body?.reason,160)||'محتوى غير مناسب',createdAt:new Date().toISOString()});
-    await memoryRepository.save();return {ok:true};
+    try{await memoryRepository.save();}catch(error){Object.assign(m,before);throw error;}
+    return {ok:true};
   }
+
   function adminList(){return memoryRepository.all().map(m=>({...publicMemory(m),hidden:Boolean(m.hidden),reportsCount:Array.isArray(m.reports)?m.reports.length:0,comments:m.comments||[],reports:m.reports||[]})).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));}
+
   async function adminUpdate(id,body){
-    const m=get(id);
+    const m=get(id);const before=structuredClone(m);
     if(body?.text!==undefined)m.text=clean(body.text,1200);
     if(body?.displayName!==undefined)m.displayName=clean(body.displayName,80)||'مجهول';
     if(body?.hidden!==undefined)m.hidden=Boolean(body.hidden);
     if(body?.pinned!==undefined)m.pinned=Boolean(body.pinned);
     if(body?.clearReports)m.reports=[];
-    await memoryRepository.save();return publicMemory(m);
+    try{await memoryRepository.save();}catch(error){Object.assign(m,before);throw error;}
+    return publicMemory(m);
   }
+
   async function adminDeleteComment(id,commentId){
     const m=get(id),index=(m.comments||[]).findIndex(c=>c.id===commentId);
     if(index<0)throw new MemoryServiceError('Comment not found',404);
-    m.comments.splice(index,1);await memoryRepository.save();return {ok:true};
+    const before=structuredClone(m);
+    m.comments.splice(index,1);
+    try{await memoryRepository.save();}catch(error){Object.assign(m,before);throw error;}
+    return {ok:true};
   }
+
   async function adminDelete(id){
+    const snapshot=memoryRepository.all().slice();
     const m=memoryRepository.removeById(id);
     if(!m)throw new MemoryServiceError('Memory not found',404);
-    if(storageReady){if(m.imageKey)void deleteObject(m.imageKey);if(m.videoKey)void deleteObject(m.videoKey);}
-    await memoryRepository.save();return {ok:true};
+    try{
+      await memoryRepository.save();
+    }catch(error){
+      memoryRepository.replaceAll(snapshot);
+      throw error;
+    }
+    if(storageReady&&m.imageKey&&!await deleteObject(m.imageKey)){
+      logServiceFailure(new Error('Memory image cleanup failed.'),{service:'memory',operation:'removeImage'});
+    }
+    if(storageReady&&m.videoKey&&!await deleteObject(m.videoKey)){
+      logServiceFailure(new Error('Memory video cleanup failed.'),{service:'memory',operation:'removeVideo'});
+    }
+    return {ok:true};
   }
 
   return {restore,list,upload,create,like,share,comment,report,adminList,adminUpdate,adminDeleteComment,adminDelete};
