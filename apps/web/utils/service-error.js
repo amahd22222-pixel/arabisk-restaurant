@@ -1,3 +1,5 @@
+const PUBLIC_ERROR_META_KEYS = new Set(['id', 'reservationId']);
+
 function safeLogMessage(error) {
   const raw = String(error?.message || error || 'Unknown error');
   return raw
@@ -20,7 +22,9 @@ export function sendServiceError(res, error) {
   }
 
   if (safeStatus < 500 && error?.meta && typeof error.meta === 'object' && !Array.isArray(error.meta)) {
-    Object.assign(payload, error.meta);
+    for (const key of PUBLIC_ERROR_META_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(error.meta, key)) payload[key] = String(error.meta[key]).slice(0, 120);
+    }
   }
 
   if (safeStatus >= 500) {
