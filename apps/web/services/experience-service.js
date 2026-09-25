@@ -25,6 +25,14 @@ export function createExperienceService({storageReady,presign,readJson,writeJson
   const getOrThrow=id=>{const item=experienceRepository.find(entry=>entry.id===id);if(!item)throw new ExperienceServiceError('Experience not found',404);return item;};
   function list(req){const admin=isAdminApiKeyValid(req);return (admin?experienceRepository.all():experienceRepository.filter(item=>item.status==='published')).slice().sort((a,b)=>(Date.parse(a.startsAt||'')||0)-(Date.parse(b.startsAt||'')||0)).map(publicExperience);}
   function get(key){const normalized=cleanText(key,120).toLowerCase();const item=experienceRepository.find(entry=>String(entry.id).toLowerCase()===normalized||String(entry.slug).toLowerCase()===normalized);if(!item)throw new ExperienceServiceError('Experience not found',404);return publicExperience(item);}
+  function findBookable(slug){
+    const normalized=cleanText(slug,90).toLowerCase();
+    const item=experienceRepository.find(entry=>String(entry.slug||'').toLowerCase()===normalized&&entry.status==='published');
+    if(!item || item.bookingEnabled===false) return null;
+    const endTime=Date.parse(item.endsAt||item.startsAt||'');
+    if(Number.isFinite(endTime)&&endTime<=Date.now()) return null;
+    return { slug:item.slug, endsAt:item.endsAt||'', startsAt:item.startsAt||'' };
+  }
   async function create(body){
     const titleAr=cleanText(body.titleAr,120),titleEn=cleanText(body.titleEn,140),startsAt=cleanText(body.startsAt,40),status=STATUS_VALUES.has(body.status)?body.status:'draft';
     if(!titleAr||!titleEn||!startsAt)throw new ExperienceServiceError('titleAr, titleEn and startsAt are required');
@@ -76,7 +84,7 @@ export function createExperienceService({storageReady,presign,readJson,writeJson
   function presignVideoDelete(body){if(!storageReady)throw new ExperienceServiceError('Video storage is not configured on the web service.',503);const item=getOrThrow(cleanText(body?.experienceId,40));if(!item.videoKey)return {url:'',key:''};try{return {url:presign('DELETE',item.videoKey,900),key:item.videoKey};}catch(error){console.error(error);throw new ExperienceServiceError('Unable to prepare experience video deletion.',503);}}
   function presignImageDelete(body){if(!storageReady)throw new ExperienceServiceError('Image storage is not configured on the web service.',503);const item=getOrThrow(cleanText(body?.experienceId,40));if(!item.coverImageKey)return {url:'',key:''};try{return {url:presign('DELETE',item.coverImageKey,900),key:item.coverImageKey};}catch(error){console.error(error);throw new ExperienceServiceError('Unable to prepare experience image deletion.',503);}}
     const isAdmin=req=>isAdminApiKeyValid(req);
-  return {restore,list,get,create,update,remove,presignImage,presignVideo,presignVideoDelete,presignImageDelete,isAdmin,experiences};
+  return {restore,list,get,findBookable,create,update,remove,presignImage,presignVideo,presignVideoDelete,presignImageDelete,isAdmin};
 }
 
 export { experiences };
