@@ -32,30 +32,53 @@ export function createCategoryService({categoriesRepository,productsRepository,s
   }
   async function update(id,body){
     const category=getOrThrow(id);
+    const before=structuredClone(category);
+    const oldImageKey=category.imageKey||'';
     const nextNameAr=body.nameAr!==undefined?cleanText(body.nameAr,100):category.nameAr;
     const nextNameEn=body.nameEn!==undefined?cleanText(body.nameEn,120):category.nameEn;
     if(!nextNameAr)throw new CategoryServiceError('Arabic category name cannot be empty');
     if(!nextNameEn)throw new CategoryServiceError('English category name cannot be empty');
     if(categories.some(x=>x.id!==category.id&&(x.nameAr===nextNameAr||x.nameEn.toLowerCase()===nextNameEn.toLowerCase())))throw new CategoryServiceError('Category with the same name already exists',409);
-
-    const oldImageKey=category.imageKey||'';
     const nextImageUrl=body.imageUrl!==undefined?cleanUrl(body.imageUrl):category.imageUrl;
     const nextImageKey=body.imageKey!==undefined?cleanKey(body.imageKey):category.imageKey;
     category.nameAr=nextNameAr;
     category.nameEn=nextNameEn;
     if(body.active!==undefined)category.active=Boolean(body.active);
     if(body.sortOrder!==undefined&&Number.isFinite(Number(body.sortOrder)))category.sortOrder=Math.max(1,Number(body.sortOrder));
-    if(body.imageUrl!==undefined){category.imageUrl=nextImageUrl;if(nextImageUrl&&category.imageKey){category.imageKey='';if(storageReady)void deleteObject(oldImageKey);}}
+    if(body.imageUrl!==undefined){
+      category.imageUrl=nextImageUrl;
+      if(nextImageUrl)category.imageKey='';
+    }
     if(body.imageKey!==undefined)category.imageKey=nextImageKey;
-    if(storageReady&&body.imageKey!==undefined&&oldImageKey&&oldImageKey!==category.imageKey)void deleteObject(oldImageKey);
-    await persist();return publicCategory(category);
+    try{
+      await persist();
+    }catch(error){
+      Object.assign(category,before);
+      throw error;
+    }
+    if(storageReady&&oldImageKey&&oldImageKey!==category.imageKey){
+      const deleted=await deleteObject(oldImageKey);
+      if(!deleted)logServiceFailure(new Error('Category old image cleanup failed.'),{service:'category',operation:'cleanupImage'});
+    }
+    return publicCategory(category);
   }
   async function remove(id){
+    const before=categories.all().slice();
     const category=categories.findById(id);if(!category)throw new CategoryServiceError('Category not found',404);
     const index=categories.all().findIndex(c=>c.id===id);if(index<0)throw new CategoryServiceError('Category not found',404);
     const linked=products.filter(p=>p.categoryId===category.id).length;
     if(linked)throw new CategoryServiceError('لا يمكن حذف القسم لأنه يحتوي على '+linked+' صنف. انقل الأصناف إلى قسم آخر أولاً.',409);
-    categories.removeById(id);if(storageReady&&category.imageKey)void deleteObject(category.imageKey);categories.all().forEach((x,n)=>x.sortOrder=n+1);await persist();
+    categories.removeById(id);categories.all().forEach((x,n)=>x.sortOrder=n+1);
+    try{
+      await persist();
+    }catch(error){
+      categories.replaceAll(before);
+      throw error;
+    }
+    if(storageReady&&category.imageKey){
+      const deleted=await deleteObject(category.imageKey);
+      if(!deleted)logServiceFailure(new Error('Category image cleanup failed.'),{service:'category',operation:'removeImage'});
+    }
     return {ok:true,removed:category};
   }
   function presignImage(body){
