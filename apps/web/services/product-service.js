@@ -51,7 +51,7 @@ export function createProductService({
     },
 
     update(req, res) {
-      const product = products.find(item => item.id === req.params.id);
+      const product = repository.findById(req.params.id);
       if (!product) return res.status(404).json({ message: 'Product not found' });
       const body = req.body || {};
       const oldImageKey = product.imageKey;
