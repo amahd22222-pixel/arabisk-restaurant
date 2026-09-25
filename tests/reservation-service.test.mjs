@@ -52,3 +52,10 @@ test('duplicate reservation returns conflict metadata', () => {
     error => error.status === 409 && error.meta?.reservationId === 'R0001'
   );
 });
+test('reservation rejects impossible calendar dates', () => {
+  const { service } = createFixture();
+  assert.throws(
+    () => service.createReservation({ name: 'Ahmed', phone: '0500000000', date: '2099-02-31', time: '19:00', guests: 2 }),
+    error => error.status === 400
+  );
+});
