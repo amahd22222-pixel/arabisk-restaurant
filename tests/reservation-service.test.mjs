@@ -1,24 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createReservationService } from '../apps/web/services/reservation-service.js';
+import { createCollectionRepository } from '../apps/web/repositories/collection-repository.js';
 
 function createFixture({ persist = async () => true } = {}) {
   const reservations = [];
   const customers = [];
   const events = [];
+  const reservationRepository = createCollectionRepository(reservations, { persist });
+  const customerRepository = createCollectionRepository(customers, { persist });
   const repository = {
     reservations: {
-      all: () => reservations,
-      findById: id => reservations.find(item => item.id === id),
-      findDuplicate: (phone, date, time) => reservations.find(item => item.status !== 'cancelled' && item.phone === phone && item.date === date && item.time === time),
-      add: item => reservations.push(item),
-      save: () => {}
+      ...reservationRepository,
+      findDuplicate: (phone, date, time) => reservations.find(
+        item => item.status !== 'cancelled' && item.phone === phone && item.date === date && item.time === time
+      )
     },
     customers: {
-      findByPhone: phone => customers.find(item => item.phone === phone),
-      add: item => customers.push(item),
-      all: () => customers,
-      save: () => {}
+      ...customerRepository,
+      findByPhone: phone => customers.find(item => item.phone === phone)
     }
   };
 
