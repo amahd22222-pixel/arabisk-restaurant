@@ -20,6 +20,7 @@ export function createMediaService({
   presign
 }) {
   const { products } = repository;
+  const { products } = repository;
   const productDetails = [];
   let detailsLoaded = false;
 
