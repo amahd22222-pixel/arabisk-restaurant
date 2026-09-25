@@ -15,8 +15,8 @@ class OrderServiceError extends Error {
   }
 }
 
-export function createOrderService({ repository, products, cleanText, nextOrderId, invalidateSmartSnapshot, revenue, crypto }) {
-  const { orders, customers } = repository;
+export function createOrderService({ repository, cleanText, nextOrderId, invalidateSmartSnapshot, revenue, crypto }) {
+  const { orders, products, customers } = repository;
 
   function getOrThrow(id) {
     const order = orders.findById(id);
@@ -131,7 +131,7 @@ export function createOrderService({ repository, products, cleanText, nextOrderI
       completedAt: ''
     };
 
-    orders.all().push(order);
+    orders.add(order);
     invalidateSmartSnapshot();
 
     let orderCustomerId = '';
