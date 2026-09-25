@@ -110,3 +110,44 @@ test('state store persist reports a failed storage write', async () => {
   assert.equal(await persistence, false);
   assert.equal(store.status().lastPersistOk, false);
 });
+
+
+test('state store binds each persistence promise to its own queued write', async () => {
+  let resolveFirst;
+  let writes = 0;
+  const firstWrite = new Promise(resolve => { resolveFirst = resolve; });
+  const store = createStateStore({
+    readJsonWithStatus: async () => ({ ok: true, found: false, value: null }),
+    writeJson: async (_key, snapshot) => {
+      writes += 1;
+      if (writes === 1) {
+        await firstWrite;
+      }
+      return true;
+    },
+    storageReady: true,
+    stateKey: 'data/test-state.json',
+    menuVersion: 'test',
+    products: [],
+    customers: [],
+    orders: [],
+    reservations: []
+  });
+
+  await store.restore();
+  const first = store.persist();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  store.flush();
+
+  const second = store.persist();
+  await new Promise(resolve => setTimeout(resolve, 300));
+  assert.equal(writes, 1);
+
+  resolveFirst();
+  assert.equal(await first, true);
+  assert.equal(await new Promise(resolve => setImmediate(() => resolve(writes))), 1);
+
+  await new Promise(resolve => setTimeout(resolve, 300));
+  assert.equal(writes, 2);
+  assert.equal(await second, true);
+});
