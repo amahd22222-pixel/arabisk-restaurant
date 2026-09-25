@@ -8,6 +8,22 @@ export function isSecureRequest(req) {
   return req.headers['x-forwarded-proto'] === 'https' || process.env.NODE_ENV === 'production';
 }
 
+export function isSameOriginRequest(req) {
+  const origin = String(req.headers.origin || '').trim();
+  if (!origin) return true;
+  try {
+    const protocol = String(req.headers['x-forwarded-proto'] || (isSecureRequest(req) ? 'https' : 'http'))
+      .split(',')[0]
+      .trim()
+      .replace(/[^a-z]/gi, '')
+      .toLowerCase();
+    const host = String(req.headers.host || '').trim().toLowerCase();
+    return Boolean(host) && origin === protocol + '://' + host;
+  } catch {
+    return false;
+  }
+}
+
 export function setSecurityHeaders(res, req) {
   const headers = {
     'X-Content-Type-Options': 'nosniff',
