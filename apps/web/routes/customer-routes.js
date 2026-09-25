@@ -1,8 +1,4 @@
-const sendServiceError = (res, error) => {
-  const status = Number(error?.status) || 500;
-  return res.status(status).json({ message: error?.message || 'Internal server error' });
-};
-
+import { sendServiceError } from '../utils/service-error.js';
 export function registerCustomerRoutes(app, { service, requireAdminApiKey }) {
   app.get('/api/customers', requireAdminApiKey, (_req, res) => {
     return res.json(service.listCustomers());
