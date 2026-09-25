@@ -84,9 +84,6 @@ const cleanText=(value,max=180)=>String(value??'').trim().slice(0,max);
 const cleanKey=(value)=>String(value??'').trim().replace(/^\/+/, '').slice(0,500);
 const cleanUrl=(value)=>String(value??'').trim().slice(0,1000);
 const normalizeList=(value,allowed,max=8)=>Array.isArray(value)?[...new Set(value.map(item=>String(item??'').trim().toLowerCase()).filter(item=>allowed.has(item)))].slice(0,max):[];
-const SMART_TAGS=new Set(['spicy']);
-const DIETARY_TAGS=new Set(['vegetarian','vegan','gluten-free']);
-
 const orders=[]; const customers=[]; const reservations=[];
 const reservationRateLimit=createRateLimiter({
   windowMs:10*60*1000,
@@ -194,9 +191,7 @@ registerProductRoutes(app, {
   invalidateSmartSnapshot,
   nextProductId,
   maxVideoBytes: MAX_VIDEO_BYTES,
-  videoTypes: VIDEO_TYPES,
-  smartPopularWindowMs: SMART_POPULAR_WINDOW_MS,
-  smartNewWindowMs: SMART_NEW_WINDOW_MS
+  videoTypes: VIDEO_TYPES
 });
 
 const stateRepository = createStateRepository({ orders, customers, reservations, persist: persistState });
