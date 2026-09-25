@@ -11,6 +11,7 @@ export const storageReady = Boolean(bucket && accessKey && secretKey);
 const STORAGE_READ_TIMEOUT_MS = 8000;
 const STORAGE_WRITE_TIMEOUT_MS = 10000;
 const MAX_KEY_LENGTH = 500;
+const MAX_JSON_RESPONSE_BYTES = 8 * 1024 * 1024;
 
 function normalizeKey(key) {
   const value = String(key ?? '').trim();
@@ -67,12 +68,49 @@ export function presign(method, key, expires = 900) {
   return `${endpoint}${uri(normalizedKey)}?${query.toString()}`;
 }
 
+async function readResponseTextLimited(response, maxBytes) {
+  if (Number.isFinite(Number(response.headers.get('content-length'))) &&
+      Number(response.headers.get('content-length')) > maxBytes) {
+    throw new Error('Storage response exceeded the configured size limit');
+  }
+
+  if (!response.body) {
+    const text = await response.text();
+    if (Buffer.byteLength(text, 'utf8') > maxBytes) {
+      throw new Error('Storage response exceeded the configured size limit');
+    }
+    return text;
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let receivedBytes = 0;
+  let text = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      text += decoder.decode();
+      break;
+    }
+    receivedBytes += value.byteLength;
+    if (receivedBytes > maxBytes) {
+      await reader.cancel();
+      throw new Error('Storage response exceeded the configured size limit');
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+
+  return text;
+}
+
 export async function readJson(key, fallback = null) {
   if (!storageReady) return fallback;
   try {
     const response = await storageFetch(presign('GET', key, 900), {}, STORAGE_READ_TIMEOUT_MS);
     if (!response.ok) return fallback;
-    return await response.json();
+    const body = await readResponseTextLimited(response, MAX_JSON_RESPONSE_BYTES);
+    return JSON.parse(body);
   } catch (error) {
     console.error(`Storage read failed for ${key}:`, error);
     return fallback;
