@@ -1,16 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRevenueService } from '../apps/web/services/revenue-service.js';
+import { createStateRepository } from '../apps/web/repositories/state-repository.js';
 
 test('revenue summary builds without leaking ranking scope', () => {
+  const repository = createStateRepository({
+    products: [],
+    categories: [],
+    orders: [],
+    customers: [],
+    reservations: [],
+    persist: async () => {}
+  });
+
   const service = createRevenueService({
     readJson: async () => null,
     writeJson: async () => {},
     storageReady: false,
-    customers: [],
-    reservations: [],
-    orders: [],
-    products: []
+    repository
   });
 
   service.recordEvent({
