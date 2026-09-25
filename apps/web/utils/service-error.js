@@ -1,3 +1,11 @@
+function safeLogMessage(error) {
+  const raw = String(error?.message || error || 'Unknown error');
+  return raw
+    .replace(/(password|passwd|secret|token|api[_-]?key|authorization)\s*[=:]\s*[^\s,;]+/gi, '$1=[REDACTED]')
+    .replace(/(https?:\/\/)([^\s/@]+):([^\s/@]+)@/gi, '$1[REDACTED]@')
+    .slice(0, 240);
+}
+
 export function sendServiceError(res, error) {
   const status = Number(error?.status);
   const safeStatus = Number.isInteger(status) && status >= 400 && status <= 499 ? status : 500;
@@ -20,7 +28,7 @@ export function sendServiceError(res, error) {
       event: 'web_service_error',
       requestId: res.locals.requestId || 'unknown',
       status: safeStatus,
-      error: String(error?.message || error)
+      error: safeLogMessage(error)
     }));
   }
 
