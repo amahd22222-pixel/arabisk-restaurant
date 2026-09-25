@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { logServiceFailure } from './utils/service-error.js';
 
 const env = (name) => process.env[name] || '';
 const endpoint = String(env('AWS_ENDPOINT_URL') || 'https://t3.storageapi.dev').replace(/\/$/, '');
@@ -114,7 +115,7 @@ export async function readJsonWithStatus(key) {
     const body = await readResponseTextLimited(response, MAX_JSON_RESPONSE_BYTES);
     return { ok: true, found: true, value: JSON.parse(body), reason: 'ok' };
   } catch (error) {
-    console.error(`Storage read failed for ${key}:`, error);
+    logServiceFailure(error, { service: 'storage', operation: 'read' });
     return { ok: false, found: false, value: null, reason: 'read_failed' };
   }
 }
@@ -139,7 +140,7 @@ export async function writeJson(key, value) {
     if (!response.ok) throw new Error(`Storage write returned ${response.status}`);
     return true;
   } catch (error) {
-    console.error(`Storage write failed for ${key}:`, error);
+    logServiceFailure(error, { service: 'storage', operation: 'write' });
     return false;
   }
 }
@@ -151,7 +152,7 @@ export async function deleteObject(key) {
     if (!response.ok && response.status !== 404) throw new Error(`Storage delete returned ${response.status}`);
     return true;
   } catch (error) {
-    console.error(`Storage delete failed for ${key}:`, error);
+    logServiceFailure(error, { service: 'storage', operation: 'delete' });
     return false;
   }
 }
