@@ -6,7 +6,8 @@ import {
   SESSION_TTL_MS,
   AUTH_RATE_WINDOW_MS,
   AUTH_RATE_LIMIT,
-  MAX_AUTH_RATE_KEYS
+  MAX_AUTH_RATE_KEYS,
+  MAX_ADMIN_SESSIONS
 } from './config.js';
 
 function parseCookies(header = '') {
@@ -89,7 +90,19 @@ export function createAdminAuth() {
 
   function createSession(res, req, username) {
     const token = crypto.randomBytes(32).toString('hex');
-    sessions.set(token, { username, expiresAt: Date.now() + SESSION_TTL_MS });
+    const now = Date.now();
+    if (sessions.size >= MAX_ADMIN_SESSIONS) {
+      let oldestToken;
+      let oldestExpiry = Infinity;
+      for (const [existingToken, existingSession] of sessions) {
+        if (existingSession.expiresAt < oldestExpiry) {
+          oldestExpiry = existingSession.expiresAt;
+          oldestToken = existingToken;
+        }
+      }
+      if (oldestToken) sessions.delete(oldestToken);
+    }
+    sessions.set(token, { username, expiresAt: now + SESSION_TTL_MS });
     res.setHeader('Set-Cookie', sessionCookie(token, req));
   }
 
