@@ -10,7 +10,7 @@ class MemoryServiceError extends Error{
   constructor(message,status=400){super(message);this.name='MemoryServiceError';this.status=status;}
 }
 
-export function createMemoryService({storageReady,presign,readJson,writeJson,deleteObject}){
+export function createMemoryService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject}){
   const state={memories:[]};
   let queue=Promise.resolve();
 
@@ -24,7 +24,9 @@ export function createMemoryService({storageReady,presign,readJson,writeJson,del
 
   const restore=async()=>{
     if(!storageReady)return;
-    const saved=await readJson(STATE_KEY,null);
+    const result=await readJsonWithStatus(STATE_KEY);
+    if(!result.ok)throw new Error('Memory state could not be restored from storage.');
+    const saved=result.value;
     if(saved&&Array.isArray(saved.memories))memoryRepository.replaceAll(saved.memories);
   };
 
