@@ -1,9 +1,8 @@
 import crypto from 'node:crypto';
+import { cleanText, cleanKey } from '../utils/input.js';
 const STUDIO_STATE_KEY='data/arabisk-studio.json';
 const MAX_VIDEO_BYTES=120*1024*1024;
 const VIDEO_TYPES=new Set(['video/mp4','video/webm','video/quicktime']);
-const cleanText=(v,max=180)=>String(v??'').trim().slice(0,max);
-const cleanKey=v=>String(v??'').trim().replace(/^\/+/, '').slice(0,500);
 class StudioServiceError extends Error{constructor(message,status=400){super(message);this.name='StudioServiceError';this.status=status;}}
 export function createStudioService({storageReady,presign,readJson,writeJson,deleteObject}){
   const studio=[];const persist=()=>writeJson(STUDIO_STATE_KEY,studio);
