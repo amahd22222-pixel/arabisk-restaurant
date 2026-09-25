@@ -60,10 +60,10 @@ export function createReservationService({ repository, cleanText, nextReservatio
       status: 'pending',
       createdAt
     };
-    reservations.add(reservation);
 
     const reservationCustomer = customers.findByPhone(phone);
     const reservationCustomerId = reservationCustomer?.id || crypto.randomUUID();
+    const beforeCustomer = reservationCustomer ? structuredClone(reservationCustomer) : null;
 
     if (reservationCustomer) {
       reservationCustomer.name = name;
@@ -78,6 +78,19 @@ export function createReservationService({ repository, cleanText, nextReservatio
       });
     }
 
+    reservations.add(reservation);
+    try {
+      await reservations.save();
+    } catch (error) {
+      reservations.removeById(reservation.id);
+      if (reservationCustomer && beforeCustomer) {
+        Object.assign(reservationCustomer, beforeCustomer);
+      } else {
+        customers.removeById(reservationCustomerId);
+      }
+      throw error;
+    }
+
     revenue.recordEvent({
       eventName: 'reservation_created',
       sessionId: cleanText(body.sessionId, 100),
@@ -85,13 +98,13 @@ export function createReservationService({ repository, cleanText, nextReservatio
       reservationId: reservation.id
     });
 
-    await reservations.save();
     return reservation;
   }
 
   async function updateReservation(id, body) {
     const reservation = reservations.findById(id);
     if (!reservation) throw new ReservationServiceError('Reservation not found', 404);
+    const before = structuredClone(reservation);
 
     if (body?.status !== undefined) {
       const nextStatus = String(body.status);
@@ -102,7 +115,12 @@ export function createReservationService({ repository, cleanText, nextReservatio
     }
 
     if (body?.notes !== undefined) reservation.notes = cleanText(body.notes, 300);
-    await reservations.save();
+    try {
+      await reservations.save();
+    } catch (error) {
+      Object.assign(reservation, before);
+      throw error;
+    }
     return reservation;
   }
 
