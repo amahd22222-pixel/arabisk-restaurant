@@ -8,8 +8,9 @@ const cleanKey=(v)=>String(v??'').trim().replace(/^\/+/, '').slice(0,500);
 const cleanUrl=(v)=>String(v??'').trim().slice(0,1000);
 class CategoryServiceError extends Error{constructor(message,status=400){super(message);this.name='CategoryServiceError';this.status=status;}}
 
-export function createCategoryService({repository,storageReady,presign,readJson,writeJson,deleteObject,isAdminApiKeyValid}){
-  const { categories, products } = repository;
+export function createCategoryService({categoriesRepository,productsRepository,storageReady,presign,readJson,writeJson,deleteObject,isAdminApiKeyValid}){
+  const categories = categoriesRepository.all();
+  const products = productsRepository.all();
   const restore=async()=>{if(!storageReady)return;const saved=await readJson(CATEGORY_STATE_KEY,null);if(Array.isArray(saved)&&saved.length)categories.splice(0,categories.length,...saved);};
   const persist=()=>writeJson(CATEGORY_STATE_KEY,categories);
   const nextId=()=>{const max=categories.reduce((n,c)=>{const m=String(c.id||'').match(/^C(\d+)$/);return Math.max(n,m?Number(m[1]):0);},0);return 'C'+String(max+1).padStart(3,'0');};
