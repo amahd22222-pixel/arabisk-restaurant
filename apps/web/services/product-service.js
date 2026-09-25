@@ -5,7 +5,7 @@ export function createProductService({
   cleanText, cleanKey, cleanUrl, normalizeList, smartSnapshot, withMediaUrls,
   invalidateSmartSnapshot, nextProductId, maxVideoBytes, videoTypes
 }) {
-  const { products } = repository;
+  const products = repository;
   const smartTags = new Set(['spicy']);
   const dietaryTags = new Set(['vegetarian', 'vegan', 'gluten-free']);
 
@@ -13,7 +13,7 @@ export function createProductService({
     list(req, res) {
       const category = cleanText(req.query.category, 80);
       const search = cleanText(req.query.search, 80).toLowerCase();
-      let result = category ? products.filter(product => product.categoryId === category) : products;
+      let result = category ? products.filter(product => product.categoryId === category) : products.all();
       if (search) result = result.filter(product => `${product.nameAr} ${product.nameEn}`.toLowerCase().includes(search));
       if (!isAdminApiKeyValid(req)) result = result.filter(product => product.available !== false);
       const snapshot = smartSnapshot();
@@ -42,7 +42,7 @@ export function createProductService({
         available: Boolean(available), videoKey: cleanKey(videoKey),
         tags: normalizeList(tags, smartTags), dietary: normalizeList(dietary, dietaryTags),
         spiceLevel: Math.max(0, Math.min(3, Number(spiceLevel) || 0)), chefChoice: Boolean(chefChoice),
-        isNew: Boolean(isNew), createdAt: new Date().toISOString(), sortOrder: products.length + 1
+        isNew: Boolean(isNew), createdAt: new Date().toISOString(), sortOrder: products.all().length + 1
       };
       repository.add(product);
       invalidateSmartSnapshot();
