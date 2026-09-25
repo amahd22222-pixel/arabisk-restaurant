@@ -1,52 +1,5 @@
 const $=(selector)=>document.querySelector(selector);
-const apiBase=()=>((localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||import.meta.env.VITE_API_BASE_URL||(import.meta.env.DEV?'http://localhost:3000':'/proxy')).replace(/\/$/,''));
-let products=[],categories=[],orders=[],customers=[],reservations=[],customerSegments=[],editingId=null;
-const categoryName=(id)=>categories.find(c=>c.id===id)?.nameAr||id;
-const escapeHtml=(value)=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
-const orderStatusLabel={pending:'قيد المراجعة',confirmed:'مؤكد',preparing:'قيد التحضير',ready:'جاهز',completed:'مكتمل',cancelled:'ملغي'};
-const statusClass=(status)=>status==='confirmed'||status==='ready'||status==='completed'?'on':status==='cancelled'?'off':'pending';
-class AdminApiError extends Error{
-  constructor(message,status=0,requestId=''){
-    super(message);
-    this.name='AdminApiError';
-    this.status=status;
-    this.requestId=requestId;
-  }
-}
-async function request(path,options={}){
-  const controller=new AbortController();
-  const timeoutMs=Number(options.timeoutMs||15000);
-  const timeout=window.setTimeout(()=>controller.abort(),timeoutMs);
-  const headers={'Content-Type':'application/json',Accept:'application/json','X-Request-Id':crypto.randomUUID(),...(options.headers||{})};
-  const fetchOptions={...options,headers,cache:'no-store',signal:options.signal||controller.signal};
-  delete fetchOptions.timeoutMs;
-  try{
-    const response=await fetch(`${apiBase()}${path}`,fetchOptions);
-    const responseRequestId=response.headers.get('X-Request-Id')||headers['X-Request-Id'];
-    const text=await response.text();
-    let data={};
-    if(text){
-      try{data=JSON.parse(text)}catch{
-        data={message:text.slice(0,300)};
-      }
-    }
-    if(!response.ok){
-      const message=response.status===401?'انتهت جلسة لوحة التحكم. سجّل الدخول مرة أخرى.':
-        response.status===403?'ليس لديك صلاحية تنفيذ هذا الإجراء.':
-        response.status===429?'تم تجاوز عدد المحاولات المسموح بها. حاول مرة أخرى لاحقًا.':
-        data.message||`تعذر تنفيذ الطلب (HTTP ${response.status}).`;
-      throw new AdminApiError(message,response.status,responseRequestId);
-    }
-    return data;
-  }catch(error){
-    if(error instanceof AdminApiError)throw error;
-    if(error?.name==='AbortError')throw new AdminApiError('انتهت مهلة الاتصال بالخادم. حاول مرة أخرى.',408,headers['X-Request-Id']);
-    throw new AdminApiError('تعذر الاتصال بالخادم. تحقق من الشبكة ثم حاول مرة أخرى.',0,headers['X-Request-Id']);
-  }finally{
-    window.clearTimeout(timeout);
-  }
-}
-window.ARABISK_ADMIN_REQUEST=request;
+import { request } from './api-client.js';
 function renderStats(){$('#count-products').textContent=products.length;$('#count-categories').textContent=categories.length;$('#count-available').textContent=products.filter(p=>p.available).length;$('#count-reservations').textContent=reservations.length;$('#count-orders').textContent=orders.length;document.querySelectorAll('[data-sidebar-count="reservations"]').forEach(node=>node.textContent=reservations.length);document.querySelectorAll('[data-sidebar-count="orders"]').forEach(node=>node.textContent=orders.length);}
 function renderProducts(){const query=$('#search').value.trim().toLowerCase();const filtered=products.filter(p=>!query||`${p.nameAr} ${p.nameEn}`.toLowerCase().includes(query));$('#products-body').innerHTML=filtered.map(p=>`<tr><td>${p.imageUrl?`<img class="product-thumb" src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy">`:''}<strong>${escapeHtml(p.nameAr)}</strong><small>${escapeHtml(p.nameEn)}</small></td><td>${escapeHtml(categoryName(p.categoryId))}</td><td class="price">AED ${Number(p.price).toFixed(0)}</td><td>${p.videoKey?'<span class="status on">متوفر</span>':'<span class="status off">غير مضاف</span>'}</td><td><span class="status ${p.available?'on':'off'}">${p.available?'متاح':'مخفي'}</span></td><td class="actions"><button data-video="${p.id}">فيديو</button><button data-edit="${p.id}">تعديل</button><button data-delete="${p.id}" class="danger">حذف</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">لا توجد أصناف</td></tr>';}
 function renderCategories(){$('#categories-body').innerHTML=categories.map((c,index)=>`<tr><td>${index+1}</td><td><strong>${escapeHtml(c.nameAr)}</strong></td><td>${escapeHtml(c.nameEn)}</td><td><span class="status ${c.active?'on':'off'}">${c.active?'نشط':'مخفي'}</span></td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد أقسام</td></tr>';}
