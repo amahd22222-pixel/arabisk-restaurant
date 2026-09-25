@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { isSecureRequest } from './http-utils.js';
 import {
   adminUsername,
   adminPassword,
@@ -66,10 +67,6 @@ export function createAdminAuth() {
     }
     previous.count += 1;
     return false;
-  }
-
-  function isSecureRequest(req) {
-    return req.headers['x-forwarded-proto'] === 'https' || process.env.NODE_ENV === 'production';
   }
 
   function sessionCookie(token, req, maxAge = Math.floor(SESSION_TTL_MS / 1000)) {
