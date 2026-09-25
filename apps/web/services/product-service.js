@@ -8,6 +8,12 @@ export function createProductService({
   const products = repository;
   const smartTags = new Set(['spicy']);
   const dietaryTags = new Set(['vegetarian', 'vegan', 'gluten-free']);
+  const presentProduct=(product,snapshot,{includePrivate=false}={})=>{
+    const value=withMediaUrls(product,snapshot);
+    if(includePrivate)return value;
+    const { imageKey: _imageKey, videoKey: _videoKey, ...publicValue } = value;
+    return publicValue;
+  };
 
   return {
     list(req, res) {
@@ -17,14 +23,15 @@ export function createProductService({
       if (search) result = result.filter(product => `${product.nameAr} ${product.nameEn}`.toLowerCase().includes(search));
       if (!isAdminApiKeyValid(req)) result = result.filter(product => product.available !== false);
       const snapshot = smartSnapshot();
-      return res.json(result.map(product => withMediaUrls(product, snapshot)));
+      const admin=isAdminApiKeyValid(req);
+      return res.json(result.map(product => presentProduct(product, snapshot, {includePrivate:admin})));
     },
 
     get(req, res) {
       const product = repository.findById(req.params.id);
       if (!product) return res.status(404).json({ message: 'Product not found' });
       if (product.available === false && !isAdminApiKeyValid(req)) return res.status(404).json({ message: 'Product not found' });
-      return res.json(withMediaUrls(product));
+      return res.json(presentProduct(product, smartSnapshot(), {includePrivate:isAdminApiKeyValid(req)}));
     },
 
     create(req, res) {
