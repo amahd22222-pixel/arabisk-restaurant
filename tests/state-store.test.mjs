@@ -26,3 +26,27 @@ test('state store exposes lifecycle operations, not internal collections', async
   await store.restore();
   assert.equal(store.status().restoreStatus, 'storage_not_configured');
 });
+
+test('state store fails closed when snapshot storage cannot be read', async () => {
+  let writes = 0;
+  const state = {
+    products: [{ id: 'P001' }],
+    customers: [],
+    orders: [],
+    reservations: []
+  };
+  const store = createStateStore({
+    readJsonWithStatus: async () => ({ ok: false, found: false, value: null, reason: 'read_failed' }),
+    writeJson: async () => { writes += 1; return true; },
+    storageReady: true,
+    stateKey: 'data/test-state.json',
+    menuVersion: 'test',
+    ...state
+  });
+
+  await assert.rejects(() => store.restore(), /could not be restored/i);
+  assert.equal(store.status().restoreStatus, 'restore_failed');
+  assert.equal(store.status().lastPersistOk, false);
+  await store.flush();
+  assert.equal(writes, 0);
+});
