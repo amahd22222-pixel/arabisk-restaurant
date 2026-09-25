@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCollectionRepository } from '../apps/web/repositories/collection-repository.js';
 
-test('collection repository keeps CRUD and persistence behavior explicit', () => {
+test('collection repository keeps CRUD and persistence behavior explicit', async () => {
   const items = [{ id: 'P001', name: 'First' }];
   let saves = 0;
-  const repository = createCollectionRepository(items, { persist: () => { saves += 1; } });
+  const repository = createCollectionRepository(items, { persist: async () => { saves += 1; return true; } });
 
   assert.equal(repository.findById('P001').name, 'First');
   assert.equal(repository.findById('missing'), undefined);
@@ -17,7 +17,7 @@ test('collection repository keeps CRUD and persistence behavior explicit', () =>
   assert.equal(items.length, 2);
   assert.equal(saves, 0);
 
-  repository.save();
+  await repository.save();
   assert.equal(saves, 1);
 
   const removed = repository.removeById('P001');
@@ -33,4 +33,10 @@ test('collection repository keeps CRUD and persistence behavior explicit', () =>
     () => repository.replaceAll({ id: 'invalid' }),
     { name: 'TypeError' }
   );
+});
+
+
+test('collection repository rejects an unsuccessful persistence result', async () => {
+  const repository = createCollectionRepository([], { persist: async () => false });
+  await assert.rejects(repository.save, /could not be persisted/i);
 });
