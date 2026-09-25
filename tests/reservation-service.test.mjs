@@ -35,26 +35,26 @@ function createFixture() {
   return { service, reservations, customers, events };
 }
 
-test('reservation rejects dates in the past', () => {
+test('reservation rejects dates in the past', async () => {
   const { service } = createFixture();
-  assert.throws(
+  await assert.rejects(
     () => service.createReservation({ name: 'Ahmed', phone: '0500000000', date: '2020-01-01', time: '19:00', guests: 2 }),
     error => error.status === 400
   );
 });
 
-test('duplicate reservation returns conflict metadata', () => {
+test('duplicate reservation returns conflict metadata', async () => {
   const { service } = createFixture();
   const input = { name: 'Ahmed', phone: '0500000000', date: '2099-01-01', time: '19:00', guests: 2 };
-  service.createReservation(input);
-  assert.throws(
+  await service.createReservation(input);
+  await assert.rejects(
     () => service.createReservation(input),
     error => error.status === 409 && error.meta?.reservationId === 'R0001'
   );
 });
-test('reservation rejects impossible calendar dates', () => {
+test('reservation rejects impossible calendar dates', async () => {
   const { service } = createFixture();
-  assert.throws(
+  await assert.rejects(
     () => service.createReservation({ name: 'Ahmed', phone: '0500000000', date: '2099-02-31', time: '19:00', guests: 2 }),
     error => error.status === 400
   );
