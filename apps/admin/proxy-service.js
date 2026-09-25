@@ -1,5 +1,6 @@
 import { MAX_UPSTREAM_RESPONSE_BYTES, UPSTREAM_API_TIMEOUT_MS } from './config.js';
 import { parseJsonBody } from './http-utils.js';
+import { logServiceFailure } from '../web/utils/service-error.js';
 
 export function createProxyApi({ adminApiKey, webApiBase, requestId }) {
   return async function proxyApiRequest(req, res) {
@@ -77,11 +78,10 @@ export function createProxyApi({ adminApiKey, webApiBase, requestId }) {
       return res.end(responseBody);
     } catch (error) {
       const timedOut = error?.name === 'AbortError';
-      console.error(JSON.stringify({
-        event: 'admin_proxy_error',
-        requestId: String(res.getHeader('X-Request-Id') || requestId(req)),
-        message: timedOut ? 'upstream_timeout' : String(error?.message || error)
-      }));
+      logServiceFailure(
+        timedOut ? new Error('upstream_timeout') : error,
+        { service: 'admin-proxy', operation: 'upstream-request' }
+      );
       res.writeHead(timedOut ? 504 : 502, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'});
       return res.end(JSON.stringify({ message: timedOut ? 'The web API took too long to respond.' : 'Unable to reach the web API.' }));
     } finally {
