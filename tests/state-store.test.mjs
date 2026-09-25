@@ -114,13 +114,17 @@ test('state store persist reports a failed storage write', async () => {
 
 test('state store binds each persistence promise to its own queued write', async () => {
   let resolveFirst;
+  let resolveFirstStarted;
   let writes = 0;
   const firstWrite = new Promise(resolve => { resolveFirst = resolve; });
+  const firstStarted = new Promise(resolve => { resolveFirstStarted = resolve; });
   const store = createStateStore({
     readJsonWithStatus: async () => ({ ok: true, found: false, value: null }),
     writeJson: async (_key, snapshot) => {
       writes += 1;
       if (writes === 1) {
+        resolveFirstStarted();
+
         await firstWrite;
       }
       return true;
@@ -138,6 +142,7 @@ test('state store binds each persistence promise to its own queued write', async
   const first = store.persist();
   await new Promise(resolve => setTimeout(resolve, 0));
   store.flush();
+  await firstStarted;
 
   const second = store.persist();
   assert.equal(writes, 1);
