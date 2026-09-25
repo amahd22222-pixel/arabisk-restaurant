@@ -4,9 +4,9 @@ export const cleanKey = (value) => String(value ?? '').trim().replace(/^\/+/, ''
 
 export const cleanUrl = (value) => {
   const text = String(value ?? '').trim().slice(0, 1000);
-  if (!text || text.includes('\\0')) return '';
+  if (!text || text.includes('\0')) return '';
   if (text.startsWith('/') && !text.startsWith('//')) return text;
-  return /^https?:\\/\\//i.test(text) ? text : '';
+  return /^https?:\/\//i.test(text) ? text : '';
 };
 
 export const normalizeList = (value, allowed, max = 8) =>
