@@ -1,12 +1,18 @@
 export function createStateStore({ readJsonWithStatus, writeJson, storageReady, stateKey, menuVersion, products, customers, orders, reservations }) {
   const PERSIST_DEBOUNCE_MS = 250;
-  let persistQueue = Promise.resolve();
+  let persistQueue = Promise.resolve(true);
   let persistTimer = null;
   let persistRequested = false;
+  let persistWaiters = [];
   let restoreStatus = 'not_started';
   let restoredAt = null;
   let lastPersistAt = null;
   let lastPersistOk = storageReady ? null : true;
+
+  const settlePersistWaiters = (result) => {
+    const waiters = persistWaiters.splice(0);
+    for (const resolve of waiters) resolve(result);
+  };
 
   const rebuildCustomerOrderStats = () => {
     const statsByPhone = new Map();
@@ -63,22 +69,37 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
     if (!persistRequested) return persistQueue;
     persistRequested = false;
     const snapshot = structuredClone({ menuVersion, products, orders, customers, reservations });
-    persistQueue = persistQueue.catch(() => {}).then(async () => {
-      const ok = await writeJson(stateKey, snapshot);
-      lastPersistOk = ok;
-      lastPersistAt = new Date().toISOString();
-      return ok;
+    persistQueue = persistQueue.catch(() => true).then(async () => {
+      try {
+        const ok = await writeJson(stateKey, snapshot);
+        lastPersistOk = ok;
+        lastPersistAt = new Date().toISOString();
+        return ok;
+      } catch {
+        lastPersistOk = false;
+        lastPersistAt = new Date().toISOString();
+        return false;
+      }
     });
+    persistQueue.then(settlePersistWaiters);
     return persistQueue;
   };
 
   const persist = () => {
+    if (!storageReady) return Promise.resolve(true);
+    if (restoreStatus === 'restore_failed') return Promise.resolve(false);
+
     persistRequested = true;
+    const result = new Promise(resolve => persistWaiters.push(resolve));
+
     if (!persistTimer) {
-      persistTimer = setTimeout(() => flush(), PERSIST_DEBOUNCE_MS);
+      persistTimer = setTimeout(() => {
+        void flush();
+      }, PERSIST_DEBOUNCE_MS);
       persistTimer.unref();
     }
-    return persistQueue;
+
+    return result;
   };
 
   return {
