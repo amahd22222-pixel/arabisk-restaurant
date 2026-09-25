@@ -116,7 +116,10 @@ test('experience media replacement persists before deleting the old media', asyn
   await service.update(created.id, { coverImageKey: 'experiences/new.webp' });
 
   assert.deepEqual(events, ['write', 'delete:experiences/old.webp']);
-  assert.equal(service.get(created.id).coverImageKey, 'experiences/new.webp');
+  assert.equal(
+    service.get(created.id).coverImageUrl,
+    'https://signed.example/GET/experiences/new.webp'
+  );
 });
 
 test('experience media update rolls back without deleting the old media when persistence fails', async () => {
@@ -151,7 +154,10 @@ test('experience media update rolls back without deleting the old media when per
   );
 
   assert.equal(service.get(created.id).titleAr, 'قبل الفشل');
-  assert.equal(service.get(created.id).coverImageKey, 'experiences/old.webp');
+  assert.equal(
+    service.get(created.id).coverImageUrl,
+    'https://signed.example/GET/experiences/old.webp'
+  );
   assert.deepEqual(deleted, []);
 });
 
