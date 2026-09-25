@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { logServiceFailure } from '../utils/service-error.js';
 
 export function createProductService({
   repository, categories, storageReady, presign, deleteObject, isAdminApiKeyValid,
@@ -144,7 +145,7 @@ export function createProductService({
       try {
         return res.json({ key, uploadUrl: presign('PUT', key, 900), expiresIn: 900 });
       } catch (error) {
-        console.error(error);
+        logServiceFailure(error,{service:'product',operation:'presignVideo'});
         return res.status(503).json({ message: 'Unable to prepare video upload.' });
       }
     },
@@ -158,7 +159,7 @@ export function createProductService({
       try {
         return res.json({ url: presign('DELETE', product.videoKey, 900), key: product.videoKey });
       } catch (error) {
-        console.error(error);
+        logServiceFailure(error,{service:'product',operation:'deleteVideoPresign'});
         return res.status(503).json({ message: 'Unable to prepare video deletion.' });
       }
     }
