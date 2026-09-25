@@ -1,10 +1,4 @@
-const sendServiceError = (res, error) => {
-  const status = Number(error?.status) || 500;
-  const payload = { message: error?.message || 'Internal server error' };
-  if (error?.meta && typeof error.meta === 'object') Object.assign(payload, error.meta);
-  return res.status(status).json(payload);
-};
-
+import { sendServiceError } from '../utils/service-error.js';
 export function registerReservationRoutes(app, { service, requireAdminApiKey, reservationRateLimit }) {
   app.get('/api/reservations', requireAdminApiKey, (_req, res) => {
     return res.json(service.listReservations());
