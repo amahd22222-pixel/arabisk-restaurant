@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'url';
-import { presign, storageReady, readJson, writeJson, deleteObject } from './storage.js';
+import { presign, storageReady, readJson, readJsonWithStatus, writeJson, deleteObject } from './storage.js';
 import { serviceErrorHandler } from './utils/service-error.js';
 import { cleanText, cleanKey, cleanUrl, normalizeList } from './utils/input.js';
 import { categories, products } from './menu-data.js';
@@ -86,7 +86,7 @@ const rateLimitCleanupTimer=setInterval(() => {
 rateLimitCleanupTimer.unref();
 
 const stateStore = createStateStore({
-  readJson,
+  readJsonWithStatus,
   writeJson,
   storageReady,
   stateKey: STATE_KEY,
