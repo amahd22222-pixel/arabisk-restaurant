@@ -75,10 +75,6 @@ export function createStateStore({ readJson, writeJson, storageReady, stateKey, 
   };
 
   return {
-    products,
-    customers,
-    orders,
-    reservations,
     restore,
     persist,
     flush,
