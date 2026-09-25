@@ -28,3 +28,30 @@ test('experience service exposes only bookable experience data to reservations',
     endsAt: ''
   });
 });
+
+test('public experience payload omits private media keys', async () => {
+  const service = createExperienceService({
+    storageReady: true,
+    presign: (method, key) => 'https://signed.example/' + method + '/' + key,
+    readJson: async () => null,
+    writeJson: async () => true,
+    deleteObject: async () => true,
+    isAdminApiKeyValid: () => false
+  });
+
+  const slug = 'public-experience-' + Date.now();
+  const created = await service.create({
+    slug,
+    titleAr: 'اختبار عام',
+    titleEn: 'Public boundary',
+    startsAt: '2099-01-01T12:00:00.000Z',
+    status: 'published',
+    coverImageKey: 'experiences/public.webp'
+  });
+
+  const result = service.get(created.id);
+
+  assert.equal(result.coverImageUrl, 'https://signed.example/GET/experiences/public.webp');
+  assert.equal('coverImageKey' in result, false);
+  assert.equal('videoKey' in result, false);
+});
