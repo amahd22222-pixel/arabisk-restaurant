@@ -1,4 +1,6 @@
-export function createNextPrefixedId(collection, prefix, width) {
+export function createNextPrefixedId(source, prefix, width) {
+  const collection = typeof source?.all === 'function' ? source.all() : source;
+
   return () => {
     const max = collection.reduce((highest, item) => {
       const rawId = String(item.id || '');
