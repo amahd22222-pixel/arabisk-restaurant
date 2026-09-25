@@ -1,10 +1,9 @@
 import crypto from 'node:crypto';
+import { cleanText } from '../utils/input.js';
 
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
 const PRODUCT_DETAILS_STATE_KEY = 'data/arabisk-product-details.json';
-
-const cleanText = (value, max = 180) => String(value ?? '').trim().slice(0, max);
 const listValues = (value, max = 8, itemMax = 120) =>
   Array.isArray(value)
     ? [...new Set(value.map(item => cleanText(item, itemMax)).filter(Boolean))].slice(0, max)
