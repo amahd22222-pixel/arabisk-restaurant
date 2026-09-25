@@ -54,7 +54,7 @@ test('invalid status transition is rejected', async () => {
     items: [{ productId: 'P001', quantity: 1 }]
   });
 
-  assert.throws(
+  await assert.rejects(
     () => service.updateOrder(order.id, { status: 'completed' }),
     error => error.status === 409
   );
