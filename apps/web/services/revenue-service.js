@@ -215,6 +215,13 @@ export function createRevenueService({
   repository
 }) {
   const { customers, reservations, orders, products } = repository;
+  const stateQueries = {
+    findCustomer: (predicate) => customers.find(predicate),
+    findProduct: (predicate) => products.find(predicate),
+    findReservation: (predicate) => reservations.find(predicate),
+    filterOrders: (predicate) => orders.filter(predicate),
+    filterReservations: (predicate) => reservations.filter(predicate)
+  };
   const REVENUE_PERSIST_DEBOUNCE_MS = 250;
     const REVENUE_SUMMARY_CACHE_MS = 3000;
     const REVENUE_SEGMENTS_CACHE_MS = 5000;
@@ -490,7 +497,7 @@ export function createRevenueService({
           const gapRate = Math.max(0, 100 - addRate);
           const score = clamp(40 + Math.min(35, Math.round(gapRate * 0.35)) + Math.min(25, Math.round(views / 2)));
           const p = priority(score);
-          const product = products.find(item => item.id === productId) || {};
+          const product = stateQueries.findProduct(item => item.id === productId) || {};
           return {
             productId,
             name: clean(product.nameAr || product.nameEn || productId, 100),
@@ -561,7 +568,7 @@ export function createRevenueService({
         .sort((a,b) => b.priorityScore - a.priorityScore || b.daysSinceLastOrder - a.daysSinceLastOrder)
         .slice(0, 50);
   
-      const upcomingReservations = reservations.filter(reservation => reservation.status !== 'cancelled')
+      const upcomingReservations = stateQueries.filterReservations(reservation => reservation.status !== 'cancelled')
         .map(reservation => {
           const at = Date.parse(`${reservation.date}T${reservation.time}:00`);
           return { ...reservation, at };
@@ -892,16 +899,16 @@ export function createRevenueService({
       let customerName = '';
       let customerPhone = '';
       if (['inactive_customer','returning_customer'].includes(type)) {
-        const customer = customers.find(item => item.id === reference);
+        const customer = stateQueries.findCustomer(item => item.id === reference);
         if (customer) {
           customerId = clean(customer.id, 100);
           customerName = clean(customer.name || 'عميل', 80);
           customerPhone = clean(customer.phone, 40);
         }
       } else if (type === 'upcoming_reservation') {
-        const reservation = reservations.find(item => item.id === reference);
+        const reservation = stateQueries.findReservation(item => item.id === reference);
         if (reservation) {
-          const customer = customers.find(item => item.phone && reservation.phone && item.phone === reservation.phone);
+          const customer = stateQueries.findCustomer(item => item.phone && reservation.phone && item.phone === reservation.phone);
           customerId = clean(customer?.id || '', 100);
           customerName = clean(customer?.name || reservation.name || 'عميل', 80);
           customerPhone = clean(customer?.phone || reservation.phone || '', 40);
@@ -1060,7 +1067,7 @@ export function createRevenueService({
       const expiresAt = Date.parse(campaign.recoveryExpiresAt || '');
       if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return { error: 'EXPIRED' };
       const items = (campaign.cartItems || []).map(item => {
-        const product = products.find(row => row.id === item.productId && row.available !== false);
+        const product = stateQueries.findProduct(row => row.id === item.productId && row.available !== false);
         return product ? { id: product.id, qty: Number(item.quantity) || 1 } : null;
       }).filter(Boolean);
       if (!items.length) return { error: 'ITEMS_UNAVAILABLE' };
@@ -1106,7 +1113,7 @@ export function createRevenueService({
       campaign.workflowStatus = 'done';
       campaign.completedAt = new Date().toISOString();
       campaign.orderId = orderId;
-      campaign.customerId = linkedOrder?.phone ? (customers.find(customer => customer.phone === linkedOrder.phone)?.id || '') : '';
+      campaign.customerId = linkedOrder?.phone ? (stateQueries.findCustomer(customer => customer.phone === linkedOrder.phone)?.id || '') : '';
       campaign.resultRevenue = outcome === 'converted' && linkedOrder
         ? Math.max(0, number(linkedOrder.total))
         : manualRevenue;
@@ -1330,8 +1337,8 @@ export function createRevenueService({
       const id = clean(customerId, 100);
       const customer = customers.findById(id);
       if (!customer) return null;
-      const customerOrders = orders.filter(order => order.status === 'completed' && order.phone && customer.phone && order.phone === customer.phone);
-      const customerReservations = reservations.filter(item => item.phone && customer.phone && item.phone === customer.phone);
+      const customerOrders = stateQueries.filterOrders(order => order.status === 'completed' && order.phone && customer.phone && order.phone === customer.phone);
+      const customerReservations = stateQueries.filterReservations(item => item.phone && customer.phone && item.phone === customer.phone);
       const customerEvents = events.filter(item => item.customerId === id).sort((a,b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 40);
       const summary = buildSummary();
       const opportunities = [
@@ -1362,7 +1369,7 @@ export function createRevenueService({
         }
       }
       const favoriteProducts=[...productMap.values()].sort((a,b)=>b.quantity-a.quantity||b.orders-a.orders).slice(0,5).map(item=>{
-        const product=products.find(row=>row.id===item.productId)||{};
+        const product=stateQueries.findProduct(row=>row.id===item.productId)||{};
         return {productId:item.productId,name:clean(product.nameAr||product.nameEn||item.productId,100),quantity:item.quantity,orders:item.orders};
       });
       const eventCounts={};
@@ -1436,7 +1443,7 @@ export function createRevenueService({
         reservation_created: 'أنشأ حجزًا'
       };
       const eventTimeline = customerEvents.map(item => {
-        const product = item.productId ? products.find(row => row.id === item.productId) : null;
+        const product = item.productId ? stateQueries.findProduct(row => row.id === item.productId) : null;
         return {
           type: 'event',
           label: eventLabels[item.eventName] || item.eventName,
