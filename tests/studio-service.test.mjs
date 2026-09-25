@@ -39,12 +39,34 @@ test('studio media replacement persists new key before deleting old media', asyn
 
 test('studio update rolls back in-memory state when persistence fails', async () => {
   const deleted = [];
-  const { service } = makeService({ writeResult: false, deleted });
+  let writes = 0;
+  const service = createStudioService({
+    storageReady: true,
+    presign: (method, key) => `https://signed.example/${method}/${key}`,
+    readJsonWithStatus: async () => ({ ok: true, found: false, value: null, reason: 'not_found' }),
+    writeJson: async () => {
+      writes += 1;
+      return writes < 3;
+    },
+    deleteObject: async key => {
+      deleted.push(key);
+      return true;
+    }
+  });
+
+  await service.create({ title: 'Main', sortOrder: 1 });
+  await service.update('S001', { desktopVideoKey: 'studio/S001/desktop/old.mp4' });
 
   await assert.rejects(
-    () => service.create({ title: 'Main', sortOrder: 1 }),
+    () => service.update('S001', {
+      title: 'Changed',
+      desktopVideoKey: 'studio/S001/desktop/new.mp4'
+    }),
     /persisted to storage/i
   );
+
+  assert.equal(service.get('S001').title, 'Main');
+  assert.equal(service.get('S001').desktopVideoUrl, 'https://signed.example/GET/studio/S001/desktop/old.mp4');
   assert.equal(deleted.length, 0);
 });
 
