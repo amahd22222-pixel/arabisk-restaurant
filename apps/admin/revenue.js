@@ -1,3 +1,12 @@
+import { AdminApiError, request } from './api-client.js';
+
+const revenueRequest=async(path,options={},fallbackMessage='تعذر تنفيذ طلب الإيرادات.')=>{
+  try{return await request(path,options);}
+  catch(error){
+    if(error instanceof AdminApiError&&error.status>=500)throw new Error(fallbackMessage);
+    throw error;
+  }
+};
 const revenueBlockerTypes=[['customer_response','انتظار رد العميل'],['owner_unavailable','المسؤول غير متاح'],['approval','انتظار موافقة'],['inventory','المخزون / توفر المنتج'],['pricing','السعر / العرض يحتاج تعديل'],['technical','مشكلة تقنية'],['dependency','اعتماد على مهمة أو طرف آخر'],['capacity','القدرة التشغيلية غير كافية'],['other','عائق آخر']];
 const revenueBlockerTypeLabel=key=>revenueBlockerTypes.find(item=>item[0]===key)?.[1]||'عائق آخر';
 async function promptRevenueBlocker(id){
@@ -10,9 +19,7 @@ async function promptRevenueBlocker(id){
   const reason=prompt('اكتب وصف العائق بالتفصيل:',row.blockerReason||'');
   if(reason===null)return false;
   if(!reason.trim())throw new Error('يجب تسجيل وصف للعائق.');
-  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:'blocked',blockerType:type,blockerReason:reason.trim(),notes:row.taskNotes||''})});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.message||'تعذر حجب المهمة.');
+  const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:'blocked',blockerType:type,blockerReason:reason.trim(),notes:row.taskNotes||''})},'تعذر حجب المهمة.');
   return true;
 }
 const revenueIgnoredReasons=[['customer_unresponsive','لم يرد العميل'],['not_interested','غير مهتم'],['not_relevant','العرض غير مناسب'],['operational_issue','عائق تشغيلي'],['timing','التوقيت غير مناسب'],['duplicate','مكرر / تمت معالجته سابقًا'],['other','سبب آخر']];
@@ -45,12 +52,9 @@ async function submitRevenueOutcome(id,outcomePreset=''){
   const note=prompt('ملاحظة مختصرة اختيارية للنتيجة:','');
   if(note===null)return false;
   if(note.trim())payload.outcomeReasonNote=note.trim();
-  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/outcome',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.message||'تعذر تسجيل النتيجة.');
+  const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(id)+'/outcome',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},'تعذر تسجيل النتيجة.');
   return true;
 }
-const revenueApiBase=()=>{
   if(!import.meta.env.DEV)return '/proxy';
   return (localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||import.meta.env.VITE_API_BASE_URL||'http://localhost:3000').replace(/\/$/,'');
 };
@@ -138,9 +142,7 @@ function renderRevenueTaskDetail(row,activity=[]){
 async function openRevenueTaskDetail(id){
   const row=revenueTaskById(id);
   if(!row)return;
-  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/activity',{cache:'no-store'});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.message||'تعذر تحميل تفاصيل المهمة.');
+  const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(id)+'/activity',{cache:'no-store'},'تعذر تحميل تفاصيل المهمة.');
   renderRevenueTaskDetail(row,data.activityLog||[]);
 }
 async function revenueTaskAssignFromDetail(id){
@@ -151,23 +153,17 @@ async function revenueTaskAssignFromDetail(id){
   if(hoursInput===null)return;
   const hours=Math.max(1,Math.min(720,Number(hoursInput)||24));
   const dueAt=new Date(Date.now()+hours*3600000).toISOString();
-  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner,dueAt,workflowStatus:'assigned'})});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.message||'تعذر تحديث المهمة.');
+  const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner,dueAt,workflowStatus:'assigned'})},'تعذر تحديث المهمة.');
 }
 async function revenueTaskBlockFromDetail(id){ await promptRevenueBlocker(id); }
 async function revenueTaskUnblockFromDetail(id){
   const row=revenueTaskById(id)||{};
   const nextStatus=row.owner?'assigned':'unassigned';
-  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:nextStatus,notes:row.taskNotes||''})});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.message||'تعذر حل العائق.');
+  const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:nextStatus,notes:row.taskNotes||''})},'تعذر حل العائق.');
 }
 async function revenueTaskStartFromDetail(id){
   const row=revenueTaskById(id)||{};
-  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:'in_progress'})});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.message||'تعذر بدء التنفيذ.');
+  const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:'in_progress'})},'تعذر بدء التنفيذ.');
 }
 async function revenueTaskCompleteFromDetail(id){ await submitRevenueOutcome(id); }
 function renderRevenueTaskRouting(){
@@ -235,9 +231,7 @@ async function executeAbandonedCartRecovery(reference,button){
   if(!reference)return;
   button.disabled=true;
   try{
-    const response=await fetch(revenueApiBase()+'/api/revenue/abandoned-carts/'+encodeURIComponent(reference)+'/execute',{method:'POST',headers:{'Content-Type':'application/json'}});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.message||'تعذر تنفيذ استرجاع السلة.');
+    const data=await revenueRequest('/api/revenue/abandoned-carts/'+encodeURIComponent(reference)+'/execute',{method:'POST',headers:{'Content-Type':'application/json'}},'تعذر تنفيذ استرجاع السلة.');
     const fullUrl=window.location.origin+'/revenue-recovery?token='+encodeURIComponent(data.recoveryToken||'');
     const result=document.querySelector('#revenue-recovery-result');
     const input=document.querySelector('#revenue-recovery-url');
@@ -252,9 +246,7 @@ async function loadRevenueUnsafe(){
   if(state)state.textContent='جارٍ تحليل فرص الإيراد…';
   const setMetric=(id,value)=>{const node=document.querySelector(id);if(node)node.textContent=String(value??0)};
   try{
-    const response=await fetch(revenueApiBase()+'/api/revenue/summary',{cache:'no-store'});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.message||'تعذر تحميل بيانات الإيراد.');
+    const data=await revenueRequest('/api/revenue/summary',{cache:'no-store'},'تعذر تحميل بيانات الإيراد.');
     const f=data.funnel||{};
     const health=data.health||{};
     setMetric('#rev-health-score',health.score);
@@ -457,9 +449,7 @@ document.querySelector('#revenue-routing-body')?.addEventListener('click',async 
     const currentRouting=window.revenueTaskRouting?.recommendations||[];
     const row=currentRouting.find(item=>item.id===id);
     if(!owner)throw new Error('لا يوجد مسؤول مقترح لهذه المهمة.');
-    const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner,dueAt:row?.dueAt||button.dataset.routeDue||'',workflowStatus:'assigned'})});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.message||'تعذر تطبيق اقتراح التوزيع.');
+    const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner,dueAt:row?.dueAt||button.dataset.routeDue||'',workflowStatus:'assigned'})},'تعذر تطبيق اقتراح التوزيع.');
     button.textContent='تم التعيين';
     await loadRevenue();
   }catch(error){alert(error.message);button.disabled=false;}
@@ -470,9 +460,7 @@ async function revenueTaskSaveNotesFromDetail(id){
   const note=document.querySelector('#revenue-detail-task-note');
   const notes=note?note.value.trim():'';
   const workflowStatus=['unassigned','assigned','in_progress','blocked'].includes(row.workflowStatus)?row.workflowStatus:(row.owner?'assigned':'unassigned');
-  const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus,notes,blockerReason:row.blockerReason||row.task?.blockerReason||''})});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.message||'تعذر حفظ الملاحظات.');
+  const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus,notes,blockerReason:row.blockerReason||row.task?.blockerReason||''})},'تعذر حفظ الملاحظات.');
 }
 
 document.querySelector('#revenue-task-detail-body')?.addEventListener('click',async event=>{
@@ -511,16 +499,12 @@ document.querySelector('#revenue-task-board')?.addEventListener('click',async ev
     if(action==='unblock'){
       const row=revenueTaskById(id)||{};
       const nextStatus=row.owner?'assigned':'unassigned';
-      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:nextStatus,notes:row.taskNotes||''})});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(data.message||'تعذر حل العائق.');
+      const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:row.owner||'',dueAt:row.dueAt||'',workflowStatus:nextStatus,notes:row.taskNotes||''})},'تعذر حل العائق.');
       await loadRevenue();
       return;
     }
     if(action==='history'){
-      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/activity',{cache:'no-store'});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(data.message||'تعذر تحميل سجل النشاط.');
+      const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(id)+'/activity',{cache:'no-store'},'تعذر تحميل سجل النشاط.');
       renderRevenueActivityPanel(data);
       return;
     }
@@ -531,13 +515,9 @@ document.querySelector('#revenue-task-board')?.addEventListener('click',async ev
       if(hoursInput===null)return;
       const hours=Math.max(1,Math.min(720,Number(hoursInput)||24));
       const dueAt=new Date(Date.now()+hours*3600000).toISOString();
-      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner,dueAt,workflowStatus:'assigned'})});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(data.message||'تعذر تعيين المهمة.');
+      const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner,dueAt,workflowStatus:'assigned'})},'تعذر تعيين المهمة.');
     }else if(action==='start'){
-      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:button.dataset.owner||'',dueAt:button.dataset.dueAt||'',workflowStatus:'in_progress'})});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(data.message||'تعذر بدء التنفيذ.');
+      const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:button.dataset.owner||'',dueAt:button.dataset.dueAt||'',workflowStatus:'in_progress'})},'تعذر بدء التنفيذ.');
     }else if(action==='block'){
       await promptRevenueBlocker(id);
     }else if(action==='complete'){
@@ -557,9 +537,7 @@ async function executeReturningCustomerRecovery(reference,button){
   if(!reference)return;
   button.disabled=true;
   try{
-    const response=await fetch(revenueApiBase()+'/api/revenue/returning-customers/'+encodeURIComponent(reference)+'/execute',{method:'POST',headers:{'Content-Type':'application/json'}});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.message||'تعذر تنفيذ إعادة الطلب.');
+    const data=await revenueRequest('/api/revenue/returning-customers/'+encodeURIComponent(reference)+'/execute',{method:'POST',headers:{'Content-Type':'application/json'}},'تعذر تنفيذ إعادة الطلب.');
     const fullUrl=window.location.origin+'/revenue-recovery?token='+encodeURIComponent(data.recoveryToken||'');
     const result=document.querySelector('#revenue-recovery-result');
     const input=document.querySelector('#revenue-recovery-url');
@@ -573,9 +551,7 @@ async function executeInactiveCustomerRecovery(reference,button){
   if(!reference)return;
   button.disabled=true;
   try{
-    const response=await fetch(revenueApiBase()+'/api/revenue/inactive-customers/'+encodeURIComponent(reference)+'/execute',{method:'POST',headers:{'Content-Type':'application/json'}});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.message||'تعذر تنفيذ إعادة تنشيط العميل.');
+    const data=await revenueRequest('/api/revenue/inactive-customers/'+encodeURIComponent(reference)+'/execute',{method:'POST',headers:{'Content-Type':'application/json'}},'تعذر تنفيذ إعادة تنشيط العميل.');
     const fullUrl=window.location.origin+'/revenue-recovery?token='+encodeURIComponent(data.recoveryToken||'');
     const result=document.querySelector('#revenue-recovery-result');
     const input=document.querySelector('#revenue-recovery-url');
@@ -607,9 +583,7 @@ document.querySelector('#revenue-actions-body')?.addEventListener('click',async 
   const button=event.target.closest('[data-create-draft]'); if(!button)return;
   button.disabled=true;
   try{
-    const response=await fetch(revenueApiBase()+'/api/revenue/campaign-drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:button.dataset.type,reference:button.dataset.reference})});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok) throw new Error(data.message||'تعذر إنشاء المسودة.');
+    const data=await revenueRequest('/api/revenue/campaign-drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:button.dataset.type,reference:button.dataset.reference})},'تعذر إنشاء المسودة.');
     alert(data.reused ? 'المهمة موجودة بالفعل ومفتوحة لنفس الفرصة؛ لم يتم إنشاء نسخة مكررة.' : 'تم إنشاء المسودة. لا يوجد إرسال تلقائي في هذه النسخة.');
     await loadRevenue();
   }catch(error){alert(error.message)}finally{button.disabled=false;}
@@ -643,9 +617,7 @@ document.querySelector('#revenue-campaigns-body')?.addEventListener('click',asyn
     const dueAt=new Date(Date.now()+hours*3600000).toISOString();
     taskButton.disabled=true;
     try{
-      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(taskButton.dataset.id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner,dueAt,workflowStatus:'assigned'})});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(data.message||'تعذر تعيين المهمة.');
+      const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(taskButton.dataset.id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner,dueAt,workflowStatus:'assigned'})},'تعذر تعيين المهمة.');
       await loadRevenue();
     }catch(error){alert(error.message)}finally{taskButton.disabled=false;}
     return;
@@ -663,9 +635,7 @@ document.querySelector('#revenue-campaigns-body')?.addEventListener('click',asyn
   if(startButton){
     startButton.disabled=true;
     try{
-      const response=await fetch(revenueApiBase()+'/api/revenue/campaigns/'+encodeURIComponent(startButton.dataset.id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:startButton.dataset.owner||'',dueAt:startButton.dataset.dueAt||'',workflowStatus:'in_progress'})});
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(data.message||'تعذر بدء المهمة.');
+      const data=await revenueRequest('/api/revenue/campaigns/'+encodeURIComponent(startButton.dataset.id)+'/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:startButton.dataset.owner||'',dueAt:startButton.dataset.dueAt||'',workflowStatus:'in_progress'})},'تعذر بدء المهمة.');
       await loadRevenue();
     }catch(error){alert(error.message)}finally{startButton.disabled=false;}
     return;
@@ -682,9 +652,7 @@ document.querySelector('#revenue-alerts-list')?.addEventListener('click',async e
   const button=event.target.closest('[data-alert-action]'); if(!button)return;
   button.disabled=true;
   try{
-    const response=await fetch(revenueApiBase()+'/api/revenue/campaign-drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'alert_action',reference:button.dataset.alertAction})});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.message||'تعذر إنشاء المهمة.');
+    const data=await revenueRequest('/api/revenue/campaign-drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'alert_action',reference:button.dataset.alertAction})},'تعذر إنشاء المهمة.');
     button.textContent=data.reused?'المهمة موجودة بالفعل':'تم إنشاء المهمة';
     await loadRevenue();
   }catch(error){alert(error.message);button.disabled=false;}
