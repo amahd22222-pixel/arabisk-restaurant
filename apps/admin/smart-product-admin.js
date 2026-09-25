@@ -1,5 +1,4 @@
 import { request } from './api-client.js';
-const apiBase=()=>((localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||import.meta.env.VITE_API_BASE_URL||(import.meta.env.DEV?'http://localhost:3000':'/proxy')).replace(/\/$/,''));
 
 const style=document.createElement('style');
 style.textContent=`

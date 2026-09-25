@@ -1,11 +1,9 @@
 import { request } from './api-client.js';
 const $=s=>document.querySelector(s);
-const apiBase=()=>((localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||import.meta.env.VITE_API_BASE_URL||(import.meta.env.DEV?'http://localhost:3000':'/proxy')).replace(/\/$/,''));
 const publicWebBase=()=>((localStorage.getItem('ARABISK_PUBLIC_WEB_BASE')||window.ARABISK_PUBLIC_WEB_BASE||import.meta.env.VITE_PUBLIC_WEB_BASE||'https://web-production-d41a3.up.railway.app').replace(/\/$/,''));
 const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[c]));
 let experiences=[],editingId=null;
 const labels={draft:'مسودة',published:'منشورة',closed:'مغلقة',archived:'مؤرشفة'};
-const request=async(path,options={})=>{const r=await fetch(apiBase()+path,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'تعذر الاتصال بالخادم');return d};
 const fmt=v=>{const d=new Date(v);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat('ar-AE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(d):'—'};
 const dateTimeLocal=v=>{const d=new Date(v);if(!Number.isFinite(d.getTime()))return '';const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`};
 const MAX_VIDEO_BYTES=120*1024*1024;
