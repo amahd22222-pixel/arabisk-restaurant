@@ -82,16 +82,6 @@ const rateLimitCleanupTimer=setInterval(() => {
 }, 10*60*1000);
 rateLimitCleanupTimer.unref();
 
-const smartMenu = createSmartMenuService({
-  orders,
-  normalizeList,
-  presign,
-  storageReady,
-  smartPopularWindowMs: SMART_POPULAR_WINDOW_MS,
-  smartNewWindowMs: SMART_NEW_WINDOW_MS
-});
-const { smartSnapshot, withMediaUrls, invalidateSmartSnapshot } = smartMenu;
-
 const stateStore = createStateStore({
   readJson,
   writeJson,
@@ -105,6 +95,16 @@ const stateStore = createStateStore({
 });
 const { persist: persistState, flush: flushPersistState } = stateStore;
 const stateRepository = createStateRepository({ products, categories, orders, customers, reservations, persist: persistState });
+
+const smartMenu = createSmartMenuService({
+  repository: stateRepository,
+  normalizeList,
+  presign,
+  storageReady,
+  smartPopularWindowMs: SMART_POPULAR_WINDOW_MS,
+  smartNewWindowMs: SMART_NEW_WINDOW_MS
+});
+const { smartSnapshot, withMediaUrls, invalidateSmartSnapshot } = smartMenu;
 
 const revenue=createRevenueService({readJson,writeJson,storageReady,customers,reservations,orders,products});
 registerRevenueRoutes(app,{service:revenue,requireAdminApiKey,analyticsRateLimit});
@@ -137,7 +137,7 @@ app.get('/health',(_req,res)=>{
 
 registerProductRoutes(app, {
   repository: stateRepository.products,
-  categories,
+  categories: stateRepository.categories,
   storageReady,
   presign,
   deleteObject,
