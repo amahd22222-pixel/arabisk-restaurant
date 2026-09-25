@@ -29,6 +29,7 @@ import { createSmartMenuService } from './services/smart-menu-service.js';
 import { createReservationService } from './services/reservation-service.js';
 import { registerReservationRoutes } from './routes/reservation-routes.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
+import { registerPageRoutes } from './routes/page-routes.js';
 import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS } from './config.js';
 
 const app = express();
@@ -157,7 +158,6 @@ registerExperienceRoutes(app,{service:experienceService,requireAdminApiKey});
 const restoreExperiences=experienceService.restore;
 const memoryService=createMemoryService({storageReady,presign,readJson,writeJson,deleteObject});
 registerMemoriesRoutes(app,{service:memoryService,requireAdminApiKey,memoryUploadRateLimit,memoryMutationRateLimit});
-const memories=memoryService;
 const nextProductId=()=>{const max=products.reduce((highest,product)=>Math.max(highest,Number(String(product.id).replace(/^P/,''))||0),0);return `P${String(max+1).padStart(3,'0')}`};
 
 app.get('/health',(_req,res)=>{
@@ -255,16 +255,7 @@ registerMediaRoutes(app, {
   service: mediaService,
   requireAdminApiKey
 });
-app.get('/cart',(req,res)=>res.sendFile(path.join(__dirname,'cart-page.html')));
-app.get('/track-order',(req,res)=>res.sendFile(path.join(__dirname,'order-tracking.html')));
-app.get('/events',(req,res)=>res.sendFile(path.join(__dirname,'events.html')));
-app.get('/memories',(req,res)=>{res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');res.setHeader('Pragma','no-cache');res.setHeader('Expires','0');res.sendFile(path.join(__dirname,'memories.html'));});
-app.get(/^\/events\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'event-page.html')));
-app.get('/menu',(req,res)=>res.sendFile(path.join(__dirname,'menu.html')));
-app.get(/^\/menu\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'category-page.html')));
-app.get(/^\/menu\/[^/]+\/[^/]+$/,(req,res)=>res.sendFile(path.join(__dirname,'product-page.html')));
-
-app.use(express.static(dist));app.use((_req,res)=>res.sendFile(path.join(dist,'index.html')));app.use((error,req,res,_next)=>{
+registerPageRoutes(app, { rootDir: __dirname, distDir: dist });app.use((error,req,res,_next)=>{
   if(error?.type==='entity.too.large')return res.status(413).json({message:'Request body is too large.'});
   if(error instanceof SyntaxError&&error?.status===400)return res.status(400).json({message:'Invalid JSON request.'});
   console.error(JSON.stringify({event:'web_unhandled_error',requestId:res.locals.requestId||'unknown',method:req.method,path:req.path,error:String(error?.message||error)}));
@@ -275,7 +266,7 @@ await stateStore.restore();
 await restoreCategories();
 await restoreStudio();
 await restoreExperiences();
-await memories.restore();
+await memoryService.restore();
 await revenue.restoreRevenue();
 if(storageReady){
   persistState();
