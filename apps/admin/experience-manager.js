@@ -1,3 +1,4 @@
+import { request } from './api-client.js';
 const $=s=>document.querySelector(s);
 const apiBase=()=>((localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||import.meta.env.VITE_API_BASE_URL||(import.meta.env.DEV?'http://localhost:3000':'/proxy')).replace(/\/$/,''));
 const publicWebBase=()=>((localStorage.getItem('ARABISK_PUBLIC_WEB_BASE')||window.ARABISK_PUBLIC_WEB_BASE||import.meta.env.VITE_PUBLIC_WEB_BASE||'https://web-production-d41a3.up.railway.app').replace(/\/$/,''));
