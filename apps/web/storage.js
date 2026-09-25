@@ -12,6 +12,7 @@ const STORAGE_READ_TIMEOUT_MS = 8000;
 const STORAGE_WRITE_TIMEOUT_MS = 10000;
 const MAX_KEY_LENGTH = 500;
 const MAX_JSON_RESPONSE_BYTES = 8 * 1024 * 1024;
+const MAX_JSON_REQUEST_BYTES = 8 * 1024 * 1024;
 
 function normalizeKey(key) {
   const value = String(key ?? '').trim();
@@ -120,10 +121,14 @@ export async function readJson(key, fallback = null) {
 export async function writeJson(key, value) {
   if (!storageReady) return false;
   try {
+    const body = JSON.stringify(value);
+    if (Buffer.byteLength(body, 'utf8') > MAX_JSON_REQUEST_BYTES) {
+      throw new Error('Storage request exceeded the configured size limit');
+    }
     const response = await storageFetch(presign('PUT', key, 900), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify(value)
+      body
     }, STORAGE_WRITE_TIMEOUT_MS);
     if (!response.ok) throw new Error(`Storage write returned ${response.status}`);
     return true;
