@@ -13,12 +13,13 @@ const galleryValues = value =>
   listValues(value, 8, 1000).filter(url => /^(https?:\/\/|\/)/i.test(url));
 
 export function createMediaService({
-  products,
+  repository,
   storageReady,
   readJson,
   writeJson,
   presign
 }) {
+  const { products } = repository;
   const productDetails = [];
   let detailsLoaded = false;
 
