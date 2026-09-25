@@ -12,10 +12,20 @@ export class AdminApiError extends Error{
 export async function request(path,options={}){
   const controller=new AbortController();
   const timeoutMs=Number(options.timeoutMs||15000);
-  const timeout=window.setTimeout(()=>controller.abort(),timeoutMs);
+  const timeout=window.setTimeout(()=>controller.abort(new DOMException('Request timeout','TimeoutError')),timeoutMs);
+  const callerSignal=options.signal;
+  const forwardCallerAbort=()=>{
+    if(!controller.signal.aborted)controller.abort(callerSignal?.reason);
+  };
+  if(callerSignal){
+    if(callerSignal.aborted)forwardCallerAbort();
+    else callerSignal.addEventListener('abort',forwardCallerAbort,{once:true});
+  }
+
   const headers={'Content-Type':'application/json',Accept:'application/json','X-Request-Id':crypto.randomUUID(),...(options.headers||{})};
-  const fetchOptions={...options,headers,cache:'no-store',signal:options.signal||controller.signal};
+  const fetchOptions={...options,headers,cache:'no-store',signal:controller.signal};
   delete fetchOptions.timeoutMs;
+
   try{
     const response=await fetch(`${apiBase()}${path}`,fetchOptions);
     const responseRequestId=response.headers.get('X-Request-Id')||headers['X-Request-Id'];
@@ -32,9 +42,14 @@ export async function request(path,options={}){
     return data;
   }catch(error){
     if(error instanceof AdminApiError)throw error;
-    if(error?.name==='AbortError')throw new AdminApiError('انتهت مهلة الاتصال بالخادم. حاول مرة أخرى.',408,headers['X-Request-Id']);
+    if(error?.name==='AbortError'||error?.name==='TimeoutError'||error?.message==='Request timeout'){
+      throw new AdminApiError('انتهت مهلة الاتصال بالخادم. حاول مرة أخرى.',408,headers['X-Request-Id']);
+    }
     throw new AdminApiError('تعذر الاتصال بالخادم. تحقق من الشبكة ثم حاول مرة أخرى.',0,headers['X-Request-Id']);
-  }finally{window.clearTimeout(timeout)}
+  }finally{
+    window.clearTimeout(timeout);
+    callerSignal?.removeEventListener('abort',forwardCallerAbort);
+  }
 }
 
 window.ARABISK_ADMIN_REQUEST=request;
