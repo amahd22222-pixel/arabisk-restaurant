@@ -1,10 +1,11 @@
 import crypto from 'node:crypto';
 
 export function createProductService({
-  products, categories, storageReady, presign, deleteObject, isAdminApiKeyValid,
+  repository, categories, storageReady, presign, deleteObject, isAdminApiKeyValid,
   cleanText, cleanKey, cleanUrl, normalizeList, smartSnapshot, withMediaUrls,
   persistState, invalidateSmartSnapshot, nextProductId, maxVideoBytes, videoTypes
 }) {
+  const { products } = repository;
   const smartTags = new Set(['spicy']);
   const dietaryTags = new Set(['vegetarian', 'vegan', 'gluten-free']);
 
@@ -20,7 +21,7 @@ export function createProductService({
     },
 
     get(req, res) {
-      const product = products.find(item => item.id === req.params.id);
+      const product = repository.findById(req.params.id);
       if (!product) return res.status(404).json({ message: 'Product not found' });
       if (product.available === false && !isAdminApiKeyValid(req)) return res.status(404).json({ message: 'Product not found' });
       return res.json(withMediaUrls(product));
@@ -43,7 +44,7 @@ export function createProductService({
         spiceLevel: Math.max(0, Math.min(3, Number(spiceLevel) || 0)), chefChoice: Boolean(chefChoice),
         isNew: Boolean(isNew), createdAt: new Date().toISOString(), sortOrder: products.length + 1
       };
-      products.push(product);
+      repository.add(product);
       invalidateSmartSnapshot();
       persistState();
       return res.status(201).json(withMediaUrls(product));
@@ -93,9 +94,8 @@ export function createProductService({
     },
 
     remove(req, res) {
-      const index = products.findIndex(product => product.id === req.params.id);
-      if (index === -1) return res.status(404).json({ message: 'Product not found' });
-      const [removed] = products.splice(index, 1);
+      const removed = repository.removeById(req.params.id);
+      if (!removed) return res.status(404).json({ message: 'Product not found' });
       if (storageReady) {
         if (removed.imageKey) void deleteObject(removed.imageKey);
         if (removed.videoKey) void deleteObject(removed.videoKey);
@@ -111,7 +111,7 @@ export function createProductService({
       const fileName = cleanText(req.body?.fileName, 160).replace(/[^a-zA-Z0-9._-]/g, '-');
       const contentType = cleanText(req.body?.contentType, 80).toLowerCase();
       const size = Number(req.body?.size);
-      if (!products.some(product => product.id === productId)) return res.status(404).json({ message: 'Product not found' });
+      if (!repository.findById(productId)) return res.status(404).json({ message: 'Product not found' });
       if (!fileName || !videoTypes.has(contentType)) return res.status(400).json({ message: 'Only MP4, WebM and MOV videos are supported.' });
       if (!Number.isFinite(size) || size < 1 || size > maxVideoBytes) return res.status(400).json({ message: 'Maximum video size is 120 MB.' });
       const key = `products/${productId}/${crypto.randomUUID()}-${fileName}`;
@@ -126,7 +126,7 @@ export function createProductService({
     deleteVideoPresign(req, res) {
       if (!storageReady) return res.status(503).json({ message: 'Video storage is not configured on the web service.' });
       const productId = cleanText(req.body?.productId, 40);
-      const product = products.find(item => item.id === productId);
+      const product = repository.findById(productId);
       if (!product) return res.status(404).json({ message: 'Product not found' });
       if (!product.videoKey) return res.json({ url: '', key: '' });
       try {
