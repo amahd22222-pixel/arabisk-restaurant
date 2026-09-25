@@ -1,11 +1,12 @@
 export function createSmartMenuService({
-  orders,
+  repository,
   normalizeList,
   presign,
   storageReady,
   smartPopularWindowMs,
   smartNewWindowMs
 }) {
+  const { orders } = repository;
   const SMART_SNAPSHOT_CACHE_MS = 30 * 1000;
   const MEDIA_URL_CACHE_MS = 60 * 1000;
   const MAX_MEDIA_URL_CACHE = 1000;
