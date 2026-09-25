@@ -41,3 +41,93 @@ test('memory service enforces bounded community growth', async () => {
     error => error.status === 409
   );
 });
+
+
+test('memory creation rolls back when persistence fails', async () => {
+  const memories = [];
+  const service = createMemoryService({
+    storageReady: true,
+    presign: () => '',
+    readJsonWithStatus: async () => ({ ok: true, found: false, value: null }),
+    writeJson: async () => false,
+    deleteObject: async () => true
+  });
+
+  await assert.rejects(
+    () => service.create({ text: 'لن تُحفظ' }),
+    /persisted to storage/i
+  );
+
+  assert.deepEqual(service.list({}).items, []);
+  assert.equal(memories.length, 0);
+});
+
+test('memory mutation rolls back when persistence fails', async () => {
+  let failSave = false;
+  const service = createMemoryService({
+    storageReady: true,
+    presign: () => '',
+    readJsonWithStatus: async () => ({ ok: true, found: false, value: null }),
+    writeJson: async () => !failSave,
+    deleteObject: async () => true
+  });
+
+  const memory = await service.create({ text: 'النص الأصلي' });
+  failSave = true;
+
+  await assert.rejects(
+    () => service.adminUpdate(memory.id, { text: 'النص المعدل' }),
+    /persisted to storage/i
+  );
+
+  assert.equal(service.get ? 'available' : 'hidden', 'available');
+  assert.equal(service.list({}).items[0].text, 'النص الأصلي');
+});
+
+test('memory deletion persists before deleting media', async () => {
+  let failSave = false;
+  const events = [];
+  const service = createMemoryService({
+    storageReady: true,
+    presign: (method, key) => `https://signed.example/${method}/${key}`,
+    readJsonWithStatus: async () => ({ ok: true, found: false, value: null }),
+    writeJson: async () => { events.push('write'); return !failSave; },
+    deleteObject: async key => { events.push(`delete:${key}`); return true; }
+  });
+
+  const memory = await service.create({
+    text: 'ذكرى',
+    imageKey: 'memories/image.webp'
+  });
+  events.length = 0;
+
+  await service.adminDelete(memory.id);
+
+  assert.deepEqual(events, ['write', 'delete:memories/image.webp']);
+});
+
+test('memory deletion restores the item and keeps media when persistence fails', async () => {
+  let failSave = false;
+  const deleted = [];
+  const service = createMemoryService({
+    storageReady: true,
+    presign: () => '',
+    readJsonWithStatus: async () => ({ ok: true, found: false, value: null }),
+    writeJson: async () => !failSave,
+    deleteObject: async key => { deleted.push(key); return true; }
+  });
+
+  const memory = await service.create({
+    text: 'ذكرى',
+    imageKey: 'memories/image.webp'
+  });
+  failSave = true;
+
+  await assert.rejects(
+    () => service.adminDelete(memory.id),
+    /persisted to storage/i
+  );
+
+  assert.equal(service.list({}).items.length, 1);
+  assert.equal(deleted.length, 0);
+});
