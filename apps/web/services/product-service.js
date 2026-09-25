@@ -59,18 +59,26 @@ export function createProductService({
         spiceLevel: Math.max(0, Math.min(3, Number(spiceLevel) || 0)), chefChoice: Boolean(chefChoice),
         isNew: Boolean(isNew), createdAt: new Date().toISOString(), sortOrder: products.all().length + 1
       };
+
       repository.add(product);
+      try {
+        await repository.save();
+      } catch (error) {
+        repository.removeById(product.id);
+        throw error;
+      }
+
       invalidateSmartSnapshot();
-      await repository.save();
       return res.status(201).json(withMediaUrls(product));
     },
 
     async update(req, res) {
       const product = repository.findById(req.params.id);
       if (!product) return res.status(404).json({ message: 'Product not found' });
+      const before = structuredClone(product);
+      const oldImageKey = product.imageKey || '';
+      const oldVideoKey = product.videoKey || '';
       const body = req.body || {};
-      const oldImageKey = product.imageKey;
-      const oldVideoKey = product.videoKey;
 
       if (body.categoryId !== undefined) {
         const categoryId = cleanText(body.categoryId, 40);
@@ -94,11 +102,7 @@ export function createProductService({
       if (body.imageUrl !== undefined) {
         const nextUrl = cleanUrl(body.imageUrl);
         product.imageUrl = nextUrl;
-        if (nextUrl && product.imageKey) {
-          const oldKey = product.imageKey;
-          product.imageKey = '';
-          if (storageReady) void deleteObject(oldKey);
-        }
+        if (nextUrl) product.imageKey = '';
       }
       if (body.imageKey !== undefined) product.imageKey = cleanKey(body.imageKey);
       if (body.price !== undefined) {
@@ -113,22 +117,49 @@ export function createProductService({
       if (body.spiceLevel !== undefined) product.spiceLevel = Math.max(0, Math.min(3, Number(body.spiceLevel) || 0));
       if (body.chefChoice !== undefined) product.chefChoice = Boolean(body.chefChoice);
       if (body.isNew !== undefined) product.isNew = Boolean(body.isNew);
-      if (storageReady && body.imageKey !== undefined && oldImageKey && oldImageKey !== product.imageKey) void deleteObject(oldImageKey);
-      if (storageReady && body.videoKey !== undefined && oldVideoKey && oldVideoKey !== product.videoKey) void deleteObject(oldVideoKey);
+
+      try {
+        await repository.save();
+      } catch (error) {
+        Object.assign(product, before);
+        throw error;
+      }
+
+      if (storageReady && oldImageKey && oldImageKey !== product.imageKey) {
+        const deleted = await deleteObject(oldImageKey);
+        if (!deleted) logServiceFailure(new Error('Product old image cleanup failed.'), { service: 'product', operation: 'cleanupImage' });
+      }
+      if (storageReady && oldVideoKey && oldVideoKey !== product.videoKey) {
+        const deleted = await deleteObject(oldVideoKey);
+        if (!deleted) logServiceFailure(new Error('Product old video cleanup failed.'), { service: 'product', operation: 'cleanupVideo' });
+      }
+
       invalidateSmartSnapshot();
-      await repository.save();
       return res.json(withMediaUrls(product));
     },
 
     async remove(req, res) {
+      const snapshot = repository.all().slice();
       const removed = repository.removeById(req.params.id);
       if (!removed) return res.status(404).json({ message: 'Product not found' });
-      if (storageReady) {
-        if (removed.imageKey) void deleteObject(removed.imageKey);
-        if (removed.videoKey) void deleteObject(removed.videoKey);
+
+      try {
+        await repository.save();
+      } catch (error) {
+        repository.replaceAll(snapshot);
+        throw error;
       }
+
+      if (storageReady && removed.imageKey) {
+        const deleted = await deleteObject(removed.imageKey);
+        if (!deleted) logServiceFailure(new Error('Product image cleanup failed.'), { service: 'product', operation: 'removeImage' });
+      }
+      if (storageReady && removed.videoKey) {
+        const deleted = await deleteObject(removed.videoKey);
+        if (!deleted) logServiceFailure(new Error('Product video cleanup failed.'), { service: 'product', operation: 'removeVideo' });
+      }
+
       invalidateSmartSnapshot();
-      await repository.save();
       return res.json({ ok: true, removed });
     },
 
