@@ -39,3 +39,30 @@ test('session storage evicts the oldest session at the configured cap',()=>{
 
   assert.equal(getSession({...req,headers:{cookie:`arabisk_admin_session=${encodeURIComponent(firstToken)}`}}),null);
 });
+
+test('session expires at the absolute lifetime even when refreshed',()=>{
+  const { createSession, getSession } = createAdminAuth();
+  const req=makeReq();
+  let cookie='';
+  const res={
+    setHeader(name,value){ if(name==='Set-Cookie') cookie=value; },
+    writeHead(){},
+    end(){}
+  };
+
+  const originalNow = Date.now;
+  try {
+    const issuedAt = originalNow();
+    Date.now = () => issuedAt;
+    createSession(res,req,'ci');
+    const token=decodeURIComponent(cookie.split(';',1)[0].split('=',2)[1]);
+
+    Date.now = () => issuedAt + (23 * 60 * 60 * 1000);
+    assert.ok(getSession({...req,headers:{cookie:`arabisk_admin_session=${encodeURIComponent(token)}`}}));
+
+    Date.now = () => issuedAt + (24 * 60 * 60 * 1000) + 1;
+    assert.equal(getSession({...req,headers:{cookie:`arabisk_admin_session=${encodeURIComponent(token)}`}}),null);
+  } finally {
+    Date.now = originalNow;
+  }
+});
