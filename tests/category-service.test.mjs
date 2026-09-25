@@ -62,3 +62,31 @@ test('category creation normalizes shared input values before persistence', asyn
   assert.equal(categories.length, 1);
 });
 
+
+test('public category listing omits private storage keys', async () => {
+  const categories = [{
+    id: 'C010',
+    nameAr: 'خاصة',
+    nameEn: 'Private',
+    imageUrl: '',
+    imageKey: 'categories/C010/private.webp',
+    sortOrder: 1,
+    active: true
+  }];
+  const categoryRepository = createCollectionRepository(categories);
+  const service = createCategoryService({
+    categoriesRepository: categoryRepository,
+    productsRepository: createCollectionRepository([]),
+    storageReady: true,
+    presign: () => 'https://signed.example/category.webp',
+    readJson: async () => null,
+    writeJson: async () => true,
+    deleteObject: async () => true,
+    isAdminApiKeyValid: () => false
+  });
+
+  const [result] = service.list({});
+
+  assert.equal(result.imageUrl, 'https://signed.example/category.webp');
+  assert.equal('imageKey' in result, false);
+});
