@@ -1,4 +1,4 @@
-const sendServiceError=(res,error)=>res.status(Number(error?.status)||500).json({message:error?.message||'Internal server error'});
+import { sendServiceError } from '../utils/service-error.js';
 export function registerStudioRoutes(app,{service,requireAdminApiKey}){
   app.get('/api/studio/shows',(req,res)=>{try{return res.json(service.list(req.query));}catch(error){return sendServiceError(res,error);}});
   app.get('/api/studio/shows/:id',(req,res)=>{try{return res.json(service.get(req.params.id));}catch(error){return sendServiceError(res,error);}});
