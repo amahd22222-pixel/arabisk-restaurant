@@ -116,15 +116,18 @@ test('completed order update rolls back order and customer when persistence fail
 
   const customer = customers[0];
   assert.equal(customer.orderCount, 0);
-  failSave = true;
 
   await service.updateOrder(order.id, { status: 'confirmed' });
+  await service.updateOrder(order.id, { status: 'preparing' });
+  await service.updateOrder(order.id, { status: 'ready' });
+
+  failSave = true;
   await assert.rejects(
-    () => service.updateOrder(order.id, { status: 'preparing' }),
+    () => service.updateOrder(order.id, { status: 'completed' }),
     /persisted to storage/i
   );
 
-  assert.equal(orders[0].status, 'confirmed');
+  assert.equal(orders[0].status, 'ready');
   assert.equal(customers[0].orderCount, 0);
   assert.equal(events.filter(event => event.eventName === 'order_completed').length, 0);
 });
