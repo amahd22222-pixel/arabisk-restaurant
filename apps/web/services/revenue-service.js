@@ -1243,7 +1243,7 @@ export function createRevenueService({
       }
   
       const reservationsByPhone = new Map();
-      for (const reservation of reservations) {
+      for (const reservation of reservations.all()) {
         if (!reservation.phone || reservation.status === 'cancelled') continue;
         reservationsByPhone.set(reservation.phone, (reservationsByPhone.get(reservation.phone) || 0) + 1);
       }
