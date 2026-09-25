@@ -13,7 +13,7 @@ import { createCategoryService } from './services/category-service.js';
 import { registerCategoryRoutes } from './routes/category-routes.js';
 import { createStudioService } from './services/studio-service.js';
 import { registerStudioRoutes } from './routes/studio-routes.js';
-import { createExperienceService, experiences } from './services/experience-service.js';
+import { createExperienceService } from './services/experience-service.js';
 import { registerExperienceRoutes } from './routes/experience-routes.js';
 import { createMemoryService } from './services/memory-service.js';
 import { registerMemoriesRoutes } from './routes/memory-routes.js';
@@ -184,7 +184,7 @@ const reservationService = createReservationService({
   repository: stateRepository,
   cleanText,
   nextReservationId: createNextPrefixedId(stateRepository.reservations, 'R', 4),
-  experiences,
+  findBookableExperience: experienceService.findBookable,
   revenue,
   crypto
 });
