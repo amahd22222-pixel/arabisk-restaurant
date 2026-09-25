@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { cleanText } from '../utils/input.js';
+import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
 
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
@@ -14,7 +15,7 @@ const galleryValues = value =>
 export function createMediaService({
   repository,
   storageReady,
-  readJson,
+  readJsonWithStatus,
   writeJson,
   presign
 }) {
@@ -24,31 +25,35 @@ export function createMediaService({
 
   async function ensureDetails() {
     if (detailsLoaded) return;
-    detailsLoaded = true;
-    if (!storageReady) return;
-
-    try {
-      const saved = await readJson(PRODUCT_DETAILS_STATE_KEY, null);
-      if (Array.isArray(saved)) {
-        productDetails.splice(
-          0,
-          productDetails.length,
-          ...saved
-            .filter(item => item && item.productId)
-            .map(item => ({
-              productId: String(item.productId),
-              portion: cleanText(item.portion, 80),
-              ingredientsAr: cleanText(item.ingredientsAr || item.ingredients, 1200),
-              allergens: listValues(item.allergens, 8, 120),
-              notesAr: cleanText(item.notesAr, 800),
-              gallery: galleryValues(item.gallery),
-              updatedAt: cleanText(item.updatedAt, 40)
-            }))
-        );
-      }
-    } catch (error) {
-      console.error('ARABISK product details restore failed:', error);
+    if (!storageReady) {
+      detailsLoaded = true;
+      return;
     }
+
+    const saved = await readRequiredSnapshot(
+      readJsonWithStatus,
+      PRODUCT_DETAILS_STATE_KEY,
+      'Product details could not be restored from storage.'
+    );
+
+    if (Array.isArray(saved)) {
+      productDetails.splice(
+        0,
+        productDetails.length,
+        ...saved
+          .filter(item => item && item.productId)
+          .map(item => ({
+            productId: String(item.productId),
+            portion: cleanText(item.portion, 80),
+            ingredientsAr: cleanText(item.ingredientsAr || item.ingredients, 1200),
+            allergens: listValues(item.allergens, 8, 120),
+            notesAr: cleanText(item.notesAr, 800),
+            gallery: galleryValues(item.gallery),
+            updatedAt: cleanText(item.updatedAt, 40)
+          }))
+      );
+    }
+    detailsLoaded = true;
   }
 
   const getDetails = productId =>
@@ -78,7 +83,7 @@ export function createMediaService({
     item.gallery = galleryValues(body.gallery);
     item.updatedAt = new Date().toISOString();
 
-    await writeJson(PRODUCT_DETAILS_STATE_KEY, productDetails);
+    await writeRequiredSnapshot(writeJson, PRODUCT_DETAILS_STATE_KEY, productDetails, 'Product details could not be persisted to storage.');
     return item;
   }
 

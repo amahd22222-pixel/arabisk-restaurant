@@ -205,7 +205,7 @@ registerReservationRoutes(app, {
 const mediaService = createMediaService({
   repository: stateRepository.products,
   storageReady,
-  readJson,
+  readJsonWithStatus,
   writeJson,
   presign
 });
