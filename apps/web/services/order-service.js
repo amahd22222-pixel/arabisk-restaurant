@@ -24,7 +24,7 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
     return order;
   }
 
-  function updateOrder(id, body) {
+  async function updateOrder(id, body) {
     const order = getOrThrow(id);
     const now = new Date().toISOString();
 
@@ -67,11 +67,11 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
 
     if (body?.notes !== undefined) order.notes = cleanText(body.notes, 300);
     order.updatedAt = now;
-    orders.save();
+    await orders.save();
     return order;
   }
 
-  function createOrder(body) {
+  async function createOrder(body) {
     const orderType = ['dine_in', 'pickup'].includes(body.orderType) ? body.orderType : 'dine_in';
     const tableNumber = orderType === 'dine_in' ? cleanText(body.tableNumber, 30) : '';
     const name = cleanText(body.name, 80);
@@ -155,7 +155,7 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
       metadata: { orderType }
     });
     if (recoveryToken) revenue.recordRecoveryOrder(recoveryToken, order.id);
-    orders.save();
+    await orders.save();
     return order;
   }
 
