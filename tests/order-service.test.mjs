@@ -1,28 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createOrderService } from '../apps/web/services/order-service.js';
+import { createCollectionRepository } from '../apps/web/repositories/collection-repository.js';
 
 function createFixture() {
   const orders = [];
   const customers = [];
+  const products = [{ id: 'P001', nameAr: 'طبق', nameEn: 'Dish', price: 25, available: true }];
   const events = [];
   const repository = {
-    orders: {
-      all: () => orders,
-      findById: id => orders.find(order => order.id === id),
-      save: () => {}
-    },
+    orders: createCollectionRepository(orders),
+    products: createCollectionRepository(products),
     customers: {
-      findByPhone: phone => customers.find(customer => customer.phone === phone),
-      add: customer => customers.push(customer),
-      all: () => customers,
-      save: () => {}
+      ...createCollectionRepository(customers),
+      findByPhone: phone => customers.find(customer => customer.phone === phone)
     }
   };
 
   const service = createOrderService({
     repository,
-    products: [{ id: 'P001', nameAr: 'طبق', nameEn: 'Dish', price: 25, available: true }],
     cleanText: (value, max = 180) => String(value ?? '').trim().slice(0, max),
     nextOrderId: () => 'O00001',
     invalidateSmartSnapshot: () => {},
