@@ -149,7 +149,6 @@ registerProductRoutes(app, {
   normalizeList,
   smartSnapshot,
   withMediaUrls,
-  persistState,
   invalidateSmartSnapshot,
   nextProductId,
   maxVideoBytes: MAX_VIDEO_BYTES,
