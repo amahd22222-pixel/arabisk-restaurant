@@ -26,6 +26,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Repository hygiene
+        run: node scripts/verify-repository-hygiene.mjs
       - name: Verify syntax
         run: npm run verify:syntax
 
