@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { cleanText as clean, cleanKey } from '../utils/input.js';
 import { createCollectionRepository } from '../repositories/collection-repository.js';
-import { readRequiredSnapshot } from '../repositories/restore-helper.js';
+import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
 
 const STATE_KEY='data/arabisk-memories.json';
 const IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
@@ -17,7 +17,7 @@ export function createMemoryService({storageReady,presign,readJsonWithStatus,wri
 
   const persist=()=>{
     const snapshot=structuredClone(state);
-    queue=queue.catch(()=>{}).then(()=>writeJson(STATE_KEY,snapshot));
+    queue=queue.catch(()=>{}).then(()=>writeRequiredSnapshot(writeJson,STATE_KEY,snapshot,'Memory state could not be persisted to storage.'));
     return queue;
   };
 

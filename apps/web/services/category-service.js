@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { cleanText, cleanKey, cleanUrl } from '../utils/input.js';
-import { readRequiredSnapshot } from '../repositories/restore-helper.js';
+import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
 
 const CATEGORY_STATE_KEY='data/arabisk-categories.json';
 const MAX_CATEGORY_IMAGE_BYTES=15*1024*1024;
@@ -11,7 +11,7 @@ export function createCategoryService({categoriesRepository,productsRepository,s
   const categories = categoriesRepository;
   const products = productsRepository;
   const restore=async()=>{if(!storageReady)return;const saved=await readRequiredSnapshot(readJsonWithStatus,CATEGORY_STATE_KEY,'Category state could not be restored from storage.');if(Array.isArray(saved)&&saved.length)categories.replaceAll(saved);};
-  const persist=()=>writeJson(CATEGORY_STATE_KEY,categories.all());
+  const persist=()=>writeRequiredSnapshot(writeJson,CATEGORY_STATE_KEY,categories.all(),'Category state could not be persisted to storage.');
   const nextId=()=>{const max=categories.all().reduce((n,c)=>{const m=String(c.id||'').match(/^C(\d+)$/);return Math.max(n,m?Number(m[1]):0);},0);return 'C'+String(max+1).padStart(3,'0');};
   const publicCategory=c=>({...c,imageUrl:c.imageKey&&storageReady?presign('GET',c.imageKey,900):(c.imageUrl||'')});
   const presentCategory=(category,{includePrivate=false}={})=>{

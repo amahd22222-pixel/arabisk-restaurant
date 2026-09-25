@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { cleanText, cleanUrl } from '../utils/input.js';
 import { createCollectionRepository } from '../repositories/collection-repository.js';
-import { readRequiredSnapshot } from '../repositories/restore-helper.js';
+import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
 
 const EXPERIENCE_STATE_KEY='data/arabisk-experiences.json';
 const IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
@@ -18,7 +18,7 @@ const experiences=[];
 class ExperienceServiceError extends Error{constructor(message,status=400){super(message);this.name='ExperienceServiceError';this.status=status;}}
 
 export function createExperienceService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid}){
-  const persist=()=>writeJson(EXPERIENCE_STATE_KEY,experiences);
+  const persist=()=>writeRequiredSnapshot(writeJson,EXPERIENCE_STATE_KEY,experiences,'Experience state could not be persisted to storage.');
   const experienceRepository=createCollectionRepository(experiences,{persist});
   const restore=async()=>{if(!storageReady)return;const saved=await readRequiredSnapshot(readJsonWithStatus,EXPERIENCE_STATE_KEY,'Experience state could not be restored from storage.');if(Array.isArray(saved))experienceRepository.replaceAll(saved);};
   const nextId=()=> 'E'+crypto.randomUUID().slice(0,8).toUpperCase();
