@@ -89,7 +89,7 @@ export function createProductService({
       if (storageReady && body.imageKey !== undefined && oldImageKey && oldImageKey !== product.imageKey) void deleteObject(oldImageKey);
       if (storageReady && body.videoKey !== undefined && oldVideoKey && oldVideoKey !== product.videoKey) void deleteObject(oldVideoKey);
       invalidateSmartSnapshot();
-      persistState();
+      repository.save();
       return res.json(withMediaUrls(product));
     },
 
@@ -101,7 +101,7 @@ export function createProductService({
         if (removed.videoKey) void deleteObject(removed.videoKey);
       }
       invalidateSmartSnapshot();
-      persistState();
+      repository.save();
       return res.json({ ok: true, removed });
     },
 
