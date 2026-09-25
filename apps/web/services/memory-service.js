@@ -15,7 +15,10 @@ class MemoryServiceError extends Error{
   constructor(message,status=400){super(message);this.name='MemoryServiceError';this.status=status;}
 }
 
-export function createMemoryService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject}){
+export function createMemoryService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject,limits={}}){
+  const maxMemories=Number.isInteger(limits.maxMemories)&&limits.maxMemories>0?Math.min(limits.maxMemories,MAX_MEMORIES):MAX_MEMORIES;
+  const maxCommentsPerMemory=Number.isInteger(limits.maxCommentsPerMemory)&&limits.maxCommentsPerMemory>0?Math.min(limits.maxCommentsPerMemory,MAX_COMMENTS_PER_MEMORY):MAX_COMMENTS_PER_MEMORY;
+  const maxReportsPerMemory=Number.isInteger(limits.maxReportsPerMemory)&&limits.maxReportsPerMemory>0?Math.min(limits.maxReportsPerMemory,MAX_REPORTS_PER_MEMORY):MAX_REPORTS_PER_MEMORY;
   const state={memories:[]};
   let queue=Promise.resolve();
 
@@ -84,7 +87,7 @@ export function createMemoryService({storageReady,presign,readJsonWithStatus,wri
   }
 
   async function create(body){
-    if(state.memories.length>=MAX_MEMORIES)throw new MemoryServiceError('Community memory storage is currently full.',503);
+    if(state.memories.length>=maxMemories)throw new MemoryServiceError('Community memory storage is currently full.',503);
     const text=clean(body.text,1200),displayName=clean(body.displayName,80)||'مجهول',imageKey=cleanKey(body.imageKey),videoKey=cleanKey(body.videoKey);
     if(!text&&!imageKey&&!videoKey)throw new MemoryServiceError('أضف نصًا أو صورة أو فيديو.');
     if(imageKey&&videoKey)throw new MemoryServiceError('يمكن نشر صورة أو فيديو واحد مع النص.');
@@ -96,7 +99,7 @@ export function createMemoryService({storageReady,presign,readJsonWithStatus,wri
   async function share(id){const m=getVisible(id);m.shareCount=Number(m.shareCount||0)+1;await memoryRepository.save();return {shareCount:m.shareCount};}
   async function comment(id,body){
     const m=getVisible(id);
-    if((m.comments||[]).length>=MAX_COMMENTS_PER_MEMORY)throw new MemoryServiceError('This memory has reached its comment limit.',409);
+    if((m.comments||[]).length>=maxCommentsPerMemory)throw new MemoryServiceError('This memory has reached its comment limit.',409);
     const text=clean(body?.text,500),displayName=clean(body?.displayName,80)||'مجهول';
     if(!text)throw new MemoryServiceError('اكتب تعليقًا أولًا.');
     const item={id:crypto.randomUUID(),text,displayName,createdAt:new Date().toISOString()};
@@ -104,7 +107,7 @@ export function createMemoryService({storageReady,presign,readJsonWithStatus,wri
   }
   async function report(id,body){
     const m=get(id);
-    if((m.reports||[]).length>=MAX_REPORTS_PER_MEMORY)throw new MemoryServiceError('This memory has reached its report limit.',409);
+    if((m.reports||[]).length>=maxReportsPerMemory)throw new MemoryServiceError('This memory has reached its report limit.',409);
     m.reports.push({id:crypto.randomUUID(),reason:clean(body?.reason,160)||'محتوى غير مناسب',createdAt:new Date().toISOString()});
     await memoryRepository.save();return {ok:true};
   }
