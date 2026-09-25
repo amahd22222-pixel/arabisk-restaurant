@@ -57,8 +57,10 @@ test('session expires at the absolute lifetime even when refreshed',()=>{
     createSession(res,req,'ci');
     const token=decodeURIComponent(cookie.split(';',1)[0].split('=',2)[1]);
 
-    Date.now = () => issuedAt + (23 * 60 * 60 * 1000);
-    assert.ok(getSession({...req,headers:{cookie:`arabisk_admin_session=${encodeURIComponent(token)}`}}));
+    for (const hours of [7, 14, 21, 23.9]) {
+      Date.now = () => issuedAt + Math.floor(hours * 60 * 60 * 1000);
+      assert.ok(getSession({...req,headers:{cookie:`arabisk_admin_session=${encodeURIComponent(token)}`}}));
+    }
 
     Date.now = () => issuedAt + (24 * 60 * 60 * 1000) + 1;
     assert.equal(getSession({...req,headers:{cookie:`arabisk_admin_session=${encodeURIComponent(token)}`}}),null);
