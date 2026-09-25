@@ -1,4 +1,7 @@
-const apiBase=()=>((localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||import.meta.env.VITE_API_BASE_URL||(import.meta.env.DEV?'http://localhost:3000':'/proxy')).replace(/\/$/,''));
+const apiBase=()=>{
+  if(!import.meta.env.DEV)return '/proxy';
+  return (localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||import.meta.env.VITE_API_BASE_URL||'http://localhost:3000').replace(/\/$/,'');
+};
 
 export class AdminApiError extends Error{
   constructor(message,status=0,requestId=''){

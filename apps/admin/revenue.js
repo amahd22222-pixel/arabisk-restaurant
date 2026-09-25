@@ -50,7 +50,10 @@ async function submitRevenueOutcome(id,outcomePreset=''){
   if(!response.ok)throw new Error(data.message||'تعذر تسجيل النتيجة.');
   return true;
 }
-const revenueApiBase=()=>((localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||import.meta.env.VITE_API_BASE_URL||(import.meta.env.DEV?'http://localhost:3000':'/proxy')).replace(/\/$/,''));
+const revenueApiBase=()=>{
+  if(!import.meta.env.DEV)return '/proxy';
+  return (localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||import.meta.env.VITE_API_BASE_URL||'http://localhost:3000').replace(/\/$/,'');
+};
 const revEsc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
 const revMoney=value=>'AED '+Number(value||0).toFixed(0);
 const revPriority=(key,label)=>`<span class="rev-priority ${revEsc(key)}">${revEsc(label)}</span>`;
