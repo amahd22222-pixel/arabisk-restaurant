@@ -8,7 +8,7 @@ class ReservationServiceError extends Error {
   }
 }
 
-export function createReservationService({ repository, cleanText, nextReservationId, experiences, revenue, crypto }) {
+export function createReservationService({ repository, cleanText, nextReservationId, findBookableExperience, revenue, crypto }) {
   const { reservations, customers } = repository;
 
   function listReservations() {
@@ -38,13 +38,9 @@ export function createReservationService({ repository, cleanText, nextReservatio
     }
 
     if (eventSlug) {
-      const experience = experiences.find(item => item.slug === eventSlug && item.status === 'published');
-      if (!experience || experience.bookingEnabled === false) {
+      const experience = findBookableExperience(eventSlug);
+      if (!experience) {
         throw new ReservationServiceError('Selected experience is not available for booking.');
-      }
-      const endTime = Date.parse(experience.endsAt || experience.startsAt || '');
-      if (Number.isFinite(endTime) && endTime <= Date.now()) {
-        throw new ReservationServiceError('Selected experience is no longer accepting bookings.');
       }
     }
 
