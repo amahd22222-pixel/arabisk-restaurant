@@ -1,4 +1,4 @@
-export function createStateStore({ readJson, writeJson, storageReady, stateKey, menuVersion, products, customers, orders, reservations }) {
+export function createStateStore({ readJsonWithStatus, writeJson, storageReady, stateKey, menuVersion, products, customers, orders, reservations }) {
   const PERSIST_DEBOUNCE_MS = 250;
   let persistQueue = Promise.resolve();
   let persistTimer = null;
@@ -31,8 +31,15 @@ export function createStateStore({ readJson, writeJson, storageReady, stateKey, 
       restoredAt = new Date().toISOString();
       return;
     }
-    const saved = await readJson(stateKey, null);
-    if (!saved || typeof saved !== 'object') {
+    const result = await readJsonWithStatus(stateKey);
+    if (!result.ok) {
+      restoreStatus = 'restore_failed';
+      restoredAt = new Date().toISOString();
+      lastPersistOk = false;
+      throw new Error('State snapshot could not be restored from storage.');
+    }
+    const saved = result.value;
+    if (!result.found || !saved || typeof saved !== 'object') {
       restoreStatus = 'no_snapshot';
       restoredAt = new Date().toISOString();
       return;
