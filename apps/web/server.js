@@ -133,8 +133,10 @@ app.get('/health',(_req,res)=>{
   };
   return res.status(ready ? 200 : 503).json(payload);
 });
+const stateRepository = createStateRepository({ products, orders, customers, reservations, persist: persistState });
+
 registerProductRoutes(app, {
-  products,
+  repository: stateRepository.products,
   categories,
   storageReady,
   presign,
@@ -154,7 +156,6 @@ registerProductRoutes(app, {
   videoTypes: VIDEO_TYPES
 });
 
-const stateRepository = createStateRepository({ orders, customers, reservations, persist: persistState });
 
 const orderService = createOrderService({
   repository: stateRepository,
