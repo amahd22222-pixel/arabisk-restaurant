@@ -112,4 +112,7 @@ const shutdown = (signal) => {
 };
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
+server.requestTimeout=30_000;
+server.headersTimeout=35_000;
+server.keepAliveTimeout=5_000;
 server.listen(adminPort, adminHost, () => console.log(`ARABISK admin listening on ${adminHost}:${adminPort} — session authentication and server-side API proxy enabled`));
