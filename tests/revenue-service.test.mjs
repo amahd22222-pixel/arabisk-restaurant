@@ -32,3 +32,32 @@ test('revenue summary builds without leaking ranking scope', () => {
   assert.ok(Array.isArray(summary.intelligence?.nextActions));
   assert.ok(summary.campaigns);
 });
+
+
+test('revenue persistence rejects when storage reports a failed write', async () => {
+  const repository = createStateRepository({
+    products: [],
+    categories: [],
+    orders: [],
+    customers: [],
+    reservations: [],
+    persist: async () => {}
+  });
+
+  const service = createRevenueService({
+    readJsonWithStatus: async () => ({ ok: true, found: false, value: null, reason: 'not_found' }),
+    writeJson: async () => false,
+    storageReady: true,
+    repository
+  });
+
+  service.recordEvent({
+    eventName: 'menu_view',
+    sessionId: 'persistence-failure-session'
+  });
+
+  await assert.rejects(
+    () => service.flushPersistRevenue(),
+    /Revenue state could not be persisted to storage/i
+  );
+});
