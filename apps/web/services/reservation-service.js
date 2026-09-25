@@ -17,7 +17,7 @@ export function createReservationService({ repository, cleanText, nextReservatio
     return reservations.all();
   }
 
-  function createReservation(body) {
+  async function createReservation(body) {
     const name = cleanText(body.name, 80);
     const phone = cleanText(body.phone, 40);
     const date = cleanText(body.date, 20);
@@ -85,11 +85,11 @@ export function createReservationService({ repository, cleanText, nextReservatio
       reservationId: reservation.id
     });
 
-    reservations.save();
+    await reservations.save();
     return reservation;
   }
 
-  function updateReservation(id, body) {
+  async function updateReservation(id, body) {
     const reservation = reservations.findById(id);
     if (!reservation) throw new ReservationServiceError('Reservation not found', 404);
 
@@ -102,7 +102,7 @@ export function createReservationService({ repository, cleanText, nextReservatio
     }
 
     if (body?.notes !== undefined) reservation.notes = cleanText(body.notes, 300);
-    reservations.save();
+    await reservations.save();
     return reservation;
   }
 
