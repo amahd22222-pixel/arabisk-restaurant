@@ -43,3 +43,29 @@ test('media details update fails closed when storage write fails', async () => {
     /Product details could not be persisted to storage/i
   );
 });
+
+test('media gallery sanitizer rejects protocol-relative and unsafe URLs', async () => {
+  const service = createMediaService({
+    ...baseOptions,
+    readJsonWithStatus: async () => ({
+      ok: true,
+      found: true,
+      value: [{
+        productId: 'P001',
+        gallery: [
+          'https://cdn.example.com/a.jpg',
+          '/images/local.jpg',
+          '//tracker.example.com/pixel',
+          'javascript:alert(1)'
+        ]
+      }]
+    }),
+    writeJson: async () => true
+  });
+
+  const details = await service.getDetailsForProduct('P001');
+  assert.deepEqual(details.gallery, [
+    'https://cdn.example.com/a.jpg',
+    '/images/local.jpg'
+  ]);
+});

@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { cleanText } from '../utils/input.js';
+import { cleanText, cleanUrl } from '../utils/input.js';
 import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
 
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
@@ -10,7 +10,7 @@ const listValues = (value, max = 8, itemMax = 120) =>
     ? [...new Set(value.map(item => cleanText(item, itemMax)).filter(Boolean))].slice(0, max)
     : [];
 const galleryValues = value =>
-  listValues(value, 8, 1000).filter(url => /^(https?:\/\/|\/)/i.test(url));
+  listValues(value, 8, 1000).map(url => cleanUrl(url)).filter(Boolean);
 
 export function createMediaService({
   repository,
