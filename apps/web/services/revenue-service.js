@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
+import { logServiceFailure } from '../utils/service-error.js';
 
 const REVENUE_STATE_KEY = 'data/arabisk-revenue-v1.json';
 const MAX_EVENTS = 8000;
@@ -235,6 +236,8 @@ export function createRevenueService({
     let summaryCacheAt = 0;
     let segmentsCache = null;
     let segmentsCacheAt = 0;
+    let lastPersistAt = null;
+    let lastPersistOk = storageReady ? null : true;
     const invalidateRevenueCaches = () => {
       summaryCache = null;
       summaryCacheAt = 0;
@@ -257,7 +260,18 @@ export function createRevenueService({
       if (!storageReady || !persistRequested) return persistQueue;
       persistRequested = false;
       const snapshot = { version: 2, events: events.slice(-MAX_EVENTS), campaigns: campaigns.slice(-MAX_CAMPAIGNS) };
-      persistQueue = persistQueue.catch(() => {}).then(() => writeRequiredSnapshot(writeJson, REVENUE_STATE_KEY, snapshot, 'Revenue state could not be persisted to storage.'));
+      persistQueue = persistQueue.catch(() => {}).then(async () => {
+        try {
+          await writeRequiredSnapshot(writeJson, REVENUE_STATE_KEY, snapshot, 'Revenue state could not be persisted to storage.');
+          lastPersistOk = true;
+          lastPersistAt = new Date().toISOString();
+          return true;
+        } catch (error) {
+          lastPersistOk = false;
+          lastPersistAt = new Date().toISOString();
+          throw error;
+        }
+      });
       return persistQueue;
     }
   
@@ -265,7 +279,11 @@ export function createRevenueService({
       if (!storageReady) return Promise.resolve(false);
       persistRequested = true;
       if (!persistTimer) {
-        persistTimer = setTimeout(() => { void flushPersistRevenue(); }, REVENUE_PERSIST_DEBOUNCE_MS);
+        persistTimer = setTimeout(() => {
+          void flushPersistRevenue().catch(error => {
+            logServiceFailure(error, { service: 'revenue', operation: 'persist' });
+          });
+        }, REVENUE_PERSIST_DEBOUNCE_MS);
         persistTimer.unref();
       }
       return persistQueue;
@@ -2216,5 +2234,7 @@ export function createRevenueService({
     };
   }
 
-  return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, executeAbandonedCartRecovery, executeInactiveCustomerRecovery, executeReturningCustomerRecovery, getRecoveryCart, recordRecoveryOrder, updateCampaignOutcome, updateCampaignTask, getCampaignActivity, campaignSummary, customer360, customerSegments, flushPersistRevenue };
+  const persistenceStatus = () => ({ lastPersistAt, lastPersistOk });
+
+  return { restoreRevenue, recordEvent, buildSummary, createCampaignDraft, executeAbandonedCartRecovery, executeInactiveCustomerRecovery, executeReturningCustomerRecovery, getRecoveryCart, recordRecoveryOrder, updateCampaignOutcome, updateCampaignTask, getCampaignActivity, campaignSummary, customer360, customerSegments, flushPersistRevenue, persistenceStatus };
 }

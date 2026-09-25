@@ -61,3 +61,35 @@ test('revenue persistence rejects when storage reports a failed write', async ()
     /Revenue state could not be persisted to storage/i
   );
 });
+
+
+test('revenue records failed background persistence in its status', async () => {
+  const repository = createStateRepository({
+    products: [],
+    categories: [],
+    orders: [],
+    customers: [],
+    reservations: [],
+    persist: async () => {}
+  });
+
+  const service = createRevenueService({
+    readJsonWithStatus: async () => ({ ok: true, found: false, value: null, reason: 'not_found' }),
+    writeJson: async () => false,
+    storageReady: true,
+    repository
+  });
+
+  service.recordEvent({
+    eventName: 'menu_view',
+    sessionId: 'background-persistence-session'
+  });
+
+  await assert.rejects(
+    () => service.flushPersistRevenue(),
+    /Revenue state could not be persisted to storage/i
+  );
+
+  assert.equal(service.persistenceStatus().lastPersistOk, false);
+  assert.ok(service.persistenceStatus().lastPersistAt);
+});

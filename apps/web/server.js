@@ -126,13 +126,15 @@ const nextProductId = createNextPrefixedId(stateRepository.products, 'P', 3);
 
 app.get('/health',(_req,res)=>{
   const persistence = stateStore.status();
-  const ready = !storageReady || persistence.lastPersistOk !== false;
+  const revenuePersistence = revenue.persistenceStatus();
+  const ready = (!storageReady || persistence.lastPersistOk !== false) && revenuePersistence.lastPersistOk !== false;
   const payload = {
     ok: ready,
     service: 'arabisk-web',
     uptimeSeconds: Math.floor((Date.now()-serverStartedAt)/1000),
     storageConfigured: storageReady,
     persistence,
+    revenuePersistence,
     environment: isProductionRuntime ? 'production' : 'development'
   };
   return res.status(ready ? 200 : 503).json(payload);
