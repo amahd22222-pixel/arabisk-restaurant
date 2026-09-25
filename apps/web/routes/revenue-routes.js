@@ -1,4 +1,4 @@
-export function registerRevenueRoutes(app, { service, requireAdminApiKey, analyticsRateLimit }) {
+export function registerRevenueRoutes(app, { service, requireAdminApiKey, analyticsRateLimit, recoveryRateLimit }) {
   const {
     createCampaignDraft,
     executeAbandonedCartRecovery,
@@ -98,7 +98,7 @@ export function registerRevenueRoutes(app, { service, requireAdminApiKey, analyt
     return res.status(202).json({ accepted: true, id: event.id });
   });
 
-  app.get('/api/revenue/recovery/:token', (req, res) => {
+  app.get('/api/revenue/recovery/:token', recoveryRateLimit, (req, res) => {
     const result = getRecoveryCart(req.params.token);
     if (!result || result.error === 'NOT_FOUND') return res.status(404).json({ message: 'رابط الاسترجاع غير صالح.' });
     if (result.error === 'ALREADY_RECOVERED') return res.status(410).json({ message: 'تم استخدام رابط استرجاع السلة بالفعل.' });
