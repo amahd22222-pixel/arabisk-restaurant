@@ -5,7 +5,6 @@ import { createCollectionRepository } from '../repositories/collection-repositor
 const STATE_KEY='data/arabisk-memories.json';
 const IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
 const VIDEO_TYPES=new Set(['video/mp4','video/webm','video/quicktime']);
-const clean=(v,n=500)=>String(v??'').trim().slice(0,n);
 const cleanKey=v=>clean(v,500).replace(/^\/+/,'');
 
 class MemoryServiceError extends Error{
