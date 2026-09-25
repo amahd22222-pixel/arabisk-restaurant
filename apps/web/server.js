@@ -104,11 +104,11 @@ const stateStore = createStateStore({
   reservations
 });
 const { persist: persistState, flush: flushPersistState } = stateStore;
-const stateRepository = createStateRepository({ products, orders, customers, reservations, persist: persistState });
+const stateRepository = createStateRepository({ products, categories, orders, customers, reservations, persist: persistState });
 
 const revenue=createRevenueService({readJson,writeJson,storageReady,customers,reservations,orders,products});
 registerRevenueRoutes(app,{service:revenue,requireAdminApiKey,analyticsRateLimit});
-const categoryService=createCategoryService({repository:stateRepository.products,storageReady,presign,readJson,writeJson,deleteObject,isAdminApiKeyValid});
+const categoryService=createCategoryService({categoriesRepository:stateRepository.categories,productsRepository:stateRepository.products,storageReady,presign,readJson,writeJson,deleteObject,isAdminApiKeyValid});
 registerCategoryRoutes(app,{service:categoryService,requireAdminApiKey});
 const restoreCategories=categoryService.restore;
 const studioService=createStudioService({storageReady,presign,readJson,writeJson,deleteObject});
