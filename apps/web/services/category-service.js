@@ -6,10 +6,10 @@ const MAX_CATEGORY_IMAGE_BYTES=15*1024*1024;
 const CATEGORY_IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
 class CategoryServiceError extends Error{constructor(message,status=400){super(message);this.name='CategoryServiceError';this.status=status;}}
 
-export function createCategoryService({categoriesRepository,productsRepository,storageReady,presign,readJson,writeJson,deleteObject,isAdminApiKeyValid}){
+export function createCategoryService({categoriesRepository,productsRepository,storageReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid}){
   const categories = categoriesRepository;
   const products = productsRepository;
-  const restore=async()=>{if(!storageReady)return;const saved=await readJson(CATEGORY_STATE_KEY,null);if(Array.isArray(saved)&&saved.length)categories.replaceAll(saved);};
+  const restore=async()=>{if(!storageReady)return;const result=await readJsonWithStatus(CATEGORY_STATE_KEY);if(!result.ok)throw new Error('Category state could not be restored from storage.');const saved=result.value;if(Array.isArray(saved)&&saved.length)categories.replaceAll(saved);};
   const persist=()=>writeJson(CATEGORY_STATE_KEY,categories.all());
   const nextId=()=>{const max=categories.all().reduce((n,c)=>{const m=String(c.id||'').match(/^C(\d+)$/);return Math.max(n,m?Number(m[1]):0);},0);return 'C'+String(max+1).padStart(3,'0');};
   const publicCategory=c=>({...c,imageUrl:c.imageKey&&storageReady?presign('GET',c.imageKey,900):(c.imageUrl||'')});
