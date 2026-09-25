@@ -1,16 +1,10 @@
-const customerIntelApiBase=()=>{
-  if(!import.meta.env.DEV)return '/proxy';
-  return (localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||import.meta.env.VITE_API_BASE_URL||'http://localhost:3000').replace(/\/$/,'');
-};
+import { request } from './api-client.js';
 
 const ciEscape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
 const ciMoney=value=>'AED '+Number(value||0).toFixed(0);
 
 async function customerIntelRequest(path){
-  const response=await fetch(customerIntelApiBase()+path,{headers:{Accept:'application/json'},cache:'no-store'});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(data.message||'تعذر تحميل ذكاء العملاء.');
-  return data;
+  return request(path);
 }
 
 function customerIntelSegmentKeyMatch(segment,terms){
