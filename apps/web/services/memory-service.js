@@ -7,6 +7,9 @@ import { logServiceFailure } from '../utils/service-error.js';
 const STATE_KEY='data/arabisk-memories.json';
 const IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
 const VIDEO_TYPES=new Set(['video/mp4','video/webm','video/quicktime']);
+const MAX_MEMORIES=5000;
+const MAX_COMMENTS_PER_MEMORY=100;
+const MAX_REPORTS_PER_MEMORY=100;
 
 class MemoryServiceError extends Error{
   constructor(message,status=400){super(message);this.name='MemoryServiceError';this.status=status;}
@@ -81,6 +84,7 @@ export function createMemoryService({storageReady,presign,readJsonWithStatus,wri
   }
 
   async function create(body){
+    if(state.memories.length>=MAX_MEMORIES)throw new MemoryServiceError('Community memory storage is currently full.',503);
     const text=clean(body.text,1200),displayName=clean(body.displayName,80)||'مجهول',imageKey=cleanKey(body.imageKey),videoKey=cleanKey(body.videoKey);
     if(!text&&!imageKey&&!videoKey)throw new MemoryServiceError('أضف نصًا أو صورة أو فيديو.');
     if(imageKey&&videoKey)throw new MemoryServiceError('يمكن نشر صورة أو فيديو واحد مع النص.');
@@ -91,13 +95,17 @@ export function createMemoryService({storageReady,presign,readJsonWithStatus,wri
   async function like(id){const m=getVisible(id);m.likes=Number(m.likes||0)+1;await memoryRepository.save();return {likes:m.likes};}
   async function share(id){const m=getVisible(id);m.shareCount=Number(m.shareCount||0)+1;await memoryRepository.save();return {shareCount:m.shareCount};}
   async function comment(id,body){
-    const m=getVisible(id),text=clean(body?.text,500),displayName=clean(body?.displayName,80)||'مجهول';
+    const m=getVisible(id);
+    if((m.comments||[]).length>=MAX_COMMENTS_PER_MEMORY)throw new MemoryServiceError('This memory has reached its comment limit.',409);
+    const text=clean(body?.text,500),displayName=clean(body?.displayName,80)||'مجهول';
     if(!text)throw new MemoryServiceError('اكتب تعليقًا أولًا.');
     const item={id:crypto.randomUUID(),text,displayName,createdAt:new Date().toISOString()};
     m.comments.push(item);await memoryRepository.save();return {commentsCount:m.comments.length,comment:item};
   }
   async function report(id,body){
-    const m=get(id);m.reports.push({id:crypto.randomUUID(),reason:clean(body?.reason,160)||'محتوى غير مناسب',createdAt:new Date().toISOString()});
+    const m=get(id);
+    if((m.reports||[]).length>=MAX_REPORTS_PER_MEMORY)throw new MemoryServiceError('This memory has reached its report limit.',409);
+    m.reports.push({id:crypto.randomUUID(),reason:clean(body?.reason,160)||'محتوى غير مناسب',createdAt:new Date().toISOString()});
     await memoryRepository.save();return {ok:true};
   }
   function adminList(){return memoryRepository.all().map(m=>({...publicMemory(m),hidden:Boolean(m.hidden),reportsCount:Array.isArray(m.reports)?m.reports.length:0,comments:m.comments||[],reports:m.reports||[]})).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));}
