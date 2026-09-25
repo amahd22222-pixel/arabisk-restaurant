@@ -105,17 +105,23 @@ async function readResponseTextLimited(response, maxBytes) {
   return text;
 }
 
-export async function readJson(key, fallback = null) {
-  if (!storageReady) return fallback;
+export async function readJsonWithStatus(key) {
+  if (!storageReady) return { ok: false, found: false, value: null, reason: 'storage_not_configured' };
   try {
     const response = await storageFetch(presign('GET', key, 900), {}, STORAGE_READ_TIMEOUT_MS);
-    if (!response.ok) return fallback;
+    if (response.status === 404) return { ok: true, found: false, value: null, reason: 'not_found' };
+    if (!response.ok) return { ok: false, found: false, value: null, reason: `http_${response.status}` };
     const body = await readResponseTextLimited(response, MAX_JSON_RESPONSE_BYTES);
-    return JSON.parse(body);
+    return { ok: true, found: true, value: JSON.parse(body), reason: 'ok' };
   } catch (error) {
     console.error(`Storage read failed for ${key}:`, error);
-    return fallback;
+    return { ok: false, found: false, value: null, reason: 'read_failed' };
   }
+}
+
+export async function readJson(key, fallback = null) {
+  const result = await readJsonWithStatus(key);
+  return result.ok && result.found ? result.value : fallback;
 }
 
 export async function writeJson(key, value) {
