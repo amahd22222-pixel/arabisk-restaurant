@@ -1,11 +1,9 @@
 import crypto from 'node:crypto';
+import { cleanText, cleanKey, cleanUrl } from '../utils/input.js';
 
 const CATEGORY_STATE_KEY='data/arabisk-categories.json';
 const MAX_CATEGORY_IMAGE_BYTES=15*1024*1024;
 const CATEGORY_IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
-const cleanText=(v,max=180)=>String(v??'').trim().slice(0,max);
-const cleanKey=(v)=>String(v??'').trim().replace(/^\/+/, '').slice(0,500);
-const cleanUrl=(v)=>String(v??'').trim().slice(0,1000);
 class CategoryServiceError extends Error{constructor(message,status=400){super(message);this.name='CategoryServiceError';this.status=status;}}
 
 export function createCategoryService({categoriesRepository,productsRepository,storageReady,presign,readJson,writeJson,deleteObject,isAdminApiKeyValid}){
