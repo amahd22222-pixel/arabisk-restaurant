@@ -3,8 +3,7 @@ import crypto from 'node:crypto';
 export function createProductService({
   products, categories, storageReady, presign, deleteObject, isAdminApiKeyValid,
   cleanText, cleanKey, cleanUrl, normalizeList, smartSnapshot, withMediaUrls,
-  persistState, invalidateSmartSnapshot, nextProductId, maxVideoBytes, videoTypes,
-  smartPopularWindowMs, smartNewWindowMs
+  persistState, invalidateSmartSnapshot, nextProductId, maxVideoBytes, videoTypes
 }) {
   const smartTags = new Set(['spicy']);
   const dietaryTags = new Set(['vegetarian', 'vegan', 'gluten-free']);
