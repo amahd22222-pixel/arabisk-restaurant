@@ -9,8 +9,7 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
   let lastPersistAt = null;
   let lastPersistOk = storageReady ? null : true;
 
-  const settlePersistWaiters = (result) => {
-    const waiters = persistWaiters.splice(0);
+  const settlePersistWaiters = (result, waiters) => {
     for (const resolve of waiters) resolve(result);
   };
 
@@ -69,6 +68,8 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
     if (!persistRequested) return persistQueue;
     persistRequested = false;
     const snapshot = structuredClone({ menuVersion, products, orders, customers, reservations });
+    const waiters = persistWaiters;
+    persistWaiters = [];
     persistQueue = persistQueue.catch(() => true).then(async () => {
       try {
         const ok = await writeJson(stateKey, snapshot);
@@ -81,7 +82,7 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
         return false;
       }
     });
-    persistQueue.then(settlePersistWaiters);
+    persistQueue.then(result => settlePersistWaiters(result, waiters));
     return persistQueue;
   };
 
