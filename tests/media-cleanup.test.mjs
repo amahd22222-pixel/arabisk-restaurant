@@ -93,20 +93,6 @@ test('category removal persists before deleting its image', async () => {
 });
 
 test('experience media replacement persists before deleting the old media', async () => {
-  const experiences = [{
-    id: 'E001',
-    slug: 'chef-night',
-    titleAr: 'ليلة الشيف',
-    titleEn: 'Chef Night',
-    startsAt: '2099-01-01T10:00:00.000Z',
-    endsAt: '',
-    status: 'published',
-    bookingEnabled: true,
-    coverImageUrl: '',
-    coverImageKey: 'experiences/E001/old.webp',
-    videoUrl: '',
-    videoKey: ''
-  }];
   const events = [];
   const service = createExperienceService({
     storageReady: true,
@@ -116,61 +102,60 @@ test('experience media replacement persists before deleting the old media', asyn
     deleteObject: async key => { events.push(`delete:${key}`); return true; },
     isAdminApiKeyValid: () => true
   });
-  await service.update('E001', { coverImageKey: 'experiences/E001/new.webp' });
 
-  assert.deepEqual(events, ['write', 'delete:experiences/E001/old.webp']);
-  assert.equal(experiences[0].coverImageKey, 'experiences/E001/new.webp');
+  const created = await service.create({
+    slug: 'cleanup-experience-' + Date.now(),
+    titleAr: 'تجربة',
+    titleEn: 'Cleanup test',
+    startsAt: '2099-01-01T10:00:00.000Z',
+    status: 'published',
+    coverImageKey: 'experiences/old.webp'
+  });
+  events.length = 0;
+
+  await service.update(created.id, { coverImageKey: 'experiences/new.webp' });
+
+  assert.deepEqual(events, ['write', 'delete:experiences/old.webp']);
+  assert.equal(service.get(created.id).coverImageKey, 'experiences/new.webp');
 });
 
 test('experience media update rolls back without deleting the old media when persistence fails', async () => {
-  const experiences = [{
-    id: 'E001',
-    slug: 'chef-night',
-    titleAr: 'ليلة الشيف',
-    titleEn: 'Chef Night',
-    startsAt: '2099-01-01T10:00:00.000Z',
-    endsAt: '',
-    status: 'published',
-    bookingEnabled: true,
-    coverImageUrl: '',
-    coverImageKey: 'experiences/E001/old.webp',
-    videoUrl: '',
-    videoKey: ''
-  }];
+  let failNext = false;
   const deleted = [];
   const service = createExperienceService({
     storageReady: true,
     presign: (method, key) => `https://signed.example/${method}/${key}`,
     readJsonWithStatus: async () => ({ ok: true, found: false, value: null }),
-    writeJson: async () => false,
+    writeJson: async () => !failNext,
     deleteObject: async key => { deleted.push(key); return true; },
     isAdminApiKeyValid: () => true
   });
 
+  const created = await service.create({
+    slug: 'rollback-experience-' + Date.now(),
+    titleAr: 'تجربة',
+    titleEn: 'Rollback test',
+    startsAt: '2099-01-01T10:00:00.000Z',
+    status: 'published',
+    coverImageKey: 'experiences/old.webp'
+  });
+  await service.update(created.id, { titleAr: 'قبل الفشل' });
+
+  failNext = true;
   await assert.rejects(
-    () => service.update('E001', { coverImageKey: 'experiences/E001/new.webp' }),
+    () => service.update(created.id, {
+      titleAr: 'بعد الفشل',
+      coverImageKey: 'experiences/new.webp'
+    }),
     /persisted to storage/i
   );
 
-  assert.equal(experiences[0].coverImageKey, 'experiences/E001/old.webp');
+  assert.equal(service.get(created.id).titleAr, 'قبل الفشل');
+  assert.equal(service.get(created.id).coverImageKey, 'experiences/old.webp');
   assert.deepEqual(deleted, []);
 });
 
 test('experience removal persists before deleting its media', async () => {
-  const experiences = [{
-    id: 'E001',
-    slug: 'chef-night',
-    titleAr: 'ليلة الشيف',
-    titleEn: 'Chef Night',
-    startsAt: '2099-01-01T10:00:00.000Z',
-    endsAt: '',
-    status: 'published',
-    bookingEnabled: true,
-    coverImageUrl: '',
-    coverImageKey: 'experiences/E001/old.webp',
-    videoUrl: '',
-    videoKey: ''
-  }];
   const events = [];
   const service = createExperienceService({
     storageReady: true,
@@ -181,8 +166,18 @@ test('experience removal persists before deleting its media', async () => {
     isAdminApiKeyValid: () => true
   });
 
-  await service.remove('E001');
+  const created = await service.create({
+    slug: 'remove-experience-' + Date.now(),
+    titleAr: 'تجربة',
+    titleEn: 'Remove test',
+    startsAt: '2099-01-01T10:00:00.000Z',
+    status: 'published',
+    coverImageKey: 'experiences/remove.webp'
+  });
+  events.length = 0;
 
-  assert.deepEqual(events, ['write', 'delete:experiences/E001/old.webp']);
-  assert.equal(experiences.length, 0);
+  await service.remove(created.id);
+
+  assert.deepEqual(events, ['write', 'delete:experiences/remove.webp']);
+  assert.throws(() => service.get(created.id), /Experience not found/);
 });
