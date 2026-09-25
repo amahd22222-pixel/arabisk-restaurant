@@ -22,7 +22,7 @@ export function createSmartMenuService({
     if (!force && smartSnapshotCache && now - smartSnapshotCachedAt < SMART_SNAPSHOT_CACHE_MS) return smartSnapshotCache;
     const cutoff = now - smartPopularWindowMs;
     const sales = new Map();
-    for (const order of orders) {
+    for (const order of orders.all()) {
       if (order.status === 'cancelled') continue;
       const created = Date.parse(order.createdAt || '');
       if (!Number.isFinite(created) || created < cutoff) continue;
