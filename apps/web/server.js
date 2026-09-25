@@ -158,7 +158,6 @@ registerProductRoutes(app, {
 
 const orderService = createOrderService({
   repository: stateRepository,
-  products,
   cleanText,
   nextOrderId: createNextPrefixedId(orders, 'O', 5),
   invalidateSmartSnapshot,
