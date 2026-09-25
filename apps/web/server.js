@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'url';
 import { presign, storageReady, readJson, writeJson, deleteObject } from './storage.js';
+import { serviceErrorHandler } from './utils/service-error.js';
 import { categories, products } from './menu-data.js';
 import { requireAdminApiKey, isAdminApiKeyValid } from './admin-auth.js';
 import { createMediaService } from './services/media-service.js';
@@ -208,12 +209,8 @@ registerMediaRoutes(app, {
   service: mediaService,
   requireAdminApiKey
 });
-registerPageRoutes(app, { rootDir: __dirname, distDir: dist });app.use((error,req,res,_next)=>{
-  if(error?.type==='entity.too.large')return res.status(413).json({message:'Request body is too large.'});
-  if(error instanceof SyntaxError&&error?.status===400)return res.status(400).json({message:'Invalid JSON request.'});
-  console.error(JSON.stringify({event:'web_unhandled_error',requestId:res.locals.requestId||'unknown',method:req.method,path:req.path,error:String(error?.message||error)}));
-  if(!res.headersSent)res.status(500).json({message:'Internal server error'});
-});
+registerPageRoutes(app, { rootDir: __dirname, distDir: dist });
+app.use(serviceErrorHandler);
 
 await stateStore.restore();
 await restoreCategories();
