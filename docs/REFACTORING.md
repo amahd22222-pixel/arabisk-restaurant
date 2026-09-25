@@ -6,7 +6,7 @@ The web service is organized by responsibility:
 - `services/`: request and business workflows for orders, customers, and reservations.
 - `repositories/`: persistence access boundaries.
 - `storage.js`: object-storage signing and persistence primitives.
-- `revenue-engine.js`: revenue analytics and recovery domain.
+- `revenue-service.js`: revenue analytics and recovery domain.
 
 New endpoints should not put business logic directly into `server.js`. Route handlers should validate transport input and delegate domain work to a service. Persistence must go through a repository or storage boundary.
 
