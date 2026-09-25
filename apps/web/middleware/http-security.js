@@ -25,7 +25,10 @@ export function configureHttpSecurity(app, { allowedCorsOrigins, isProductionRun
   app.use(cors(corsOptions));
   app.options(/.*/, cors(corsOptions));
 
-  const requestId = (req) => String(req.get('X-Request-Id') || crypto.randomUUID()).slice(0, 80);
+  const requestId = (req) => {
+    const incoming = String(req.get('X-Request-Id') || '').trim();
+    return /^[A-Za-z0-9._-]{1,80}$/.test(incoming) ? incoming : crypto.randomUUID();
+  };
 
   app.use((req, res, next) => {
     const id = requestId(req);
