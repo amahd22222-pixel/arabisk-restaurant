@@ -8,6 +8,15 @@ function safeLogMessage(error) {
     .slice(0, 240);
 }
 
+export function logServiceFailure(error, { service = 'web', operation = 'unknown' } = {}) {
+  console.error(JSON.stringify({
+    event: 'service_failure',
+    service: String(service).slice(0, 60),
+    operation: String(operation).slice(0, 80),
+    error: safeLogMessage(error)
+  }));
+}
+
 export function sendServiceError(res, error) {
   const status = Number(error?.status);
   const safeStatus = Number.isInteger(status) && status >= 400 && status <= 499 ? status : 500;

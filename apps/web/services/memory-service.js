@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { cleanText as clean, cleanKey } from '../utils/input.js';
 import { createCollectionRepository } from '../repositories/collection-repository.js';
 import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
+import { logServiceFailure } from '../utils/service-error.js';
 
 const STATE_KEY='data/arabisk-memories.json';
 const IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
@@ -76,7 +77,7 @@ export function createMemoryService({storageReady,presign,readJsonWithStatus,wri
     const extension=clean(body?.fileName,80).split('.').pop()?.replace(/[^a-z0-9]/gi,'').toLowerCase()||(kind==='image'?'jpg':'mp4');
     const key='memories/'+new Date().toISOString().slice(0,10)+'/'+crypto.randomUUID()+'.'+extension;
     try{return {kind,key,uploadUrl:presign('PUT',key,900),expiresIn:900};}
-    catch(error){console.error(error);throw new MemoryServiceError('تعذر تجهيز رفع الوسائط.',503);}
+    catch(error){logServiceFailure(error,{service:'memory',operation:'upload'});throw new MemoryServiceError('تعذر تجهيز رفع الوسائط.',503);}
   }
 
   async function create(body){

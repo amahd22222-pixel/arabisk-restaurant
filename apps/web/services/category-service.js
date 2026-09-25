@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { cleanText, cleanKey, cleanUrl } from '../utils/input.js';
 import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
+import { logServiceFailure } from '../utils/service-error.js';
 
 const CATEGORY_STATE_KEY='data/arabisk-categories.json';
 const MAX_CATEGORY_IMAGE_BYTES=15*1024*1024;
@@ -64,12 +65,12 @@ export function createCategoryService({categoriesRepository,productsRepository,s
     if(!fileName||!CATEGORY_IMAGE_TYPES.has(contentType))throw new CategoryServiceError('Only JPG, PNG, WebP and AVIF images are supported.');
     if(!Number.isFinite(size)||size<1||size>MAX_CATEGORY_IMAGE_BYTES)throw new CategoryServiceError('Maximum category image size is 15 MB.');
     const targetId=categoryId||'new-'+crypto.randomUUID();const key='categories/'+targetId+'/'+crypto.randomUUID()+'-'+fileName;
-    try{return {key,uploadUrl:presign('PUT',key,900),expiresIn:900};}catch(error){console.error(error);throw new CategoryServiceError('Unable to prepare category image upload.',503);}
+    try{return {key,uploadUrl:presign('PUT',key,900),expiresIn:900};}catch(error){logServiceFailure(error,{service:'category',operation:'presignImage'});throw new CategoryServiceError('Unable to prepare category image upload.',503);}
   }
   function presignImageDelete(body){
     if(!storageReady)throw new CategoryServiceError('Image storage is not configured on the web service.',503);
     const category=getOrThrow(cleanText(body?.categoryId,40));if(!category.imageKey)return {url:'',key:''};
-    try{return {url:presign('DELETE',category.imageKey,900),key:category.imageKey};}catch(error){console.error(error);throw new CategoryServiceError('Unable to prepare category image deletion.',503);}
+    try{return {url:presign('DELETE',category.imageKey,900),key:category.imageKey};}catch(error){logServiceFailure(error,{service:'category',operation:'presignImageDelete'});throw new CategoryServiceError('Unable to prepare category image deletion.',503);}
   }
   return {restore,list,create,update,remove,presignImage,presignImageDelete};
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sendServiceError } from '../apps/web/utils/service-error.js';
+import { sendServiceError, logServiceFailure } from '../apps/web/utils/service-error.js';
 
 test('service error helper hides internal server messages', () => {
   const responses = [];
@@ -60,4 +60,27 @@ test('service error helper only exposes allowlisted public metadata', () => {
   assert.equal(responses[0].payload.reservationId, 'R001');
   assert.equal(responses[0].payload.secret, undefined);
   assert.equal(responses[0].payload.internalToken, undefined);
+});
+
+
+test('service failure logger redacts sensitive values and emits structured metadata', () => {
+  const original = console.error;
+  const calls = [];
+  console.error = (...args) => calls.push(args.join(' '));
+  try {
+    logServiceFailure(new Error('token=secret-value password=hunter2'), {
+      service: 'memory',
+      operation: 'upload'
+    });
+  } finally {
+    console.error = original;
+  }
+
+  assert.equal(calls.length, 1);
+  assert.match(calls[0], /"event":"service_failure"/);
+  assert.match(calls[0], /"service":"memory"/);
+  assert.match(calls[0], /"operation":"upload"/);
+  assert.match(calls[0], /token=\[REDACTED\]/);
+  assert.match(calls[0], /password=\[REDACTED\]/);
+  assert.doesNotMatch(calls[0], /secret-value|hunter2/);
 });
