@@ -1,3 +1,4 @@
+import { request } from './api-client.js';
 const nextActionApiBase=()=>((localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||(location.hostname==='localhost'?'http://localhost:3000':'/proxy')).replace(/\/$/,''));
 const nextActionEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 const nextActionMoney=v=>'AED '+Number(v||0).toFixed(0);
@@ -31,15 +32,10 @@ function openNextRevenueAction(id){
 
 async function createNextRevenueAction(decision){
   if(!decision?.actionType||!decision?.actionReference)return;
-  const apiRequest=window.ARABISK_ADMIN_REQUEST;
-  const data=apiRequest
-    ? await apiRequest('/api/revenue/campaign-drafts',{method:'POST',body:JSON.stringify({type:decision.actionType,reference:decision.actionReference})})
-    : await (async()=>{
-        const response=await fetch(nextActionApiBase()+'/api/revenue/campaign-drafts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:decision.actionType,reference:decision.actionReference})});
-        const payload=await response.json().catch(()=>({}));
-        if(!response.ok)throw new Error(payload.message||'تعذر إنشاء الإجراء المقترح.');
-        return payload;
-      })();
+  const data=await request('/api/revenue/campaign-drafts',{
+    method:'POST',
+    body:JSON.stringify({type:decision.actionType,reference:decision.actionReference})
+  });
   const campaignId=data.id||data.campaignId||'';
   if(campaignId)openNextRevenueAction(campaignId);
 }
