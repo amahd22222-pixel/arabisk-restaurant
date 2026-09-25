@@ -22,3 +22,4 @@ test('collection repository keeps CRUD and persistence behavior explicit', () =>
   assert.equal(repository.removeById('missing'), null);
   assert.equal(items.length, 1);
 });
+
