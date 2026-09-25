@@ -23,3 +23,12 @@ test('date utility accepts real calendar dates and rejects impossible dates', ()
   assert.equal(isValidDateOnly('2099-13-01'), false);
   assert.equal(isValidDateOnly('2099-01-01'), true);
 });
+
+test('URL utility allows web/local URLs and rejects executable schemes', () => {
+  assert.equal(cleanUrl('https://cdn.example.com/item.webp'), 'https://cdn.example.com/item.webp');
+  assert.equal(cleanUrl('http://cdn.example.com/item.webp'), 'http://cdn.example.com/item.webp');
+  assert.equal(cleanUrl('/assets/item.webp'), '/assets/item.webp');
+  assert.equal(cleanUrl('javascript:alert(1)'), '');
+  assert.equal(cleanUrl('data:text/html,<script>alert(1)</script>'), '');
+  assert.equal(cleanUrl('//attacker.example/item.webp'), '');
+});
