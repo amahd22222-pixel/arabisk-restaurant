@@ -3,7 +3,7 @@ export function registerCustomerRoutes(app, { service, requireAdminApiKey }) {
     return res.json(service.listCustomers());
   });
 
-  app.patch('/api/customers/:id', requireAdminApiKey, (req, res) => {
-    return res.json(service.updateCustomer(req.params.id, req.body || {}));
+  app.patch('/api/customers/:id', requireAdminApiKey, async (req, res) => {
+    return res.json(await service.updateCustomer(req.params.id, req.body || {}));
   });
 }
