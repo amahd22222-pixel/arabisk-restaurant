@@ -13,11 +13,11 @@ export function createStateRepository({ products, categories, orders, customers,
     orders: orderRepository,
     customers: {
       ...customerRepository,
-      findByPhone: (phone) => customers.find(item => item.phone === phone)
+      findByPhone: (phone) => customerRepository.find(item => item.phone === phone)
     },
     reservations: {
       ...reservationRepository,
-      findDuplicate: (phone, date, time) => reservations.find(
+      findDuplicate: (phone, date, time) => reservationRepository.find(
         item => item.status !== 'cancelled' && item.phone === phone && item.date === date && item.time === time
       )
     }
