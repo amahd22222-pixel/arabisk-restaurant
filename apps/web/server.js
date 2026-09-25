@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'url';
 import { presign, storageReady, readJson, writeJson, deleteObject } from './storage.js';
 import { serviceErrorHandler } from './utils/service-error.js';
+import { cleanText, cleanKey, cleanUrl, normalizeList } from './utils/input.js';
 import { categories, products } from './menu-data.js';
 import { requireAdminApiKey, isAdminApiKeyValid } from './admin-auth.js';
 import { createMediaService } from './services/media-service.js';
@@ -42,10 +43,6 @@ const dist = path.join(__dirname, 'dist');
 configureHttpSecurity(app, { allowedCorsOrigins, isProductionRuntime });
 app.use(express.json({limit:'1mb',strict:true}));
 
-const cleanText=(value,max=180)=>String(value??'').trim().slice(0,max);
-const cleanKey=(value)=>String(value??'').trim().replace(/^\/+/, '').slice(0,500);
-const cleanUrl=(value)=>String(value??'').trim().slice(0,1000);
-const normalizeList=(value,allowed,max=8)=>Array.isArray(value)?[...new Set(value.map(item=>String(item??'').trim().toLowerCase()).filter(item=>allowed.has(item)))].slice(0,max):[];
 const orders=[]; const customers=[]; const reservations=[];
 const reservationRateLimit=createRateLimiter({
   windowMs:10*60*1000,
