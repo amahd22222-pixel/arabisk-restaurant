@@ -71,16 +71,13 @@ test('studio update rolls back in-memory state when persistence fails', async ()
 });
 
 test('studio remove restores the item when persistence fails', async () => {
-  let attempts = 0;
+  let failNextSave = false;
   const deleted = [];
   const service = createStudioService({
     storageReady: true,
     presign: (method, key) => `https://signed.example/${method}/${key}`,
     readJsonWithStatus: async () => ({ ok: true, found: false, value: null, reason: 'not_found' }),
-    writeJson: async () => {
-      attempts += 1;
-      return attempts !== 3;
-    },
+    writeJson: async () => !failNextSave,
     deleteObject: async key => {
       deleted.push(key);
       return true;
@@ -90,7 +87,7 @@ test('studio remove restores the item when persistence fails', async () => {
   await service.create({ title: 'Main', sortOrder: 1 });
   await service.update('S001', { desktopVideoKey: 'studio/S001/desktop/current.mp4' });
 
-  attempts = 0;
+  failNextSave = true;
   await assert.rejects(
     () => service.remove('S001'),
     /persisted to storage/i
