@@ -10,6 +10,7 @@ on:
       - 'package-lock.json'
       - '.github/workflows/admin-build.yml'
       - 'tests/**'
+      - 'scripts/**'
   push:
     branches:
       - main
@@ -21,6 +22,7 @@ on:
       - 'package-lock.json'
       - '.github/workflows/admin-build.yml'
       - 'tests/**'
+      - 'scripts/**'
 
 jobs:
   admin-build:
