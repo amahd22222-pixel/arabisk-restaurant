@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { readRequiredSnapshot } from '../repositories/restore-helper.js';
 
 const REVENUE_STATE_KEY = 'data/arabisk-revenue-v1.json';
 const MAX_EVENTS = 8000;
@@ -243,9 +244,7 @@ export function createRevenueService({
   
     async function restoreRevenue() {
       if (!storageReady) return;
-      const result = await readJsonWithStatus(REVENUE_STATE_KEY);
-      if (!result.ok) throw new Error('Revenue state could not be restored from storage.');
-      const saved = result.value;
+      const saved = await readRequiredSnapshot(readJsonWithStatus, REVENUE_STATE_KEY, 'Revenue state could not be restored from storage.');
       if (saved && Array.isArray(saved.events)) events.splice(0, events.length, ...saved.events.slice(-MAX_EVENTS));
       if (saved && Array.isArray(saved.campaigns)) campaigns.splice(0, campaigns.length, ...saved.campaigns.slice(-MAX_CAMPAIGNS));
     }

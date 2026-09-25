@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { cleanText as clean, cleanKey } from '../utils/input.js';
 import { createCollectionRepository } from '../repositories/collection-repository.js';
+import { readRequiredSnapshot } from '../repositories/restore-helper.js';
 
 const STATE_KEY='data/arabisk-memories.json';
 const IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
@@ -24,9 +25,7 @@ export function createMemoryService({storageReady,presign,readJsonWithStatus,wri
 
   const restore=async()=>{
     if(!storageReady)return;
-    const result=await readJsonWithStatus(STATE_KEY);
-    if(!result.ok)throw new Error('Memory state could not be restored from storage.');
-    const saved=result.value;
+    const saved=await readRequiredSnapshot(readJsonWithStatus,STATE_KEY,'Memory state could not be restored from storage.');
     if(saved&&Array.isArray(saved.memories))memoryRepository.replaceAll(saved.memories);
   };
 

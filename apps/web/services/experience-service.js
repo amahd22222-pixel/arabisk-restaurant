@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { cleanText, cleanUrl } from '../utils/input.js';
 import { createCollectionRepository } from '../repositories/collection-repository.js';
+import { readRequiredSnapshot } from '../repositories/restore-helper.js';
 
 const EXPERIENCE_STATE_KEY='data/arabisk-experiences.json';
 const IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
@@ -19,7 +20,7 @@ class ExperienceServiceError extends Error{constructor(message,status=400){super
 export function createExperienceService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid}){
   const persist=()=>writeJson(EXPERIENCE_STATE_KEY,experiences);
   const experienceRepository=createCollectionRepository(experiences,{persist});
-  const restore=async()=>{if(!storageReady)return;const result=await readJsonWithStatus(EXPERIENCE_STATE_KEY);if(!result.ok)throw new Error('Experience state could not be restored from storage.');const saved=result.value;if(Array.isArray(saved))experienceRepository.replaceAll(saved);};
+  const restore=async()=>{if(!storageReady)return;const saved=await readRequiredSnapshot(readJsonWithStatus,EXPERIENCE_STATE_KEY,'Experience state could not be restored from storage.');if(Array.isArray(saved))experienceRepository.replaceAll(saved);};
   const nextId=()=> 'E'+crypto.randomUUID().slice(0,8).toUpperCase();
   const publicExperience=item=>({...item,coverImageUrl:item.coverImageKey&&storageReady?presign('GET',item.coverImageKey,900):(item.coverImageUrl||''),videoUrl:item.videoKey&&storageReady?presign('GET',item.videoKey,900):(item.videoUrl||'')});
   const presentExperience=(item,{includePrivate=false}={})=>{
