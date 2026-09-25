@@ -20,7 +20,7 @@ export function createCategoryService({categoriesRepository,productsRepository,s
     return publicValue;
   };
   const getOrThrow=id=>{const category=categories.find(c=>c.id===id);if(!category)throw new CategoryServiceError('Category not found',404);return category;};
-  function list(req){const visible=isAdminApiKeyValid(req)?categories.all():categories.filter(c=>c.active!==false);return visible.map(publicCategory);}
+  function list(req){const admin=isAdminApiKeyValid(req);const visible=admin?categories.all():categories.filter(c=>c.active!==false);return visible.map(category=>presentCategory(category,{includePrivate:admin}));}
   async function create(body){
     const nameAr=cleanText(body.nameAr,100),nameEn=cleanText(body.nameEn,120);
     if(!nameAr||!nameEn)throw new CategoryServiceError('nameAr and nameEn are required');
