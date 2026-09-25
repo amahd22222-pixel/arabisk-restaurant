@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { cleanText, cleanUrl } from '../utils/input.js';
 
 const EXPERIENCE_STATE_KEY='data/arabisk-experiences.json';
 const IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
@@ -8,8 +9,6 @@ const VIDEO_TYPES=new Set(['video/mp4','video/webm','video/quicktime']);
 const STATUS_VALUES=new Set(['draft','published','closed','archived']);
 const TYPE_VALUES=new Set(['event','music','chef','family','private','seasonal']);
 const isValidDateTime=value=>Number.isFinite(Date.parse(String(value||'')));
-const cleanText=(value,max=240)=>String(value??'').trim().slice(0,max);
-const cleanUrl=(value)=>String(value??'').trim().slice(0,1000);
 const slugify=value=>String(value??'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,90);
 const hasMedia=(url,key)=>Boolean(cleanUrl(url)||cleanText(key,500));
 const mediaConflict=(imageUrl,imageKey,videoUrl,videoKey)=>hasMedia(imageUrl,imageKey)&&hasMedia(videoUrl,videoKey);
