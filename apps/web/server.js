@@ -120,7 +120,7 @@ registerExperienceRoutes(app,{service:experienceService,requireAdminApiKey});
 const restoreExperiences=experienceService.restore;
 const memoryService=createMemoryService({storageReady,presign,readJson,writeJson,deleteObject});
 registerMemoriesRoutes(app,{service:memoryService,requireAdminApiKey,memoryUploadRateLimit,memoryMutationRateLimit});
-const nextProductId = createNextPrefixedId(products, 'P', 3);
+const nextProductId = createNextPrefixedId(stateRepository.products, 'P', 3);
 
 app.get('/health',(_req,res)=>{
   const persistence = stateStore.status();
@@ -160,7 +160,7 @@ registerProductRoutes(app, {
 const orderService = createOrderService({
   repository: stateRepository,
   cleanText,
-  nextOrderId: createNextPrefixedId(orders, 'O', 5),
+  nextOrderId: createNextPrefixedId(stateRepository.orders, 'O', 5),
   invalidateSmartSnapshot,
   revenue,
   crypto
@@ -186,7 +186,7 @@ registerCustomerRoutes(app, {
 const reservationService = createReservationService({
   repository: stateRepository,
   cleanText,
-  nextReservationId: createNextPrefixedId(reservations, 'R', 4),
+  nextReservationId: createNextPrefixedId(stateRepository.reservations, 'R', 4),
   experiences,
   revenue,
   crypto
