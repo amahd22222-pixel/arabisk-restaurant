@@ -1,3 +1,4 @@
+import { request } from './api-client.js';
 const $=(selector)=>document.querySelector(selector);
 const apiBase=()=>((localStorage.getItem('ARABISK_API_BASE')||window.ARABISK_API_BASE||import.meta.env.VITE_API_BASE_URL||(import.meta.env.DEV?'http://localhost:3000':'/proxy')).replace(/\/$/,''));
 const columns=[{key:'new',statuses:['pending','confirmed'],label:'طلبات جديدة',empty:'لا توجد طلبات جديدة.',next:{pending:'confirmed',confirmed:'preparing'}} ,{key:'preparing',statuses:['preparing'],label:'قيد التحضير',empty:'لا توجد طلبات قيد التحضير.',next:{preparing:'ready'}},{key:'ready',statuses:['ready'],label:'جاهز',empty:'لا توجد طلبات جاهزة.',next:{ready:'completed'}}];
