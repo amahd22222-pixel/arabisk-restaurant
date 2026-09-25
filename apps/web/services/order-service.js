@@ -26,6 +26,9 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
 
   async function updateOrder(id, body) {
     const order = getOrThrow(id);
+    const beforeOrder = structuredClone(order);
+    let beforeCustomer = null;
+    let changedCustomer = null;
     const now = new Date().toISOString();
 
     if (body?.status !== undefined) {
@@ -38,36 +41,47 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
       }
 
       order.status = nextStatus;
-      invalidateSmartSnapshot();
 
       if (nextStatus === 'completed') {
         order.completedAt = order.completedAt || now;
-        let completedCustomerId = '';
-
         if (order.orderType === 'pickup' && order.phone) {
           const customer = customers.findByPhone(order.phone);
           if (customer) {
-            completedCustomerId = customer.id;
+            changedCustomer = customer;
+            beforeCustomer = structuredClone(customer);
             customer.name = cleanText(order.name, 80);
             customer.orderCount = Number(customer.orderCount || 0) + 1;
             customer.lastOrderAt = order.completedAt;
           }
         }
-
-        revenue.recordEvent({
-          eventName: 'order_completed',
-          sessionId: cleanText(order.sessionId, 100),
-          customerId: completedCustomerId,
-          orderId: order.id,
-          orderValue: order.total,
-          metadata: { orderType: order.orderType }
-        });
       }
     }
 
     if (body?.notes !== undefined) order.notes = cleanText(body.notes, 300);
     order.updatedAt = now;
-    await orders.save();
+
+    try {
+      await orders.save();
+    } catch (error) {
+      Object.assign(order, beforeOrder);
+      if (changedCustomer && beforeCustomer) Object.assign(changedCustomer, beforeCustomer);
+      throw error;
+    }
+
+    invalidateSmartSnapshot();
+
+    if (order.status === 'completed' && beforeOrder.status !== 'completed') {
+      const completedCustomerId = changedCustomer?.id || '';
+      revenue.recordEvent({
+        eventName: 'order_completed',
+        sessionId: cleanText(order.sessionId, 100),
+        customerId: completedCustomerId,
+        orderId: order.id,
+        orderValue: order.total,
+        metadata: { orderType: order.orderType }
+      });
+    }
+
     return order;
   }
 
@@ -131,20 +145,37 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
       completedAt: ''
     };
 
-    orders.add(order);
-    invalidateSmartSnapshot();
-
     let orderCustomerId = '';
+    let existingCustomer = null;
+    let beforeCustomer = null;
+
     if (orderType === 'pickup' && phone) {
-      const existing = customers.findByPhone(phone);
-      if (existing) {
-        orderCustomerId = existing.id;
-        existing.name = name;
+      existingCustomer = customers.findByPhone(phone);
+      if (existingCustomer) {
+        orderCustomerId = existingCustomer.id;
+        beforeCustomer = structuredClone(existingCustomer);
+        existingCustomer.name = name;
       } else {
         orderCustomerId = crypto.randomUUID();
         customers.add({ id: orderCustomerId, name, phone, orderCount: 0, lastOrderAt: '' });
       }
     }
+
+    orders.add(order);
+
+    try {
+      await orders.save();
+    } catch (error) {
+      orders.removeById(order.id);
+      if (existingCustomer && beforeCustomer) {
+        Object.assign(existingCustomer, beforeCustomer);
+      } else if (!existingCustomer && orderCustomerId) {
+        customers.removeById(orderCustomerId);
+      }
+      throw error;
+    }
+
+    invalidateSmartSnapshot();
 
     revenue.recordEvent({
       eventName: 'order_created',
@@ -155,7 +186,6 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
       metadata: { orderType }
     });
     if (recoveryToken) revenue.recordRecoveryOrder(recoveryToken, order.id);
-    await orders.save();
     return order;
   }
 
