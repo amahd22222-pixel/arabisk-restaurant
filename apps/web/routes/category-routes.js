@@ -1,4 +1,4 @@
-const sendServiceError=(res,error)=>res.status(Number(error?.status)||500).json({message:error?.message||'Internal server error'});
+import { sendServiceError } from '../utils/service-error.js';
 export function registerCategoryRoutes(app,{service,requireAdminApiKey}){
   app.get('/api/categories',(req,res)=>{try{return res.json(service.list(req));}catch(error){return sendServiceError(res,error);}});
   app.post('/api/categories',requireAdminApiKey,async(req,res)=>{try{return res.status(201).json(await service.create(req.body||{}));}catch(error){return sendServiceError(res,error);}});
