@@ -30,15 +30,22 @@ export function createProductService({
     create(req, res) {
       const { categoryId, nameAr, nameEn, descriptionAr = '', descriptionEn = '', imageUrl = '', imageKey = '', price,
         available = true, videoKey = '', tags = [], dietary = [], spiceLevel = 0, chefChoice = false, isNew = false } = req.body || {};
-      if (!categoryId || !nameAr || !nameEn || !Number.isFinite(Number(price))) {
-        return res.status(400).json({ message: 'categoryId, nameAr, nameEn and numeric price are required' });
+      const normalizedCategoryId = cleanText(categoryId, 40);
+      const normalizedNameAr = cleanText(nameAr, 160);
+      const normalizedNameEn = cleanText(nameEn, 160);
+      const numericPrice = Number(price);
+
+      if (!normalizedCategoryId || !normalizedNameAr || !normalizedNameEn || !Number.isFinite(numericPrice) || numericPrice < 0) {
+        return res.status(400).json({ message: 'categoryId, nameAr, nameEn and a valid non-negative price are required' });
       }
-      if (!categories.some(category => category.id === categoryId)) return res.status(400).json({ message: 'Unknown category' });
+      if (!categories.some(category => category.id === normalizedCategoryId)) {
+        return res.status(400).json({ message: 'Unknown category' });
+      }
 
       const product = {
-        id: nextProductId(), categoryId, nameAr: cleanText(nameAr), nameEn: cleanText(nameEn),
-        descriptionAr: cleanText(descriptionAr), descriptionEn: cleanText(descriptionEn),
-        imageUrl: cleanUrl(imageUrl), imageKey: cleanKey(imageKey), price: Number(price),
+        id: nextProductId(), categoryId: normalizedCategoryId, nameAr: normalizedNameAr, nameEn: normalizedNameEn,
+        descriptionAr: cleanText(descriptionAr, 1000), descriptionEn: cleanText(descriptionEn, 1000),
+        imageUrl: cleanUrl(imageUrl), imageKey: cleanKey(imageKey), price: numericPrice,
         available: Boolean(available), videoKey: cleanKey(videoKey),
         tags: normalizeList(tags, smartTags), dietary: normalizeList(dietary, dietaryTags),
         spiceLevel: Math.max(0, Math.min(3, Number(spiceLevel) || 0)), chefChoice: Boolean(chefChoice),
@@ -58,13 +65,24 @@ export function createProductService({
       const oldVideoKey = product.videoKey;
 
       if (body.categoryId !== undefined) {
-        if (!categories.some(category => category.id === body.categoryId)) return res.status(400).json({ message: 'Unknown category' });
-        product.categoryId = body.categoryId;
+        const categoryId = cleanText(body.categoryId, 40);
+        if (!categoryId || !categories.some(category => category.id === categoryId)) {
+          return res.status(400).json({ message: 'Unknown category' });
+        }
+        product.categoryId = categoryId;
       }
-      if (body.nameAr !== undefined) product.nameAr = cleanText(body.nameAr);
-      if (body.nameEn !== undefined) product.nameEn = cleanText(body.nameEn);
-      if (body.descriptionAr !== undefined) product.descriptionAr = cleanText(body.descriptionAr);
-      if (body.descriptionEn !== undefined) product.descriptionEn = cleanText(body.descriptionEn);
+      if (body.nameAr !== undefined) {
+        const nameAr = cleanText(body.nameAr, 160);
+        if (!nameAr) return res.status(400).json({ message: 'Arabic product name is required' });
+        product.nameAr = nameAr;
+      }
+      if (body.nameEn !== undefined) {
+        const nameEn = cleanText(body.nameEn, 160);
+        if (!nameEn) return res.status(400).json({ message: 'English product name is required' });
+        product.nameEn = nameEn;
+      }
+      if (body.descriptionAr !== undefined) product.descriptionAr = cleanText(body.descriptionAr, 1000);
+      if (body.descriptionEn !== undefined) product.descriptionEn = cleanText(body.descriptionEn, 1000);
       if (body.imageUrl !== undefined) {
         const nextUrl = cleanUrl(body.imageUrl);
         product.imageUrl = nextUrl;
@@ -76,8 +94,9 @@ export function createProductService({
       }
       if (body.imageKey !== undefined) product.imageKey = cleanKey(body.imageKey);
       if (body.price !== undefined) {
-        if (!Number.isFinite(Number(body.price))) return res.status(400).json({ message: 'Price must be numeric' });
-        product.price = Number(body.price);
+        const price = Number(body.price);
+        if (!Number.isFinite(price) || price < 0) return res.status(400).json({ message: 'Price must be a valid non-negative number' });
+        product.price = price;
       }
       if (body.available !== undefined) product.available = Boolean(body.available);
       if (body.videoKey !== undefined) product.videoKey = cleanKey(body.videoKey);
