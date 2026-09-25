@@ -29,7 +29,7 @@ export function createExperienceService({storageReady,presign,readJson,writeJson
     return publicValue;
   };
   const getOrThrow=id=>{const item=experienceRepository.find(entry=>entry.id===id);if(!item)throw new ExperienceServiceError('Experience not found',404);return item;};
-  function list(req){const admin=isAdminApiKeyValid(req);return (admin?experienceRepository.all():experienceRepository.filter(item=>item.status==='published')).slice().sort((a,b)=>(Date.parse(a.startsAt||'')||0)-(Date.parse(b.startsAt||'')||0)).map(publicExperience);}
+  function list(req){const admin=isAdminApiKeyValid(req);return (admin?experienceRepository.all():experienceRepository.filter(item=>item.status==='published')).slice().sort((a,b)=>(Date.parse(a.startsAt||'')||0)-(Date.parse(b.startsAt||'')||0)).map(item=>presentExperience(item,{includePrivate:admin}));}
   function get(key){const normalized=cleanText(key,120).toLowerCase();const item=experienceRepository.find(entry=>String(entry.id).toLowerCase()===normalized||String(entry.slug).toLowerCase()===normalized);if(!item)throw new ExperienceServiceError('Experience not found',404);return publicExperience(item);}
   function findBookable(slug){
     const normalized=cleanText(slug,90).toLowerCase();
