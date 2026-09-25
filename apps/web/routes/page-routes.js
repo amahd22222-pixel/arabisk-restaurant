@@ -19,5 +19,13 @@ export function registerPageRoutes(app, { rootDir, distDir }) {
   app.get(/^\/menu\/[^/]+\/[^/]+$/, (_req, res) => res.sendFile(page('product-page.html')));
 
   app.use(express.static(distDir));
+
+  app.use('/api', (_req, res) => {
+    return res.status(404).json({
+      code: 'API_ROUTE_NOT_FOUND',
+      message: 'API route not found.'
+    });
+  });
+
   app.use((_req, res) => res.sendFile(path.join(distDir, 'index.html')));
 }
