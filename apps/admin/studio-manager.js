@@ -1,3 +1,4 @@
+import { request as api } from './api-client.js';
 const API = (localStorage.getItem('ARABISK_API_BASE') || (import.meta.env.DEV ? 'http://localhost:3000' : '/proxy')).replace(/\/$/, '');
 const state={shows:[],editing:null};
 const q=(s,r=document)=>r.querySelector(s);
