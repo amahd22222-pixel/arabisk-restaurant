@@ -79,7 +79,7 @@ test('studio remove restores the item when persistence fails', async () => {
     readJsonWithStatus: async () => ({ ok: true, found: false, value: null, reason: 'not_found' }),
     writeJson: async () => {
       attempts += 1;
-      return attempts > 1;
+      return attempts !== 3;
     },
     deleteObject: async key => {
       deleted.push(key);
