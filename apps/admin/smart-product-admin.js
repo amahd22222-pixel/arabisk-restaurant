@@ -16,7 +16,6 @@ style.textContent=`
 `;
 document.head.appendChild(style);
 
-function request(path,options={}){return fetch(`${apiBase()}${path}`,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options}).then(async response=>{const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر تحميل بيانات الصنف');return data;});}
 
 function ensureSmartFields(){
   const form=document.querySelector('#product-form');
