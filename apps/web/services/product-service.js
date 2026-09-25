@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 export function createProductService({
   repository, categories, storageReady, presign, deleteObject, isAdminApiKeyValid,
   cleanText, cleanKey, cleanUrl, normalizeList, smartSnapshot, withMediaUrls,
-  persistState, invalidateSmartSnapshot, nextProductId, maxVideoBytes, videoTypes
+  invalidateSmartSnapshot, nextProductId, maxVideoBytes, videoTypes
 }) {
   const { products } = repository;
   const smartTags = new Set(['spicy']);
@@ -46,7 +46,7 @@ export function createProductService({
       };
       repository.add(product);
       invalidateSmartSnapshot();
-      persistState();
+      repository.save();
       return res.status(201).json(withMediaUrls(product));
     },
 
