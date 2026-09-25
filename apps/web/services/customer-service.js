@@ -5,7 +5,7 @@ export function createCustomerService({ repository, cleanText }) {
     return customers.all();
   }
 
-  function updateCustomer(id, body) {
+  async function updateCustomer(id, body) {
     const customer = customers.findById(id);
     if (!customer) {
       const error = new Error('Customer not found');
@@ -18,7 +18,7 @@ export function createCustomerService({ repository, cleanText }) {
       customer.internalNotesUpdatedAt = new Date().toISOString();
     }
 
-    customers.save();
+    await customers.save();
 
     return {
       id: customer.id,
