@@ -50,3 +50,63 @@ test('state store fails closed when snapshot storage cannot be read', async () =
   await store.flush();
   assert.equal(writes, 0);
 });
+
+
+test('state store persist resolves after the actual storage write completes', async () => {
+  let releaseWrite;
+  let started = false;
+  const writeDone = new Promise(resolve => { releaseWrite = resolve; });
+  const store = createStateStore({
+    readJsonWithStatus: async () => ({ ok: true, found: false, value: null }),
+    writeJson: async () => {
+      started = true;
+      await writeDone;
+      return true;
+    },
+    storageReady: true,
+    stateKey: 'data/test-state.json',
+    menuVersion: 'test',
+    products: [],
+    customers: [],
+    orders: [],
+    reservations: []
+  });
+
+  await store.restore();
+  const persistence = store.persist();
+  const flush = store.flush();
+
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(started, true);
+
+  let settled = false;
+  persistence.then(() => { settled = true; });
+  await Promise.resolve();
+  assert.equal(settled, false);
+
+  releaseWrite();
+  assert.equal(await persistence, true);
+  assert.equal(await flush, true);
+  assert.equal(store.status().lastPersistOk, true);
+});
+
+test('state store persist reports a failed storage write', async () => {
+  const store = createStateStore({
+    readJsonWithStatus: async () => ({ ok: true, found: false, value: null }),
+    writeJson: async () => false,
+    storageReady: true,
+    stateKey: 'data/test-state.json',
+    menuVersion: 'test',
+    products: [],
+    customers: [],
+    orders: [],
+    reservations: []
+  });
+
+  await store.restore();
+  const persistence = store.persist();
+  await store.flush();
+
+  assert.equal(await persistence, false);
+  assert.equal(store.status().lastPersistOk, false);
+});
