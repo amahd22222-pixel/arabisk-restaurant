@@ -27,8 +27,8 @@ export function sendServiceError(res, error) {
   return res.status(safeStatus).json(payload);
 }
 
-export function serviceErrorHandler(error, req, res, _next) {
-  if (res.headersSent) return;
+export function serviceErrorHandler(error, req, res, next) {
+  if (res.headersSent) return next(error);
 
   if (error?.type === 'entity.too.large') {
     return sendServiceError(res, {
