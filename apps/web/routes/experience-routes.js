@@ -1,4 +1,4 @@
-const sendServiceError=(res,error)=>res.status(Number(error?.status)||500).json({message:error?.message||'Internal server error'});
+import { sendServiceError } from '../utils/service-error.js';
 export function registerExperienceRoutes(app,{service,requireAdminApiKey}){
   app.get('/api/experiences',(req,res)=>{try{return res.json(service.list(req));}catch(error){return sendServiceError(res,error);}});
   app.get('/api/experiences/:slugOrId',(req,res)=>{try{const key=String(req.params.slugOrId||'').trim();const data=service.get(key);if(data.status!=='published'&&!service.isAdmin(req))return res.status(404).json({message:'Experience not found'});return res.json(data);}catch(error){return sendServiceError(res,error);}});
