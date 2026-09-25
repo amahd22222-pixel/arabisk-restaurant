@@ -9,7 +9,7 @@ import {
   webApiBase
 } from './config.js';
 import { createAdminAuth } from './auth-service.js';
-import { setSecurityHeaders, requestId, unauthorized, safePath, sendFile, redirect, parseJsonBody } from './http-utils.js';
+import { setSecurityHeaders, requestId, unauthorized, safePath, sendFile, redirect, parseJsonBody, isSameOriginRequest } from './http-utils.js';
 import { createProxyApi } from './proxy-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -37,6 +37,12 @@ const server = http.createServer(async (req, res) => {
   });
   setSecurityHeaders(res, req);
   const requestPath = (req.url || '/').split('?')[0];
+
+  const stateChanging = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method);
+  if (stateChanging && !isSameOriginRequest(req)) {
+    res.writeHead(403, {'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
+    return res.end(JSON.stringify({ ok: false, code: 'CSRF_ORIGIN_REJECTED', message: 'Cross-origin request rejected.' }));
+  }
 
   if (req.method === 'POST' && requestPath === '/auth/check') {
     if (consumeAuthAttempt(req, res)) return;
