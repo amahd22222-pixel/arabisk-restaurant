@@ -220,6 +220,9 @@ if(storageReady){
   await flushPersistState();
 }
 const server=app.listen(port,()=>console.log(`ARABISK web listening on ${port} — ${products.length} menu items, ${categories.length} categories`));
+server.requestTimeout=30_000;
+server.headersTimeout=35_000;
+server.keepAliveTimeout=5_000;
 let shuttingDown=false;
 const shutdown=(signal)=>{
   if(shuttingDown)return;
