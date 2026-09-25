@@ -44,7 +44,6 @@ test('memory service enforces bounded community growth', async () => {
 
 
 test('memory creation rolls back when persistence fails', async () => {
-  const memories = [];
   const service = createMemoryService({
     storageReady: true,
     presign: () => '',
@@ -59,7 +58,6 @@ test('memory creation rolls back when persistence fails', async () => {
   );
 
   assert.deepEqual(service.list({}).items, []);
-  assert.equal(memories.length, 0);
 });
 
 test('memory mutation rolls back when persistence fails', async () => {
@@ -80,7 +78,6 @@ test('memory mutation rolls back when persistence fails', async () => {
     /persisted to storage/i
   );
 
-  assert.equal(service.get ? 'available' : 'hidden', 'available');
   assert.equal(service.list({}).items[0].text, 'النص الأصلي');
 });
 
