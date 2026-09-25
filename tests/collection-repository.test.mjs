@@ -9,6 +9,9 @@ test('collection repository keeps CRUD and persistence behavior explicit', () =>
 
   assert.equal(repository.findById('P001').name, 'First');
   assert.equal(repository.findById('missing'), undefined);
+  assert.deepEqual(repository.filter(item => item.id === 'P001'), [{ id: 'P001', name: 'First' }]);
+  assert.equal(repository.some(item => item.name === 'First'), true);
+  assert.equal(repository.some(item => item.name === 'Missing'), false);
 
   repository.add({ id: 'P002', name: 'Second' });
   assert.equal(items.length, 2);
@@ -21,5 +24,13 @@ test('collection repository keeps CRUD and persistence behavior explicit', () =>
   assert.equal(removed.id, 'P001');
   assert.equal(repository.removeById('missing'), null);
   assert.equal(items.length, 1);
-});
 
+  const replaced = repository.replaceAll([{ id: 'P003', name: 'Third' }]);
+  assert.equal(replaced, items);
+  assert.deepEqual(items, [{ id: 'P003', name: 'Third' }]);
+
+  assert.throws(
+    () => repository.replaceAll({ id: 'invalid' }),
+    { name: 'TypeError' }
+  );
+});
