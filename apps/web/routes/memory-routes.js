@@ -1,4 +1,4 @@
-const sendServiceError=(res,error)=>res.status(Number(error?.status)||500).json({message:error?.message||'Internal server error'});
+import { sendServiceError } from '../utils/service-error.js';
 
 export function registerMemoriesRoutes(app,{service,requireAdminApiKey,memoryUploadRateLimit,memoryMutationRateLimit}){
   app.get('/api/memories',(req,res)=>{
