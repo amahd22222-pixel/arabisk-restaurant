@@ -28,7 +28,14 @@ export function createCategoryService({categoriesRepository,productsRepository,s
     if(!nameAr||!nameEn)throw new CategoryServiceError('nameAr and nameEn are required');
     if(categories.some(c=>c.nameAr===nameAr||c.nameEn.toLowerCase()===nameEn.toLowerCase()))throw new CategoryServiceError('Category with the same name already exists',409);
     const category={id:nextId(),nameAr,nameEn,imageUrl:cleanUrl(body.imageUrl),imageKey:cleanKey(body.imageKey),sortOrder:categories.all().length+1,active:body.active!==undefined?Boolean(body.active):true};
-    categories.add(category);await persist();return publicCategory(category);
+    categories.add(category);
+    try{
+      await persist();
+    }catch(error){
+      categories.removeById(category.id);
+      throw error;
+    }
+    return publicCategory(category);
   }
   async function update(id,body){
     const category=getOrThrow(id);
