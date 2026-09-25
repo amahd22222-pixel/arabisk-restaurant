@@ -1,5 +1,10 @@
 export function createCollectionRepository(items, { persist, persistOnAdd = false } = {}) {
-  const save = () => persist?.();
+  const save = async () => {
+    if (!persist) return true;
+    const result = await persist();
+    if (result === false) throw new Error('Repository state could not be persisted to storage.');
+    return true;
+  };
 
   return {
     all: () => items,
@@ -9,7 +14,7 @@ export function createCollectionRepository(items, { persist, persistOnAdd = fals
     some: (predicate) => items.some(predicate),
     add: (item) => {
       items.push(item);
-      if (persistOnAdd) save();
+      if (persistOnAdd) void save().catch(() => {});
       return item;
     },
     replaceAll: (nextItems) => {
