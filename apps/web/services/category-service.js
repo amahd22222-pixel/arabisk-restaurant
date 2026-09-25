@@ -13,6 +13,12 @@ export function createCategoryService({categoriesRepository,productsRepository,s
   const persist=()=>writeJson(CATEGORY_STATE_KEY,categories.all());
   const nextId=()=>{const max=categories.all().reduce((n,c)=>{const m=String(c.id||'').match(/^C(\d+)$/);return Math.max(n,m?Number(m[1]):0);},0);return 'C'+String(max+1).padStart(3,'0');};
   const publicCategory=c=>({...c,imageUrl:c.imageKey&&storageReady?presign('GET',c.imageKey,900):(c.imageUrl||'')});
+  const presentCategory=(category,{includePrivate=false}={})=>{
+    const value=publicCategory(category);
+    if(includePrivate)return value;
+    const { imageKey: _imageKey, ...publicValue } = value;
+    return publicValue;
+  };
   const getOrThrow=id=>{const category=categories.find(c=>c.id===id);if(!category)throw new CategoryServiceError('Category not found',404);return category;};
   function list(req){const visible=isAdminApiKeyValid(req)?categories.all():categories.filter(c=>c.active!==false);return visible.map(publicCategory);}
   async function create(body){
