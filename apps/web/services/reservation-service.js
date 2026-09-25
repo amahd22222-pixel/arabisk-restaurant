@@ -1,3 +1,5 @@
+import { isValidDateOnly } from '../utils/input.js';
+
 const RESERVATION_STATUSES = new Set(['pending', 'confirmed', 'cancelled']);
 
 class ReservationServiceError extends Error {
@@ -23,7 +25,7 @@ export function createReservationService({ repository, cleanText, nextReservatio
     const guests = Number(body.guests);
     const notes = cleanText(body.notes, 300);
     const eventSlug = cleanText(body.eventSlug, 90).toLowerCase();
-    const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(date);
+    const dateOk = isValidDateOnly(date);
     const timeOk = /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
     const today = new Date().toISOString().slice(0, 10);
 
