@@ -1,8 +1,4 @@
-const sendServiceError = (res, error) => {
-  const status = Number(error?.status) || 500;
-  return res.status(status).json({ message: error?.message || 'Internal server error' });
-};
-
+import { sendServiceError } from '../utils/service-error.js';
 export function registerMediaRoutes(app, {
   service,
   requireAdminApiKey
