@@ -90,3 +90,28 @@ test('public category listing omits private storage keys', async () => {
   assert.equal(result.imageUrl, 'https://signed.example/category.webp');
   assert.equal('imageKey' in result, false);
 });
+
+
+test('category creation rolls back when persistence fails', async () => {
+  const categories = [];
+  const service = createCategoryService({
+    categoriesRepository: createCollectionRepository(categories),
+    productsRepository: createCollectionRepository([]),
+    storageReady: true,
+    presign: () => '',
+    readJsonWithStatus: async () => ({ ok: true, found: false, value: null }),
+    writeJson: async () => false,
+    deleteObject: async () => true,
+    isAdminApiKeyValid: () => true
+  });
+
+  await assert.rejects(
+    () => service.create({
+      nameAr: 'قسم مؤقت',
+      nameEn: 'Temporary'
+    }),
+    /persisted to storage/i
+  );
+
+  assert.equal(categories.length, 0);
+});
