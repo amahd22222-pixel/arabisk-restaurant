@@ -109,18 +109,18 @@ const smartMenu = createSmartMenuService({
 });
 const { smartSnapshot, withMediaUrls, invalidateSmartSnapshot } = smartMenu;
 
-const revenue=createRevenueService({readJson,writeJson,storageReady,repository:stateRepository});
+const revenue=createRevenueService({readJsonWithStatus,writeJson,storageReady,repository:stateRepository});
 registerRevenueRoutes(app,{service:revenue,requireAdminApiKey,analyticsRateLimit,recoveryRateLimit});
-const categoryService=createCategoryService({categoriesRepository:stateRepository.categories,productsRepository:stateRepository.products,storageReady,presign,readJson,writeJson,deleteObject,isAdminApiKeyValid});
+const categoryService=createCategoryService({categoriesRepository:stateRepository.categories,productsRepository:stateRepository.products,storageReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid});
 registerCategoryRoutes(app,{service:categoryService,requireAdminApiKey});
 const restoreCategories=categoryService.restore;
-const studioService=createStudioService({storageReady,presign,readJson,writeJson,deleteObject});
+const studioService=createStudioService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject});
 registerStudioRoutes(app,{service:studioService,requireAdminApiKey});
 const restoreStudio=studioService.restore;
-const experienceService=createExperienceService({storageReady,presign,readJson,writeJson,deleteObject,isAdminApiKeyValid});
+const experienceService=createExperienceService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid});
 registerExperienceRoutes(app,{service:experienceService,requireAdminApiKey});
 const restoreExperiences=experienceService.restore;
-const memoryService=createMemoryService({storageReady,presign,readJson,writeJson,deleteObject});
+const memoryService=createMemoryService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject});
 registerMemoriesRoutes(app,{service:memoryService,requireAdminApiKey,memoryUploadRateLimit,memoryMutationRateLimit});
 const nextProductId = createNextPrefixedId(stateRepository.products, 'P', 3);
 
