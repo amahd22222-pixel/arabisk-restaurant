@@ -6,7 +6,8 @@ import {
   adminPort,
   adminHost,
   adminApiKey,
-  webApiBase
+  webApiBase,
+  publicWebBase
 } from './config.js';
 import { createAdminAuth } from './auth-service.js';
 import { setSecurityHeaders, requestId, unauthorized, safePath, sendFile, redirect, parseJsonBody, isSameOriginRequest } from './http-utils.js';
@@ -72,7 +73,7 @@ const server = http.createServer(async (req, res) => {
     const incoming = new URL(req.url || '/revenue-recovery', `http://${req.headers.host || 'localhost'}`);
     const token = String(incoming.searchParams.get('token') || '').trim();
     if (!token || token.length > 80) return res.writeHead(400).end('Invalid recovery link');
-    return redirect(res, `${webApiBase}/cart?recover=${encodeURIComponent(token)}`);
+    return redirect(res, `${publicWebBase}/cart?recover=${encodeURIComponent(token)}`);
   }
 
   if (requestPath === '/auth/session') {
