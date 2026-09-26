@@ -123,25 +123,37 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cleanup() { status=$?; kill ${web_pid:-} ${admin_pid:-} ${revenue_pid:-} 2>/dev/null || true; if [ "$status" -ne 0 ]; then cat /tmp/arabisk-web.log /tmp/arabisk-admin-web-smoke.log /tmp/arabisk-web-revenue.log 2>/dev/null || true; fi; exit "$status"; }; trap cleanup EXIT
+          wait_for_http() {
+            local pid="$1" url="$2" label="$3"
+            for i in {1..60}; do
+              if curl -fsS "$url" >/dev/null 2>&1; then return 0; fi
+              if ! kill -0 "$pid" 2>/dev/null; then
+                echo "$label process exited before readiness"
+                return 1
+              fi
+              sleep 0.5
+            done
+            echo "$label did not become ready"
+            return 1
+          }
+
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4186 npm run start --workspace apps/web > /tmp/arabisk-web.log 2>&1 &
           web_pid=$!
+          wait_for_http "$web_pid" http://127.0.0.1:4186/health "web" 
+          curl -fsS http://127.0.0.1:4186/health | grep -q '"ok":true'
+          curl -fsSI http://127.0.0.1:4186/health | grep -qi '^X-Content-Type-Options: nosniff'
+          curl -fsSI http://127.0.0.1:4186/health | grep -qi '^X-Request-Id:'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4186/api/orders)" = "401"
+          test -z "$(curl -s -D - -o /dev/null -H 'Origin: http://localhost:5173' http://127.0.0.1:4186/health | grep -i '^Access-Control-Allow-Origin:')"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{' http://127.0.0.1:4186/api/orders)" = "400"
+
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_WEB_API_URL=http://127.0.0.1:4186 ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin-web-smoke.log 2>&1 &
           admin_pid=$!
+          wait_for_http "$admin_pid" http://127.0.0.1:4175/health "admin"
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4187 npm run start --workspace apps/web > /tmp/arabisk-web-revenue.log 2>&1 &
           revenue_pid=$!
-          cleanup() { status=$?; kill "$web_pid" "$admin_pid" "$revenue_pid" 2>/dev/null || true; if [ "$status" -ne 0 ]; then cat /tmp/arabisk-web.log /tmp/arabisk-admin-web-smoke.log /tmp/arabisk-web-revenue.log 2>/dev/null || true; fi; exit "$status"; }; trap cleanup EXIT
-          pid=$web_pid
-          for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:4186/health > /tmp/web-health.json; then
-              break
-            fi
-            if ! kill -0 "$pid" 2>/dev/null; then
-              cat /tmp/arabisk-web.log
-              exit 1
-            fi
-            sleep 0.5
-          done
-          curl -fsS http://127.0.0.1:4186/health | grep -q '"ok":true'
+          wait_for_http "$revenue_pid" http://127.0.0.1:4187/health "revenue web"
           curl -fsSI http://127.0.0.1:4186/health | grep -qi '^X-Content-Type-Options: nosniff'
           curl -fsSI http://127.0.0.1:4186/health | grep -qi '^X-Request-Id:'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4186/api/orders)" = "503"
@@ -168,17 +180,6 @@ jobs:
           assert isinstance(orders, list), 'admin proxy orders response must be a list'
           print(f'proxy-connected categories={len(categories)} products={len(products)} orders={len(orders)}')
           PY
-
-          for port in 4175 4187; do
-            for i in {1..30}; do
-              if curl -fsS http://127.0.0.1:$port/health >/dev/null; then break; fi
-              if ! kill -0 "$([ "$port" = "4175" ] && echo "$admin_pid" || echo "$revenue_pid")" 2>/dev/null; then
-                cat /tmp/arabisk-admin-web-smoke.log /tmp/arabisk-web-revenue.log
-                exit 1
-              fi
-              sleep 0.5
-            done
-          done
 
           curl -fsS http://127.0.0.1:4187/api/products > /tmp/ci-products.json
           product_id="$(python - <<'PY'
