@@ -9,6 +9,14 @@ export class AdminApiError extends Error{
   }
 }
 
+let sessionRedirecting=false;
+const redirectToLogin=()=>{
+  if(sessionRedirecting||window.location.pathname==='/login')return;
+  sessionRedirecting=true;
+  const next=window.location.pathname+window.location.search+window.location.hash;
+  window.location.assign(`/login?next=${encodeURIComponent(next)}`);
+};
+
 export async function request(path,options={}){
   const controller=new AbortController();
   const timeoutMs=Number(options.timeoutMs||15000);
@@ -33,7 +41,8 @@ export async function request(path,options={}){
     let data={};
     if(text){try{data=JSON.parse(text)}catch{data={message:text.slice(0,300)}}}
     if(!response.ok){
-      const message=response.status===401?'انتهت جلسة لوحة التحكم. سجّل الدخول مرة أخرى.':
+      if(response.status===401)redirectToLogin();
+      const message=response.status===401?'انتهت جلسة لوحة التحكم. جارٍ إعادتك لتسجيل الدخول.':
         response.status===403?'ليس لديك صلاحية تنفيذ هذا الإجراء.':
         response.status===429?'تم تجاوز عدد المحاولات المسموح بها. حاول مرة أخرى لاحقًا.':
         data.message||`تعذر تنفيذ الطلب (HTTP ${response.status}).`;
