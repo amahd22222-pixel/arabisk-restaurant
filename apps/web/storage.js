@@ -145,6 +145,19 @@ export async function writeJson(key, value) {
   }
 }
 
+export async function writeObject(key, body, contentType) {
+  if (!storageReady) throw new Error('Storage is not configured');
+  const normalizedKey = normalizeKey(key);
+  if (!normalizedKey) throw new Error('Invalid storage key');
+  const response = await storageFetch(presign('PUT', normalizedKey, 900), {
+    method: 'PUT',
+    headers: { 'Content-Type': String(contentType || 'application/octet-stream') },
+    body
+  }, 120000);
+  if (!response.ok) throw new Error(`Storage object write returned ${response.status}`);
+  return true;
+}
+
 export async function deleteObject(key) {
   if (!storageReady || !key) return true;
   try {
