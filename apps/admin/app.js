@@ -1,8 +1,21 @@
 const $=(selector)=>document.querySelector(selector);
 import { request } from './api-client.js';
+
+const dashboardState = {
+  products: [],
+  categories: [],
+  orders: [],
+  reservations: [],
+  customers: [],
+  customerSegments: [],
+  editingId: null
+};
+
+let { products, categories, orders, reservations, customers, customerSegments } = dashboardState;
+let editingId = dashboardState.editingId;
 function renderStats(){$('#count-products').textContent=products.length;$('#count-categories').textContent=categories.length;$('#count-available').textContent=products.filter(p=>p.available).length;$('#count-reservations').textContent=reservations.length;$('#count-orders').textContent=orders.length;document.querySelectorAll('[data-sidebar-count="reservations"]').forEach(node=>node.textContent=reservations.length);document.querySelectorAll('[data-sidebar-count="orders"]').forEach(node=>node.textContent=orders.length);}
 function renderProducts(){const query=$('#search').value.trim().toLowerCase();const filtered=products.filter(p=>!query||`${p.nameAr} ${p.nameEn}`.toLowerCase().includes(query));$('#products-body').innerHTML=filtered.map(p=>`<tr><td>${p.imageUrl?`<img class="product-thumb" src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy">`:''}<strong>${escapeHtml(p.nameAr)}</strong><small>${escapeHtml(p.nameEn)}</small></td><td>${escapeHtml(categoryName(p.categoryId))}</td><td class="price">AED ${Number(p.price).toFixed(0)}</td><td>${p.videoKey?'<span class="status on">متوفر</span>':'<span class="status off">غير مضاف</span>'}</td><td><span class="status ${p.available?'on':'off'}">${p.available?'متاح':'مخفي'}</span></td><td class="actions"><button data-video="${p.id}">فيديو</button><button data-edit="${p.id}">تعديل</button><button data-delete="${p.id}" class="danger">حذف</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">لا توجد أصناف</td></tr>';}
-function renderCategories(){$('#categories-body').innerHTML=categories.map((c,index)=>`<tr><td>${index+1}</td><td><strong>${escapeHtml(c.nameAr)}</strong></td><td>${escapeHtml(c.nameEn)}</td><td><span class="status ${c.active?'on':'off'}">${c.active?'نشط':'مخفي'}</span></td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد أقسام</td></tr>';}
+function renderCategories(){const tbody=$('#categories-body');if(!tbody)return;tbody.innerHTML=categories.map((category,index)=>`<tr><td>${index+1}</td><td>${category.imageUrl?`<img class="category-thumb" src="${escapeHtml(category.imageUrl)}" alt="" loading="lazy">`:'<span class="category-thumb placeholder">—</span>'}</td><td><strong>${escapeHtml(category.nameAr)}</strong></td><td>${escapeHtml(category.nameEn)}</td><td><span class="status ${category.active?'on':'off'}">${category.active?'نشط':'مخفي'}</span></td><td class="actions"><button data-category-edit="${escapeHtml(category.id)}">تعديل</button><button data-category-delete="${escapeHtml(category.id)}" class="danger">حذف</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">لا توجد أقسام</td></tr>';}
 function renderReservations(){const rows=reservations.map(r=>`<tr><td><strong>${escapeHtml(r.name)}</strong><small>${r.eventSlug?`فعالية: ${escapeHtml(r.eventSlug)}`:(r.notes?escapeHtml(r.notes):'—')}</small></td><td>${escapeHtml(r.date)}<small>${escapeHtml(r.time)}</small></td><td>${Number(r.guests)}</td><td dir="ltr">${escapeHtml(r.phone)}</td><td><span class="status ${r.status==='confirmed'?'on':r.status==='cancelled'?'off':'pending'}">${r.status==='confirmed'?'مؤكد':r.status==='cancelled'?'ملغي':'قيد المراجعة'}</span></td><td class="actions"><button data-res-status="confirmed" data-id="${r.id}">تأكيد</button><button data-res-status="cancelled" data-id="${r.id}" class="danger">إلغاء</button></td></tr>`).join('');$('#reservations-body').innerHTML=rows||'<tr><td colspan="6" class="empty">لا توجد حجوزات حاليًا.</td></tr>';}
 function renderOrders(){const body=$('#orders-body');if(!orders.length){body.innerHTML='';$('#orders-state').textContent='لا توجد طلبات مسجلة حاليًا.';return}$('#orders-state').textContent=`${orders.length} طلب مسجل.`;body.innerHTML=orders.map(order=>{const items=(order.items||[]).map(item=>`${escapeHtml(item.nameAr)} × ${Number(item.quantity)}`).join('، ');const orderType=order.orderType==='pickup'?'استلام':'داخل المطعم';const location=order.tableNumber?`<small>طاولة ${escapeHtml(order.tableNumber)}</small>`:'';return `<tr><td><strong>${escapeHtml(order.id)}</strong><small>${new Date(order.createdAt).toLocaleString('ar-AE')}</small></td><td><strong>${escapeHtml(order.name)}</strong><small dir="ltr">${escapeHtml(order.phone)}</small></td><td><small>${items}</small></td><td class="price">AED ${Number(order.total).toFixed(0)}</td><td><strong>${orderType}</strong>${location}</td><td><span class="status ${statusClass(order.status)}">${orderStatusLabel[order.status]||order.status}</span></td><td class="actions"><select data-order-status="${escapeHtml(order.id)}"><option value="pending">قيد المراجعة</option><option value="confirmed">مؤكد</option><option value="preparing">قيد التحضير</option><option value="ready">جاهز</option><option value="completed">مكتمل</option><option value="cancelled">ملغي</option></select></td></tr>`}).join('');orders.forEach(order=>{const select=document.querySelector(`select[data-order-status="${CSS.escape(order.id)}"]`);if(select)select.value=order.status});}
 function renderCustomerSegments(){
@@ -95,8 +108,37 @@ function syncSidebarState(){
     toggle.querySelector('span').textContent=collapsed?'›':'‹';
   }
 }
-function showSection(sectionId){if(sectionId==='customers')void loadCustomerSegments().catch(()=>{});document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('section-visible'));document.querySelectorAll('[data-section]').forEach(link=>link.classList.toggle('active',link.dataset.section===sectionId));const titleMap={dashboard:'إدارة ARABISK',products:'إدارة الأصناف',categories:'إدارة الأقسام',studio:'ARABISK Studio — العروض',experiences:'الفعاليات والتجارب',reservations:'حجوزات الطاولات',orders:'الطلبات',revenue:'فرص الإيراد',memories:'ذكريات',customers:'العملاء',settings:'إعدادات الموقع'};$('#page-title').textContent=titleMap[sectionId]||'إدارة ARABISK';$('#dashboard-stats').style.display=sectionId==='dashboard'?'grid':'none';const section=document.getElementById(sectionId==='dashboard'?'products':sectionId);if(section)section.classList.add('section-visible');if(sectionId==='dashboard')document.getElementById('products').classList.add('section-visible');}
-async function load(){ $('#connection').textContent='جارٍ الاتصال…';try{const results=await Promise.all([request('/api/categories'),request('/api/products'),request('/api/orders'),request('/api/reservations')]);[categories,products,orders,reservations]=results;renderStats();renderProducts();renderCategories();renderOrders();renderReservations();$('#connection').textContent='متصل';$('#connection').className='connected';$('#error').textContent='';if(location.hash.replace('#','')==='customers')void loadCustomerSegments().catch(error=>{if($('#error'))$('#error').textContent=error.message;});}catch(error){$('#connection').textContent='غير متصل';$('#connection').className='disconnected';$('#error').textContent=error.message+' . تحقق من رابط الـAPI في الإعدادات.';}}
+function showSection(sectionId){if(sectionId==='customers')void loadCustomerSegments().catch(()=>{});document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('section-visible'));document.querySelectorAll('[data-section]').forEach(link=>link.classList.toggle('active',link.dataset.section===sectionId));const titleMap={dashboard:'إدارة ARABISK',products:'إدارة الأصناف',categories:'إدارة الأقسام',studio:'العروض'},experiences:'الفعاليات والتجارب',reservations:'حجوزات الطاولات',orders:'الطلبات',revenue:'فرص الإيراد',memories:'ذكريات',customers:'العملاء',settings:'إعدادات الموقع'};$('#page-title').textContent=titleMap[sectionId]||'إدارة ARABISK';$('#dashboard-stats').style.display=sectionId==='dashboard'?'grid':'none';const section=document.getElementById(sectionId==='dashboard'?'products':sectionId);if(section)section.classList.add('section-visible');if(sectionId==='dashboard')document.getElementById('products').classList.add('section-visible');}
+async function load(){
+  $('#connection').textContent='جارٍ الاتصال…';
+  const resources=[
+    ['categories','/api/categories'],
+    ['products','/api/products'],
+    ['orders','/api/orders'],
+    ['reservations','/api/reservations']
+  ];
+  const results=await Promise.allSettled(resources.map(([,path])=>request(path)));
+  const failures=[];
+  results.forEach((result,index)=>{
+    const [key] = resources[index];
+    if(result.status==='fulfilled'){
+      const value=result.value;
+      if(key==='categories')categories=Array.isArray(value)?value:[];
+      if(key==='products')products=Array.isArray(value)?value:[];
+      if(key==='orders')orders=Array.isArray(value)?value:[];
+      if(key==='reservations')reservations=Array.isArray(value)?value:[];
+    }else failures.push(resources[index][0]+': '+(result.reason?.message||'تعذر تحميل البيانات'));
+  });
+  dashboardState.products=products;
+  dashboardState.categories=categories;
+  dashboardState.orders=orders;
+  dashboardState.reservations=reservations;
+  renderStats();renderProducts();renderCategories();renderOrders();renderReservations();
+  $('#connection').textContent=failures.length?'متصل جزئيًا':'متصل';
+  $('#connection').className='connected';
+  $('#error').textContent=failures.length?'تعذر تحميل: '+failures.join(' — '):'';
+  if(location.hash.replace('#','')==='customers')void loadCustomerSegments().catch(error=>{if($('#error'))$('#error').textContent=error.message;});
+}
 function loadSettings(){$('#api-base').value=apiBase();$('#site-name').value=localStorage.getItem('ARABISK_SITE_NAME')||'ARABISK';$('#site-description').value=localStorage.getItem('ARABISK_SITE_DESCRIPTION')||'مطعم وكافيه بطابع عربي عصري.';}
 async function uploadFile(endpoint,productId,file,onProgress,errorText){const prepared=await request(endpoint,{method:'POST',body:JSON.stringify({productId,fileName:file.name,contentType:file.type,size:file.size})});await new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('PUT',prepared.uploadUrl);xhr.setRequestHeader('Content-Type',file.type||'application/octet-stream');xhr.upload.onprogress=event=>{if(event.lengthComputable&&onProgress)onProgress(Math.round(event.loaded/event.total*100))};xhr.onload=()=>xhr.status>=200&&xhr.status<300?resolve():reject(new Error(errorText));xhr.onerror=()=>reject(new Error('تعذر الاتصال بتخزين الوسائط.'));xhr.send(file)});return prepared.key;}
 async function deleteVideo(productId){const prepared=await request('/api/videos/delete-presign',{method:'POST',body:JSON.stringify({productId})});if(prepared.url){const response=await fetch(prepared.url,{method:'DELETE'});if(!response.ok)throw new Error('تعذر حذف الفيديو من التخزين.')}await request(`/api/products/${productId}`,{method:'PATCH',body:JSON.stringify({videoKey:''})});}
