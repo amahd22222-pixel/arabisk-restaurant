@@ -73,6 +73,13 @@ jobs:
           node --check apps/web/services/revenue-service.js
           node --check apps/web/routes/revenue-routes.js
 
+      - name: Verify Railway private API fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(env -u ARABISK_WEB_API_URL -u ARABISK_WEB_API_PRIVATE_DOMAIN -u ARABISK_WEB_API_PRIVATE_PORT NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production node --input-type=module -e "import('./apps/admin/config.js').then(({webApiBase})=>process.stdout.write(webApiBase))")"
+          test "$actual" = "http://web.railway.internal:8080"
+
       - name: Build admin
         run: npm run build --workspace apps/admin
 
@@ -118,7 +125,7 @@ jobs:
           set -euo pipefail
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production PORT=4186 npm run start --workspace apps/web > /tmp/arabisk-web.log 2>&1 &
           web_pid=$!
-          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin-web-smoke.log 2>&1 &
+          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_WEB_API_URL=http://127.0.0.1:4186 ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin-web-smoke.log 2>&1 &
           admin_pid=$!
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4187 npm run start --workspace apps/web > /tmp/arabisk-web-revenue.log 2>&1 &
           revenue_pid=$!
@@ -145,10 +152,22 @@ jobs:
             test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{"event":"menu_view","sessionId":"ci-rate-limit"}' http://127.0.0.1:4187/api/events)" = "202"
           done
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{"event":"menu_view","sessionId":"ci-rate-limit"}' http://127.0.0.1:4187/api/events)" = "429"
-          echo "Admin proxy must fail closed when its upstream URL is absent."
+          echo "Admin proxy connected smoke test: admin -> web -> API"
           curl -fsS -c /tmp/arabisk-admin.cookies -H 'Content-Type: application/json' --data '{"username":"ci","password":"ci"}' http://127.0.0.1:4175/auth/check > /tmp/admin-login.json
           grep -q '"ok":true' /tmp/admin-login.json
-          test "$(curl -s -o /dev/null -w '%{http_code}' -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/orders)" = "503"
+          curl -fsS -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/categories > /tmp/admin-proxy-categories.json
+          curl -fsS -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/products > /tmp/admin-proxy-products.json
+          curl -fsS -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/orders > /tmp/admin-proxy-orders.json
+          python - <<'PY'
+          import json
+          categories=json.load(open('/tmp/admin-proxy-categories.json'))
+          products=json.load(open('/tmp/admin-proxy-products.json'))
+          orders=json.load(open('/tmp/admin-proxy-orders.json'))
+          assert len(categories) > 0, 'admin proxy must expose categories from web'
+          assert len(products) > 0, 'admin proxy must expose products from web'
+          assert isinstance(orders, list), 'admin proxy orders response must be a list'
+          print(f'proxy-connected categories={len(categories)} products={len(products)} orders={len(orders)}')
+          PY
 
           for port in 4175 4187; do
             for i in {1..30}; do
