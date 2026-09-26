@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'url';
-import { presign, storageReady, readJson, readJsonWithStatus, writeJson, deleteObject } from './storage.js';
+import { presign, storageReady, readJson, readJsonWithStatus, writeJson, writeObject, deleteObject } from './storage.js';
 import { serviceErrorHandler, logServiceFailure } from './utils/service-error.js';
 import { cleanText, cleanKey, cleanUrl, normalizeList } from './utils/input.js';
 import { categories, products } from './menu-data.js';
@@ -120,7 +120,7 @@ const restoreStudio=studioService.restore;
 const experienceService=createExperienceService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid});
 registerExperienceRoutes(app,{service:experienceService,requireAdminApiKey});
 const restoreExperiences=experienceService.restore;
-const memoryService=createMemoryService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject});
+const memoryService=createMemoryService({storageReady,presign,readJsonWithStatus,writeJson,writeObject,deleteObject});
 registerMemoriesRoutes(app,{service:memoryService,requireAdminApiKey,memoryUploadRateLimit,memoryMutationRateLimit});
 const nextProductId = createNextPrefixedId(stateRepository.products, 'P', 3);
 
