@@ -77,8 +77,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          actual="$(env -u ARABISK_WEB_API_URL -u ARABISK_WEB_API_PRIVATE_DOMAIN -u ARABISK_WEB_API_PRIVATE_PORT NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production node --input-type=module -e "import('./apps/admin/config.js').then(({webApiBase})=>process.stdout.write(webApiBase))")"
-          test "$actual" = "http://web.railway.internal:8080"
+          actual="$(env ARABISK_WEB_API_URL=https://stale-public-url.example ARABISK_WEB_API_PRIVATE_DOMAIN=custom-web.railway.internal ARABISK_WEB_API_PRIVATE_PORT=8080 NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production node --input-type=module -e "import('./apps/admin/config.js').then(({webApiBase})=>process.stdout.write(webApiBase))")"
+          test "$actual" = "http://custom-web.railway.internal:8080"
 
       - name: Build admin
         run: npm run build --workspace apps/admin
