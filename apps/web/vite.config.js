@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const standaloneAssetNames = new Set(['cart.js', 'cart-page.js', 'smart-menu.js', 'product-page.js', 'events.js', 'event-detail.js', 'style.css']);
+const pwaAssetNames = new Set(['manifest.json', 'sw.js', 'offline.html', 'pwa-ui.js']);
 
 function standaloneMenuPages() {
   return {
@@ -40,6 +41,15 @@ function standaloneMenuPages() {
         fs.mkdirSync(directory, { recursive: true });
         for (const fileName of standaloneAssetNames) {
           fs.copyFileSync(path.join(root, fileName), path.join(directory, fileName));
+        }
+        for (const fileName of pwaAssetNames) {
+          fs.copyFileSync(path.join(root, fileName), path.join(directory, fileName));
+        }
+        const iconSource = path.join(root, 'icons');
+        const iconTarget = path.join(directory, 'icons');
+        fs.mkdirSync(iconTarget, { recursive: true });
+        for (const fileName of fs.readdirSync(iconSource)) {
+          fs.copyFileSync(path.join(iconSource, fileName), path.join(iconTarget, fileName));
         }
       };
 
