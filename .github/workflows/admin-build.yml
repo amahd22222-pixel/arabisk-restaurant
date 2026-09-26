@@ -123,7 +123,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production PORT=4186 npm run start --workspace apps/web > /tmp/arabisk-web.log 2>&1 &
+          NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4186 npm run start --workspace apps/web > /tmp/arabisk-web.log 2>&1 &
           web_pid=$!
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_WEB_API_URL=http://127.0.0.1:4186 ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin-web-smoke.log 2>&1 &
           admin_pid=$!
