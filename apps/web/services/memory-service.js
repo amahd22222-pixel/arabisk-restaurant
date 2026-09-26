@@ -111,6 +111,10 @@ export function createMemoryService({storageReady,presign,readJsonWithStatus,wri
       await memoryRepository.save();
     }catch(error){
       memoryRepository.removeById(memory.id);
+      if(storageReady){
+        if(imageKey)await deleteObject(imageKey).catch(()=>{});
+        if(videoKey)await deleteObject(videoKey).catch(()=>{});
+      }
       throw error;
     }
     return publicMemory(memory);
