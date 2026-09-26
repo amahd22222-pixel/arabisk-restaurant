@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#17130f"/>
+  <circle cx="256" cy="256" r="178" fill="none" stroke="#d2b16d" stroke-width="8"/>
+  <text x="256" y="282" text-anchor="middle" fill="#f4ead7" font-family="Georgia,serif" font-size="116" font-weight="700" letter-spacing="8">A</text>
+  <text x="256" y="352" text-anchor="middle" fill="#d2b16d" font-family="Arial,sans-serif" font-size="28" font-weight="700" letter-spacing="7">ARABISK</text>
+</svg>
