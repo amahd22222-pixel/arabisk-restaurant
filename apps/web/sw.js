@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v3';
+const CACHE_VERSION = 'arabisk-pwa-v4';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -67,14 +67,14 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     caches.match(request).then((cached) => {
-      const network = fetch(request).then((response) => {
+      if (cached) return cached;
+      return fetch(request).then((response) => {
         if (response.ok && response.type === 'basic') {
           const copy = response.clone();
           caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy)).catch(() => {});
         }
         return response;
-      }).catch(() => cached || caches.match('/offline.html'));
-      return cached || network;
+      });
     })
   );
 });
