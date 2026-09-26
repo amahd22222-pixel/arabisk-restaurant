@@ -1,22 +1,29 @@
 import express from 'express';
 import path from 'node:path';
+import fs from 'node:fs/promises';
+
+const injectMobileNavigation = async (filePath, res) => {
+  const html = await fs.readFile(filePath, 'utf8');
+  const assets = '<link rel="stylesheet" href="/mobile-nav.css">\\n<script type="module" src="/mobile-nav.js"></script>';
+  res.type('html').send(html.replace('</head>', `${assets}\\n</head>`));
+};
 
 export function registerPageRoutes(app, { rootDir, distDir }) {
   const page = (file) => path.join(rootDir, file);
 
-  app.get('/cart', (_req, res) => res.sendFile(page('cart-page.html')));
-  app.get('/track-order', (_req, res) => res.sendFile(page('order-tracking.html')));
-  app.get('/events', (_req, res) => res.sendFile(page('events.html')));
+  app.get('/cart', async (_req, res, next) => { try { await injectMobileNavigation(page('cart-page.html'), res); } catch (error) { next(error); } });
+  app.get('/track-order', async (_req, res, next) => { try { await injectMobileNavigation(page('order-tracking.html'), res); } catch (error) { next(error); } });
+  app.get('/events', async (_req, res, next) => { try { await injectMobileNavigation(page('events.html'), res); } catch (error) { next(error); } });
   app.get('/memories', (_req, res) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    res.sendFile(page('memories.html'));
+    void injectMobileNavigation(page('memories.html'), res).catch(next);
   });
-  app.get(/^\/events\/[^/]+$/, (_req, res) => res.sendFile(page('event-page.html')));
-  app.get('/menu', (_req, res) => res.sendFile(page('menu.html')));
-  app.get(/^\/menu\/[^/]+$/, (_req, res) => res.sendFile(page('category-page.html')));
-  app.get(/^\/menu\/[^/]+\/[^/]+$/, (_req, res) => res.sendFile(page('product-page.html')));
+  app.get(/^\/events\/[^/]+$/, async (_req, res, next) => { try { await injectMobileNavigation(page('event-page.html'), res); } catch (error) { next(error); } });
+  app.get('/menu', async (_req, res, next) => { try { await injectMobileNavigation(page('menu.html'), res); } catch (error) { next(error); } });
+  app.get(/^\/menu\/[^/]+$/, async (_req, res, next) => { try { await injectMobileNavigation(page('category-page.html'), res); } catch (error) { next(error); } });
+  app.get(/^\/menu\/[^/]+\/[^/]+$/, async (_req, res, next) => { try { await injectMobileNavigation(page('product-page.html'), res); } catch (error) { next(error); } });
 
   app.use(express.static(distDir));
 
