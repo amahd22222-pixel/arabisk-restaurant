@@ -16,5 +16,6 @@
   "engines": {
     "node": "24.x",
     "npm": "10.8.2"
-  }
+  },
+  "description": "ARABISK restaurant website and administration console"
 }
