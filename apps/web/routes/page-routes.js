@@ -4,8 +4,8 @@ import fs from 'node:fs/promises';
 
 const injectMobileNavigation = async (filePath, res) => {
   const html = await fs.readFile(filePath, 'utf8');
-  const assets = '<link rel="stylesheet" href="/mobile-nav.css">\\n<script type="module" src="/mobile-nav.js"></script>';
-  res.type('html').send(html.replace('</head>', `${assets}\\n</head>`));
+  const assets = '<link rel="stylesheet" href="/mobile-nav.css">\n<script type="module" src="/mobile-nav.js"></script>';
+  res.type('html').send(html.replace('</head>', `${assets}\n</head>`));
 };
 
 export function registerPageRoutes(app, { rootDir, distDir }) {
@@ -14,7 +14,7 @@ export function registerPageRoutes(app, { rootDir, distDir }) {
   app.get('/cart', async (_req, res, next) => { try { await injectMobileNavigation(page('cart-page.html'), res); } catch (error) { next(error); } });
   app.get('/track-order', async (_req, res, next) => { try { await injectMobileNavigation(page('order-tracking.html'), res); } catch (error) { next(error); } });
   app.get('/events', async (_req, res, next) => { try { await injectMobileNavigation(page('events.html'), res); } catch (error) { next(error); } });
-  app.get('/memories', (_req, res) => {
+  app.get('/memories', (_req, res, next) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
