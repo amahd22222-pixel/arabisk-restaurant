@@ -1,5 +1,5 @@
 const $=(selector)=>document.querySelector(selector);
-import { request } from './api-client.js';
+import { request, apiBase } from './api-client.js';
 
 function escapeHtml(value){
   return String(value ?? '').replace(/[&<>"']/g, ch => ({
