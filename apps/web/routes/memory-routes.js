@@ -1,4 +1,4 @@
-export function registerMemoriesRoutes(app,{service,requireAdminApiKey,memoryUploadRateLimit,memoryMutationRateLimit}){
+import express from 'express';\n\nexport function registerMemoriesRoutes(app,{service,requireAdminApiKey,memoryUploadRateLimit,memoryMutationRateLimit}){
   app.get('/api/memories',(req,res)=>{
     const result=service.list(req.query);
     res.setHeader('X-Memories-Total',String(result.total));
@@ -6,7 +6,7 @@ export function registerMemoriesRoutes(app,{service,requireAdminApiKey,memoryUpl
     return res.json(result.items);
   });
 
-  app.post('/api/memories/upload',memoryUploadRateLimit,(req,res)=>res.json(service.upload(req.body||{})));
+  app.post('/api/memories/upload', memoryUploadRateLimit, express.raw({ type: ['image/*', 'video/*'], limit: '120mb' }), async (req, res) => {\n    if (Buffer.isBuffer(req.body)) {\n      const contentType = String(req.headers['content-type'] || '').split(';', 1)[0].trim().toLowerCase();\n      const fileName = String(req.headers['x-file-name'] || 'memory-media').slice(0, 120);\n      const result = await service.uploadContent({ fileName, contentType, size: req.body.length }, req.body);\n      return res.json(result);\n    }\n    return res.json(service.upload(req.body || {}));\n  });
 
   app.post('/api/memories',memoryMutationRateLimit,async(req,res)=>res.status(201).json(await service.create(req.body||{})));
 
