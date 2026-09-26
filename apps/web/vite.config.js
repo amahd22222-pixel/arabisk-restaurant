@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const standaloneAssetNames = new Set(['cart.js', 'cart-page.js', 'smart-menu.js', 'product-page.js', 'events.js', 'event-detail.js', 'style.css']);
+const standaloneAssetNames = new Set(['cart.js', 'cart-page.js', 'smart-menu.js', 'product-page.js', 'events.js', 'event-detail.js', 'style.css', 'mobile-nav.js', 'mobile-nav.css']);
 const pwaAssetNames = new Set(['manifest.json', 'sw.js', 'offline.html', 'pwa-ui.js']);
 
 function standaloneMenuPages() {
