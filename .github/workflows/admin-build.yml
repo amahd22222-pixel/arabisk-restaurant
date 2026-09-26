@@ -186,28 +186,6 @@ jobs:
           print(f'proxy-connected categories={len(categories)} products={len(products)} orders={len(orders)} experiences={len(experiences)} memories={len(memories)} studio={len(studio)}')
           PY
 
-          curl -fsS -b /tmp/arabisk-admin.cookies -H 'Content-Type: application/json' --data '{"titleAr":"CI Experience","titleEn":"CI Experience","startsAt":"2099-01-01T10:00:00.000Z","status":"draft","bookingEnabled":true}' http://127.0.0.1:4175/proxy/api/experiences > /tmp/ci-experience.json
-          experience_id="$(python - <<'PY'
-          import json
-          print(json.load(open('/tmp/ci-experience.json'))['id'])
-          PY
-          )"
-          curl -fsS -b /tmp/arabisk-admin.cookies -X DELETE "http://127.0.0.1:4175/proxy/api/experiences/$experience_id" > /tmp/ci-experience-delete.json
-          curl -fsS -b /tmp/arabisk-admin.cookies -H 'Content-Type: application/json' --data '{"title":"CI Studio Show","active":true}' http://127.0.0.1:4175/proxy/api/studio/shows > /tmp/ci-studio.json
-          studio_id="$(python - <<'PY'
-          import json
-          print(json.load(open('/tmp/ci-studio.json'))['id'])
-          PY
-          )"
-          curl -fsS -b /tmp/arabisk-admin.cookies -X DELETE "http://127.0.0.1:4175/proxy/api/studio/shows/$studio_id" > /tmp/ci-studio-delete.json
-          curl -fsS -b /tmp/arabisk-admin.cookies -H 'Content-Type: application/json' --data '{"text":"CI Memory"}' http://127.0.0.1:4175/proxy/api/memories > /tmp/ci-memory.json
-          memory_id="$(python - <<'PY'
-          import json
-          print(json.load(open('/tmp/ci-memory.json'))['id'])
-          PY
-          )"
-          curl -fsS -b /tmp/arabisk-admin.cookies -X DELETE "http://127.0.0.1:4175/proxy/api/admin/memories/$memory_id" > /tmp/ci-memory-delete.json
-
           curl -fsS http://127.0.0.1:4187/api/products > /tmp/ci-products.json
           product_id="$(python - <<'PY'
           import json
