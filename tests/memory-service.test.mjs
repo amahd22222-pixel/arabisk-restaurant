@@ -128,3 +128,24 @@ test('memory deletion restores the item and keeps media when persistence fails',
   assert.equal(service.list({}).items.length, 1);
   assert.equal(deleted.length, 0);
 });
+
+
+test('memory creation cleans uploaded media when persistence fails', async () => {
+  const deleted = [];
+  const service = createMemoryService({
+    storageReady: true,
+    presign: (method, key) => 'https://signed.example/' + method + '/' + key,
+    readJsonWithStatus: async () => ({ ok: true, found: false, value: null }),
+    writeJson: async () => false,
+    writeObject: async () => true,
+    deleteObject: async key => { deleted.push(key); return true; }
+  });
+
+  await assert.rejects(
+    () => service.create({ text: 'فشل الحفظ', imageKey: 'memories/failing-image.webp' }),
+    /persisted to storage/i
+  );
+
+  assert.deepEqual(deleted, ['memories/failing-image.webp']);
+  assert.deepEqual(service.list({}).items, []);
+});
