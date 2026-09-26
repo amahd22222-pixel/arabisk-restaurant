@@ -28,10 +28,10 @@ export const adminApiKey = String(process.env.ARABISK_ADMIN_API_KEY || '').trim(
  * otherwise use Railway private networking so the control plane cannot lose
  * its connection merely because a public URL variable was removed.
  */
-export const webApiBase = configuredWebApiBase || (
+export const webApiBase = (
   isProductionRuntime && isRailwayRuntime
     ? privateWebApiBase
-    : ''
+    : configuredWebApiBase
 );
 
 export const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
