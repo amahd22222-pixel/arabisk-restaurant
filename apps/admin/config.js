@@ -1,4 +1,9 @@
 const configuredWebApiBase = String(process.env.ARABISK_WEB_API_URL || '').trim().replace(/\/$/, '');
+const runtimeEnvironment = String(
+  process.env.RAILWAY_ENVIRONMENT_NAME || process.env.RAILWAY_ENVIRONMENT || ''
+).trim().toLowerCase();
+const isProductionRuntime =
+  process.env.NODE_ENV === 'production' || runtimeEnvironment === 'production';
 const isRailwayRuntime = Boolean(
   process.env.RAILWAY_PROJECT_ID ||
   process.env.RAILWAY_SERVICE_ID ||
@@ -24,7 +29,7 @@ export const adminApiKey = String(process.env.ARABISK_ADMIN_API_KEY || '').trim(
  * its connection merely because a public URL variable was removed.
  */
 export const webApiBase = configuredWebApiBase || (
-  process.env.NODE_ENV === 'production' && isRailwayRuntime
+  isProductionRuntime && isRailwayRuntime
     ? privateWebApiBase
     : ''
 );
