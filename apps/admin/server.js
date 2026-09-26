@@ -132,22 +132,39 @@ async function verifyUpstreamConnection() {
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
+  const headers = {
+    Accept: 'application/json',
+    'X-Arabisk-Admin-Key': adminApiKey,
+    'X-Request-Id': requestId({ headers: {} })
+  };
+
   try {
-    const response = await fetch(new URL('/api/categories', `${webApiBase}/`), {
-      headers: {
-        Accept: 'application/json',
-        'X-Arabisk-Admin-Key': adminApiKey,
-        'X-Request-Id': requestId({ headers: {} })
-      },
-      signal: controller.signal
-    });
-    const body = await response.text();
-    let categories = [];
-    try { categories = JSON.parse(body); } catch {}
+    const paths = [
+      ['/api/categories', 'categories'],
+      ['/api/products', 'products'],
+      ['/api/experiences', 'experiences'],
+      ['/api/admin/memories', 'memories']
+    ];
+    const results = {};
+    for (const [pathname, key] of paths) {
+      const response = await fetch(new URL(pathname, `${webApiBase}/`), {
+        headers,
+        signal: controller.signal
+      });
+      const body = await response.text();
+      let parsed = [];
+      try { parsed = JSON.parse(body); } catch {}
+      results[key] = {
+        status: response.status,
+        count: Array.isArray(parsed) ? parsed.length : 0
+      };
+      if (!response.ok) results[key].error = 'upstream_http_error';
+    }
+
     console.log(JSON.stringify({
       event: 'admin_proxy_upstream_check',
-      status: response.status,
-      categories: Array.isArray(categories) ? categories.length : 0
+      webApiBase: webApiBase.replace(/^(https?:\/\/)[^/]+/, '$1[redacted]'),
+      results
     }));
   } catch (error) {
     console.error(JSON.stringify({
