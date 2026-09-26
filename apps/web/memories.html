@@ -494,11 +494,18 @@ async function publish(){
   try{
     let imageKey='',videoKey='';
     if(file){
-      const upload=await api('/api/memories/upload',{method:'POST',body:JSON.stringify({fileName:file.name,contentType:file.type,size:file.size})});
       setMessage('جاري رفع الوسائط…');
-      const put=await fetch(upload.data.uploadUrl,{method:'PUT',headers:{'Content-Type':file.type},body:file});
-      if(!put.ok)throw Error('فشل رفع الوسائط.');
-      if(upload.data.kind==='image')imageKey=upload.data.key;else videoKey=upload.data.key;
+      const uploadResponse=await fetch('/api/memories/upload',{
+        method:'POST',
+        headers:{
+          'Content-Type':file.type,
+          'X-File-Name':encodeURIComponent(file.name)
+        },
+        body:file
+      });
+      const uploadData=await uploadResponse.json().catch(()=>({}));
+      if(!uploadResponse.ok)throw Error(uploadData.message||'فشل رفع الوسائط.');
+      if(uploadData.kind==='image')imageKey=uploadData.key;else if(uploadData.kind==='video')videoKey=uploadData.key;else throw Error('نوع الوسائط غير مدعوم.');
     }
     await api('/api/memories',{method:'POST',body:JSON.stringify({text,displayName:name,imageKey,videoKey,productId:$('#productLink').value,experienceSlug:$('#experienceLink').value})});
     $('#productLink').value='';$('#experienceLink').value='';
