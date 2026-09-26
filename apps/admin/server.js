@@ -121,4 +121,45 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 server.requestTimeout=30_000;
 server.headersTimeout=35_000;
 server.keepAliveTimeout=5_000;
-server.listen(adminPort, adminHost, () => console.log(`ARABISK admin listening on ${adminHost}:${adminPort} — session authentication and server-side API proxy enabled`));
+async function verifyUpstreamConnection() {
+  if (!webApiBase) {
+    console.error(JSON.stringify({
+      event: 'admin_proxy_configuration_error',
+      code: 'WEB_API_NOT_CONFIGURED'
+    }));
+    return;
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const response = await fetch(new URL('/api/categories', `${webApiBase}/`), {
+      headers: {
+        Accept: 'application/json',
+        'X-Arabisk-Admin-Key': adminApiKey,
+        'X-Request-Id': requestId({ headers: {} })
+      },
+      signal: controller.signal
+    });
+    const body = await response.text();
+    let categories = [];
+    try { categories = JSON.parse(body); } catch {}
+    console.log(JSON.stringify({
+      event: 'admin_proxy_upstream_check',
+      status: response.status,
+      categories: Array.isArray(categories) ? categories.length : 0
+    }));
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: 'admin_proxy_upstream_check_failed',
+      error: error?.name === 'AbortError' ? 'timeout' : 'unreachable'
+    }));
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+server.listen(adminPort, adminHost, () => {
+  console.log(`ARABISK admin listening on ${adminHost}:${adminPort} — session authentication and server-side API proxy enabled`);
+  void verifyUpstreamConnection();
+});
