@@ -15,7 +15,7 @@ class MemoryServiceError extends Error{
   constructor(message,status=400){super(message);this.name='MemoryServiceError';this.status=status;}
 }
 
-export function createMemoryService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject,limits={}}){
+export function createMemoryService({storageReady,presign,readJsonWithStatus,writeJson,writeObject,deleteObject,limits={}}){
   const maxMemories=Number.isInteger(limits.maxMemories)&&limits.maxMemories>0?Math.min(limits.maxMemories,MAX_MEMORIES):MAX_MEMORIES;
   const maxCommentsPerMemory=Number.isInteger(limits.maxCommentsPerMemory)&&limits.maxCommentsPerMemory>0?Math.min(limits.maxCommentsPerMemory,MAX_COMMENTS_PER_MEMORY):MAX_COMMENTS_PER_MEMORY;
   const maxReportsPerMemory=Number.isInteger(limits.maxReportsPerMemory)&&limits.maxReportsPerMemory>0?Math.min(limits.maxReportsPerMemory,MAX_REPORTS_PER_MEMORY):MAX_REPORTS_PER_MEMORY;
@@ -84,6 +84,20 @@ export function createMemoryService({storageReady,presign,readJsonWithStatus,wri
     const key='memories/'+new Date().toISOString().slice(0,10)+'/'+crypto.randomUUID()+'.'+extension;
     try{return {kind,key,uploadUrl:presign('PUT',key,900),expiresIn:900};}
     catch(error){logServiceFailure(error,{service:'memory',operation:'upload'});throw new MemoryServiceError('تعذر تجهيز رفع الوسائط.',503);}
+  }
+
+  async function uploadContent(body, buffer){
+    if(!Buffer.isBuffer(buffer))throw new MemoryServiceError('ملف الوسائط غير صالح.');
+    const descriptor=upload(body);
+    if(buffer.length!==Number(body?.size))throw new MemoryServiceError('حجم الملف المرسل لا يطابق الحجم المعلن.');
+    try{
+      await writeObject(descriptor.key,buffer,body.contentType);
+      return {kind:descriptor.kind,key:descriptor.key};
+    }catch(error){
+      logServiceFailure(error,{service:'memory',operation:'upload-content'});
+      await deleteObject(descriptor.key).catch(()=>{});
+      throw new MemoryServiceError('فشل رفع الوسائط إلى التخزين.',502);
+    }
   }
 
   async function create(body){
@@ -176,5 +190,5 @@ export function createMemoryService({storageReady,presign,readJsonWithStatus,wri
     return {ok:true};
   }
 
-  return {restore,list,upload,create,like,share,comment,report,adminList,adminUpdate,adminDeleteComment,adminDelete};
+  return {restore,list,upload,uploadContent,create,like,share,comment,report,adminList,adminUpdate,adminDeleteComment,adminDelete};
 }
