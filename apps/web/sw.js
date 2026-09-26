@@ -1,11 +1,13 @@
-const CACHE_VERSION = 'arabisk-pwa-v1';
+const CACHE_VERSION = 'arabisk-pwa-v2';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/style.css',
   '/app.js',
+  '/pwa-ui.js',
   '/studio-runtime.js',
   '/manifest.json',
+  '/offline.html',
   '/icons/icon.svg',
   '/icons/maskable.svg'
 ];
@@ -32,22 +34,33 @@ function isSameOrigin(request) {
   return new URL(request.url).origin === self.location.origin;
 }
 
+function shouldBypass(request) {
+  const url = new URL(request.url);
+  return url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/proxy/') ||
+    url.pathname.startsWith('/auth/');
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.method !== 'GET' || !isSameOrigin(request)) return;
+  if (request.method !== 'GET' || !isSameOrigin(request) || shouldBypass(request)) return;
 
   const url = new URL(request.url);
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/proxy/')) return;
 
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy)).catch(() => {});
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy)).catch(() => {});
+          }
           return response;
         })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match('/index.html')))
+        .catch(async () => {
+          const cached = await caches.match(request);
+          return cached || caches.match('/index.html') || caches.match('/offline.html');
+        })
     );
     return;
   }
@@ -60,7 +73,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy)).catch(() => {});
         }
         return response;
-      }).catch(() => cached);
+      }).catch(() => cached || caches.match('/offline.html'));
       return cached || network;
     })
   );
