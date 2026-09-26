@@ -22,16 +22,17 @@ export const adminPassword = String(process.env.ARABISK_ADMIN_PASSWORD || '');
 export const adminApiKey = String(process.env.ARABISK_ADMIN_API_KEY || '').trim();
 
 /*
- * Production normally runs admin and web as sibling services in the same
- * Railway environment. Prefer an explicitly configured URL when supplied;
- * otherwise use Railway private networking so the control plane cannot lose
- * its connection merely because a public URL variable was removed.
+ * Production runs admin and web as sibling services in the same Railway
+ * environment. Admin-to-web traffic uses Railway private networking.
+ * ARABISK_WEB_API_URL remains available as the public website base URL for
+ * browser redirects such as revenue recovery links.
  */
 export const webApiBase = (
   isProductionRuntime && isRailwayRuntime
     ? privateWebApiBase
     : configuredWebApiBase
 );
+export const publicWebBase = configuredWebApiBase || 'https://web-production-d41a3.up.railway.app';
 
 export const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 export const SESSION_ABSOLUTE_TTL_MS = 24 * 60 * 60 * 1000;
