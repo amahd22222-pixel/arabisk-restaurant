@@ -49,7 +49,7 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
       restoredAt = new Date().toISOString();
       return;
     }
-    if (saved.menuVersion === menuVersion && Array.isArray(saved.products) && saved.products.length) {
+    if (saved.menuVersion === menuVersion && Array.isArray(saved.products)) {
       products.splice(0, products.length, ...saved.products);
     }
     if (Array.isArray(saved.orders)) orders.splice(0, orders.length, ...saved.orders);
