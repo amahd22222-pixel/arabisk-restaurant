@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { cleanText, cleanUrl } from '../utils/input.js';
-import { writeRequiredSnapshot } from '../repositories/restore-helper.js';
+import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
 
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
@@ -30,17 +30,12 @@ export function createMediaService({
       return;
     }
 
-    const result = await readJsonWithStatus(PRODUCT_DETAILS_STATE_KEY);
-    if (!result.ok) {
-      logServiceFailure(
-        new Error(`Product details snapshot unavailable: ${result.reason}`),
-        { service: 'media', operation: 'restore-details' }
-      );
-      detailsLoaded = true;
-      return;
-    }
+    const saved = await readRequiredSnapshot(
+      readJsonWithStatus,
+      PRODUCT_DETAILS_STATE_KEY,
+      'Product details could not be restored from storage.'
+    );
 
-    const saved = result.value;
     if (Array.isArray(saved)) {
       productDetails.splice(
         0,
