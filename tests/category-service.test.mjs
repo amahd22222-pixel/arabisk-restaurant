@@ -115,3 +115,22 @@ test('category creation rolls back when persistence fails', async () => {
 
   assert.equal(categories.length, 0);
 });
+
+
+test('category restore respects an explicitly empty snapshot', async () => {
+  const categories = [{ id: 'C001', nameAr: 'قديمة', nameEn: 'Old', active: true }];
+  const repository = createCollectionRepository(categories);
+  const service = createCategoryService({
+    categoriesRepository: repository,
+    productsRepository: createCollectionRepository([]),
+    storageReady: true,
+    presign: () => '',
+    readJsonWithStatus: async () => ({ ok: true, found: true, value: [] }),
+    writeJson: async () => true,
+    deleteObject: async () => true,
+    isAdminApiKeyValid: () => true
+  });
+
+  await service.restore();
+  assert.deepEqual(categories, []);
+});
