@@ -144,7 +144,7 @@ jobs:
           curl -fsS http://127.0.0.1:4186/health | grep -q '"ok":true'
           curl -fsSI http://127.0.0.1:4186/health | grep -qi '^X-Content-Type-Options: nosniff'
           curl -fsSI http://127.0.0.1:4186/health | grep -qi '^X-Request-Id:'
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:4186/api/orders)" = "401"
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H "X-Arabisk-Admin-Key: $CI_ADMIN_KEY" http://127.0.0.1:4186/api/orders)" = "200"
           test -z "$(curl -s -D - -o /dev/null -H 'Origin: http://localhost:5173' http://127.0.0.1:4186/health | grep -i '^Access-Control-Allow-Origin:')"
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{' http://127.0.0.1:4186/api/orders)" = "400"
 
