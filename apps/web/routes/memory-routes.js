@@ -11,7 +11,9 @@ export function registerMemoriesRoutes(app,{service,requireAdminApiKey,memoryUpl
   app.post('/api/memories/upload', memoryUploadRateLimit, express.raw({ type: ['image/*', 'video/*'], limit: '120mb' }), async (req, res) => {
     if (Buffer.isBuffer(req.body)) {
       const contentType = String(req.headers['content-type'] || '').split(';', 1)[0].trim().toLowerCase();
-      const fileName = String(req.headers['x-file-name'] || 'memory-media').slice(0, 120);
+      const encodedFileName = String(req.headers['x-file-name'] || 'memory-media').slice(0, 120);
+      let fileName = encodedFileName;
+      try { fileName = decodeURIComponent(encodedFileName); } catch {}
       const result = await service.uploadContent({ fileName, contentType, size: req.body.length }, req.body);
       return res.json(result);
     }
