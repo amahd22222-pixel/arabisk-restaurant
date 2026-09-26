@@ -26,6 +26,17 @@ function ensurePwaUi() {
   });
 }
 
+async function checkForPwaUpdate() {
+  if (!('serviceWorker' in navigator)) return;
+  const registration = await navigator.serviceWorker.getRegistration('/');
+  if (!registration) return;
+  try {
+    await registration.update();
+  } catch {
+    // A transient network failure must not affect the restaurant experience.
+  }
+}
+
 window.addEventListener('beforeinstallprompt', (event) => {
   event.preventDefault();
   deferredInstallPrompt = event;
@@ -48,4 +59,9 @@ window.addEventListener('arabisk:pwa-update', () => {
   banner.innerHTML = '<span>يتوفر تحديث جديد لـ ARABISK.</span><button type="button">تحديث الآن</button>';
   banner.querySelector('button')?.addEventListener('click', () => window.location.reload());
   document.body.appendChild(banner);
+});
+
+window.addEventListener('online', checkForPwaUpdate);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkForPwaUpdate();
 });
