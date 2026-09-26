@@ -50,6 +50,25 @@ function applyLanguage() {
   if (toggle) toggle.textContent = language === 'ar' ? 'EN' : 'ع';
 }
 
+const mobileMenuToggle = $('#mobile-menu-toggle');
+const siteNav = $('#site-nav');
+
+mobileMenuToggle?.addEventListener('click', () => {
+  const nav = mobileMenuToggle.closest('.nav');
+  const isOpen = nav?.classList.toggle('menu-open') ?? false;
+  mobileMenuToggle.setAttribute('aria-expanded', String(isOpen));
+  mobileMenuToggle.setAttribute('aria-label', isOpen ? 'إغلاق القائمة' : 'فتح القائمة');
+});
+
+siteNav?.querySelectorAll('a').forEach((link) => {
+  link.addEventListener('click', () => {
+    const nav = mobileMenuToggle?.closest('.nav');
+    nav?.classList.remove('menu-open');
+    mobileMenuToggle?.setAttribute('aria-expanded', 'false');
+    mobileMenuToggle?.setAttribute('aria-label', 'فتح القائمة');
+  });
+});
+
 function localToday() {
   return new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
