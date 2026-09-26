@@ -473,7 +473,10 @@ function clearMedia(){
   $('#previewImage').removeAttribute('src');$('#previewVideo').removeAttribute('src');$('#previewVideo').load();
 }
 function showPreview(file){
-  clearMedia();if(!file)return;
+  if(selectedObjectUrl){URL.revokeObjectURL(selectedObjectUrl);selectedObjectUrl=''}
+  $('#preview').classList.remove('show');$('#previewImage').hidden=true;$('#previewVideo').hidden=true;
+  $('#previewImage').removeAttribute('src');$('#previewVideo').removeAttribute('src');$('#previewVideo').load();
+  if(!file)return;
   selectedObjectUrl=URL.createObjectURL(file);
   $('#preview').classList.add('show');
   if(file.type.startsWith('image/')){$('#previewImage').src=selectedObjectUrl;$('#previewImage').hidden=false}
