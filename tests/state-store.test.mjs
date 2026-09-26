@@ -159,3 +159,26 @@ test('state store binds each persistence promise to its own queued write', async
   assert.equal(writes, 2);
   assert.equal(await second, true);
 });
+
+
+test('state store restores an explicitly empty product snapshot', async () => {
+  const products = [{ id: 'P001' }];
+  const store = createStateStore({
+    readJsonWithStatus: async () => ({
+      ok: true,
+      found: true,
+      value: { menuVersion: 'test', products: [], customers: [], orders: [], reservations: [] }
+    }),
+    writeJson: async () => true,
+    storageReady: true,
+    stateKey: 'data/test-state.json',
+    menuVersion: 'test',
+    products,
+    customers: [],
+    orders: [],
+    reservations: []
+  });
+
+  await store.restore();
+  assert.deepEqual(products, []);
+});
