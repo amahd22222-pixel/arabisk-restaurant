@@ -7,8 +7,7 @@ const isProductionRuntime =
 const isRailwayRuntime = Boolean(
   process.env.RAILWAY_PROJECT_ID ||
   process.env.RAILWAY_SERVICE_ID ||
-  process.env.RAILWAY_ENVIRONMENT_ID ||
-  process.env.RAILWAY_ENVIRONMENT_NAME
+  process.env.RAILWAY_ENVIRONMENT_ID
 );
 const privateWebHost = String(process.env.ARABISK_WEB_API_PRIVATE_DOMAIN || 'web.railway.internal').trim().replace(/\/$/, '');
 const privateWebPort = Number(process.env.ARABISK_WEB_API_PRIVATE_PORT || 8080);
