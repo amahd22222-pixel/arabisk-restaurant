@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v2';
+const CACHE_VERSION = 'arabisk-pwa-v3';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -46,8 +46,6 @@ function shouldBypass(request) {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET' || !isSameOrigin(request) || shouldBypass(request)) return;
-
-  const url = new URL(request.url);
 
   if (request.mode === 'navigate') {
     event.respondWith(
