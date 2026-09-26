@@ -1,6 +1,33 @@
 const $=(selector)=>document.querySelector(selector);
 import { request } from './api-client.js';
 
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  }[ch]));
+}
+function categoryName(categoryId){
+  return categories.find(category => category.id === categoryId)?.nameAr || '—';
+}
+const orderStatusLabel={
+  pending:'قيد المراجعة',
+  confirmed:'مؤكد',
+  preparing:'قيد التحضير',
+  ready:'جاهز',
+  completed:'مكتمل',
+  cancelled:'ملغي'
+};
+function statusClass(status){
+  return status === 'completed' ? 'on'
+    : status === 'cancelled' ? 'off'
+    : status === 'ready' ? 'on'
+    : 'pending';
+}
+
 const dashboardState = {
   products: [],
   categories: [],
@@ -155,7 +182,7 @@ $('#reservations-body').addEventListener('click',async event=>{const id=event.ta
 $('#orders-body').addEventListener('change',async event=>{const id=event.target.dataset.orderStatus;if(!id)return;try{await request(`/api/orders/${id}`,{method:'PATCH',body:JSON.stringify({status:event.target.value})});await load()}catch(error){alert(error.message);await load()}});
 $('#product-form').addEventListener('submit',async event=>{event.preventDefault();const submit=$('#product-form .submit'),progress=$('#upload-progress');submit.disabled=true;try{const payload={categoryId:$('#category').value,nameAr:$('#name-ar').value,nameEn:$('#name-en').value,descriptionAr:$('#description-ar').value,imageUrl:$('#image-url').value.trim(),price:Number($('#price').value),available:$('#available').checked};let saved=editingId?await request(`/api/products/${editingId}`,{method:'PATCH',body:JSON.stringify(payload)}):await request('/api/products',{method:'POST',body:JSON.stringify(payload)});const imageFile=$('#image-file').files[0];if(imageFile){if(imageFile.size>15*1024*1024)throw new Error('الحد الأقصى للصورة 15MB.');if(!['image/jpeg','image/png','image/webp','image/avif'].includes(imageFile.type))throw new Error('الصيغ المسموحة: JPG وPNG وWebP وAVIF.');progress.hidden=false;progress.querySelector('span').style.width='0%';progress.querySelector('small').textContent='جاري رفع الصورة… 0%';const key=await uploadFile('/api/images/presign',saved.id,imageFile,percent=>{progress.querySelector('span').style.width=`${percent}%`;progress.querySelector('small').textContent=`جاري رفع الصورة… ${percent}%`},'فشل رفع الصورة إلى التخزين.');saved=await request(`/api/products/${saved.id}`,{method:'PATCH',body:JSON.stringify({imageKey:key,imageUrl:''})})}const file=$('#video-file').files[0];if(file){if(file.size>120*1024*1024)throw new Error('الحد الأقصى للفيديو 120MB.');if(!['video/mp4','video/webm','video/quicktime'].includes(file.type))throw new Error('الصيغ المسموحة: MP4 وWebM وMOV.');progress.hidden=false;progress.querySelector('span').style.width='0%';progress.querySelector('small').textContent='جاري رفع الفيديو… 0%';const key=await uploadFile('/api/videos/presign',saved.id,file,percent=>{progress.querySelector('span').style.width=`${percent}%`;progress.querySelector('small').textContent=`جاري رفع الفيديو… ${percent}%`},'فشل رفع الفيديو إلى التخزين.');await request(`/api/products/${saved.id}`,{method:'PATCH',body:JSON.stringify({videoKey:key})})}progress.hidden=true;closeModal();await load()}catch(error){progress.hidden=true;alert(error.message)}finally{submit.disabled=false}});
 $('#settings-form').addEventListener('submit',event=>{event.preventDefault();localStorage.setItem('ARABISK_API_BASE',$('#api-base').value.trim().replace(/\/$/,''));localStorage.setItem('ARABISK_SITE_NAME',$('#site-name').value.trim());localStorage.setItem('ARABISK_SITE_DESCRIPTION',$('#site-description').value.trim());$('#settings-message').textContent='تم حفظ الإعدادات.';setTimeout(()=>$('#settings-message').textContent='',2500);load()});
-syncSidebarState();$('#sidebar-toggle')?.addEventListener('click',()=>{const collapsed=!document.body.classList.contains('sidebar-collapsed');localStorage.setItem('ARABISK_SIDEBAR_COLLAPSED',collapsed?'1':'0');syncSidebarState();});loadSettings();showSection(location.hash.replace('#','')||'dashboard');load();
+syncSidebarState();$('#sidebar-toggle')?.addEventListener('click',()=>{const collapsed=!document.body.classList.contains('sidebar-collapsed');localStorage.setItem('ARABISK_SIDEBAR_COLLAPSED',collapsed?'1':'0');syncSidebarState();});loadSettings();showSection(location.hash.replace('#','')||'dashboard');void load().catch(error=>{console.error('Dashboard initialization failed:',error);const connection=$('#connection');if(connection){connection.textContent='تعذر الاتصال';connection.className='disconnected';}const banner=$('#error');if(banner)banner.textContent=error?.message||'تعذر تحميل لوحة التحكم.';});
 
 async function openCustomer360(customerId){
   const modal=$('#customer360-modal');
