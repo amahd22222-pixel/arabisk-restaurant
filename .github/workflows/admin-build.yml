@@ -166,16 +166,47 @@ jobs:
           curl -fsS -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/categories > /tmp/admin-proxy-categories.json
           curl -fsS -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/products > /tmp/admin-proxy-products.json
           curl -fsS -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/orders > /tmp/admin-proxy-orders.json
+          curl -fsS -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/experiences > /tmp/admin-proxy-experiences.json
+          curl -fsS -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/admin/memories > /tmp/admin-proxy-memories.json
+          curl -fsS -b /tmp/arabisk-admin.cookies http://127.0.0.1:4175/proxy/api/studio/shows > /tmp/admin-proxy-studio.json
           python - <<'PY'
           import json
           categories=json.load(open('/tmp/admin-proxy-categories.json'))
           products=json.load(open('/tmp/admin-proxy-products.json'))
           orders=json.load(open('/tmp/admin-proxy-orders.json'))
+          experiences=json.load(open('/tmp/admin-proxy-experiences.json'))
+          memories=json.load(open('/tmp/admin-proxy-memories.json'))
+          studio=json.load(open('/tmp/admin-proxy-studio.json'))
           assert len(categories) > 0, 'admin proxy must expose categories from web'
           assert len(products) > 0, 'admin proxy must expose products from web'
           assert isinstance(orders, list), 'admin proxy orders response must be a list'
-          print(f'proxy-connected categories={len(categories)} products={len(products)} orders={len(orders)}')
+          assert isinstance(experiences, list), 'admin proxy experiences response must be a list'
+          assert isinstance(memories, list), 'admin proxy memories response must be a list'
+          assert isinstance(studio, list), 'admin proxy studio response must be a list'
+          print(f'proxy-connected categories={len(categories)} products={len(products)} orders={len(orders)} experiences={len(experiences)} memories={len(memories)} studio={len(studio)}')
           PY
+
+          curl -fsS -b /tmp/arabisk-admin.cookies -H 'Content-Type: application/json' --data '{"titleAr":"CI Experience","titleEn":"CI Experience","startsAt":"2099-01-01T10:00:00.000Z","status":"draft","bookingEnabled":true}' http://127.0.0.1:4175/proxy/api/experiences > /tmp/ci-experience.json
+          experience_id="$(python - <<'PY'
+          import json
+          print(json.load(open('/tmp/ci-experience.json'))['id'])
+          PY
+          )"
+          curl -fsS -b /tmp/arabisk-admin.cookies -X DELETE "http://127.0.0.1:4175/proxy/api/experiences/$experience_id" > /tmp/ci-experience-delete.json
+          curl -fsS -b /tmp/arabisk-admin.cookies -H 'Content-Type: application/json' --data '{"title":"CI Studio Show","active":true}' http://127.0.0.1:4175/proxy/api/studio/shows > /tmp/ci-studio.json
+          studio_id="$(python - <<'PY'
+          import json
+          print(json.load(open('/tmp/ci-studio.json'))['id'])
+          PY
+          )"
+          curl -fsS -b /tmp/arabisk-admin.cookies -X DELETE "http://127.0.0.1:4175/proxy/api/studio/shows/$studio_id" > /tmp/ci-studio-delete.json
+          curl -fsS -b /tmp/arabisk-admin.cookies -H 'Content-Type: application/json' --data '{"text":"CI Memory"}' http://127.0.0.1:4175/proxy/api/memories > /tmp/ci-memory.json
+          memory_id="$(python - <<'PY'
+          import json
+          print(json.load(open('/tmp/ci-memory.json'))['id'])
+          PY
+          )"
+          curl -fsS -b /tmp/arabisk-admin.cookies -X DELETE "http://127.0.0.1:4175/proxy/api/admin/memories/$memory_id" > /tmp/ci-memory-delete.json
 
           curl -fsS http://127.0.0.1:4187/api/products > /tmp/ci-products.json
           product_id="$(python - <<'PY'
