@@ -34,11 +34,13 @@ import { createReservationService } from './services/reservation-service.js';
 import { registerReservationRoutes } from './routes/reservation-routes.js';
 import { createPushSubscriptionService } from './services/push-subscription-service.js';
 import { registerPushRoutes } from './routes/push-routes.js';
+import { createNotificationService } from './services/notification-service.js';
+import { registerNotificationRoutes } from './routes/notification-routes.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { configureHttpSecurity } from './middleware/http-security.js';
 import { createNextPrefixedId } from './utils/id-generator.js';
 import { registerPageRoutes } from './routes/page-routes.js';
-import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS, vapidPublicKey as VAPID_PUBLIC_KEY } from './config.js';
+import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS, vapidPublicKey as VAPID_PUBLIC_KEY, vapidPrivateKey as VAPID_PRIVATE_KEY, vapidSubject as VAPID_SUBJECT } from './config.js';
 
 const app = express();
 const serverStartedAt = Date.now();
@@ -99,7 +101,12 @@ const pushSubscribeRateLimit=createRateLimiter({
   limit:20,
   message:'Too many push subscription requests. Please try again later.'
 });
-const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,promotionClaimRateLimit,promotionQuoteRateLimit,memoryUploadRateLimit,memoryMutationRateLimit,pushSubscribeRateLimit];
+const notificationSendRateLimit=createRateLimiter({
+  windowMs:10*60*1000,
+  limit:20,
+  message:'Too many notification sending requests. Please try again later.'
+});
+const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,promotionClaimRateLimit,promotionQuoteRateLimit,memoryUploadRateLimit,memoryMutationRateLimit,pushSubscribeRateLimit,notificationSendRateLimit];
 const rateLimitCleanupTimer=setInterval(() => {
   for (const limiter of rateLimiters) limiter.cleanup();
 }, 10*60*1000);
@@ -244,6 +251,21 @@ registerPushRoutes(app, {
   vapidPublicKey: VAPID_PUBLIC_KEY
 });
 
+const notificationService = createNotificationService({
+  readJsonWithStatus,
+  writeJson,
+  storageReady,
+  pushSubscriptionsRepository: stateRepository.pushSubscriptions,
+  vapidPrivateKey: VAPID_PRIVATE_KEY,
+  vapidPublicKey: VAPID_PUBLIC_KEY,
+  vapidSubject: VAPID_SUBJECT
+});
+registerNotificationRoutes(app, {
+  service: notificationService,
+  requireAdminApiKey,
+  sendRateLimit: notificationSendRateLimit
+});
+
 const mediaService = createMediaService({
   repository: stateRepository.products,
   storageReady,
@@ -272,6 +294,7 @@ await restoreExperiences();
 await memoryService.restore();
 await revenue.restoreRevenue();
 await promotionService.restore();
+await notificationService.restore();
 if(dbReady){
   persistState();
   await flushPersistState();
@@ -293,6 +316,7 @@ const shutdown=(signal)=>{
       await flushPersistState();
       await revenue.flushPersistRevenue();
       await promotionService.flushPersistence();
+      await notificationService.persistenceStatus();
       await closeDbPool();
     }catch(error){
       logServiceFailure(error, { service: 'web', operation: 'shutdown-flush' });
