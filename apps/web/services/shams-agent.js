@@ -91,7 +91,7 @@ function detectLocalPlan({ message, memory, products }) {
     };
   }
 
-  if (/(ضيف|أضف|اضف|حط|حطي|ضيفي).*(سلة|العربة)|^(ضيف|اضف|أضف)\b/i.test(normalized)) {
+  if (/(ضيف|أضف|اضف|حط|حطي|ضيفي)\b/i.test(normalized)) {
     const product = matches[0] || latest;
     if (product) {
       return {
@@ -352,6 +352,7 @@ export function createShamsAgent({ repository, memoryService, requestModel = nul
       return false;
     });
 
+    const failedTool = toolResults.find(item => item.result?.error);
     const responseData = {
       recommendations: toolResults.find(item => item.name === 'recommend_menu')?.result?.recommendations || [],
       matches: toolResults.find(item => item.name === 'search_menu')?.result?.matches || [],
@@ -359,7 +360,7 @@ export function createShamsAgent({ repository, memoryService, requestModel = nul
       order: toolResults.find(item => item.name === 'get_order_status')?.result?.order
     };
 
-    let reply = clean(plan.reply, 800) || buildLocalReply(intent, responseData);
+    let reply = failedTool?.result?.error || clean(plan.reply, 800) || buildLocalReply(intent, responseData);
     if (!reply) reply = 'أنا معك. قل لي ماذا تريد أن نفعل داخل ARABISK.';
 
     stage = 'respond';
