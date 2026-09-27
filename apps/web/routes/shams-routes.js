@@ -7,7 +7,10 @@ export function registerShamsRoutes(app, { service, profileRateLimit }) {
     const result = await service.chat({
       message: req.body?.message,
       history: req.body?.history,
-      profileToken: String(req.headers['x-arabisk-profile-token'] || '').trim()
+      profileToken: String(req.headers['x-arabisk-profile-token'] || '').trim(),
+      sessionId: String(req.body?.sessionId || '').trim(),
+      page: String(req.body?.page || '/').trim(),
+      cart: Array.isArray(req.body?.cart) ? req.body.cart : []
     });
     return res.json(result);
   });
