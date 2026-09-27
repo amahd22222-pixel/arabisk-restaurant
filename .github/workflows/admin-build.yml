@@ -98,7 +98,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for file in manifest.json sw.js offline.html pwa-ui.js pwa-register.js mobile-nav.js mobile-nav.css; do
+          for file in manifest.json sw.js offline.html pwa-ui.js pwa-register.js mobile-nav.js mobile-nav.css home-app.css home-shell.js; do
             test -f "apps/web/dist/$file"
           done
           test -f apps/web/dist/icons/icon.svg
