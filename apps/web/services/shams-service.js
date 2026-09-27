@@ -51,6 +51,46 @@ function buildMenuContext(repository) {
   }));
 }
 
+function buildLocalRecommendation(products, message) {
+  const raw = String(message || '');
+  const budgetMatch = raw.match(/(\\d{2,4})\\s*(?:درهم|د|aed)?/i);
+  const budget = budgetMatch ? Number(budgetMatch[1]) : 0;
+  const spicy = /(حار|حارة|سبايسي|spicy)/i.test(raw);
+  const vegetarian = /(نبات|vegetarian|vegan)/i.test(raw);
+  const candidates = products
+    .filter(product => product?.available !== false)
+    .filter(product => !budget || Number(product.price || 0) <= budget)
+    .filter(product => !vegetarian || product.dietary?.includes?.('vegetarian') || product.dietary?.includes?.('vegan'))
+    .filter(product => !spicy || product.tags?.includes?.('spicy') || Number(product.spiceLevel || 0) > 0);
+
+  const ranked = candidates
+    .map(product => ({
+      product,
+      score:
+        (product.chefChoice ? 4 : 0) +
+        (product.isNew ? 2 : 0) +
+        (product.available !== false ? 1 : 0) -
+        (budget ? Math.max(0, Number(product.price || 0) - budget) / Math.max(1, budget) : 0)
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(item => item.product);
+
+  if (!ranked.length) {
+    return {
+      reply: 'أكيد ☀️ أقدر أساعدك نختار، لكن محتاج أعرف ميزانيتك أو هل تفضل شيء خفيف أم وجبة مشبعة.'
+    };
+  }
+
+  const lines = ranked.map(product => `• ${product.nameAr || product.nameEn} — ${product.price} AED`);
+  return {
+    reply: `عندي لك ${ranked.length === 1 ? 'اختيار' : 'كم اختيار'} مناسب ☀️\\n${lines.join('\\n')}\\n\\nتحب أشوف لك تفاصيل أول اختيار؟`,
+    actions: ranked[0]?.categorySlug
+      ? [{ type: 'navigate', url: `/menu/${encodeURIComponent(ranked[0].categorySlug)}`, label: 'عرض الاختيارات' }]
+      : []
+  };
+}
+
 function localConcierge({ message, customer, repository }) {
   const raw = clean(message);
   const normalized = raw.toLocaleLowerCase('ar');
@@ -105,6 +145,10 @@ function localConcierge({ message, customer, repository }) {
     return {
       reply: 'ميزة المكافآت والولاء جزء من خطة ARABISK القادمة، وحاليًا أقدر أساعدك في الطلب والحجز والمنيو والفعاليات.'
     };
+  }
+
+  if (/(اختاري|اختار|محتار|محتارة|ساعديني أختار|ساعدني أختار|اختيار|choose|recommend)/i.test(normalized)) {
+    return buildLocalRecommendation(products, raw);
   }
 
   if (matches.length) {
