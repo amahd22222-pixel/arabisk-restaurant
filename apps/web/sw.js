@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v7';
+const CACHE_VERSION = 'arabisk-pwa-v8';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -83,6 +83,44 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       });
+    })
+  );
+});
+
+// ---- Push notifications ----
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: 'ARABISK', body: event.data ? event.data.text() : '' };
+  }
+
+  const title = String(data.title || 'ARABISK').slice(0, 80);
+  const options = {
+    body: String(data.body || '').slice(0, 200),
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag: String(data.tag || 'arabisk-notification').slice(0, 60),
+    data: { url: String(data.url || '/') },
+    dir: 'rtl',
+    lang: 'ar'
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes(targetUrl) && 'focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
     })
   );
 });
