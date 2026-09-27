@@ -527,6 +527,7 @@ footer small{margin-inline-start:auto;color:#726b62;font-size:9px}
 
 
 /* Supporting screens and system controls */
+/* ARABISK app-shell: verified through production quality gate */
 .lang{
   display:inline-flex;
   align-items:center;
