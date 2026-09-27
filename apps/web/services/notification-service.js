@@ -84,7 +84,8 @@ export function createNotificationService({
     createdAt: item.createdAt,
     sentAt: item.sentAt || '',
     status: item.status,
-    stats: item.stats || { targeted: 0, delivered: 0, failed: 0, removed: 0 }
+    stats: item.stats || { targeted: 0, delivered: 0, failed: 0, removed: 0 },
+    error: item.error || ''
   }));
 
   async function dispatch(campaign) {
@@ -97,6 +98,16 @@ export function createNotificationService({
 
     const subscriptions = installedSubscriptions();
     const stats = { targeted: subscriptions.length, delivered: 0, failed: 0, removed: 0 };
+
+    if (subscriptions.length === 0) {
+      campaign.stats = stats;
+      campaign.status = 'no-recipients';
+      campaign.error = 'لا توجد أجهزة تطبيق مثبتة ومشتركة في إشعارات ARABISK وقت الإرسال.';
+      campaign.completedAt = nowIso();
+      await persist();
+      return campaign;
+    }
+
     const queue = subscriptions.slice();
 
     const worker = async () => {
@@ -129,8 +140,9 @@ export function createNotificationService({
     };
     await Promise.all(Array.from({ length: Math.min(SEND_CONCURRENCY, Math.max(1, queue.length)) }, () => worker()));
     campaign.stats = stats;
-    campaign.sentAt = nowIso();
+    campaign.sentAt = stats.delivered > 0 ? nowIso() : '';
     campaign.status = stats.delivered > 0 && stats.failed === 0 ? 'sent' : stats.delivered > 0 ? 'partial' : 'failed';
+    campaign.error = stats.failed > 0 ? 'تعذر تسليم الإشعار إلى بعض الأجهزة.' : '';
     campaign.completedAt = nowIso();
     if (stats.removed > 0) await pushSubscriptionsRepository.save();
     await persist();
