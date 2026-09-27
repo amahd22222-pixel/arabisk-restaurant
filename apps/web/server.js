@@ -36,11 +36,13 @@ import { createPushSubscriptionService } from './services/push-subscription-serv
 import { registerPushRoutes } from './routes/push-routes.js';
 import { createNotificationService } from './services/notification-service.js';
 import { registerNotificationRoutes } from './routes/notification-routes.js';
+import { createShamsService } from './services/shams-service.js';
+import { registerShamsRoutes } from './routes/shams-routes.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { configureHttpSecurity } from './middleware/http-security.js';
 import { createNextPrefixedId } from './utils/id-generator.js';
 import { registerPageRoutes } from './routes/page-routes.js';
-import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS, vapidPublicKey as VAPID_PUBLIC_KEY, vapidPrivateKey as VAPID_PRIVATE_KEY, vapidSubject as VAPID_SUBJECT } from './config.js';
+import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS, shamsAiApiKey as SHAMS_AI_API_KEY, shamsAiModel as SHAMS_AI_MODEL, shamsAiEndpoint as SHAMS_AI_ENDPOINT, vapidPublicKey as VAPID_PUBLIC_KEY, vapidPrivateKey as VAPID_PRIVATE_KEY, vapidSubject as VAPID_SUBJECT } from './config.js';
 
 const app = express();
 const serverStartedAt = Date.now();
@@ -111,7 +113,12 @@ const customerProfileRateLimit=createRateLimiter({
   limit:12,
   message:'Too many profile requests. Please try again later.'
 });
-const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,promotionClaimRateLimit,promotionQuoteRateLimit,memoryUploadRateLimit,memoryMutationRateLimit,pushSubscribeRateLimit,notificationSendRateLimit,customerProfileRateLimit];
+const shamsRateLimit=createRateLimiter({
+  windowMs:10*60*1000,
+  limit:24,
+  message:'Too many Shams requests. Please try again later.'
+});
+const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,promotionClaimRateLimit,promotionQuoteRateLimit,memoryUploadRateLimit,memoryMutationRateLimit,pushSubscribeRateLimit,notificationSendRateLimit,customerProfileRateLimit,shamsRateLimit];
 const rateLimitCleanupTimer=setInterval(() => {
   for (const limiter of rateLimiters) limiter.cleanup();
 }, 10*60*1000);
@@ -176,6 +183,7 @@ app.get('/health',async(_req,res)=>{
     persistence,
     revenuePersistence,
     promotionPersistence,
+    shams: shamsService?.status?.() || { configured: false },
     environment: isProductionRuntime ? 'production' : 'development'
   };
   return res.status(ready ? 200 : 503).json(payload);
@@ -230,6 +238,15 @@ registerCustomerRoutes(app, {
   requireAdminApiKey,
   profileRateLimit: customerProfileRateLimit
 });
+
+const shamsService = createShamsService({
+  repository: stateRepository,
+  findCustomerByProfileToken: customerService.findByProfileToken,
+  aiApiKey: SHAMS_AI_API_KEY,
+  aiModel: SHAMS_AI_MODEL,
+  aiEndpoint: SHAMS_AI_ENDPOINT
+});
+registerShamsRoutes(app, { service: shamsService, profileRateLimit: shamsRateLimit });
 
 const reservationService = createReservationService({
   repository: stateRepository,
@@ -304,6 +321,7 @@ await revenue.restoreRevenue();
 await promotionService.restore();
 await notificationService.restore();
 console.log(`ARABISK notification bootstrap — configured=${notificationService.getStatus().configured} installedSubscribers=${notificationService.getStatus().subscribers}`);
+console.log(`ARABISK Shams bootstrap — configured=${shamsService.status().configured} provider=${shamsService.status().provider} model=${shamsService.status().model}`);
 if(dbReady){
   persistState();
   await flushPersistState();
