@@ -110,6 +110,7 @@ function mountPermissionPrompt() {
 
 async function bootstrapPush() {
   if (!supportsPush()) return;
+  if (!window.ARABISK_PROFILE?.getToken?.()) return;
   try {
     if (Notification.permission === 'granted') {
       const registration = await getRegistration();
