@@ -1,9 +1,11 @@
-const CACHE_VERSION = 'arabisk-pwa-v4';
+const CACHE_VERSION = 'arabisk-pwa-v5';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/style.css',
+  '/home-app.css',
   '/app.js',
+  '/home-shell.js',
   '/pwa-ui.js',
   '/pwa-register.js',
   '/mobile-nav.css',
