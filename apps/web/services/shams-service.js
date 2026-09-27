@@ -3,7 +3,7 @@ import { createShamsWorkflowService } from './shams-workflow-service.js';
 import { createShamsMemoryService } from './shams-memory-service.js';
 
 const MAX_MESSAGE = 1200;
-const DEFAULT_MODEL = 'gpt-5.6-luna';
+const DEFAULT_MODEL = 'gpt-5.6-sol';
 const DEFAULT_ENDPOINT = 'https://api.openai.com/v1/responses';
 
 class ShamsServiceError extends Error {
@@ -58,19 +58,91 @@ export function createShamsService({
 
   async function requestModel(prompt) {
     if (!apiKey) return '';
+
+    const planSchema = {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        intent: {
+          type: 'string',
+          enum: [
+            'greeting', 'menu', 'recommend', 'cart', 'cart_summary', 'reservation',
+            'order', 'order_status', 'events', 'memories', 'product_search',
+            'product_info', 'cart_add', 'unknown'
+          ]
+        },
+        reply: { type: 'string' },
+        toolCalls: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              name: {
+                type: 'string',
+                enum: [
+                  'search_menu', 'recommend_menu', 'product_info',
+                  'cart_summary', 'cart_add', 'navigate', 'get_order_status'
+                ]
+              },
+              argsJson: { type: 'string' }
+            },
+            required: ['name', 'argsJson']
+          }
+        },
+        memory: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            budgetAed: { anyOf: [{ type: 'number' }, { type: 'null' }] },
+            spicy: { anyOf: [{ type: 'boolean' }, { type: 'null' }] },
+            vegetarian: { anyOf: [{ type: 'boolean' }, { type: 'null' }] }
+          },
+          required: ['budgetAed', 'spicy', 'vegetarian']
+        },
+        workflow: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            date: { type: 'string' },
+            time: { type: 'string' },
+            guests: { anyOf: [{ type: 'integer' }, { type: 'null' }] },
+            name: { type: 'string' },
+            phone: { type: 'string' },
+            eventSlug: { type: 'string' },
+            orderType: { type: 'string' },
+            tableNumber: { type: 'string' }
+          },
+          required: ['date', 'time', 'guests', 'name', 'phone', 'eventSlug', 'orderType', 'tableNumber']
+        }
+      },
+      required: ['intent', 'reply', 'toolCalls', 'memory', 'workflow']
+    };
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Accept: 'application/json',
         Authorization: 'Bearer ' + apiKey
       },
       body: JSON.stringify({
         model,
+        store: false,
         instructions: prompt,
-        input: 'حلّل طلب العميل وأخرج خطة JSON وفق التعليمات. لا تكتب أي نص خارج JSON.',
-        temperature: 0.2
+        input: 'حلّل طلب العميل بمنتهى الدقة. التزم بالمخطط المحدد وأخرج JSON صالح فقط. لا تعتمد على أي مصدر خارج سياق المطعم المرسل لك.',
+        reasoning: { effort: model === 'gpt-5.6-sol' ? 'high' : 'medium' },
+        max_output_tokens: 1800,
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'shams_agent_plan',
+            strict: true,
+            schema: planSchema
+          }
+        }
       }),
-      signal: AbortSignal.timeout(15000)
+      signal: AbortSignal.timeout(20000)
     });
 
     const payload = await response.json().catch(() => ({}));
@@ -97,6 +169,8 @@ export function createShamsService({
     configured: Boolean(apiKey),
     provider: apiKey ? 'openai-compatible' : 'local-agent',
     model: apiKey ? model : 'local',
+    brain: apiKey ? 'llm' : 'local-fallback',
+    reasoning: apiKey ? (model === 'gpt-5.6-sol' ? 'high' : 'medium') : 'rule-based',
     agent: true,
     workflows: ['reservation', 'order'],
     confirmations: true,
