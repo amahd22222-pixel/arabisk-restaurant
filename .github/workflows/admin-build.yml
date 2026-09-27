@@ -77,6 +77,7 @@ jobs:
           node --check apps/web/pwa-ui.js
           node --check apps/web/pwa-register.js
           node --check apps/web/mobile-nav.js
+          node --check apps/web/home-shell.js
           node --check apps/web/sw.js
 
       - name: Verify Railway private API fallback
@@ -174,6 +175,8 @@ jobs:
           wait_for_http "$revenue_pid" http://127.0.0.1:4187/health "revenue web"
           promotion_status="$(curl -sS -o /tmp/ci-promotion.json -w '%{http_code}' http://127.0.0.1:4187/api/promotions/install)"
           test "$promotion_status" = "200" || { cat /tmp/ci-promotion.json; exit 1; }
+          today_status="$(curl -sS -o /tmp/ci-today-offer.json -w '%{http_code}' http://127.0.0.1:4187/api/promotions/today)"
+          test "$today_status" = "200" || { cat /tmp/ci-today-offer.json; exit 1; }
           promo_claim_status="$(curl -sS -o /tmp/ci-promo-claim.json -w '%{http_code}' -H 'Content-Type: application/json' --data '{"clientId":"ci-install-client"}' http://127.0.0.1:4187/api/promotions/install/claim)"
           test "$promo_claim_status" = "201" || { cat /tmp/ci-promo-claim.json; exit 1; }
           promo_code="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["code"])' /tmp/ci-promo-claim.json)"
