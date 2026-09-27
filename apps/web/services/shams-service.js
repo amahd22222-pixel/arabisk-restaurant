@@ -5,10 +5,6 @@ import { createShamsMemoryService } from './shams-memory-service.js';
 const MAX_MESSAGE = 1200;
 const DEFAULT_MODEL = 'gpt-5.6-luna';
 const DEFAULT_ENDPOINT = 'https://api.openai.com/v1/responses';
-const DEFAULT_TTS_MODEL = 'gpt-4o-mini-tts';
-const DEFAULT_TTS_VOICE = 'coral';
-const DEFAULT_TTS_ENDPOINT = 'https://api.openai.com/v1/audio/speech';
-const DEFAULT_TTS_INSTRUCTIONS = 'صوت عربي طبيعي وهادئ، ودود، واضح، بإيقاع مطعم راقٍ، مع نطق عربي خليجي مفهوم.';
 
 class ShamsServiceError extends Error {
   constructor(message, status = 400) {
@@ -42,20 +38,12 @@ export function createShamsService({
   aiApiKey = '',
   aiModel = DEFAULT_MODEL,
   aiEndpoint = DEFAULT_ENDPOINT,
-  ttsModel = DEFAULT_TTS_MODEL,
-  ttsVoice = DEFAULT_TTS_VOICE,
-  ttsEndpoint = DEFAULT_TTS_ENDPOINT,
-  ttsInstructions = DEFAULT_TTS_INSTRUCTIONS,
   getOrderService,
   getReservationService
 }) {
   const apiKey = clean(aiApiKey, 300);
   const model = clean(aiModel || DEFAULT_MODEL, 80) || DEFAULT_MODEL;
   const endpoint = clean(aiEndpoint || DEFAULT_ENDPOINT, 300) || DEFAULT_ENDPOINT;
-  const speechModel = clean(ttsModel || DEFAULT_TTS_MODEL, 80) || DEFAULT_TTS_MODEL;
-  const speechVoice = clean(ttsVoice || DEFAULT_TTS_VOICE, 80) || DEFAULT_TTS_VOICE;
-  const speechEndpoint = clean(ttsEndpoint || DEFAULT_TTS_ENDPOINT, 300) || DEFAULT_TTS_ENDPOINT;
-  const speechInstructions = clean(ttsInstructions || DEFAULT_TTS_INSTRUCTIONS, 500) || DEFAULT_TTS_INSTRUCTIONS;
 
   const memoryService = createShamsMemoryService({
     readJsonWithStatus,
@@ -105,44 +93,6 @@ export function createShamsService({
     requestModel: apiKey ? requestModel : null
   });
 
-  async function synthesizeSpeech(message) {
-    const text = clean(message, 900);
-    if (!text) throw new ShamsServiceError('نص الصوت فارغ.');
-    if (!apiKey) throw new ShamsServiceError('الصوت الطبيعي غير مفعّل حاليًا.', 503);
-
-    const response = await fetch(speechEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + apiKey
-      },
-      body: JSON.stringify({
-        model: speechModel,
-        input: text,
-        voice: speechVoice,
-        instructions: speechInstructions,
-        response_format: 'mp3'
-      }),
-      signal: AbortSignal.timeout(15000)
-    });
-
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      const providerMessage = clean(payload?.error?.message || 'TTS provider request failed.', 220);
-      const error = new ShamsServiceError('تعذر توليد الصوت الطبيعي حاليًا.', 503);
-      error.providerMessage = providerMessage;
-      throw error;
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    if (!arrayBuffer.byteLength) throw new ShamsServiceError('وصل رد صوتي فارغ.', 503);
-
-    return {
-      buffer: Buffer.from(arrayBuffer),
-      contentType: response.headers.get('content-type') || 'audio/mpeg'
-    };
-  }
-
   const status = () => ({
     configured: Boolean(apiKey),
     provider: apiKey ? 'openai-compatible' : 'local-agent',
@@ -152,16 +102,6 @@ export function createShamsService({
     confirmations: true,
     memory: true,
     voiceFirst: true,
-    ttsConfigured: Boolean(apiKey),
-    tts: apiKey ? {
-      provider: 'openai-compatible',
-      model: speechModel,
-      voice: speechVoice
-    } : {
-      provider: 'browser',
-      model: 'local',
-      voice: 'device'
-    },
     stages: agent.stages
   });
 
@@ -216,5 +156,5 @@ export function createShamsService({
     }
   }
 
-  return { chat, status, synthesizeSpeech };
+  return { chat, status };
 }
