@@ -170,7 +170,7 @@ function sanitizeToolCalls(calls) {
 
 function normalizeIntent(value) {
   const allowed = new Set([
-    'greeting', 'menu', 'recommend', 'cart', 'cart_summary', 'reservation',
+    'greeting', 'menu', 'recommend', 'cart', 'cart_summary', 'reservation', 'order',
     'order_status', 'events', 'memories', 'product_search',
     'cart_add', 'unknown'
   ]);
