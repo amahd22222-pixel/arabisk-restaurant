@@ -287,10 +287,10 @@
   color:#fff;
   box-shadow:var(--app-shadow);
 }
-.today-offer-copy{display:flex;flex-direction:column;justify-content:center;padding:38px clamp(24px,5vw,58px)}
-.today-offer-copy .app-eyebrow{color:var(--app-gold-soft)}
-.today-offer-copy h2{margin:0 0 12px;font:500 clamp(34px,4vw,52px)/1.06 "Playfair Display",serif}
-.today-offer-copy p{max-width:520px;color:#bdb3a7;font-size:12px;line-height:1.9;margin:0}
+.today-offer-content{display:flex;flex-direction:column;justify-content:center;padding:38px clamp(24px,5vw,58px)}
+.today-offer-content .app-eyebrow{color:var(--app-gold-soft)}
+.today-offer-content h2{margin:0 0 12px;font:500 clamp(34px,4vw,52px)/1.06 "Playfair Display",serif}
+.today-offer-content p{max-width:520px;color:#bdb3a7;font-size:12px;line-height:1.9;margin:0}
 .today-offer-badge{width:max-content;margin:0 0 14px;padding:7px 11px;border-radius:999px;background:rgba(197,154,91,.15);color:#e6c991;font-size:10px;font-weight:900}
 .today-offer-action{display:inline-flex;width:max-content;margin-top:23px;padding:12px 16px;border-radius:999px;background:var(--app-gold);color:#17130f;text-decoration:none;font-size:11px;font-weight:900}
 .today-offer-media{position:relative;min-height:320px;background:#2b231b}
@@ -338,7 +338,7 @@
   background:linear-gradient(135deg,#201a14,#100e0c);
   color:#fff;
 }
-.booking-cta h3{margin:0 0 8px;font:500 34px/1.1 "Playfair Display",serif}
+.booking-cta-light{background:linear-gradient(135deg,#faf4e8,#efe3cf);color:#211b15}\n.booking-cta-light p{color:#756e62}\n.booking-cta h3{margin:0 0 8px;font:500 34px/1.1 "Playfair Display",serif}
 .booking-cta p{margin:0;color:#bcb1a4;font-size:11px;line-height:1.9}
 .booking-cta-action{display:flex;justify-content:flex-end}
 .booking-cta-action a{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 20px;border-radius:999px;background:var(--app-gold);color:#17130f;text-decoration:none;font-size:11px;font-weight:900}
@@ -361,7 +361,7 @@
 .app-pass p{margin:3px 0 0;color:#786f64;font-size:10px}
 .app-pass-action{padding:10px 14px;border-radius:999px;background:#1c1713;color:#fff;text-decoration:none;font-size:10px;font-weight:800;white-space:nowrap}
 
-.home-empty{padding:28px;border:1px dashed var(--app-line);border-radius:20px;color:var(--app-muted);font-size:11px;text-align:center}
+.today-offer-message{max-width:520px;color:#bdb3a7;font-size:12px;line-height:1.9;margin:0}\n.home-empty-wide{grid-column:1/-1}\n.home-empty{padding:28px;border:1px dashed var(--app-line);border-radius:20px;color:var(--app-muted);font-size:11px;text-align:center}
 
 @media(max-width:900px){
   .app-header{grid-template-columns:auto auto;justify-content:space-between}
@@ -399,7 +399,7 @@
   .product-teaser{min-height:295px;border-radius:20px}
   .today-offer{border-radius:22px}
   .today-offer-media{min-height:205px}
-  .today-offer-copy{padding:26px 20px}
+  .today-offer-content{padding:26px 20px}
   .experience-copy{padding:23px}
   .experience-copy h3{font-size:29px}
   .booking-cta{padding:24px 20px;border-radius:22px}
