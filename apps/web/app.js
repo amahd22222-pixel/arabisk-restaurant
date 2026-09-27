@@ -166,6 +166,7 @@ $('#lang-toggle')?.addEventListener('click', () => {
   language = language === 'ar' ? 'en' : 'ar';
   localStorage.setItem('ARABISK_LANG', language);
   applyLanguage();
+  window.dispatchEvent(new CustomEvent('arabisk:language-updated', { detail: { language } }));
 });
 
 $('#reservation-form')?.addEventListener('submit', submitReservation);
