@@ -1,25 +1,27 @@
-const $ = (selector) => document.querySelector(selector);
+const $ = selector => document.querySelector(selector);
 
 const translations = {
   ar: {
-    reservationEyebrow: 'TABLE RESERVATION',
-    reservationTitle: 'احجز طاولتك',
-    reservationLead: 'اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.',
-    nameLabel: 'الاسم', phoneLabel: 'رقم الهاتف', dateLabel: 'التاريخ', timeLabel: 'الوقت', guestsLabel: 'عدد الأشخاص',
-    notesLabel: 'ملاحظات', notesPlaceholder: 'مثلاً: طاولة داخلية، مناسبة خاصة…', confirmBooking: 'إرسال طلب الحجز',
-    reservationSuccess: 'تم استلام طلب الحجز بنجاح. سنتواصل معك لتأكيد الموعد.',
-    reservationError: 'تعذر إرسال طلب الحجز حاليًا. حاول مرة أخرى.',
-    copyright: '© 2026 ARABISK. All rights reserved.'
+    reservationEyebrow:'TABLE RESERVATION', reservationTitle:'احجز طاولتك',
+    reservationLead:'اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.',
+    nameLabel:'الاسم', phoneLabel:'رقم الهاتف', dateLabel:'التاريخ', timeLabel:'الوقت', guestsLabel:'عدد الأشخاص',
+    notesLabel:'ملاحظات', notesPlaceholder:'مثلاً: طاولة داخلية، مناسبة خاصة…', confirmBooking:'إرسال طلب الحجز',
+    reservationSuccess:'تم استلام طلب الحجز بنجاح. سنتواصل معك لتأكيد الموعد.',
+    reservationError:'تعذر إرسال طلب الحجز حاليًا. حاول مرة أخرى.',
+    experience:'THE ARABISK EXPERIENCE', aboutTitle:'أكثر من مجرد وجبة',
+    aboutLead:'هوية عربية دافئة، تفاصيل فاخرة، وأطباق صُممت لتُشارك وتُستمتع بها.',
+    copyright:'© 2026 ARABISK. All rights reserved.'
   },
   en: {
-    reservationEyebrow: 'TABLE RESERVATION',
-    reservationTitle: 'Book Your Table',
-    reservationLead: 'Choose the date, time and number of guests. We will contact you to confirm your reservation.',
-    nameLabel: 'Name', phoneLabel: 'Phone Number', dateLabel: 'Date', timeLabel: 'Time', guestsLabel: 'Guests',
-    notesLabel: 'Notes', notesPlaceholder: 'For example: indoor table, special occasion…', confirmBooking: 'Send Reservation Request',
-    reservationSuccess: 'Your reservation request was received. We will contact you to confirm.',
-    reservationError: 'Unable to submit the reservation right now. Please try again.',
-    copyright: '© 2026 ARABISK. All rights reserved.'
+    reservationEyebrow:'TABLE RESERVATION', reservationTitle:'Book Your Table',
+    reservationLead:'Choose the date, time and number of guests. We will contact you to confirm your reservation.',
+    nameLabel:'Name', phoneLabel:'Phone Number', dateLabel:'Date', timeLabel:'Time', guestsLabel:'Guests',
+    notesLabel:'Notes', notesPlaceholder:'For example: indoor table, special occasion…', confirmBooking:'Send Reservation Request',
+    reservationSuccess:'Your reservation request was received. We will contact you to confirm.',
+    reservationError:'Unable to submit the reservation right now. Please try again.',
+    experience:'THE ARABISK EXPERIENCE', aboutTitle:'More Than Just a Meal',
+    aboutLead:'A warm Arabic identity, refined details and dishes designed to be shared and enjoyed.',
+    copyright:'© 2026 ARABISK. All rights reserved.'
   }
 };
 
@@ -29,53 +31,38 @@ function applyLanguage() {
   const dict = translations[language];
   document.documentElement.lang = language;
   document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
-
-  const title = location.pathname.replace(/\/$/,'') === '/reservation'
+  document.title = location.pathname.replace(/\/$/,'') === '/reservation'
     ? (language === 'ar' ? 'حجز طاولة — ARABISK' : 'Book a Table — ARABISK')
     : 'ARABISK — Restaurant & Cafe';
-  document.title = title;
 
   document.querySelectorAll('[data-i18n]').forEach(element => {
-    const key = element.dataset.i18n;
-    if (dict[key] !== undefined) element.textContent = dict[key];
+    const value = dict[element.dataset.i18n];
+    if (value !== undefined) element.textContent = value;
   });
-
   document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
-    const key = element.dataset.i18nPlaceholder;
-    if (dict[key] !== undefined) element.placeholder = dict[key];
+    const value = dict[element.dataset.i18nPlaceholder];
+    if (value !== undefined) element.placeholder = value;
   });
 
   const toggle = $('#lang-toggle');
   if (toggle) toggle.textContent = language === 'ar' ? 'EN' : 'ع';
-
   window.dispatchEvent(new CustomEvent('arabisk:language-updated', { detail:{ language } }));
 }
 
 function setupHeaderMenu() {
   const button = $('#app-menu-button');
   const nav = $('#app-header-nav');
-  if (!button || !nav || button.dataset.bound === '1') return;
+  if (!button || !nav) return;
 
-  button.dataset.bound = '1';
   button.addEventListener('click', () => {
     const open = nav.classList.toggle('is-open');
     button.setAttribute('aria-expanded', String(open));
-    button.setAttribute('aria-label', open ? 'إغلاق القائمة' : 'فتح القائمة');
+    button.textContent = open ? '×' : '☰';
   });
-
-  nav.querySelectorAll('a').forEach(link => {
-    link.addEventListener('click', () => {
-      nav.classList.remove('is-open');
-      button.setAttribute('aria-expanded', 'false');
-      button.setAttribute('aria-label', 'فتح القائمة');
-    });
-  });
-
-  document.addEventListener('click', event => {
-    if (!nav.classList.contains('is-open')) return;
-    if (nav.contains(event.target) || button.contains(event.target)) return;
+  nav.addEventListener('click', () => {
     nav.classList.remove('is-open');
-    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-expanded','false');
+    button.textContent = '☰';
   });
 }
 
@@ -88,20 +75,17 @@ async function applyReservationEventContext() {
   if (!badge || location.pathname.replace(/\/$/,'') !== '/reservation') return;
 
   const slug = new URLSearchParams(location.search).get('event');
-  if (!slug) {
-    badge.hidden = true;
-    return;
-  }
+  if (!slug) { badge.hidden = true; return; }
 
   try {
     const response = await fetch('/api/experiences/' + encodeURIComponent(slug), { cache:'no-store' });
-    if (!response.ok) throw new Error('Experience lookup failed.');
+    if (!response.ok) throw new Error('experience lookup failed');
     const event = await response.json();
-    badge.textContent = 'الحجز لهذه التجربة: ' + (event.titleAr || event.titleEn || 'ARABISK Experience');
+    const title = event.titleAr || event.titleEn;
+    badge.textContent = 'الحجز لهذه التجربة: ' + title;
     badge.hidden = false;
-
     const notes = $('#reservation-notes');
-    if (notes && !notes.value) notes.value = 'حجز فعالية: ' + (event.titleAr || event.titleEn || '');
+    if (notes && !notes.value) notes.value = 'حجز فعالية: ' + title;
   } catch {
     badge.hidden = true;
   }
@@ -110,10 +94,14 @@ async function applyReservationEventContext() {
 function showPage() {
   const reservation = $('#reservation');
   const home = $('#home');
-  if (!reservation || !home) return;
+  const about = $('#about');
+  const appContent = $('.app-content');
+  if (!reservation || !home || !about) return;
 
   const isReservation = location.pathname.replace(/\/$/,'') === '/reservation';
   home.hidden = isReservation;
+  if (appContent) appContent.hidden = isReservation;
+  about.hidden = isReservation;
   reservation.hidden = !isReservation;
   document.body.classList.toggle('reservation-route', isReservation);
 
@@ -128,7 +116,6 @@ function showPage() {
 
 async function submitReservation(event) {
   event.preventDefault();
-
   const form = event.currentTarget;
   const message = $('#reservation-message');
   const button = form.querySelector('button[type="submit"]');
@@ -136,22 +123,21 @@ async function submitReservation(event) {
   const dict = translations[language];
 
   if (!message || !button) return;
-
   message.textContent = '';
   button.disabled = true;
 
   try {
     const response = await fetch('/api/reservations', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify({
-        name: $('#reservation-name')?.value || '',
-        phone: $('#reservation-phone')?.value || '',
-        date: date?.value || '',
-        time: $('#reservation-time')?.value || '',
-        guests: Number($('#reservation-guests')?.value || 0),
-        notes: $('#reservation-notes')?.value || '',
-        eventSlug: new URLSearchParams(location.search).get('event') || ''
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        name:$('#reservation-name')?.value || '',
+        phone:$('#reservation-phone')?.value || '',
+        date:date?.value || '',
+        time:$('#reservation-time')?.value || '',
+        guests:Number($('#reservation-guests')?.value || 0),
+        notes:$('#reservation-notes')?.value || '',
+        eventSlug:new URLSearchParams(location.search).get('event') || ''
       })
     });
 
