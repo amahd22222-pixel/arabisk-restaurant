@@ -31,7 +31,7 @@ export function createMemoryService({storageReady,dbReady=storageReady,presign,r
   const memoryRepository=createCollectionRepository(state.memories,{persist});
 
   const restore=async()=>{
-    if(!dbReady)return;
+    if(!dbReady&&!storageReady)return;
     const saved=await readRequiredSnapshot(readJsonWithStatus,STATE_KEY,'Memory state could not be restored from storage.');
     if(saved&&Array.isArray(saved.memories))memoryRepository.replaceAll(saved.memories);
   };
