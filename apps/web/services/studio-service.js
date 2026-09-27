@@ -3,7 +3,7 @@ import { cleanText, cleanKey } from '../utils/input.js';
 import { createCollectionRepository } from '../repositories/collection-repository.js';
 import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
 import { logServiceFailure } from '../utils/service-error.js';
-const STUDIO_STATE_KEY='data/arabisk-studio.json';
+const STUDIO_STATE_KEY='data/arabisk-studio-v2.json';
 const MAX_VIDEO_BYTES=120*1024*1024;
 const VIDEO_TYPES=new Set(['video/mp4','video/webm','video/quicktime']);
 class StudioServiceError extends Error{constructor(message,status=400){super(message);this.name='StudioServiceError';this.status=status;}}
