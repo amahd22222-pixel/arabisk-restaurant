@@ -38,6 +38,7 @@
   .app-header.is-page{background:rgba(23,19,15,.98)}
   .app-header .lang{display:none}
   .app-header .app-cart-link{display:none}
+  .app-quick-actions .app-quick-action[href="/cart"]{display:none}
   .app-hero-copy{padding-top:122px}
   #contact{padding-bottom:115px}
 }
