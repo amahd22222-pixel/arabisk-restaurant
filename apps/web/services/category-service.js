@@ -3,7 +3,7 @@ import { cleanText, cleanKey, cleanUrl } from '../utils/input.js';
 import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
 import { logServiceFailure } from '../utils/service-error.js';
 
-const CATEGORY_STATE_KEY='data/arabisk-categories.json';
+const CATEGORY_STATE_KEY='data/arabisk-categories-v2.json';
 const MAX_CATEGORY_IMAGE_BYTES=15*1024*1024;
 const CATEGORY_IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
 class CategoryServiceError extends Error{constructor(message,status=400){super(message);this.name='CategoryServiceError';this.status=status;}}
