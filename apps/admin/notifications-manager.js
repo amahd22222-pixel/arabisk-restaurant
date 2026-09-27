@@ -55,6 +55,7 @@ function statusLabel(status) {
     sent: 'تم الإرسال',
     partial: 'إرسال جزئي',
     failed: 'فشل الإرسال',
+    'no-recipients': 'لا توجد أجهزة',
     cancelled: 'ملغي'
   }[status] || status || '—');
 }
@@ -72,6 +73,13 @@ function renderStatus() {
   $('#notifications-delivered') && ($('#notifications-delivered').textContent = delivered.toLocaleString('ar-AE'));
   const scheduled = state.campaigns.filter(item => item.status === 'scheduled').length;
   $('#notifications-scheduled') && ($('#notifications-scheduled').textContent = scheduled.toLocaleString('ar-AE'));
+  const sendButton = $('#notification-send-now');
+  if (sendButton) {
+    sendButton.disabled = !s.configured || Number(s.subscribers || 0) === 0;
+    sendButton.title = Number(s.subscribers || 0) === 0
+      ? 'ثبّت تطبيق ARABISK على هاتف واحد على الأقل وفعّل الإشعارات أولًا.'
+      : '';
+  }
 }
 
 function renderPreview() {
@@ -94,7 +102,9 @@ function renderCampaigns() {
     return '<tr>' +
       '<td><strong>' + escapeHtml(item.title) + '</strong><small>' + escapeHtml(item.body) + '</small></td>' +
       '<td><span class="notification-audience">التطبيق المثبت فقط</span></td>' +
-      '<td><span class="status ' + (item.status === 'sent' ? 'on' : item.status === 'failed' ? 'off' : 'pending') + '">' + escapeHtml(statusLabel(item.status)) + '</span></td>' +
+      '<td><span class="status ' + (item.status === 'sent' ? 'on' : item.status === 'failed' ? 'off' : 'pending') + '">' + escapeHtml(statusLabel(item.status)) + '</span>' +
+      (item.error ? '<small class="notification-error">' + escapeHtml(item.error) + '</small>' : '') +
+      '</td>' +
       '<td>' + Number(stats.targeted || 0) + '<small>وصل: ' + Number(stats.delivered || 0) + ' · فشل: ' + Number(stats.failed || 0) + '</small></td>' +
       '<td>' + escapeHtml(item.scheduledAt ? formatDate(item.scheduledAt) : formatDate(item.sentAt || item.createdAt)) + '</td>' +
       '<td class="actions">' + action + '</td>' +
@@ -109,9 +119,15 @@ async function load() {
   renderStatus();
   renderCampaigns();
   const note = $('#notifications-state');
-  if (note) note.textContent = state.status.configured
-    ? 'جاهز لإرسال إشعارات Push إلى مستخدمي تطبيق ARABISK المثبت.'
-    : 'أكمل إعداد مفاتيح VAPID على الخادم أولًا لتفعيل الإرسال.';
+  if (note) {
+    if (!state.status.configured) {
+      note.textContent = 'أكمل إعداد مفاتيح VAPID على الخادم أولًا لتفعيل الإرسال.';
+    } else if (Number(state.status.subscribers || 0) === 0) {
+      note.textContent = 'الإرسال جاهز، لكن لا يوجد حاليًا أي جهاز ARABISK مثبت ومشترك في الإشعارات.';
+    } else {
+      note.textContent = 'جاهز لإرسال إشعارات Push إلى مستخدمي تطبيق ARABISK المثبت.';
+    }
+  }
 }
 
 function applyTemplate(key) {
@@ -138,9 +154,16 @@ async function sendNow() {
   button.disabled = true;
   button.textContent = 'جارٍ الإرسال…';
   try {
-    await request('/api/notifications/send', { method: 'POST', body: JSON.stringify(data), timeoutMs: 30000 });
-    $('#notifications-feedback').textContent = 'تم تنفيذ الإرسال على أجهزة التطبيق المثبتة.';
-    $('#notifications-feedback').className = 'success-message';
+    const result = await request('/api/notifications/send', { method: 'POST', body: JSON.stringify(data), timeoutMs: 30000 });
+    if (result.status === 'no-recipients') {
+      $('#notifications-feedback').textContent = 'لم يتم الإرسال: لا يوجد أي جهاز تطبيق مثبت ومشترك في الإشعارات.';
+      $('#notifications-feedback').className = 'error';
+    } else {
+      $('#notifications-feedback').textContent = result.stats?.delivered
+        ? 'تم إرسال الإشعار بنجاح إلى الأجهزة المشتركة.'
+        : 'تمت معالجة الحملة.';
+      $('#notifications-feedback').className = result.status === 'failed' ? 'error' : 'success-message';
+    }
     await load();
   } finally {
     button.disabled = false;
