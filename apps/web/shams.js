@@ -108,7 +108,6 @@
     shell.hidden = !open;
     launcher.setAttribute('aria-expanded', String(open));
     if (open) {
-      ui().input?.focus();
       if (!ui().messages?.children.length) {
         addMessage('assistant', 'أهلاً بك 🌞 أنا شمس، قولي لي ماذا تحتاج.');
       }
@@ -222,6 +221,9 @@
       if (!state.speaking && 'speechSynthesis' in window) window.speechSynthesis.cancel();
     });
     launcher.addEventListener('click', () => setOpen(!state.open));
+    launcher.addEventListener('click', () => {
+      window.setTimeout(() => ui().mic?.click(), 0);
+    });
     close.addEventListener('click', () => setOpen(false));
     sendButton.addEventListener('click', () => void send());
     input.addEventListener('keydown', event => {
