@@ -119,3 +119,7 @@ diff. If/when you want true per-entity SQL tables (for direct SQL reporting,
 for example), that can be done incrementally, service by service, starting
 with the highest-value one (typically `orders`), without blocking on the
 rest.
+
+## Automatic first-boot migration
+
+When PostgreSQL is enabled and the existing S3-compatible storage is configured, the web service performs the one-time legacy snapshot import automatically before restoring state. This is intentionally limited to the known snapshot keys listed below, is safe to repeat until completion, and never deletes the source JSON objects or media.
