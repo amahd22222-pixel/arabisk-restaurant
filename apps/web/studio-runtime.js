@@ -1,12 +1,12 @@
 const API = '/api/studio/shows?active=true';
 
-const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
-  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
 }[char]));
 
 async function loadHomeStudio() {
   try {
-    const response = await fetch(API, { cache:'no-store' });
+    const response = await fetch(API, { cache: 'no-store' });
     if (!response.ok) return [];
     const data = await response.json();
     return Array.isArray(data) ? data : [];
@@ -20,13 +20,13 @@ function ensureStyle() {
   const style = document.createElement('style');
   style.id = 'arabisk-studio-runtime-style';
   style.textContent = `
-    .arabisk-studio-display{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;background:#000}
-    .arabisk-studio-display::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(9,7,5,.84) 4%,rgba(9,7,5,.45) 48%,rgba(9,7,5,.38) 100%);pointer-events:none}
-    .arabisk-studio-display video{display:block;width:100%;height:100%;object-fit:cover;cursor:pointer}
-    .arabisk-studio-mute{position:absolute;right:18px;bottom:18px;z-index:5;width:44px;height:44px;border:1px solid rgba(255,255,255,.45);border-radius:999px;background:rgba(0,0,0,.58);color:#fff;display:grid;place-items:center;font-size:18px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:background .2s ease,transform .2s ease}
+    .arabisk-studio-display{position:absolute;inset:0;width:100%;height:100%;background:#000;overflow:hidden}
+    .arabisk-studio-display::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(9,7,5,.72),rgba(9,7,5,.26) 58%,rgba(9,7,5,.38))}
+    .arabisk-studio-display video{display:block;width:100%;height:100%;object-fit:cover;background:#000;cursor:pointer}
+    .arabisk-studio-mute{position:absolute;right:18px;bottom:18px;z-index:5;width:44px;height:44px;border:1px solid rgba(255,255,255,.5);border-radius:999px;background:rgba(0,0,0,.52);color:#fff;display:grid;place-items:center;font-size:18px;line-height:1;cursor:pointer;backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);transition:background .2s ease,transform .2s ease}
     .arabisk-studio-mute:hover{background:rgba(0,0,0,.78);transform:scale(1.04)}
     .arabisk-studio-mute:focus-visible{outline:2px solid #fff;outline-offset:2px}
-    @media(max-width:700px){.arabisk-studio-mute{right:12px;bottom:12px;width:40px;height:40px}}
+    @media(max-width:700px){.arabisk-studio-mute{right:12px;bottom:12px;width:40px;height:40px;font-size:16px}}
   `;
   document.head.appendChild(style);
 }
@@ -42,7 +42,7 @@ function bindMute(wrapper) {
     button.title = video.muted ? 'تشغيل الصوت' : 'كتم الصوت';
   };
 
-  button.addEventListener('click', event => {
+  button.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
     video.muted = !video.muted;
@@ -66,13 +66,16 @@ function renderVideo(item) {
 }
 
 function renderHome(items) {
-  const target = document.querySelector('#app-hero-studio');
-  if (!target || location.pathname.replace(/\/$/,'') !== '') return;
+  const home = document.querySelector('#app-hero-studio');
+  if (!home || location.pathname.replace(/\/$/,'') !== '') return;
 
-  target.innerHTML = items.length ? renderVideo(items[0]) : '';
-  if (!items.length) return;
+  if (!items.length) {
+    home.innerHTML = '';
+    return;
+  }
 
-  const wrapper = target.querySelector('.arabisk-studio-display');
+  home.innerHTML = renderVideo(items[0]);
+  const wrapper = home.querySelector('.arabisk-studio-display');
   if (wrapper) bindMute(wrapper);
 }
 
