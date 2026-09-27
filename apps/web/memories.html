@@ -300,7 +300,7 @@ a{text-decoration:none;color:inherit}
 <script>
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-let sort='latest',page=0,hasMore=false,busy=false,selectedObjectUrl='',memoryProducts=new Map(),memoryExperiences=new Map();
+let sort='latest',page=0,hasMore=false,busy=false,selectedObjectUrl='',selectedMediaFile=null,memoryProducts=new Map(),memoryExperiences=new Map();
 const NAME_KEY='arabisk_memories_display_name';
 const LIKED_KEY='arabisk_memories_liked_ids';
 async function loadMemoryContextOptions(){
