@@ -20,13 +20,13 @@ function ensureStyle() {
   const style = document.createElement('style');
   style.id = 'arabisk-studio-runtime-style';
   style.textContent = `
-    .arabisk-studio-display{position:absolute;inset:0;overflow:hidden;background:#000;z-index:0;opacity:.74}
-    .arabisk-studio-display::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(9,7,5,.72),rgba(9,7,5,.28) 55%,rgba(9,7,5,.42));pointer-events:none}
-    .arabisk-studio-display video{display:block;width:100%;height:100%;object-fit:cover;background:#000;cursor:pointer}
+    .arabisk-studio-display{position:absolute;inset:0;overflow:hidden;background:#000;z-index:0;opacity:.56}
+    .arabisk-studio-display::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(9,7,5,.80),rgba(9,7,5,.34) 55%,rgba(9,7,5,.52));pointer-events:none}
+    .arabisk-studio-display video{display:block;width:100%;height:100%;object-fit:cover;background:#000}
     .arabisk-studio-mute{position:absolute;right:18px;bottom:18px;z-index:5;width:46px;height:46px;border:1px solid rgba(255,255,255,.55);border-radius:999px;background:rgba(0,0,0,.56);color:#fff;display:grid;place-items:center;font-size:20px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:background .2s ease,transform .2s ease}
     .arabisk-studio-mute:hover{background:rgba(0,0,0,.8);transform:scale(1.04)}
     .arabisk-studio-mute:focus-visible{outline:2px solid #fff;outline-offset:2px}
-    @media(max-width:700px){.arabisk-studio-display{opacity:.66}.arabisk-studio-mute{right:12px;bottom:12px;width:42px;height:42px;font-size:18px}}
+    @media(max-width:700px){.arabisk-studio-display{opacity:.50}.arabisk-studio-mute{right:12px;bottom:12px;width:42px;height:42px;font-size:18px}}
   `;
   document.head.appendChild(style);
 }
@@ -57,6 +57,7 @@ function bindMute(wrapper) {
 }
 
 function renderVideo(item) {
+  if (!item) return '';
   const desktop = item.desktopVideoUrl || item.mobileVideoUrl;
   const mobile = item.mobileVideoUrl || desktop;
   if (!desktop) return '';
@@ -70,7 +71,7 @@ function renderHome(items) {
   const slot = document.querySelector('#app-hero-studio');
   if (!home || !slot || location.pathname.replace(/\/$/, '') !== '') return;
 
-  slot.innerHTML = '';
+  slot.replaceChildren();
   const videoMarkup = renderVideo(items[0]);
   if (!videoMarkup) {
     slot.hidden = true;
@@ -82,6 +83,7 @@ function renderHome(items) {
   const wrapper = slot.querySelector('.arabisk-studio-display');
   if (wrapper) bindMute(wrapper);
 }
+
 document.addEventListener('DOMContentLoaded', async () => {
   if (location.pathname.replace(/\/$/,'') !== '') return;
   renderHome(await loadHomeStudio());
