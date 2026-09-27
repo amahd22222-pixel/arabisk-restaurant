@@ -1,6 +1,6 @@
 import pg from 'pg';
 import { logServiceFailure } from './utils/service-error.js';
-import { readJsonWithStatus as readLegacyJsonWithStatus, storageReady } from './storage.js';
+import { readJsonWithStatus as readLegacyJsonWithStatus, writeJson as writeLegacyJson, storageReady } from './storage.js';
 
 const { Pool } = pg;
 
@@ -119,7 +119,10 @@ export async function migrateLegacySnapshots() {
 }
 
 export async function readJsonWithStatus(key) {
-  if (!dbReady) return { ok: false, found: false, value: null, reason: 'storage_not_configured' };
+  if (!dbReady) {
+    if (storageReady) return readLegacyJsonWithStatus(key);
+    return { ok: false, found: false, value: null, reason: 'persistence_not_configured' };
+  }
   try {
     await ensureSchema();
     const { rows } = await getPool().query('SELECT value FROM app_state WHERE key = $1', [key]);
@@ -137,7 +140,10 @@ export async function readJson(key, fallback = null) {
 }
 
 export async function writeJson(key, value) {
-  if (!dbReady) return false;
+  if (!dbReady) {
+    if (!storageReady) return false;
+    return writeLegacyJson(key, value);
+  }
   try {
     await ensureSchema();
     await getPool().query(
