@@ -1,0 +1,22 @@
+#arabisk-shams-root{position:fixed;right:18px;bottom:18px;z-index:9990;font-family:Cairo,system-ui,sans-serif;direction:rtl}
+.shams-launcher{display:inline-flex;align-items:center;gap:8px;min-width:92px;height:50px;padding:0 15px;border:1px solid rgba(197,154,91,.35);border-radius:999px;background:linear-gradient(135deg,#241d16,#12100e);color:#f0d7a7;box-shadow:0 18px 42px rgba(0,0,0,.25);cursor:pointer;font:800 12px/1 Cairo,sans-serif;transition:.2s}
+.shams-launcher:hover{transform:translateY(-2px);box-shadow:0 22px 50px rgba(0,0,0,.3)}
+.shams-sun,.shams-avatar{display:grid;place-items:center;flex:0 0 auto;border-radius:50%;background:#c59a5b;color:#1b1510}
+.shams-sun{width:27px;height:27px;font-size:15px}.shams-avatar{width:40px;height:40px;font-size:18px;box-shadow:0 0 0 5px rgba(197,154,91,.09)}
+.shams-shell{position:absolute;right:0;bottom:62px;width:min(390px,calc(100vw - 24px));height:min(650px,calc(100vh - 96px));display:grid;grid-template-rows:auto 1fr auto auto auto;overflow:hidden;border:1px solid rgba(197,154,91,.18);border-radius:24px;background:rgba(20,17,14,.98);box-shadow:0 30px 90px rgba(0,0,0,.4);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.shams-head{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;border-bottom:1px solid rgba(255,255,255,.07);color:#fff}
+.shams-identity{display:flex;align-items:center;gap:10px}.shams-identity strong{display:block;font:800 14px/1.2 Cairo,sans-serif}.shams-identity small{display:block;margin-top:3px;color:#988d80;font-size:8px}
+.shams-head-actions{display:flex;gap:6px}.shams-icon-button{width:34px;height:34px;border:1px solid rgba(255,255,255,.08);border-radius:11px;background:rgba(255,255,255,.04);color:#fff;cursor:pointer}.shams-icon-button.is-active{border-color:rgba(197,154,91,.6);color:#efcf97}
+.shams-messages{overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+.shams-message{display:flex;flex-direction:column;max-width:88%;gap:6px}.shams-message.user{align-self:flex-start;align-items:flex-start}.shams-message.assistant{align-self:flex-end;align-items:flex-end}
+.shams-message-bubble{padding:11px 13px;border-radius:17px;font-size:11px;line-height:1.9;white-space:normal}.shams-message.assistant .shams-message-bubble{background:#2a221a;color:#f6efe5;border:1px solid rgba(197,154,91,.13);border-top-right-radius:7px}.shams-message.user .shams-message-bubble{background:#c59a5b;color:#1c1712;border-top-left-radius:7px}
+.shams-actions{display:flex;flex-wrap:wrap;gap:6px}.shams-actions button,.shams-suggestions button{border:1px solid rgba(197,154,91,.18);border-radius:999px;background:rgba(255,255,255,.04);color:#e6d3b3;padding:7px 9px;font:700 9px/1.2 Cairo,sans-serif;cursor:pointer}
+.shams-suggestions{display:flex;gap:7px;overflow:auto;padding:0 14px 10px;scrollbar-width:none}.shams-suggestions::-webkit-scrollbar{display:none}
+.shams-input-row{display:grid;grid-template-columns:42px 1fr 42px;gap:7px;padding:10px 12px;border-top:1px solid rgba(255,255,255,.06)}
+.shams-input-row input{min-width:0;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:#171411;color:#fff;padding:0 12px;outline:none;font:500 11px Cairo,sans-serif}.shams-input-row input:focus{border-color:rgba(197,154,91,.55);box-shadow:0 0 0 3px rgba(197,154,91,.08)}
+.shams-mic,.shams-send{height:42px;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:#211b16;color:#fff;cursor:pointer}.shams-send{background:#c59a5b;color:#1b1510;font-size:15px}.shams-mic.is-listening{animation:shams-pulse 1s infinite;border-color:#d26f55;background:#3a211c}
+.shams-mic:disabled{opacity:.4;cursor:not-allowed}
+.shams-status{padding:0 14px 12px;color:#8e857a;font-size:8px}
+@keyframes shams-pulse{50%{transform:scale(1.05);box-shadow:0 0 0 8px rgba(210,111,85,.08)}}
+@media(max-width:620px){#arabisk-shams-root{right:12px;bottom:12px}.shams-shell{right:-1px;width:calc(100vw - 24px);height:min(620px,calc(100vh - 82px));border-radius:22px}.shams-launcher{height:46px;min-width:84px}}
+@media(prefers-reduced-motion:reduce){.shams-launcher,.shams-mic{transition:none;animation:none}.shams-messages{scroll-behavior:auto}}
