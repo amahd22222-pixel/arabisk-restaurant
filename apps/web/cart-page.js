@@ -9,6 +9,8 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&
 const readJson=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value??fallback}catch{return fallback}};
 const writeJson=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value))}catch{}};
 const readCart=()=>window.ARABISK_CART?.getItems?.()||[];
+const readProfile=()=>window.ARABISK_PROFILE?.getProfile?.()||null;
+const profileCustomerId=()=>String(readProfile()?.id||'').trim();
 async function hydrateCartView(){
   const currentItems=readCart();
   const incomplete=currentItems.filter(item=>!item.hydrated&&(!item.nameAr||item.nameAr===item.id||Number(item.price)<=0));
@@ -65,7 +67,7 @@ async function restoreRecoveryCart(){
   })();
   return recoveryRestorePromise;
 }
-function syncCheckoutFields(){const saved=readCheckout();const type=document.querySelector('#cart-order-type');const table=document.querySelector('#cart-table');const name=document.querySelector('#cart-name');const phone=document.querySelector('#cart-phone');if(type)type.value=saved.orderType||'dine_in';if(table)table.value=saved.tableNumber||'';if(name)name.value=saved.name||'';if(phone)phone.value=saved.phone||'';syncOrderTypeUI();}
+function syncCheckoutFields(){const saved=readCheckout();const profile=readProfile();const type=document.querySelector('#cart-order-type');const table=document.querySelector('#cart-table');const name=document.querySelector('#cart-name');const phone=document.querySelector('#cart-phone');if(type)type.value=saved.orderType||'dine_in';if(table)table.value=saved.tableNumber||'';if(name)name.value=saved.name||profile?.name||'';if(phone)phone.value=saved.phone||profile?.phone||'';syncOrderTypeUI();}
 function persistCheckout(){saveCheckout({orderType:document.querySelector('#cart-order-type')?.value,tableNumber:document.querySelector('#cart-table')?.value,name:document.querySelector('#cart-name')?.value,phone:document.querySelector('#cart-phone')?.value});}
 function syncOrderTypeUI(){
   const type=document.querySelector('#cart-order-type');const dineIn=type?.value!=='pickup';
@@ -120,7 +122,7 @@ async function submitOrder(event){
   persistCheckout();submit.disabled=true;status.textContent='جاري إرسال الطلب…';
   try{
     const sessionId=window.ARABISK_ANALYTICS?.getSessionId?.()||'';window.ARABISK_ANALYTICS?.track?.('checkout_started',{cartValue:total(),cartItems:cart.map(item=>({productId:item.id,quantity:Number(item.qty)||1})),metadata:{orderType}});
-    const payload={orderType,tableNumber:orderType==='dine_in'?tableNumber:'',name:orderType==='pickup'?name:'',phone:orderType==='pickup'?phone:'',notes,sessionId,recoveryToken,promoCode:promoCode||'',items:cart.map(item=>({productId:item.id,quantity:item.qty}))};
+    const payload={orderType,tableNumber:orderType==='dine_in'?tableNumber:'',name:orderType==='pickup'?name:'',phone:orderType==='pickup'?phone:'',notes,sessionId,customerId:profileCustomerId(),recoveryToken,promoCode:promoCode||'',items:cart.map(item=>({productId:item.id,quantity:item.qty}))};
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);let response;
     try{response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});}finally{clearTimeout(timer);}
     const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر إرسال الطلب.');
@@ -144,3 +146,5 @@ syncCheckoutFields();
 void restoreRecoveryCart().then(async()=>{cart=readCart();const input=document.querySelector('#cart-promo-code');if(input)input.value=promoCode;render();if(promoCode)await refreshPromoQuote(false);});
 render();
 })();
+
+window.addEventListener('arabisk:profile-updated', syncCheckoutFields);
