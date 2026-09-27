@@ -10,7 +10,7 @@
     style:'currency', currency:'AED', maximumFractionDigits:2
   }).format(Number(value) || 0);
 
-  const state = { products: [], experiences: [], memories: [] };
+  const state = { products: [], experiences: [], memories: [], todayOffer: null, installOffer: null };
 
   const getJson = async (url, fallback) => {
     try {
@@ -95,22 +95,54 @@
       item && item.available !== false && (item.isNew || item.chefChoice)
     ) || state.products.find(item => item && item.available !== false);
 
-    const offerImage = $('.today-offer-media img', root);
-    if (offerImage && featured) {
-      offerImage.src = productImage(featured);
-      offerImage.alt = featured.nameAr || featured.nameEn || 'اختيار اليوم من ARABISK';
+    const today = state.todayOffer?.enabled ? state.todayOffer : null;
+    const install = !today && state.installOffer?.enabled ? state.installOffer : null;
+
+    const selectedProduct = today?.productId
+      ? state.products.find(item => String(item.id) === String(today.productId) && item.available !== false)
+      : featured;
+
+    const image = $('.today-offer-media img', root);
+    if (image && selectedProduct) {
+      image.src = productImage(selectedProduct);
+      image.alt = selectedProduct.nameAr || selectedProduct.nameEn || 'ARABISK';
     }
 
-    if (!featured) return;
+    if (today) {
+      $('.today-offer-badge', root).textContent = today.badge || 'عرض اليوم';
+      $('.today-offer-title', root).textContent = today.title || selectedProduct?.nameAr || 'عرض اليوم';
+      $('.today-offer-note', root).textContent =
+        today.message || selectedProduct?.descriptionAr || 'عرض خاص متاح الآن في ARABISK.';
+      const action = $('.today-offer-action', root);
+      action.textContent = (today.ctaLabel || 'اطلب الآن') + ' ←';
+      action.setAttribute('href', selectedProduct
+        ? `/menu/${encodeURIComponent(String(selectedProduct.categoryId || ''))}/${encodeURIComponent(String(selectedProduct.id || ''))}`
+        : '/menu');
+      return;
+    }
 
-    $('.today-offer-badge', root).textContent = featured.isNew ? 'عرض اليوم' : 'اختيار اليوم';
-    $('.today-offer-title', root).textContent = featured.nameAr || featured.nameEn || 'طبق اليوم';
-    $('.today-offer-note', root).textContent =
-      featured.descriptionAr || featured.descriptionEn || 'اختيار مميز من مطبخ ARABISK. التوفر والسعر الحاليان يظهران في صفحة الطبق.';
-    $('.today-offer-action', root).setAttribute(
-      'href',
-      `/menu/${encodeURIComponent(String(featured.categoryId || ''))}/${encodeURIComponent(String(featured.id || ''))}`
-    );
+    if (install) {
+      $('.today-offer-badge', root).textContent = `خصم ${Math.round(Number(install.discountValue) || 0)}% للتطبيق`;
+      $('.today-offer-title', root).textContent = install.title || 'عرض خاص لعملاء ARABISK';
+      $('.today-offer-note', root).textContent = install.message || 'ثبّت ARABISK واحصل على كودك الشخصي.';
+      const action = $('.today-offer-action', root);
+      action.textContent = 'استكشف مكافأتك ←';
+      action.setAttribute('href', '/cart');
+      return;
+    }
+
+    if (featured) {
+      $('.today-offer-badge', root).textContent = featured.isNew ? 'اختيار اليوم' : 'من قائمة ARABISK';
+      $('.today-offer-title', root).textContent = featured.nameAr || featured.nameEn || 'اختيار اليوم';
+      $('.today-offer-note', root).textContent =
+        featured.descriptionAr || featured.descriptionEn || 'اختيار مميز من مطبخ ARABISK.';
+      const action = $('.today-offer-action', root);
+      action.textContent = 'اطلب الآن ←';
+      action.setAttribute(
+        'href',
+        `/menu/${encodeURIComponent(String(featured.categoryId || ''))}/${encodeURIComponent(String(featured.id || ''))}`
+      );
+    }
   }
   function renderExperience() {
     const root = $('#home-experience');
