@@ -28,7 +28,8 @@ async function syncSubscription(subscription) {
     body: JSON.stringify({
       endpoint: subscription.endpoint,
       keys: subscription.toJSON().keys,
-      contextTag: 'installed-pwa'
+      contextTag: 'installed-pwa',
+      profileToken: window.ARABISK_PROFILE?.getToken?.() || ''
     }),
     cache: 'no-store'
   });
@@ -126,4 +127,10 @@ window.addEventListener('load', () => {
 });
 window.addEventListener('appinstalled', () => {
   window.setTimeout(() => void bootstrapPush(), 1200);
+});
+window.addEventListener('arabisk:profile-ready', () => {
+  window.setTimeout(() => void bootstrapPush(), 250);
+});
+window.addEventListener('arabisk:profile-updated', () => {
+  window.setTimeout(() => void bootstrapPush(), 250);
 });
