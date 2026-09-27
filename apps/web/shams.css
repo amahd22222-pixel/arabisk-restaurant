@@ -123,3 +123,51 @@
     animation:none;
   }
 }
+
+
+/* Voice-only hardening: the assistant has no visible chat or text surface. */
+#arabisk-shams-root .shams-voice-error{
+  display:none!important;
+}
+#arabisk-shams-root .shams-voice-only{
+  user-select:none;
+  -webkit-user-select:none;
+}
+#arabisk-shams-root .shams-launcher.is-listening{
+  border-color:rgba(230,201,145,.95);
+  box-shadow:0 18px 52px rgba(0,0,0,.38),0 0 0 8px rgba(197,154,91,.08),0 0 45px rgba(197,154,91,.24);
+}
+#arabisk-shams-root .shams-launcher.is-listening .shams-sun{
+  animation:shams-listening-pulse .9s ease-in-out infinite alternate;
+}
+#arabisk-shams-root .shams-launcher.is-speaking{
+  box-shadow:0 18px 52px rgba(0,0,0,.38),0 0 0 8px rgba(197,154,91,.08),0 0 52px rgba(197,154,91,.3);
+}
+#arabisk-shams-root .shams-launcher.is-speaking .shams-sun{
+  animation:shams-speaking-pulse .65s ease-in-out infinite alternate;
+}
+#arabisk-shams-root .shams-launcher.is-thinking{
+  animation:shams-thinking-pulse 1s ease-in-out infinite;
+}
+#arabisk-shams-root .shams-launcher.is-error{
+  opacity:.82;
+}
+@keyframes shams-listening-pulse{
+  from{transform:scale(.96)}
+  to{transform:scale(1.08)}
+}
+@keyframes shams-speaking-pulse{
+  from{transform:scale(.98)}
+  to{transform:scale(1.1)}
+}
+@keyframes shams-thinking-pulse{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.035)}
+}
+@media(prefers-reduced-motion:reduce){
+  #arabisk-shams-root .shams-launcher.is-listening .shams-sun,
+  #arabisk-shams-root .shams-launcher.is-speaking .shams-sun,
+  #arabisk-shams-root .shams-launcher.is-thinking{
+    animation:none;
+  }
+}
