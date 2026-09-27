@@ -174,7 +174,6 @@
   async function init() {
     if (location.pathname.replace(/\/$/,'') !== '') return;
 
-    setupMobileMenu();
     syncCartCount();
 
     const [products, experiences, memories, installOffer] = await Promise.all([
