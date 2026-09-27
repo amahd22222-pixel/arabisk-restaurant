@@ -94,6 +94,12 @@
     const offer = state.installOffer;
     const featured = state.products.find(item => item && item.available !== false && (item.chefChoice || item.isNew)) || state.products.find(item => item?.available !== false);
 
+    const offerImage = $('.today-offer-media img', root);
+    if (offerImage && featured) {
+      offerImage.src = productImage(featured);
+      offerImage.alt = featured.nameAr || featured.nameEn || 'اختيار اليوم من ARABISK';
+    }
+
     if (offer?.enabled) {
       $('.today-offer-badge', root).textContent = `خصم ${Math.round(Number(offer.discountValue) || 0)}% للتطبيق`;
       $('.today-offer-title', root).textContent = 'خصم خاص لعملاء ARABISK';
