@@ -4,8 +4,10 @@ const ACTION_TTL_MS = 10 * 60 * 1000;
 
 const clean = (value, max = 240) => String(value ?? '').trim().slice(0, max);
 
+const toWesternDigits = value => String(value ?? '').replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)));
+
 const normalizePhone = (value) => {
-  const raw = clean(value, 40);
+  const raw = clean(toWesternDigits(value), 40);
   const digits = raw.replace(/\D/g, '');
   if (/^05\d{8}$/.test(digits)) return '+971' + digits.slice(1);
   if (/^9715\d{8}$/.test(digits)) return '+' + digits;
@@ -27,28 +29,76 @@ function localDate(offsetDays = 0) {
 }
 
 function parseGuests(text) {
-  const raw = clean(text, 500).toLowerCase()
+  const raw = clean(toWesternDigits(text), 500).toLowerCase()
     .replace(/اتنين/g, 'اثنين')
     .replace(/تلاته|تلاتة/g, 'ثلاثة')
     .replace(/اربعه|اربعة/g, 'أربعة')
-    .replace(/خمسه|خمسة/g, 'خمسة');
+    .replace(/خمسه|خمسة/g, 'خمسة')
+    .replace(/سته/g, 'ستة')
+    .replace(/سبعه/g, 'سبعة')
+    .replace(/تمانية|تمنية/g, 'ثمانية')
+    .replace(/تسعه/g, 'تسعة');
   const match = raw.match(/(?:لـ|ل|عدد|مع|حوالي)?\s*(\d{1,2})\s*(?:شخص|أشخاص|فرد|افراد|ضيوف|اشخاص)/i);
   if (match) return Number(match[1]);
-  if (/شخصين|اثنين|اتنين/i.test(raw)) return 2;
-  if (/ثلاثة|ثلاثه|تلاتة|ثلاث/i.test(raw)) return 3;
-  if (/أربعة|اربعة|اربعه|أربع/i.test(raw)) return 4;
-  if (/خمسة|خمسه|خمس/i.test(raw)) return 5;
+  const words = [
+    [/شخص(?:ين)?|اثنين|اتنين/i, 2],
+    [/ثلاثة|ثلاثه|تلاتة|ثلاث/i, 3],
+    [/أربعة|اربعة|اربعه|أربع/i, 4],
+    [/خمسة|خمسه|خمس/i, 5],
+    [/ستة|سته|ست/i, 6],
+    [/سبعة|سبعه|سبع/i, 7],
+    [/ثمانية|تمانية|تمنية|ثماني/i, 8],
+    [/تسعة|تسعه|تسع/i, 9],
+    [/عشرة|عشر/i, 10]
+  ];
+  for (const [pattern, value] of words) {
+    if (pattern.test(raw)) return value;
+  }
   return null;
 }
 
 function parseTime(text) {
-  const raw = clean(text, 500).toLowerCase()
-    .replace(/الساعة|الساعه|ساعة|الساعه/g, 'الساعة');
-  const match = raw.match(/(?:الساعة|الساعه|at)\s*(\d{1,2})(?::(\d{2}))?\s*(ص|م|am|pm)?\b/i) || raw.match(/\b(\d{1,2}):([0-5]\d)\s*(ص|م|am|pm)?\b/i);
-  if (!match) return '';
-  let hours = Number(match[1]);
-  const minutes = Number(match[2] || 0);
-  const meridiem = String(match[3] || '');
+  const raw = clean(toWesternDigits(text), 500).toLowerCase()
+    .replace(/الساعه|ساعة/g, 'الساعة')
+    .replace(/مساءً|مساء|بالليل|ليل/g, 'م')
+    .replace(/صباحًا|صباحا|الصبح|صباح/g, 'ص');
+
+  const hourWords = [
+    [/الواحدة|واحده|واحدة/i, 1], [/الاثنين|اتنين|اثنين/i, 2], [/الثلاثة|تلاتة|ثلاثه/i, 3],
+    [/الأربعة|اربعة|اربعه/i, 4], [/الخمسة|خمسه|خمسة/i, 5], [/الستة|سته|ستة/i, 6],
+    [/السبعة|سبعه|سبعة/i, 7], [/الثمانية|تمانية|تمنية|ثمانية/i, 8],
+    [/التسعة|تسعه|تسعة/i, 9], [/العشرة|عشرة/i, 10], [/الحادية عشر|حداشر/i, 11],
+    [/الثانية عشر|اتناشر|اثنا عشر/i, 12]
+  ];
+
+  let hourPattern = '(\\d{1,2})';
+  let hourValue = null;
+  for (const [pattern, value] of hourWords) {
+    if (pattern.test(raw)) {
+      hourValue = value;
+      break;
+    }
+  }
+
+  const match = raw.match(/(?:الساعة|at)\s*(\d{1,2})(?:[:.]([0-5]\d))?\s*(ونصف|و نص|و\s*30)?\s*(ص|م|am|pm)?\b/i)
+    || raw.match(/\b(\d{1,2})(?:[:.]([0-5]\d))?\s*(ونصف|و نص|و\s*30)?\s*(ص|م|am|pm)\b/i);
+
+  let hours = hourValue;
+  let minutes = 0;
+  let meridiem = '';
+
+  if (match) {
+    hours = Number(match[1]);
+    minutes = Number(match[2] || 0);
+    if (match[3]) minutes = 30;
+    meridiem = String(match[4] || '');
+  } else {
+    const wordMatch = raw.match(/(?:الساعة|at)\s*(?:الواحدة|واحده|واحدة|الاثنين|اتنين|اثنين|الثلاثة|تلاتة|ثلاثه|الأربعة|اربعة|اربعه|الخمسة|خمسه|خمسة|الستة|سته|ستة|السبعة|سبعه|سبعة|الثمانية|تمانية|تمنية|ثمانية|التسعة|تسعه|تسعة|العشرة|عشرة|الحادية عشر|حداشر|الثانية عشر|اتناشر|اثنا عشر)(?:\s*(ونصف|و نص))?\s*(ص|م|am|pm)?/i);
+    if (!wordMatch || hours === null) return '';
+    if (wordMatch[1]) minutes = 30;
+    meridiem = String(wordMatch[2] || '');
+  }
+
   if (hours > 23 || minutes > 59) return '';
   if (/م|pm/i.test(meridiem) && hours < 12) hours += 12;
   if (/ص|am/i.test(meridiem) && hours === 12) hours = 0;
