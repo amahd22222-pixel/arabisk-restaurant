@@ -167,6 +167,19 @@ async function load(){
   if(location.hash.replace('#','')==='customers')void loadCustomerSegments().catch(error=>{if($('#error'))$('#error').textContent=error.message;});
 }
 function loadSettings(){$('#api-base').value=apiBase();$('#site-name').value=localStorage.getItem('ARABISK_SITE_NAME')||'ARABISK';$('#site-description').value=localStorage.getItem('ARABISK_SITE_DESCRIPTION')||'مطعم وكافيه بطابع عربي عصري.';}
+function localDateTimeToIso(value){
+  if(!value)return '';
+  const date=new Date(value);
+  return Number.isFinite(date.getTime())?date.toISOString():'';
+}
+function isoToLocalDateTime(value){
+  if(!value)return '';
+  const date=new Date(value);
+  if(!Number.isFinite(date.getTime()))return '';
+  const pad=n=>String(n).padStart(2,'0');
+  return date.getFullYear()+'-'+pad(date.getMonth()+1)+'-'+pad(date.getDate())+'T'+pad(date.getHours())+':'+pad(date.getMinutes());
+}
+
 function renderTodayOfferProductOptions(selectedId=''){
   const select=$('#today-offer-product');
   if(!select)return;
@@ -182,8 +195,8 @@ async function loadTodayOfferSettings(){
     if($('#today-offer-enabled'))$('#today-offer-enabled').checked=data.configuredEnabled===true;
     if($('#today-offer-product'))$('#today-offer-product').value=data.productId||'';
     if($('#today-offer-badge'))$('#today-offer-badge').value=data.badge||'عرض اليوم';
-    if($('#today-offer-start'))$('#today-offer-start').value=data.startsAt||'';
-    if($('#today-offer-end'))$('#today-offer-end').value=data.endsAt||'';
+    if($('#today-offer-start'))$('#today-offer-start').value=isoToLocalDateTime(data.startsAt);
+    if($('#today-offer-end'))$('#today-offer-end').value=isoToLocalDateTime(data.endsAt);
     if($('#today-offer-title'))$('#today-offer-title').value=data.title||'اختيار اليوم من ARABISK';
     if($('#today-offer-message'))$('#today-offer-message').value=data.message||'اختيار مميز من القائمة متاح اليوم.';
     if($('#today-offer-cta'))$('#today-offer-cta').value=data.ctaLabel||'اطلب الآن';
@@ -259,8 +272,8 @@ $('#today-offer-form')?.addEventListener('submit',async event=>{
       enabled:$('#today-offer-enabled')?.checked===true,
       productId:$('#today-offer-product')?.value||'',
       badge:$('#today-offer-badge')?.value||'عرض اليوم',
-      startsAt:$('#today-offer-start')?.value||'',
-      endsAt:$('#today-offer-end')?.value||'',
+      startsAt:localDateTimeToIso($('#today-offer-start')?.value||''),
+      endsAt:localDateTimeToIso($('#today-offer-end')?.value||''),
       title:$('#today-offer-title')?.value||'اختيار اليوم من ARABISK',
       message:$('#today-offer-message')?.value||'اختيار مميز من القائمة متاح اليوم.',
       ctaLabel:$('#today-offer-cta')?.value||'اطلب الآن'
