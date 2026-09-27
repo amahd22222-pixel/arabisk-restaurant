@@ -26,9 +26,15 @@ export function createReservationService({ repository, cleanText, nextReservatio
     const notes = cleanText(body.notes, 300);
     const eventSlug = cleanText(body.eventSlug, 90).toLowerCase();
     const requestedCustomerId = cleanText(body.customerId, 80);
+    const idempotencyKey = cleanText(body.idempotencyKey, 100);
     const dateOk = isValidDateOnly(date);
     const timeOk = /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
     const today = new Date().toISOString().slice(0, 10);
+
+    if (idempotencyKey) {
+      const existing = reservations.findByIdempotencyKey(idempotencyKey);
+      if (existing) return existing;
+    }
 
     if (!name || !phone || !date || !time || !Number.isInteger(guests) || guests < 1 || guests > 20) {
       throw new ReservationServiceError('name, phone, date, time and guests are required');
@@ -63,6 +69,7 @@ export function createReservationService({ repository, cleanText, nextReservatio
       id: nextReservationId(),
       name, phone, date, time, guests, notes, eventSlug, customerId: reservationCustomerId,
       status: 'pending',
+      idempotencyKey,
       createdAt
     };
 

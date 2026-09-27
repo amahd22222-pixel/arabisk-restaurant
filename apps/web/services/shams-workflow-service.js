@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 const ACTION_TTL_MS = 10 * 60 * 1000;
 
 const clean = (value, max = 240) => String(value ?? '').trim().slice(0, max);
@@ -93,11 +95,13 @@ function confirmation(text) {
 }
 
 export function createShamsWorkflowService({ memoryService, getOrderService, getReservationService }) {
-  async function savePending(identity, type, data) {
+  async function savePending(identity, type, data, idempotencyKey = '') {
+    const key = clean(idempotencyKey, 100) || crypto.randomUUID();
     return memoryService.save(identity, {
       pendingAction: {
         type,
         data,
+        idempotencyKey: key,
         createdAt: new Date().toISOString(),
         expiresAt: Date.now() + ACTION_TTL_MS
       }
@@ -119,9 +123,11 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
   }
 
   async function handleReservation({ identity, message, memory, customer }) {
-    const current = pendingIsValid(memory.pendingAction) && memory.pendingAction.type === 'reservation'
-      ? memory.pendingAction.data
-      : {};
+    const currentPending = pendingIsValid(memory.pendingAction) && memory.pendingAction.type === 'reservation'
+      ? memory.pendingAction
+      : null;
+    const current = currentPending?.data || {};
+    const idempotencyKey = currentPending?.idempotencyKey || crypto.randomUUID();
 
     const effectiveMemory = { ...memory, name: memory.name || customer?.name || '' };
     const slots = parseReservationSlots(message, effectiveMemory);
@@ -133,12 +139,13 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
       name: slots.name || current.name || memory.name || '',
       phone: slots.phone || current.phone || '',
       eventSlug: slots.eventSlug || current.eventSlug || '',
-      customerId: slots.customerId || current.customerId || ''
+      customerId: slots.customerId || current.customerId || '',
+      sessionId: current.sessionId || identity.sessionId || ''
     };
 
     const missing = reservationSummary(merged).missing;
     if (missing.length) {
-      await savePending(identity, 'reservation', merged);
+      await savePending(identity, 'reservation', merged, idempotencyKey);
       return {
         status: 'needs_input',
         reply: 'حاضر. أحتاج ' + missing[0] + ' أولاً.',
@@ -146,7 +153,7 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
       };
     }
 
-    await savePending(identity, 'reservation', merged);
+    await savePending(identity, 'reservation', merged, idempotencyKey);
     const summary = 'الحجز: ' + merged.name + '، ' + merged.guests + ' أشخاص، ' + merged.date + ' الساعة ' + merged.time + '.';
     return {
       status: 'awaiting_confirmation',
@@ -156,9 +163,11 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
   }
 
   async function handleOrder({ identity, message, memory, cart, customer }) {
-    const current = pendingIsValid(memory.pendingAction) && memory.pendingAction.type === 'order'
-      ? memory.pendingAction.data
-      : {};
+    const currentPending = pendingIsValid(memory.pendingAction) && memory.pendingAction.type === 'order'
+      ? memory.pendingAction
+      : null;
+    const current = currentPending?.data || {};
+    const idempotencyKey = currentPending?.idempotencyKey || crypto.randomUUID();
 
     const raw = clean(message, 1200).toLowerCase();
     const orderType = /استلام|تيك أواي|takeaway|pickup/i.test(raw)
@@ -178,7 +187,8 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
       name: current.name || memory.name || customer?.name || '',
       phone: current.phone || (customer?.phone ? normalizePhone(customer.phone) : ''),
       guests: guests || current.guests || null,
-      items: Array.isArray(cart) ? cart.slice(0, 20) : (current.items || [])
+      items: Array.isArray(cart) ? cart.slice(0, 20) : (current.items || []),
+      sessionId: current.sessionId || identity.sessionId || ''
     };
 
     const phoneMatch = raw.match(/(?:05\d{8}|9715\d{8}|\+\d[\d\s-]{7,16})/);
@@ -198,11 +208,11 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
     if (merged.orderType === 'pickup' && !merged.phone) missing.push('رقم الهاتف');
 
     if (missing.length) {
-      await savePending(identity, 'order', merged);
+      await savePending(identity, 'order', merged, idempotencyKey);
       return { status: 'needs_input', reply: missing[0], pending: merged };
     }
 
-    await savePending(identity, 'order', merged);
+    await savePending(identity, 'order', merged, idempotencyKey);
 
     const itemSummary = merged.items
       .slice(0, 4)
@@ -229,7 +239,10 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
     if (pending.type === 'reservation') {
       const reservationService = getReservationService?.();
       if (!reservationService) throw new Error('Reservation service unavailable.');
-      const reservation = await reservationService.createReservation(pending.data);
+      const reservation = await reservationService.createReservation({
+        ...pending.data,
+        idempotencyKey: pending.idempotencyKey
+      });
       await clearPending(identity);
       return {
         status: 'executed',
@@ -248,6 +261,8 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
         name: pending.data.name,
         phone: pending.data.phone,
         customerId: pending.data.customerId || '',
+        sessionId: pending.data.sessionId || identity.sessionId || '',
+        idempotencyKey: pending.idempotencyKey,
         items: pending.data.items.map(item => ({
           productId: item.id,
           quantity: Number(item.quantity || item.qty || 1)

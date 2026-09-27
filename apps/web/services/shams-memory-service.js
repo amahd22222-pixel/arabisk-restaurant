@@ -63,6 +63,7 @@ function normalizeMemory(raw, identity) {
     pendingAction: source.pendingAction && typeof source.pendingAction === 'object' ? {
       type: clean(source.pendingAction.type, 40),
       data: source.pendingAction.data && typeof source.pendingAction.data === 'object' ? source.pendingAction.data : {},
+      idempotencyKey: clean(source.pendingAction.idempotencyKey, 100),
       createdAt: clean(source.pendingAction.createdAt, 40),
       expiresAt: Number(source.pendingAction.expiresAt || 0) || 0
     } : null,

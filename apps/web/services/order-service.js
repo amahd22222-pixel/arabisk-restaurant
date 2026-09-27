@@ -93,8 +93,14 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
     const notes = cleanText(body.notes, 300);
     const customerId = cleanText(body.customerId, 80);
     const recoveryToken = cleanText(body.recoveryToken, 80);
+    const idempotencyKey = cleanText(body.idempotencyKey, 100);
     const promoCode = cleanText(body.promoCode, 80).toUpperCase();
     const rawItems = Array.isArray(body.items) ? body.items : [];
+
+    if (idempotencyKey) {
+      const existing = orders.findByIdempotencyKey(idempotencyKey);
+      if (existing) return existing;
+    }
 
     if (!rawItems.length || rawItems.length > 30) throw new OrderServiceError('At least one order item is required');
     if (orderType === 'dine_in' && !tableNumber) throw new OrderServiceError('Table number is required for dine-in orders.');
@@ -149,6 +155,7 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
       sessionId: cleanText(body.sessionId, 100),
       customerId: '',
       revenueRecoveryToken: recoveryToken,
+      idempotencyKey,
       completedAt: ''
     };
 

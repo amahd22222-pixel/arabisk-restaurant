@@ -32,7 +32,7 @@ function jsonFromText(value) {
 
 function normalizeIntent(value) {
   const allowed = new Set([
-    'greeting', 'menu', 'recommend', 'cart', 'reservation',
+    'greeting', 'menu', 'recommend', 'cart', 'cart_summary', 'reservation',
     'order_status', 'events', 'memories', 'product_search',
     'cart_add', 'unknown'
   ]);
@@ -116,6 +116,9 @@ function detectLocalPlan({ message, memory, products }) {
   }
 
   if (/(السلة|العربة|cart)/i.test(normalized)) {
+    if (/(فيها|موجود|محتوى|محتويات|المجموع|الإجمالي|بكام|كام|إيه|ايه|اعرض|وريني|شوف)/i.test(normalized)) {
+      return { intent: 'cart_summary', toolCalls: [{ name: 'cart_summary', args: {} }] };
+    }
     return { intent: 'cart', toolCalls: [{ name: 'navigate', args: { path: '/cart' } }], reply: 'حاضر، أفتح لك السلة.' };
   }
 
@@ -168,6 +171,14 @@ function buildLocalReply(intent, data) {
     return 'وجدت لك ' + products.slice(0, 3).map(item => item.nameAr || item.nameEn).join('، ') + '.';
   }
 
+  if (intent === 'cart_summary') {
+    const items = data.cartSummary?.items || [];
+    if (!items.length) return 'السلة فارغة حاليًا.';
+    const summary = items.slice(0, 5)
+      .map(item => String(item.quantity) + ' × ' + item.nameAr)
+      .join('، ');
+    return 'في السلة ' + summary + ' بإجمالي ' + Number(data.cartSummary.total || 0) + ' درهم.';
+  }
   if (intent === 'cart_add') return data.added?.nameAr ? 'تمت إضافة ' + data.added.nameAr + ' إلى السلة.' : 'تمت إضافة الطبق إلى السلة.';
   if (intent === 'order_status') {
     if (data.order) {
@@ -191,7 +202,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
 
   function buildIdentity({ customer, sessionId }) {
     return customer?.id
-      ? { customerId: String(customer.id) }
+      ? { customerId: String(customer.id), sessionId: clean(sessionId, 120) }
       : { sessionId: clean(sessionId, 120) };
   }
 
@@ -205,6 +216,31 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
 
     if (name === 'recommend_menu') {
       return { recommendations: pickRecommendations(catalog, context.memory.preferences, context.message) };
+    }
+
+    if (name === 'cart_summary') {
+      const items = (Array.isArray(context.cart) ? context.cart : [])
+        .slice(0, 20)
+        .map(item => {
+          const id = clean(item?.id, 60);
+          const product = catalog.find(row => String(row.id) === id);
+          const quantity = Math.min(20, Math.max(1, Number(item?.quantity || item?.qty) || 1));
+          const unitPrice = Number(product?.price ?? item?.price ?? 0);
+          const nameAr = clean(item?.nameAr || product?.nameAr || product?.nameEn || id, 120);
+          return {
+            id,
+            nameAr,
+            quantity,
+            unitPrice,
+            lineTotal: unitPrice * quantity
+          };
+        })
+        .filter(item => item.id);
+      return {
+        items,
+        itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
+        total: items.reduce((sum, item) => sum + item.lineTotal, 0)
+      };
     }
 
     if (name === 'cart_add') {
@@ -281,7 +317,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     const prompt = [
       'أنتِ شمس Agent لمطعم ARABISK. لا تتخذي أي إجراء خارج الأدوات المحددة.',
       'أخرجي JSON فقط بالشكل: {"intent":"...","reply":"...","toolCalls":[{"name":"...","args":{}}],"memory":{"budgetAed":null,"spicy":null,"vegetarian":null}}',
-      'الأدوات المسموحة: search_menu, recommend_menu, cart_add, navigate, get_order_status.',
+      'الأدوات المسموحة: search_menu, recommend_menu, cart_summary, cart_add, navigate, get_order_status.',
       'المسارات المسموحة: /menu, /reservation, /cart, /track-order, /events, /memories.',
       'لا تدّعي نجاح إضافة أو تنفيذ أي شيء قبل وصول نتيجة الأداة.',
       'لا تطلبي كلمات مرور أو OTP أو بيانات بطاقات.',
@@ -478,6 +514,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     const responseData = {
       recommendations: toolResults.find(item => item.name === 'recommend_menu')?.result?.recommendations || [],
       matches: toolResults.find(item => item.name === 'search_menu')?.result?.matches || [],
+      cartSummary: toolResults.find(item => item.name === 'cart_summary')?.result?.cartSummary || toolResults.find(item => item.name === 'cart_summary')?.result || null,
       added: toolResults.find(item => item.name === 'cart_add')?.result?.added,
       order: toolResults.find(item => item.name === 'get_order_status')?.result?.order
     };
