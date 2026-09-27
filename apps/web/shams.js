@@ -91,7 +91,7 @@
     item.querySelectorAll('[data-shams-action]').forEach(button => {
       button.addEventListener('click', () => {
         const url = button.getAttribute('data-shams-action') || '/';
-        if (/^\\/(?!\\/)/.test(url)) window.location.assign(url);
+        if (/^\/(?!\/)/.test(url)) window.location.assign(url);
       });
     });
   };
