@@ -211,7 +211,7 @@
     ensureStyles();
     createUi();
     const { launcher, close, send: sendButton, input, voiceToggle, suggestions } = ui();
-    if (!launcher || !close || !send || !input) return;
+    if (!launcher || !close || !sendButton || !input) return;
 
     state.speaking = 'speechSynthesis' in window;
     voiceToggle?.classList.toggle('is-active', state.speaking);
