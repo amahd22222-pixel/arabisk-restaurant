@@ -100,3 +100,6 @@ footer{background:#0e0c0a!important}
   .cart-summary{border-radius:22px!important}
   .cart-submit{min-height:54px!important;font-size:12px!important;box-shadow:0 10px 24px rgba(23,19,15,.12)}
 }
+
+.mobile-checkout-dock{display:none}
+@media(max-width:800px){.mobile-checkout-dock{position:fixed;right:10px;left:10px;bottom:calc(79px + env(safe-area-inset-bottom));z-index:9997;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 10px 9px 13px;border:1px solid rgba(197,154,91,.24);border-radius:19px;background:rgba(255,253,248,.97);box-shadow:0 16px 45px rgba(23,19,15,.16);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}.mobile-checkout-dock[hidden]{display:none}.mobile-checkout-dock div{display:grid;gap:1px}.mobile-checkout-dock small{color:var(--ar-app-muted);font-size:9px}.mobile-checkout-dock strong{color:#9a733d;font:600 20px/1 "Playfair Display",serif}.mobile-checkout-dock button{flex:0 0 auto;min-height:42px;padding:0 18px;border:0;border-radius:999px;background:var(--ar-app-dark);color:#fff;font:800 11px Cairo,sans-serif}.cart-main{padding-bottom:128px!important}}
