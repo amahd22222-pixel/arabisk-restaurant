@@ -106,7 +106,12 @@ const notificationSendRateLimit=createRateLimiter({
   limit:20,
   message:'Too many notification sending requests. Please try again later.'
 });
-const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,promotionClaimRateLimit,promotionQuoteRateLimit,memoryUploadRateLimit,memoryMutationRateLimit,pushSubscribeRateLimit,notificationSendRateLimit];
+const customerProfileRateLimit=createRateLimiter({
+  windowMs:10*60*1000,
+  limit:12,
+  message:'Too many profile requests. Please try again later.'
+});
+const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,promotionClaimRateLimit,promotionQuoteRateLimit,memoryUploadRateLimit,memoryMutationRateLimit,pushSubscribeRateLimit,notificationSendRateLimit,customerProfileRateLimit];
 const rateLimitCleanupTimer=setInterval(() => {
   for (const limiter of rateLimiters) limiter.cleanup();
 }, 10*60*1000);
@@ -216,12 +221,14 @@ registerOrderRoutes(app, {
 
 const customerService = createCustomerService({
   repository: stateRepository,
-  cleanText
+  cleanText,
+  crypto
 });
 
 registerCustomerRoutes(app, {
   service: customerService,
-  requireAdminApiKey
+  requireAdminApiKey,
+  profileRateLimit: customerProfileRateLimit
 });
 
 const reservationService = createReservationService({
@@ -242,7 +249,8 @@ registerReservationRoutes(app, {
 const pushSubscriptionService = createPushSubscriptionService({
   repository: stateRepository,
   cleanText,
-  crypto
+  crypto,
+  findCustomerByProfileToken: customerService.findByProfileToken
 });
 
 registerPushRoutes(app, {
