@@ -37,7 +37,7 @@ function parseGuests(text) {
 
 function parseTime(text) {
   const raw = clean(text, 500).toLowerCase();
-  const match = raw.match(/\b(\d{1,2})(?::(\d{2}))?\s*(ص|م|am|pm)?\b/i);
+  const match = raw.match(/(?:الساعة|الساعه|at)\s*(\d{1,2})(?::(\d{2}))?\s*(ص|م|am|pm)?\b/i) || raw.match(/\b(\d{1,2}):([0-5]\d)\s*(ص|م|am|pm)?\b/i);
   if (!match) return '';
   let hours = Number(match[1]);
   const minutes = Number(match[2] || 0);
@@ -56,15 +56,16 @@ function parseReservationSlots(text, memory) {
     date: '',
     time: '',
     guests: null,
-    eventSlug: ''
+    eventSlug: '',
+    customerId: ''
   };
 
   const phoneMatch = raw.match(/(?:05\d{8}|9715\d{8}|\+\d[\d\s-]{7,16})/);
   if (phoneMatch) slots.phone = normalizePhone(phoneMatch[0]);
 
   if (/اليوم/i.test(raw)) slots.date = localDate(0);
-  else if (/بكرة|غدا|غدًا/i.test(raw)) slots.date = localDate(1);
   else if (/بعد بكرة|بعد غد|بعد غدًا/i.test(raw)) slots.date = localDate(2);
+  else if (/بكرة|غدا|غدًا/i.test(raw)) slots.date = localDate(1);
 
   const dateMatch = raw.match(/\b(20\d{2})[-/](\d{1,2})[-/](\d{1,2})\b/);
   if (dateMatch) {
@@ -124,13 +125,15 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
 
     const effectiveMemory = { ...memory, name: memory.name || customer?.name || '' };
     const slots = parseReservationSlots(message, effectiveMemory);
+    slots.customerId = String(customer?.id || '');
     if (!slots.phone && customer?.phone) slots.phone = normalizePhone(customer.phone);
     const merged = {
       ...current,
       ...Object.fromEntries(Object.entries(slots).filter(([, value]) => value !== '' && value !== null)),
       name: slots.name || current.name || memory.name || '',
       phone: slots.phone || current.phone || '',
-      eventSlug: slots.eventSlug || current.eventSlug || ''
+      eventSlug: slots.eventSlug || current.eventSlug || '',
+      customerId: slots.customerId || current.customerId || ''
     };
 
     const missing = reservationSummary(merged).missing;
