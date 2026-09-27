@@ -331,10 +331,10 @@
     }
 
     const recognition = new Recognition();
-    recognition.lang = 'ar-AE';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.continuous = false;
+    recognition.lang = RECOGNITION_LANGUAGES[state.dialect] || 'ar-AE';
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 3;
+    recognition.continuous = true;
 
     recognition.onstart = () => {
       state.listening = true;
@@ -344,10 +344,28 @@
     };
 
     recognition.onresult = event => {
-      const phrase = event.results?.[0]?.[0]?.transcript?.trim() || '';
-      state.listening = false;
-      if (phrase) void sendMessage(phrase);
-      else scheduleListeningRestart(250);
+      clearSilenceTimer();
+
+      let finalText = '';
+      let interimText = '';
+
+      for (let index = event.resultIndex || 0; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const transcript = result?.[0]?.transcript?.trim() || '';
+        if (result?.isFinal) finalText += (finalText ? ' ' : '') + transcript;
+        else interimText += (interimText ? ' ' : '') + transcript;
+      }
+
+      const observed = (finalText || interimText).trim();
+      if (observed) {
+        const detected = detectDialectFromText(observed);
+        if (detected !== 'gulf') state.dialect = detected;
+      }
+
+      if (finalText) {
+        state.transcriptBuffer = (state.transcriptBuffer + ' ' + finalText).trim();
+        scheduleTranscriptFlush(1700);
+      }
     };
 
     recognition.onerror = event => {
@@ -368,6 +386,10 @@
 
     recognition.onend = () => {
       state.listening = false;
+      if (state.transcriptBuffer.trim() && !state.busy && !state.speaking) {
+        scheduleTranscriptFlush(700);
+        return;
+      }
       if (state.conversationActive && !state.busy && !state.speaking) {
         scheduleListeningRestart(300);
       } else if (!state.busy && !state.speaking) {
@@ -402,6 +424,7 @@
     unlockAudio();
 
     try {
+      recognition.lang = RECOGNITION_LANGUAGES[state.dialect] || 'ar-AE';
       recognition.start();
       launcher?.classList.add('is-listening');
     } catch (error) {
@@ -415,6 +438,8 @@
   function stopConversation() {
     state.conversationActive = false;
     window.clearTimeout(state.restartTimer);
+    clearSilenceTimer();
+    state.transcriptBuffer = '';
     try { state.recognition?.abort(); } catch {}
     state.listening = false;
     stopSpeaking();
