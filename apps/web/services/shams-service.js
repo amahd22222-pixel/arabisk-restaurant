@@ -1,5 +1,3 @@
-import crypto from 'node:crypto';
-
 const MAX_MESSAGE = 1200;
 const MAX_HISTORY_ITEMS = 12;
 const MAX_PRODUCTS_IN_CONTEXT = 24;
@@ -175,6 +173,7 @@ async function requestModel({ endpoint, apiKey, model, instructions, input }) {
 
 export function createShamsService({
   repository,
+  findCustomerByProfileToken,
   aiApiKey = '',
   aiModel = DEFAULT_MODEL,
   aiEndpoint = DEFAULT_ENDPOINT
@@ -197,7 +196,7 @@ export function createShamsService({
     let customer = null;
     if (profileToken) {
       try {
-        customer = repository.findCustomerByProfileToken?.(profileToken) || null;
+        customer = findCustomerByProfileToken?.(profileToken) || null;
       } catch {
         customer = null;
       }
