@@ -2,7 +2,7 @@ const $ = selector => document.querySelector(selector);
 
 const translations = {
   ar: {
-    heroTitleA:'اكتشف مذاقًا', heroTitleB:'عربيًا بروح عصرية', heroKicker:'ARABISK · RESTAURANT & CAFE', heroLead:'طعام، ضيافة وتجارب تُصنع بهدوء. اختر ما يناسبك وابدأ زيارتك التالية إلى ARABISK.', quickMenu:'المنيو', quickMenuCopy:'تصفح القائمة والمنتجات', quickReserve:'الحجز', quickReserveCopy:'اختر الوقت وعدد الضيوف', quickCart:'السلة', quickCartCopy:'راجع طلبك وأكمل الشراء', quickEvents:'الفعاليات', quickEventsCopy:'اكتشف التجارب القادمة',
+    heroTitleA:'اكتشف مذاقًا', heroTitleB:'عربيًا بروح عصرية', heroKicker:'ARABISK · RESTAURANT & CAFE', heroLead:'طعام، ضيافة وتجارب تُصنع بهدوء. اختر ما يناسبك وابدأ زيارتك التالية إلى ARABISK.', quickMenu:'المنيو', quickMenuCopy:'تصفح القائمة والمنتجات', quickReserve:'الحجز', quickReserveCopy:'اختر الوقت وعدد الضيوف', quickCart:'السلة', quickCartCopy:'راجع طلبك وأكمل الشراء', quickEvents:'الفعاليات', quickEventsCopy:'اكتشف التجارب القادمة', dailyMenu:'منيو يومي متجدد', directBooking:'حجز مباشر', experiencesMeta:'تجارب وفعاليات',
     reservationEyebrow:'TABLE RESERVATION', reservationTitle:'احجز طاولتك',
     reservationLead:'اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.',
     nameLabel:'الاسم', phoneLabel:'رقم الهاتف', dateLabel:'التاريخ', timeLabel:'الوقت', guestsLabel:'عدد الأشخاص',
@@ -14,7 +14,7 @@ const translations = {
     copyright:'© 2026 ARABISK. All rights reserved.'
   },
   en: {
-    heroTitleA:'Discover Arabic Flavor', heroTitleB:'Reimagined for Today', heroKicker:'ARABISK · RESTAURANT & CAFE', heroLead:'Food, hospitality and experiences crafted with intention. Choose what fits your visit and start your next ARABISK moment.', quickMenu:'Menu', quickMenuCopy:'Browse dishes and products', quickReserve:'Reservation', quickReserveCopy:'Choose a time and guests', quickCart:'Cart', quickCartCopy:'Review your order and checkout', quickEvents:'Experiences', quickEventsCopy:'Discover upcoming experiences',
+    heroTitleA:'Discover Arabic Flavor', heroTitleB:'Reimagined for Today', heroKicker:'ARABISK · RESTAURANT & CAFE', heroLead:'Food, hospitality and experiences crafted with intention. Choose what fits your visit and start your next ARABISK moment.', quickMenu:'Menu', quickMenuCopy:'Browse dishes and products', quickReserve:'Reservation', quickReserveCopy:'Choose a time and guests', quickCart:'Cart', quickCartCopy:'Review your order and checkout', quickEvents:'Experiences', quickEventsCopy:'Discover upcoming experiences', dailyMenu:'Fresh daily menu', directBooking:'Direct booking', experiencesMeta:'Experiences & events',
     reservationEyebrow:'TABLE RESERVATION', reservationTitle:'Book Your Table',
     reservationLead:'Choose the date, time and number of guests. We will contact you to confirm your reservation.',
     nameLabel:'Name', phoneLabel:'Phone Number', dateLabel:'Date', timeLabel:'Time', guestsLabel:'Guests',
