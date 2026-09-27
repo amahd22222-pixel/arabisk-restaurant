@@ -7,11 +7,49 @@
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600&display=swap');
 :root{--ink:#111;--black:#0d0d0d;--gold:#b89455;--gold2:#d2b16d;--cream:#f6f1e7;--paper:#fffdf8;--muted:#817a6e;--line:#ded6c8}*{box-sizing:border-box}html,body{margin:0}body{background:var(--cream);color:var(--ink);font-family:Cairo,sans-serif}.nav{height:82px;background:var(--black);color:#fff;display:flex;align-items:center;padding:0 6vw;gap:42px;position:sticky;top:0;z-index:10}.brand{font-family:'Playfair Display',serif;font-size:26px;letter-spacing:3px;line-height:1}.brand span{display:block;font-family:Cairo;font-size:8px;letter-spacing:2px;color:var(--gold2);margin-top:7px}.nav nav{display:flex;gap:28px;margin:auto}.nav a{color:#eee;text-decoration:none;font-size:14px}.nav a:hover{color:var(--gold2)}.lang{display:inline-flex;align-items:center;justify-content:center;border:1px solid #6f624f;background:none;color:#fff;border-radius:50%;width:38px;height:38px;text-decoration:none}.category-page-head{padding:72px 8vw 36px;background:var(--paper);border-bottom:1px solid var(--line)}.back-btn{display:inline-block;color:var(--ink);border:1px solid var(--line);padding:9px 18px;border-radius:999px;text-decoration:none;margin-bottom:28px}.back-btn:hover{border-color:var(--gold);color:var(--gold)}.eyebrow{color:var(--gold);font-size:11px;letter-spacing:4px;margin:0 0 14px}.category-page-head h1{font-family:'Playfair Display',serif;font-size:clamp(42px,6vw,68px);font-weight:500;line-height:1.05;margin:0 0 12px}.category-page-head p:last-child{color:var(--muted);line-height:1.9;margin:0;max-width:680px}.category-page-body{padding:34px 8vw 100px;background:var(--paper);min-height:calc(100vh - 360px)}.toolbar{display:grid;gap:18px;margin-bottom:28px}.toolbar-top{display:flex;align-items:center;justify-content:space-between;gap:18px}.search{width:min(520px,100%)}.search input{width:100%;height:46px;border:1px solid var(--line);border-radius:999px;background:#fff;padding:0 18px;font:inherit;color:var(--ink);outline:none}.search input:focus{border-color:var(--gold)}.result-count{color:var(--muted);font-size:12px;white-space:nowrap}.chips{display:flex;gap:8px;flex-wrap:wrap}.chip{border:1px solid var(--line);background:#fff;padding:8px 14px;border-radius:999px;font:inherit;font-size:12px;cursor:pointer;color:var(--ink)}.chip.active{background:var(--ink);border-color:var(--ink);color:#fff}.smart-filters{display:flex;gap:8px;flex-wrap:wrap}.sort{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:12px}.sort select{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;font:inherit;outline:none}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.item{background:var(--cream);border:1px solid var(--line);padding:25px;min-height:190px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;transition:.15s}.item:hover{transform:translateY(-2px);box-shadow:0 9px 22px rgba(0,0,0,.05)}.item-link{color:inherit;text-decoration:none}.item-thumb{height:185px;margin:-25px -25px 18px;background-size:cover;background-position:center;background-color:#ebe4d8}.item .cat{font-size:10px;color:var(--gold);letter-spacing:2px}.item h3{font-size:18px;margin:10px 0}.item p{color:var(--muted);font-size:12px;margin:0;line-height:1.8}.smart-badges{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}.smart-badges span{display:inline-flex;border:1px solid #d8c29b;border-radius:999px;padding:4px 8px;font-size:10px;background:#fffaf0;color:#805f2c}.item-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px}.price{font-family:'Playfair Display',serif;color:var(--gold);font-size:24px;direction:ltr;text-align:left}.item-actions{display:flex;align-items:center;gap:8px}.item-open{font-size:12px;color:var(--gold);font-weight:600;text-decoration:none}.add-btn{border:0;border-radius:999px;background:var(--ink);color:#fff;padding:9px 13px;font:inherit;font-size:12px;cursor:pointer}.add-btn:hover{background:var(--gold)}.empty-menu{text-align:center;grid-column:1/-1;color:var(--muted);padding:35px}.menu-loading{height:170px;border:1px solid var(--line);background:linear-gradient(90deg,#f3eee5 25%,#fbf8f2 50%,#f3eee5 75%);background-size:200% 100%;animation:s 1.2s infinite}@keyframes s{to{background-position:-200% 0}}footer{background:#080808;color:#fff;padding:55px 8vw;display:flex;align-items:center;gap:15px}footer strong{font-family:'Playfair Display';font-size:28px}footer span{color:var(--gold2)}footer small{margin-right:auto;color:#777}@media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:800px){.nav{padding:0 20px}.nav nav{display:none}.category-page-head,.category-page-body{padding-left:20px;padding-right:20px}.category-page-head{padding-top:52px}.grid{grid-template-columns:1fr}.toolbar-top{align-items:stretch;flex-direction:column}.sort{justify-content:space-between}}@media(max-width:520px){.category-page-head h1{font-size:44px}.item-actions{flex-direction:column;align-items:flex-end}.chips,.smart-filters{overflow:auto;flex-wrap:nowrap;padding-bottom:4px}.chip{white-space:nowrap}}
 </style>
+
+<style id="arabisk-page-shell">
+body.home-app{background:var(--app-bg)}
+body.home-app .app-content,body.home-app .wrap{max-width:1240px;margin-inline:auto}
+body.home-app .category-page-head,body.home-app .category-page-body{background:var(--app-bg)}
+body.home-app .category-page-head{padding-top:110px;border:0}
+body.home-app .category-page-body{padding-bottom:120px}
+body.home-app .back-btn,body.home-app .back{background:var(--app-paper);border-color:var(--app-line)}
+body.home-app .item{border-radius:20px;border-color:var(--app-line);background:var(--app-paper);box-shadow:0 12px 35px rgba(37,27,17,.06)}
+body.home-app .item-thumb{border-radius:14px;margin:-25px -25px 18px;height:210px}
+body.home-app .item:hover{transform:translateY(-4px);box-shadow:0 20px 42px rgba(37,27,17,.10)}
+body.home-app .grid{gap:14px}
+body.home-app .category-page-head h1{font-family:"Playfair Display",serif}
+body.home-app .wrap{padding-top:110px}
+body.home-app .visual,body.home-app .panel,body.home-app .detail-card,body.home-app .related-card{border-color:var(--app-line);box-shadow:0 16px 38px rgba(37,27,17,.06);border-radius:24px}
+body.home-app .hero-image{height:600px}
+body.home-app .panel{padding:32px}
+body.home-app .add{background:var(--app-dark);border-radius:999px}
+body.home-app .add:hover{background:var(--app-gold)}
+body.home-app footer,body.home-app footer{background:#0d0b09}
+@media(max-width:800px){
+ body.home-app .category-page-head{padding:96px 18px 28px}
+ body.home-app .wrap{padding:96px 16px 80px}
+ body.home-app .hero-image{height:390px}
+}
+</style>
 </head>
-<body>
-<header class="nav"><div class="brand">ARABISK<span>RESTAURANT & CAFE</span></div><nav><a href="/">الرئيسية</a><a href="/menu">استكشف المنيو</a><a href="/events">الفعاليات</a><a href="/reservation">حجز طاولة</a><a href="/track-order">متابعة الطلب</a><a href="/#about">عن المطعم</a><a href="/#contact">تواصل معنا</a></nav><a class="lang" href="/menu">AR</a></header>
+<body class="home-app">
+<header class="app-header" aria-label="ARABISK">
+  <a class="brand" href="/" aria-label="ARABISK">ARABISK<span>RESTAURANT & CAFE</span></a>
+  <nav class="header-nav" id="app-header-nav" aria-label="التنقل الرئيسي">
+    <a href="/">الرئيسية</a><a href="/menu">المنيو</a><a href="/events">الفعاليات</a><a href="/reservation">الحجز</a><a href="/memories">الذكريات</a>
+  </nav>
+  <div class="app-header-actions">
+    <a class="app-cart-link" href="/cart" aria-label="فتح السلة">السلة <b id="app-cart-count" hidden>0</b></a>
+    <button class="app-menu-button" id="app-menu-button" type="button" aria-expanded="false" aria-controls="app-header-nav" aria-label="فتح القائمة">☰</button>
+    <button class="lang" id="lang-toggle" type="button" aria-label="تغيير اللغة">EN</button>
+  </div>
+</header>
 <main><section class="category-page-head"><a class="back-btn" href="/menu">← كل الأقسام</a><p id="detail-eyebrow" class="eyebrow">MENU</p><h1 id="detail-title">القسم</h1><p id="detail-lead"></p></section><section class="category-page-body"><div class="toolbar"><div class="toolbar-top"><label class="search"><input id="menu-search" type="search" placeholder="ابحث داخل القسم…" autocomplete="off"></label><span id="result-count" class="result-count"></span></div><div class="chips" id="price-filters"><button class="chip active" data-filter="all" type="button">كل الأصناف</button><button class="chip" data-filter="under50" type="button">أقل من 50</button><button class="chip" data-filter="50to100" type="button">50 – 100</button><button class="chip" data-filter="over100" type="button">أكثر من 100</button></div><label class="sort">ترتيب الأصناف<select id="sort"><option value="default">الترتيب الأساسي</option><option value="priceAsc">السعر: الأقل أولًا</option><option value="priceDesc">السعر: الأعلى أولًا</option><option value="name">الاسم</option><option value="popular">الأكثر طلبًا</option></select></label></div><div id="grid" class="grid"><div class="menu-loading"></div><div class="menu-loading"></div><div class="menu-loading"></div></div></section></main>
 <footer id="contact"><strong>ARABISK</strong><span>Restaurant & Cafe</span><small>© 2026 ARABISK. All rights reserved.</small></footer>
-<script src="/cart.js?v=20260920.8" defer></script>
+<script type="module" src="/cart.js"></script>
+<script type="module" src="/app.js"></script>
 <script src="/smart-menu.js?v=20260920.10" defer></script>
+<script type="module" src="/home-shell.js"></script>
 </body></html>
