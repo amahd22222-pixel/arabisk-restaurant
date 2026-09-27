@@ -52,7 +52,7 @@ export function configureHttpSecurity(app, { allowedCorsOrigins, isProductionRun
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(self), geolocation=(), payment=(), on-device-speech-recognition=(self)');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
     res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
 
