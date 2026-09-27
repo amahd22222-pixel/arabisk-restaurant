@@ -494,14 +494,20 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     }));
 
     const prompt = [
-      'أنتِ شمس Agent لمطعم ARABISK. لا تتخذي أي إجراء خارج الأدوات المحددة.',
-      'أخرجي JSON فقط بالشكل: {"intent":"...","reply":"...","toolCalls":[{"name":"...","args":{}}],"memory":{"budgetAed":null,"spicy":null,"vegetarian":null}}',
+      'أنتِ شمس Agent لمطعم ARABISK. افهم العربية الفصحى واللهجات المصرية والشامية (السورية واللبنانية) والخليجية.',
+      'افهم المعنى والسياق وليس التطابق الحرفي. تعامل مع أخطاء تحويل الصوت إلى نص والألفاظ العامية والاختصارات.',
+      'أخرجي JSON فقط بالشكل: {"intent":"...","reply":"...","toolCalls":[{"name":"...","args":{}}],"memory":{"budgetAed":null,"spicy":null,"vegetarian":null},"workflow":{"date":"","time":"","guests":null,"name":"","phone":"","eventSlug":"","orderType":"","tableNumber":""}}',
       'الأدوات المسموحة: search_menu, recommend_menu, cart_summary, cart_add, navigate, get_order_status.',
       'المسارات المسموحة: /menu, /reservation, /cart, /track-order, /events, /memories.',
-      'لا تدّعي نجاح إضافة أو تنفيذ أي شيء قبل وصول نتيجة الأداة.',
-      'لا تطلبي كلمات مرور أو OTP أو بيانات بطاقات.',
-      'العميل الحالي: ' + JSON.stringify(context.customer ? { id: context.customer.id, name: context.customer.name || '' } : null),
+      'لا تدّعي نجاح إضافة أو تنفيذ أي شيء قبل نتيجة الأداة. التنفيذ النهائي للحجز أو الطلب يحتاج تأكيد العميل.',
+      'لا تطلبي كلمات مرور أو OTP أو بيانات بطاقات، ولا تخترعي بيانات غير موجودة.',
+      'استخدمي السياق السابق لفهم عبارات مثل: ده، دي، هيدا، هيدي، هالطبق، التاني، الأول، اللي فات، كمان واحد.',
+      'إذا كانت الرسالة حجزًا أو طلبًا ناقصًا، استخرجي كل الحقول الموجودة فقط في workflow ولا تخترعي أي حقل.',
+      'اللهجة المكتشفة مبدئيًا: ' + dialectLocale(context.message),
+      'النص المطبع: ' + context.normalizedMessage,
+      'العميل الحالي: ' + JSON.stringify(context.customer ? { id: context.customer.id, name: context.customer.name || '', phone: context.customer.phone || '' } : null),
       'ذاكرة شمس: ' + JSON.stringify(context.memory),
+      'آخر المحادثات: ' + JSON.stringify(context.history),
       'الصفحة الحالية: ' + clean(context.page, 100),
       'السلة الحالية: ' + JSON.stringify(Array.isArray(context.cart) ? context.cart.slice(0, 20) : []),
       'كتالوج مختصر: ' + JSON.stringify(catalog),
@@ -545,7 +551,9 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       page: clean(input.page, 120),
       cart: Array.isArray(input.cart) ? input.cart.slice(0, 20) : [],
       history: Array.isArray(input.history) ? input.history.slice(-10) : [],
-      memory
+      memory,
+      dialect: detectDialect(message),
+      normalizedMessage: normalizeDialectText(message)
     };
 
     const rememberWorkflow = async (reply, intent, journey, extraProducts = []) => {
@@ -609,16 +617,22 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       }
     }
 
-    const reservationRequested = /(احجز|حجز|حجزي|طاولة|حاجز|موعد)/i.test(message);
-    const orderRequested = /(اطلب|طلبلي|اطلبلي|عاوز طلب|عايز طلب|اعمل طلب|سوّي طلب|سوي طلب|checkout|checkout)/i.test(message);
     const pendingType = pendingActionIsUsable(memory.pendingAction) ? memory.pendingAction.type : '';
+    const semanticPlan = await modelPlan(context);
+    const semanticIntent = normalizeIntent(semanticPlan?.intent);
+    const normalizedMessage = normalizeDialectText(message);
+    const reservationRequested = semanticIntent === 'reservation' ||
+      /(احجز|حجز|حجزي|طاولة|حاجز|موعد|بدي حجز|بدّي احجز|عايز احجز|عايز حجز)/i.test(normalizedMessage);
+    const orderRequested = semanticIntent === 'order' ||
+      /(اطلب|طلبلي|اطلبلي|بدّي طلب|بدي طلب|عايز طلب|عاوز طلب|اعمل طلب|سوّي طلب|سوي طلب|checkout)/i.test(normalizedMessage);
 
     if (workflowService && (reservationRequested || pendingType === 'reservation')) {
       const result = await workflowService.handleReservation({
         identity,
         message,
         memory,
-        customer
+        customer,
+        hints: semanticPlan?.workflow || {}
       });
       await rememberWorkflow(result.reply, 'reservation', {
         intent: 'reservation',
@@ -645,7 +659,8 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
         message,
         memory,
         cart: context.cart,
-        customer
+        customer,
+        hints: semanticPlan?.workflow || {}
       });
       await rememberWorkflow(result.reply, 'order', {
         intent: 'order',
@@ -668,7 +683,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
 
     stage = 'plan';
     const localPlan = detectLocalPlan({ message, memory, products: products() });
-    const model = await modelPlan(context);
+    const model = semanticPlan || await modelPlan(context);
     const plan = model || localPlan;
     const intent = normalizeIntent(plan.intent);
 
