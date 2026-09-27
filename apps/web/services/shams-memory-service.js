@@ -26,6 +26,10 @@ function normalizePreferences(value) {
       : null,
     spicy: typeof input.spicy === 'boolean' ? input.spicy : null,
     vegetarian: typeof input.vegetarian === 'boolean' ? input.vegetarian : null,
+    taste: ['sweet','savory'].includes(input.taste) ? input.taste : null,
+    weight: ['light','hearty'].includes(input.weight) ? input.weight : null,
+    category: clean(input.category, 40),
+    protein: ['chicken','beef','seafood'].includes(input.protein) ? input.protein : null,
     favoriteCategories: Array.isArray(input.favoriteCategories)
       ? input.favoriteCategories.map(item => clean(item, 80)).filter(Boolean).slice(0, 8)
       : [],
@@ -94,6 +98,14 @@ function detectPreferences(text) {
   if (/(حار|حارة|سبايسي|spicy)/i.test(raw)) preferences.spicy = true;
   if (/(مو حار|مش حار|بدون حار|غير حار|not spicy)/i.test(raw)) preferences.spicy = false;
   if (/(نباتي|نباتية|vegetarian|vegan)/i.test(raw)) preferences.vegetarian = true;
+  if (/(حلو|حلويات|تحلية|ديسرت|dessert|شوكولاته)/i.test(raw)) preferences.taste = 'sweet';
+  else if (/(مالح|حادق)/i.test(raw)) preferences.taste = 'savory';
+  if (/(خفيف|خفيفه|خفيفا|light)/i.test(raw)) preferences.weight = 'light';
+  else if (/(مشبع|دسم|تقيل|ثقيل|وجبه كامله)/i.test(raw)) preferences.weight = 'hearty';
+  if (/(مشروب|مشروبات|شراب|عصير|قهوه|قهوة|شاي|لاتيه|كوفي|drink)/i.test(raw)) preferences.category = 'drink';
+  if (/(دجاج|فراخ|chicken)/i.test(raw)) preferences.protein = 'chicken';
+  else if (/(لحمه|لحمة|لحم|ستيك|beef|meat)/i.test(raw)) preferences.protein = 'beef';
+  else if (/(سمك|بحري|جمبري|روبيان|seafood|fish|shrimp)/i.test(raw)) preferences.protein = 'seafood';
   return preferences;
 }
 
