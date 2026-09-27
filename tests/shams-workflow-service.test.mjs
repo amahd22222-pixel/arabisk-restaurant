@@ -66,7 +66,7 @@ test('reservation workflow carries slots across turns', async () => {
     memory: await memoryService.read({ sessionId: 's2' }),
     customer: null
   });
-  assert.equal(second.status, 'needs_input');
+  assert.equal(second.status, 'awaiting_confirmation');
   assert.equal(second.pending.phone, '+971500000000');
   assert.equal(second.pending.date, first.pending.date);
   assert.equal(second.pending.time, first.pending.time);
