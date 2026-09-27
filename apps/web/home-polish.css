@@ -1,0 +1,12 @@
+.about-panel,.reservation-panel{max-width:1240px;margin:0 auto;padding:56px clamp(18px,4vw,44px) 120px}
+.reservation-panel{display:block}.reservation-panel[hidden]{display:none!important}
+.reservation-head{max-width:700px;margin-bottom:24px}.reservation-head h2,.about-panel h2{margin:0 0 10px;font:500 clamp(34px,5vw,56px)/1.08 "Playfair Display",serif}.reservation-head p,.about-panel p{color:var(--app-muted);line-height:1.9;font-size:12px}
+.reservation-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:24px;border:1px solid var(--app-line);border-radius:24px;background:var(--app-paper);box-shadow:0 15px 38px rgba(37,27,17,.06)}
+.reservation-form label{display:grid;gap:7px;font-size:10px;font-weight:800;color:#554b3d}.reservation-form label.full{grid-column:1/-1}
+.reservation-form input,.reservation-form select,.reservation-form textarea{width:100%;box-sizing:border-box;border:1px solid var(--app-line);border-radius:13px;background:#fffdf8;color:var(--app-ink);padding:12px 13px;font:600 12px Cairo,sans-serif;outline:none}
+.reservation-form input:focus,.reservation-form select:focus,.reservation-form textarea:focus{border-color:rgba(197,154,91,.75);box-shadow:0 0 0 3px rgba(197,154,91,.12)}
+.gold-btn{border:0;border-radius:999px;min-height:48px;background:var(--app-gold);color:#17130f;font:900 11px Cairo,sans-serif;cursor:pointer}
+.reservation-message{grid-column:1/-1;margin:0;min-height:20px;font-size:11px}.reservation-message:empty{display:none}
+.reservation-event{grid-column:1/-1;margin:0;padding:10px 12px;border-radius:12px;background:#f2eadf;color:#66553f;font-size:10px}
+footer{padding:38px 20px 100px;text-align:center;background:#17130f;color:#fff;display:grid;gap:7px}footer strong{font:600 27px "Playfair Display",serif;letter-spacing:2px}footer span{color:#c7b9a5;font-size:10px;letter-spacing:2px}footer small{color:#84796b;font-size:9px}
+@media(max-width:620px){.reservation-form{grid-template-columns:1fr;padding:18px}.reservation-form label.full{grid-column:auto}.about-panel,.reservation-panel{padding-bottom:105px}}
