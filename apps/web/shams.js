@@ -128,11 +128,11 @@
   };
 
   const send = async (forcedMessage = '') => {
-    const { input, send } = ui();
+    const { input, send: sendButton } = ui();
     const message = String(forcedMessage || input?.value || '').trim();
     if (!message) return;
     if (input) input.value = '';
-    if (send) send.disabled = true;
+    if (sendButton) sendButton.disabled = true;
     addMessage('user', message);
     setStatus('شمس تفكر…');
 
@@ -146,7 +146,7 @@
         },
         body: JSON.stringify({
           message,
-          history: state.history.slice(-10)
+          history: state.history.slice(-11, -1)
         })
       });
       const data = await response.json().catch(() => ({}));
@@ -158,7 +158,7 @@
       addMessage('assistant', error.message || 'تعذر تشغيل شمس الآن.');
       setStatus('حدث خطأ بسيط، جرّب مرة أخرى.');
     } finally {
-      if (send) send.disabled = false;
+      if (sendButton) sendButton.disabled = false;
     }
   };
 
@@ -210,7 +210,7 @@
   const setup = () => {
     ensureStyles();
     createUi();
-    const { launcher, close, send, input, voiceToggle, suggestions } = ui();
+    const { launcher, close, send: sendButton, input, voiceToggle, suggestions } = ui();
     if (!launcher || !close || !send || !input) return;
 
     state.speaking = 'speechSynthesis' in window;
@@ -223,7 +223,7 @@
     });
     launcher.addEventListener('click', () => setOpen(!state.open));
     close.addEventListener('click', () => setOpen(false));
-    send.addEventListener('click', () => void send());
+    sendButton.addEventListener('click', () => void send());
     input.addEventListener('keydown', event => {
       if (event.key === 'Enter') {
         event.preventDefault();
