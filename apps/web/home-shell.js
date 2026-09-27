@@ -10,7 +10,7 @@
     style:'currency', currency:'AED', maximumFractionDigits:2
   }).format(Number(value) || 0);
 
-  const state = { products: [], experiences: [], memories: [], installOffer: null };
+  const state = { products: [], experiences: [], memories: [] };
 
   const getJson = async (url, fallback) => {
     try {
@@ -91,7 +91,9 @@
     const root = $('#today-offer');
     if (!root) return;
 
-      const featured = state.products.find(item => item && item.available !== false && (item.chefChoice || item.isNew)) || state.products.find(item => item?.available !== false);
+    const featured = state.products.find(item =>
+      item && item.available !== false && (item.isNew || item.chefChoice)
+    ) || state.products.find(item => item && item.available !== false);
 
     const offerImage = $('.today-offer-media img', root);
     if (offerImage && featured) {
@@ -99,22 +101,17 @@
       offerImage.alt = featured.nameAr || featured.nameEn || 'اختيار اليوم من ARABISK';
     }
 
-    if (offer?.enabled) {
-      $('.today-offer-badge', root).textContent = `خصم ${Math.round(Number(offer.discountValue) || 0)}% للتطبيق`;
-      $('.today-offer-title', root).textContent = 'خصم خاص لعملاء ARABISK';
-      $('.today-offer-note', root).textContent = offer.message || 'ثبّت ARABISK على شاشتك الرئيسية واحصل على كودك الشخصي.';
-      $('.today-offer-action', root).setAttribute('href', '/cart');
-      return;
-    }
+    if (!featured) return;
 
-    if (featured) {
-      $('.today-offer-badge', root).textContent = 'اختيار اليوم';
-      $('.today-offer-title', root).textContent = featured.nameAr || featured.nameEn || 'طبق اليوم';
-      $('.today-offer-note', root).textContent = featured.descriptionAr || featured.descriptionEn || 'اختيار مميز من مطبخ ARABISK.';
-      $('.today-offer-action', root).setAttribute('href', `/menu/${encodeURIComponent(String(featured.categoryId || ''))}/${encodeURIComponent(String(featured.id || ''))}`);
-    }
+    $('.today-offer-badge', root).textContent = featured.isNew ? 'عرض اليوم' : 'اختيار اليوم';
+    $('.today-offer-title', root).textContent = featured.nameAr || featured.nameEn || 'طبق اليوم';
+    $('.today-offer-note', root).textContent =
+      featured.descriptionAr || featured.descriptionEn || 'اختيار مميز من مطبخ ARABISK. التوفر والسعر الحاليان يظهران في صفحة الطبق.';
+    $('.today-offer-action', root).setAttribute(
+      'href',
+      `/menu/${encodeURIComponent(String(featured.categoryId || ''))}/${encodeURIComponent(String(featured.id || ''))}`
+    );
   }
-
   function renderExperience() {
     const root = $('#home-experience');
     if (!root) return;
