@@ -167,6 +167,25 @@ async function load(){
   if(location.hash.replace('#','')==='customers')void loadCustomerSegments().catch(error=>{if($('#error'))$('#error').textContent=error.message;});
 }
 function loadSettings(){$('#api-base').value=apiBase();$('#site-name').value=localStorage.getItem('ARABISK_SITE_NAME')||'ARABISK';$('#site-description').value=localStorage.getItem('ARABISK_SITE_DESCRIPTION')||'مطعم وكافيه بطابع عربي عصري.';}
+async function loadPromotionSettings(){
+  const stats=$('#pwa-offer-stats');
+  try{
+    const data=await request('/api/admin/promotions/install');
+    if($('#pwa-offer-enabled'))$('#pwa-offer-enabled').checked=data.enabled===true;
+    if($('#pwa-offer-percent'))$('#pwa-offer-percent').value=Number(data.discountValue||10);
+    if($('#pwa-offer-max'))$('#pwa-offer-max').value=Number(data.maxDiscount||0);
+    if($('#pwa-offer-min'))$('#pwa-offer-min').value=Number(data.minOrderValue||0);
+    if($('#pwa-offer-days'))$('#pwa-offer-days').value=Number(data.claimValidityDays||14);
+    if($('#pwa-offer-title'))$('#pwa-offer-title').value=data.title||'ثبّت ARABISK واحصل على خصم';
+    if($('#pwa-offer-message'))$('#pwa-offer-message').value=data.message||'ثبّت ARABISK على شاشتك الرئيسية وخذ خصمك على أول طلب باستخدام الكود الشخصي.';
+    if(stats){
+      const s=data.stats||{};
+      stats.textContent='الأكواد: '+Number(s.totalClaims||0)+' · المتاحة: '+Number(s.active||0)+' · المستخدمة: '+Number(s.redeemed||0);
+    }
+  }catch{
+    if(stats)stats.textContent='تعذر تحميل إعدادات العرض';
+  }
+}
 async function uploadFile(endpoint,productId,file,onProgress,errorText){const prepared=await request(endpoint,{method:'POST',body:JSON.stringify({productId,fileName:file.name,contentType:file.type,size:file.size})});await new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('PUT',prepared.uploadUrl);xhr.setRequestHeader('Content-Type',file.type||'application/octet-stream');xhr.upload.onprogress=event=>{if(event.lengthComputable&&onProgress)onProgress(Math.round(event.loaded/event.total*100))};xhr.onload=()=>xhr.status>=200&&xhr.status<300?resolve():reject(new Error(errorText));xhr.onerror=()=>reject(new Error('تعذر الاتصال بتخزين الوسائط.'));xhr.send(file)});return prepared.key;}
 async function deleteVideo(productId){const prepared=await request('/api/videos/delete-presign',{method:'POST',body:JSON.stringify({productId})});if(prepared.url){const response=await fetch(prepared.url,{method:'DELETE'});if(!response.ok)throw new Error('تعذر حذف الفيديو من التخزين.')}await request(`/api/products/${productId}`,{method:'PATCH',body:JSON.stringify({videoKey:''})});}
 async function deleteImage(productId){const prepared=await request('/api/images/delete-presign',{method:'POST',body:JSON.stringify({productId})});if(prepared.url){const response=await fetch(prepared.url,{method:'DELETE'});if(!response.ok)throw new Error('تعذر حذف الصورة من التخزين.')}await request(`/api/products/${productId}`,{method:'PATCH',body:JSON.stringify({imageKey:''})});}
@@ -182,7 +201,31 @@ $('#reservations-body').addEventListener('click',async event=>{const id=event.ta
 $('#orders-body').addEventListener('change',async event=>{const id=event.target.dataset.orderStatus;if(!id)return;try{await request(`/api/orders/${id}`,{method:'PATCH',body:JSON.stringify({status:event.target.value})});await load()}catch(error){alert(error.message);await load()}});
 $('#product-form').addEventListener('submit',async event=>{event.preventDefault();const submit=$('#product-form .submit'),progress=$('#upload-progress');submit.disabled=true;try{const payload={categoryId:$('#category').value,nameAr:$('#name-ar').value,nameEn:$('#name-en').value,descriptionAr:$('#description-ar').value,imageUrl:$('#image-url').value.trim(),price:Number($('#price').value),available:$('#available').checked};let saved=editingId?await request(`/api/products/${editingId}`,{method:'PATCH',body:JSON.stringify(payload)}):await request('/api/products',{method:'POST',body:JSON.stringify(payload)});const imageFile=$('#image-file').files[0];if(imageFile){if(imageFile.size>15*1024*1024)throw new Error('الحد الأقصى للصورة 15MB.');if(!['image/jpeg','image/png','image/webp','image/avif'].includes(imageFile.type))throw new Error('الصيغ المسموحة: JPG وPNG وWebP وAVIF.');progress.hidden=false;progress.querySelector('span').style.width='0%';progress.querySelector('small').textContent='جاري رفع الصورة… 0%';const key=await uploadFile('/api/images/presign',saved.id,imageFile,percent=>{progress.querySelector('span').style.width=`${percent}%`;progress.querySelector('small').textContent=`جاري رفع الصورة… ${percent}%`},'فشل رفع الصورة إلى التخزين.');saved=await request(`/api/products/${saved.id}`,{method:'PATCH',body:JSON.stringify({imageKey:key,imageUrl:''})})}const file=$('#video-file').files[0];if(file){if(file.size>120*1024*1024)throw new Error('الحد الأقصى للفيديو 120MB.');if(!['video/mp4','video/webm','video/quicktime'].includes(file.type))throw new Error('الصيغ المسموحة: MP4 وWebM وMOV.');progress.hidden=false;progress.querySelector('span').style.width='0%';progress.querySelector('small').textContent='جاري رفع الفيديو… 0%';const key=await uploadFile('/api/videos/presign',saved.id,file,percent=>{progress.querySelector('span').style.width=`${percent}%`;progress.querySelector('small').textContent=`جاري رفع الفيديو… ${percent}%`},'فشل رفع الفيديو إلى التخزين.');await request(`/api/products/${saved.id}`,{method:'PATCH',body:JSON.stringify({videoKey:key})})}progress.hidden=true;closeModal();await load()}catch(error){progress.hidden=true;alert(error.message)}finally{submit.disabled=false}});
 $('#settings-form').addEventListener('submit',event=>{event.preventDefault();localStorage.setItem('ARABISK_API_BASE',$('#api-base').value.trim().replace(/\/$/,''));localStorage.setItem('ARABISK_SITE_NAME',$('#site-name').value.trim());localStorage.setItem('ARABISK_SITE_DESCRIPTION',$('#site-description').value.trim());$('#settings-message').textContent='تم حفظ الإعدادات.';setTimeout(()=>$('#settings-message').textContent='',2500);load()});
-syncSidebarState();$('#sidebar-toggle')?.addEventListener('click',()=>{const collapsed=!document.body.classList.contains('sidebar-collapsed');localStorage.setItem('ARABISK_SIDEBAR_COLLAPSED',collapsed?'1':'0');syncSidebarState();});loadSettings();showSection(location.hash.replace('#','')||'dashboard');void load().catch(error=>{console.error('Dashboard initialization failed:',error);const connection=$('#connection');if(connection){connection.textContent='تعذر الاتصال';connection.className='disconnected';}const banner=$('#error');if(banner)banner.textContent=error?.message||'تعذر تحميل لوحة التحكم.';});
+$('#pwa-offer-form')?.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const button=$('#pwa-offer-save');const status=$('#pwa-offer-message-status');
+  if(button)button.disabled=true;
+  if(status)status.textContent='جارٍ حفظ عرض التثبيت…';
+  try{
+    const data=await request('/api/admin/promotions/install',{method:'PATCH',body:JSON.stringify({
+      enabled:$('#pwa-offer-enabled')?.checked===true,
+      discountValue:Number($('#pwa-offer-percent')?.value||10),
+      maxDiscount:Number($('#pwa-offer-max')?.value||0),
+      minOrderValue:Number($('#pwa-offer-min')?.value||0),
+      claimValidityDays:Number($('#pwa-offer-days')?.value||14),
+      title:$('#pwa-offer-title')?.value||'',
+      message:$('#pwa-offer-message')?.value||''
+    })});
+    if(status)status.textContent='تم حفظ عرض التثبيت.';
+    if(data&&$('#pwa-offer-stats')){
+      const s=data.stats||{};
+      $('#pwa-offer-stats').textContent='الأكواد: '+Number(s.totalClaims||0)+' · المتاحة: '+Number(s.active||0)+' · المستخدمة: '+Number(s.redeemed||0);
+    }
+    setTimeout(()=>{if(status)status.textContent='';},2500);
+  }catch(error){if(status)status.textContent=error.message||'تعذر حفظ العرض.';}
+  finally{if(button)button.disabled=false;}
+});
+syncSidebarState();void loadPromotionSettings();$('#sidebar-toggle')?.addEventListener('click',()=>{const collapsed=!document.body.classList.contains('sidebar-collapsed');localStorage.setItem('ARABISK_SIDEBAR_COLLAPSED',collapsed?'1':'0');syncSidebarState();});loadSettings();showSection(location.hash.replace('#','')||'dashboard');void load().catch(error=>{console.error('Dashboard initialization failed:',error);const connection=$('#connection');if(connection){connection.textContent='تعذر الاتصال';connection.className='disconnected';}const banner=$('#error');if(banner)banner.textContent=error?.message||'تعذر تحميل لوحة التحكم.';});
 
 async function openCustomer360(customerId){
   const modal=$('#customer360-modal');
