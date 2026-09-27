@@ -4,7 +4,7 @@ function ensurePwaUi() {
   if (document.getElementById('pwa-install')) return;
   const style = document.createElement('style');
   style.textContent = '.pwa-install{position:fixed;right:16px;left:16px;bottom:16px;z-index:1000;display:flex;align-items:center;gap:12px;padding:12px 14px;background:#17130f;color:#fff;border:1px solid rgba(210,177,109,.35);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.28);font:13px/1.5 Cairo,sans-serif}.pwa-install[hidden]{display:none}.pwa-install-copy{flex:1}.pwa-install-copy strong{display:block;color:#d2b16d}.pwa-install button{border:0;border-radius:999px;padding:9px 14px;background:#b89455;color:#fff;font:inherit;cursor:pointer}.pwa-install .pwa-dismiss{padding:8px 10px;background:transparent;border:1px solid #5b4a34}.pwa-update{position:fixed;right:16px;left:16px;bottom:16px;z-index:10001;display:flex;align-items:center;gap:12px;padding:12px 14px;background:#17130f;color:#fff;border:1px solid rgba(210,177,109,.35);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.28);font:13px/1.5 Cairo,sans-serif}.pwa-update button{margin-inline-start:auto;border:0;border-radius:999px;padding:9px 14px;background:#b89455;color:#fff;font:inherit;cursor:pointer}';
-  style.textContent += '@media (max-width:800px){.pwa-install,.pwa-update{bottom:calc(88px + env(safe-area-inset-bottom))}}';\n  document.head.appendChild(style);
+  style.textContent += '@media (max-width:800px){.pwa-install,.pwa-update{bottom:calc(88px + env(safe-area-inset-bottom))}}';  document.head.appendChild(style);
 
   const banner = document.createElement('aside');
   banner.id = 'pwa-install';
