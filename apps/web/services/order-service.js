@@ -169,6 +169,7 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
         orderCustomerId = crypto.randomUUID();
         customers.add({ id: orderCustomerId, name, phone, orderCount: 0, lastOrderAt: '' });
       }
+      order.customerId = orderCustomerId;
     }
 
     orders.add(order);
