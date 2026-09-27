@@ -3,13 +3,6 @@ export function registerShamsRoutes(app, { service, profileRateLimit }) {
     return res.json(service.status());
   });
 
-  app.post('/api/shams/tts', profileRateLimit, async (req, res) => {
-    const result = await service.synthesizeSpeech(req.body?.text);
-    res.set('Cache-Control', 'no-store');
-    res.type(result.contentType);
-    return res.send(result.buffer);
-  });
-
   app.post('/api/shams/chat', profileRateLimit, async (req, res) => {
     const result = await service.chat({
       message: req.body?.message,
