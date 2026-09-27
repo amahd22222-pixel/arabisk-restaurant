@@ -71,7 +71,6 @@ function parseTime(text) {
     [/الثانية عشر|اتناشر|اثنا عشر/i, 12]
   ];
 
-  let hourPattern = '(\\d{1,2})';
   let hourValue = null;
   for (const [pattern, value] of hourWords) {
     if (pattern.test(raw)) {
