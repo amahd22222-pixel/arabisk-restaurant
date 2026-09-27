@@ -93,7 +93,7 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
 .cart-order-meta div{padding:13px;border:1px solid var(--cart-line);border-radius:14px;background:#fff}
 .cart-order-meta small{display:block;color:var(--cart-muted);font-size:10px}
 .cart-order-meta strong{display:block;margin-top:4px;color:var(--cart-gold);font-size:14px}
-.cart-modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}
+.cart-modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}.cart-success-home{display:block;margin-top:12px;color:var(--cart-muted);font-size:10px;text-align:center;text-decoration:none}.cart-success-home:hover{color:var(--cart-gold)}
 .cart-promo{margin:16px 0;padding:14px;border:1px solid var(--cart-line);border-radius:16px;background:#fbfaf8}.cart-promo-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.cart-promo-head strong{font-size:13px}.cart-promo-head span{font-size:10px;color:var(--cart-muted)}.cart-promo-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px}.cart-promo-form input{min-width:0;padding:11px 12px;border:1px solid var(--cart-line);border-radius:11px;background:#fff;font:12px Cairo,sans-serif;text-transform:uppercase}.cart-promo-form button{border:0;border-radius:11px;padding:10px 14px;background:var(--cart-gold);color:#fff;font:700 11px Cairo,sans-serif;cursor:pointer}.cart-promo-status{margin:8px 0 0;font-size:10px;color:var(--cart-muted);min-height:1.4em}.cart-summary-row.discount{color:#2d7a4d}.cart-summary-row.discount strong{color:#2d7a4d}@media(max-width:900px){.cart-layout{grid-template-columns:1fr}.cart-summary{position:static}.cart-heading{align-items:flex-start;flex-direction:column}}
 @media(max-width:620px){.cart-main{padding:30px 14px 60px}.cart-heading{padding-bottom:22px}.cart-title{font-size:45px}.cart-back{width:100%;justify-content:center}.cart-item{grid-template-columns:72px minmax(0,1fr);gap:12px;padding:15px}.cart-item-image{width:72px;height:72px}.cart-item-actions{grid-column:1/-1;justify-content:space-between;padding-top:5px}.cart-card-head,.cart-summary{padding:17px}.cart-card-head{align-items:flex-start}.cart-head-actions{justify-content:flex-start}.cart-modal{padding:22px 17px}.cart-modal-actions{grid-template-columns:1fr}}
 </style>
@@ -182,7 +182,11 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
     <h3>تم استلام طلبك</h3>
     <p>تم إرسال الطلب بنجاح إلى المطعم. احتفظ برقم الطلب لمتابعة حالته.</p>
     <div class="cart-order-meta"><div><small>رقم الطلب</small><strong id="success-order-id">—</strong></div><div><small>الإجمالي</small><strong id="success-order-total">AED 0</strong></div></div>
-    <div class="cart-modal-actions"><a id="success-track" class="cart-secondary" href="/track-order">متابعة الطلب</a><div style="grid-column:1/-1;text-align:center;margin-top:10px"><a href="/track-order" style="color:#8e6f38;font-size:10px;text-decoration:none">فتح صفحة متابعة الطلب المستقلة ←</a></div><a class="cart-primary" href="/menu">اختيار المزيد</a></div>
+    <div class="cart-modal-actions">
+  <a id="success-track" class="cart-secondary" href="/track-order">متابعة الطلب</a>
+  <a class="cart-primary" href="/menu">اختيار المزيد</a>
+</div>
+<a class="cart-success-home" href="/">العودة إلى الرئيسية</a>
   </div>
 </div>
 
