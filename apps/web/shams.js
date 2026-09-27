@@ -180,7 +180,8 @@
   }
 
   async function speak(text) {
-    if (!state.voiceEnabled) return false;
+    const serverTts = await detectServerTts();
+    if (!state.voiceEnabled && !serverTts) return false;
 
     const cleanText = String(text || '')
       .replace(/[\n\r]+/g, '. ')
@@ -190,7 +191,6 @@
 
     if (!cleanText) return false;
 
-    const serverTts = await detectServerTts();
     if (serverTts) {
       try {
         const ok = await speakFromServer(cleanText);
@@ -470,16 +470,16 @@
     if (!launcher) return;
 
     state.sessionId = getSessionId();
-    state.voiceEnabled = 'speechSynthesis' in window || true;
+    state.voiceEnabled = 'speechSynthesis' in window;
     setupRecognition();
-    void detectServerTts();
+    void detectServerTts().then(serverTts => {
+      if (!state.voiceEnabled && !serverTts) {
+        showError('الصوت غير متاح في هذا المتصفح.');
+        setVisual('error');
+      }
+    });
 
     launcher.addEventListener('click', toggleVoice);
-
-    if (!state.voiceEnabled) {
-      showError('الصوت غير متاح في هذا المتصفح.');
-      setVisual('error');
-    }
   }
 
   if ('speechSynthesis' in window) {
