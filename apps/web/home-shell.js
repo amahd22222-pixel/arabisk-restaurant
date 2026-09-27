@@ -11,6 +11,7 @@
   }).format(Number(value) || 0);
 
   const state = { products: [], experiences: [], memories: [], todayOffer: null, installOffer: null };
+  let offerTimer = 0;
 
   const getJson = async (url, fallback) => {
     try {
@@ -108,6 +109,25 @@
       image.alt = selectedProduct.nameAr || selectedProduct.nameEn || 'ARABISK';
     }
 
+    window.clearInterval(offerTimer);
+    const timer = $('.today-offer-timer', root);
+    const updateTimer = (endsAt) => {
+      if (!timer) return;
+      const timestamp = Date.parse(endsAt || '');
+      if (!Number.isFinite(timestamp) || timestamp <= Date.now()) {
+        timer.hidden = true;
+        return;
+      }
+      timer.hidden = false;
+      const minutes = Math.floor((timestamp - Date.now()) / 60000);
+      const days = Math.floor(minutes / 1440);
+      const hours = Math.floor((minutes % 1440) / 60);
+      const mins = minutes % 60;
+      timer.textContent = days > 0
+        ? `ينتهي خلال ${days} يوم ${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}`
+        : `ينتهي خلال ${String(hours).padStart(2,'0')}:${String(mins).padStart(2,'0')}`;
+    };
+
     if (today) {
       $('.today-offer-badge', root).textContent = today.badge || 'عرض اليوم';
       $('.today-offer-title', root).textContent = today.title || selectedProduct?.nameAr || 'عرض اليوم';
@@ -118,6 +138,8 @@
       action.setAttribute('href', selectedProduct
         ? `/menu/${encodeURIComponent(String(selectedProduct.categoryId || ''))}/${encodeURIComponent(String(selectedProduct.id || ''))}`
         : '/menu');
+      updateTimer(today.endsAt);
+      if (today.endsAt) offerTimer = window.setInterval(() => updateTimer(today.endsAt), 30000);
       return;
     }
 
@@ -128,6 +150,7 @@
       const action = $('.today-offer-action', root);
       action.textContent = 'استكشف مكافأتك ←';
       action.setAttribute('href', '/cart');
+      if (timer) timer.hidden = true;
       return;
     }
 
