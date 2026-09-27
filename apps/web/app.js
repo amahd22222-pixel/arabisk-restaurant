@@ -2,7 +2,7 @@ const $ = selector => document.querySelector(selector);
 
 const translations = {
   ar: {
-    heroTitle:'اكتشف مذاقًا عربيًا بروح عصرية', heroLead:'ضيافة عربية بتفاصيل راقية، أطباق صُممت لتُشارك، وتجارب تجعل كل زيارة مختلفة.', heroKicker:'ARABISK · RESTAURANT & CAFE', quickMenu:'المنيو', quickMenuCopy:'اكتشف القائمة', quickReserve:'احجز', quickReserveCopy:'اختر موعدك', quickCart:'السلة', quickCartCopy:'راجع طلبك', quickEvents:'الفعاليات', quickEventsCopy:'تجاربنا القادمة',
+    heroTitleA:'اكتشف مذاقًا', heroTitleB:'عربيًا بروح عصرية', heroKicker:'ARABISK · RESTAURANT & CAFE', heroLead:'طعام، ضيافة وتجارب تُصنع بهدوء. اختر ما يناسبك وابدأ زيارتك التالية إلى ARABISK.', quickMenu:'المنيو', quickMenuCopy:'تصفح القائمة والمنتجات', quickReserve:'الحجز', quickReserveCopy:'اختر الوقت وعدد الضيوف', quickCart:'السلة', quickCartCopy:'راجع طلبك وأكمل الشراء', quickEvents:'الفعاليات', quickEventsCopy:'اكتشف التجارب القادمة',
     reservationEyebrow:'TABLE RESERVATION', reservationTitle:'احجز طاولتك',
     reservationLead:'اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.',
     nameLabel:'الاسم', phoneLabel:'رقم الهاتف', dateLabel:'التاريخ', timeLabel:'الوقت', guestsLabel:'عدد الأشخاص',
@@ -14,7 +14,7 @@ const translations = {
     copyright:'© 2026 ARABISK. All rights reserved.'
   },
   en: {
-    heroTitle:'Discover Arabic Flavor, Reimagined', heroLead:'Arabic hospitality with refined details, shareable dishes and experiences that make every visit different.', heroKicker:'ARABISK · RESTAURANT & CAFE', quickMenu:'Menu', quickMenuCopy:'Explore the menu', quickReserve:'Book', quickReserveCopy:'Choose your time', quickCart:'Cart', quickCartCopy:'Review your order', quickEvents:'Experiences', quickEventsCopy:'What is coming next',
+    heroTitleA:'Discover Arabic Flavor', heroTitleB:'Reimagined for Today', heroKicker:'ARABISK · RESTAURANT & CAFE', heroLead:'Food, hospitality and experiences crafted with intention. Choose what fits your visit and start your next ARABISK moment.', quickMenu:'Menu', quickMenuCopy:'Browse dishes and products', quickReserve:'Reservation', quickReserveCopy:'Choose a time and guests', quickCart:'Cart', quickCartCopy:'Review your order and checkout', quickEvents:'Experiences', quickEventsCopy:'Discover upcoming experiences',
     reservationEyebrow:'TABLE RESERVATION', reservationTitle:'Book Your Table',
     reservationLead:'Choose the date, time and number of guests. We will contact you to confirm your reservation.',
     nameLabel:'Name', phoneLabel:'Phone Number', dateLabel:'Date', timeLabel:'Time', guestsLabel:'Guests',
@@ -48,7 +48,7 @@ function applyLanguage() {
 
   const toggle = $('#lang-toggle');
   if (toggle) toggle.textContent = language === 'ar' ? 'EN' : 'ع';
-  window.dispatchEvent(new CustomEvent('arabisk:language-updated', { detail:{ language } }));
+  window.dispatchEvent(new CustomEvent('arabisk:language-updated', { detail: { language } }));
 }
 
 function setupHeaderMenu() {
@@ -97,12 +97,14 @@ function showPage() {
   const reservation = $('#reservation');
   const home = $('#home');
   const about = $('#about');
-  const appContent = $('.app-content');
+  const homeActions = $('#home-actions');
+  const homeSections = document.querySelectorAll('.app-content > .app-section');
   if (!reservation || !home || !about) return;
 
   const isReservation = location.pathname.replace(/\/$/,'') === '/reservation';
   home.hidden = isReservation;
-  if (appContent) appContent.hidden = isReservation;
+  if (homeActions) homeActions.hidden = isReservation;
+  homeSections.forEach(section => { section.hidden = isReservation; });
   about.hidden = isReservation;
   reservation.hidden = !isReservation;
   document.body.classList.toggle('reservation-route', isReservation);
@@ -166,6 +168,7 @@ $('#lang-toggle')?.addEventListener('click', () => {
 });
 
 $('#reservation-form')?.addEventListener('submit', submitReservation);
+
 setupHeaderMenu();
 showPage();
 window.addEventListener('pageshow', showPage);
