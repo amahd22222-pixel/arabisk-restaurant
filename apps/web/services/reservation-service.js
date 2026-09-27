@@ -25,6 +25,7 @@ export function createReservationService({ repository, cleanText, nextReservatio
     const guests = Number(body.guests);
     const notes = cleanText(body.notes, 300);
     const eventSlug = cleanText(body.eventSlug, 90).toLowerCase();
+    const requestedCustomerId = cleanText(body.customerId, 80);
     const dateOk = isValidDateOnly(date);
     const timeOk = /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
     const today = new Date().toISOString().slice(0, 10);
@@ -56,12 +57,13 @@ export function createReservationService({ repository, cleanText, nextReservatio
     const createdAt = new Date().toISOString();
     const reservation = {
       id: nextReservationId(),
-      name, phone, date, time, guests, notes, eventSlug,
+      name, phone, date, time, guests, notes, eventSlug, customerId: reservationCustomerId,
       status: 'pending',
       createdAt
     };
 
-    const reservationCustomer = customers.findByPhone(phone);
+    const profileCustomer = requestedCustomerId ? customers.findById(requestedCustomerId) : null;
+    const reservationCustomer = profileCustomer || customers.findByPhone(phone);
     const reservationCustomerId = reservationCustomer?.id || crypto.randomUUID();
     const beforeCustomer = reservationCustomer ? structuredClone(reservationCustomer) : null;
 
