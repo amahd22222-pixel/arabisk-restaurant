@@ -166,27 +166,28 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' -H "X-Arabisk-Admin-Key: $CI_ADMIN_KEY" http://127.0.0.1:4186/api/orders)" = "200"
           test -z "$(curl -s -D - -o /dev/null -H 'Origin: http://localhost:5173' http://127.0.0.1:4186/health | grep -i '^Access-Control-Allow-Origin:')"
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{' http://127.0.0.1:4186/api/orders)" = "400"
-          curl -fsS http://127.0.0.1:4186/api/promotions/install > /tmp/ci-promotion.json
-          promo_claim="$(curl -fsS -H 'Content-Type: application/json' --data '{"clientId":"ci-install-client"}' http://127.0.0.1:4186/api/promotions/install/claim)"
-          promo_code="$(python -c 'import json,sys; print(json.loads(sys.argv[1])["code"])' "$promo_claim")"
-          promo_quote="$(curl -fsS -H 'Content-Type: application/json' --data "$(python - "$promo_code" <<'PY'
-          import json,sys
-          print(json.dumps({'code':sys.argv[1],'subtotal':100}))
-          PY
-          )" http://127.0.0.1:4186/api/promotions/install/quote)"
-          python - "$promo_quote" <<'PY'
-          import json,sys
-          data=json.loads(sys.argv[1])
-          assert data['discount'] > 0
-          assert data['total'] < data['subtotal']
-          PY
-
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_WEB_API_URL=http://127.0.0.1:4186 ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin-web-smoke.log 2>&1 &
           admin_pid=$!
           wait_for_http "$admin_pid" http://127.0.0.1:4175/health "admin"
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4187 npm run start --workspace apps/web > /tmp/arabisk-web-revenue.log 2>&1 &
           revenue_pid=$!
           wait_for_http "$revenue_pid" http://127.0.0.1:4187/health "revenue web"
+          promotion_status="$(curl -sS -o /tmp/ci-promotion.json -w '%{http_code}' http://127.0.0.1:4187/api/promotions/install)"
+          test "$promotion_status" = "200" || { cat /tmp/ci-promotion.json; exit 1; }
+          promo_claim_status="$(curl -sS -o /tmp/ci-promo-claim.json -w '%{http_code}' -H 'Content-Type: application/json' --data '{"clientId":"ci-install-client"}' http://127.0.0.1:4187/api/promotions/install/claim)"
+          test "$promo_claim_status" = "201" || { cat /tmp/ci-promo-claim.json; exit 1; }
+          promo_code="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["code"])' /tmp/ci-promo-claim.json)"
+          promo_quote="$(curl -fsS -H 'Content-Type: application/json' --data "$(python - "$promo_code" <<'PY'
+          import json,sys
+          print(json.dumps({'code':sys.argv[1],'subtotal':100}))
+          PY
+          )" http://127.0.0.1:4187/api/promotions/install/quote)"
+          python - "$promo_quote" <<'PY'
+          import json,sys
+          data=json.loads(sys.argv[1])
+          assert data['discount'] > 0
+          assert data['total'] < data['subtotal']
+          PY
           for i in {1..180}; do
             test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{"event":"menu_view","sessionId":"ci-rate-limit"}' http://127.0.0.1:4187/api/events)" = "202"
           done
