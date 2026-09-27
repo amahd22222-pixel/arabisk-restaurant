@@ -166,22 +166,6 @@
     }).join('');
   }
 
-  function setupMobileMenu() {
-    const button = $('#app-menu-button');
-    const nav = $('#app-header-nav');
-    if (!button || !nav) return;
-    button.addEventListener('click', () => {
-      const open = nav.classList.toggle('is-open');
-      button.setAttribute('aria-expanded', String(open));
-      button.textContent = open ? '×' : '☰';
-    });
-    nav.addEventListener('click', () => {
-      nav.classList.remove('is-open');
-      button.setAttribute('aria-expanded','false');
-      button.textContent = '☰';
-    });
-  }
-
   function handleLanguageUpdate() {
     syncCartCount();
     renderFeatured();
