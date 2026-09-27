@@ -1,4 +1,5 @@
 import { createShamsAgent } from './shams-agent.js';
+import { createShamsWorkflowService } from './shams-workflow-service.js';
 import { createShamsMemoryService } from './shams-memory-service.js';
 
 const MAX_MESSAGE = 1200;
@@ -36,7 +37,9 @@ export function createShamsService({
   writeJson,
   aiApiKey = '',
   aiModel = DEFAULT_MODEL,
-  aiEndpoint = DEFAULT_ENDPOINT
+  aiEndpoint = DEFAULT_ENDPOINT,
+  getOrderService,
+  getReservationService
 }) {
   const apiKey = clean(aiApiKey, 300);
   const model = clean(aiModel || DEFAULT_MODEL, 80) || DEFAULT_MODEL;
@@ -45,6 +48,12 @@ export function createShamsService({
   const memoryService = createShamsMemoryService({
     readJsonWithStatus,
     writeJson
+  });
+
+  const workflowService = createShamsWorkflowService({
+    memoryService,
+    getOrderService,
+    getReservationService
   });
 
   async function requestModel(prompt) {
@@ -80,6 +89,7 @@ export function createShamsService({
   const agent = createShamsAgent({
     repository,
     memoryService,
+    workflowService,
     requestModel: apiKey ? requestModel : null
   });
 
