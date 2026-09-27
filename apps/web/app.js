@@ -2,6 +2,7 @@ const $ = selector => document.querySelector(selector);
 
 const translations = {
   ar: {
+    heroTitle:'اكتشف مذاقًا عربيًا بروح عصرية', heroLead:'ضيافة عربية بتفاصيل راقية، أطباق صُممت لتُشارك، وتجارب تجعل كل زيارة مختلفة.', heroKicker:'ARABISK · RESTAURANT & CAFE', quickMenu:'المنيو', quickMenuCopy:'اكتشف القائمة', quickReserve:'احجز', quickReserveCopy:'اختر موعدك', quickCart:'السلة', quickCartCopy:'راجع طلبك', quickEvents:'الفعاليات', quickEventsCopy:'تجاربنا القادمة',
     reservationEyebrow:'TABLE RESERVATION', reservationTitle:'احجز طاولتك',
     reservationLead:'اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.',
     nameLabel:'الاسم', phoneLabel:'رقم الهاتف', dateLabel:'التاريخ', timeLabel:'الوقت', guestsLabel:'عدد الأشخاص',
@@ -13,6 +14,7 @@ const translations = {
     copyright:'© 2026 ARABISK. All rights reserved.'
   },
   en: {
+    heroTitle:'Discover Arabic Flavor, Reimagined', heroLead:'Arabic hospitality with refined details, shareable dishes and experiences that make every visit different.', heroKicker:'ARABISK · RESTAURANT & CAFE', quickMenu:'Menu', quickMenuCopy:'Explore the menu', quickReserve:'Book', quickReserveCopy:'Choose your time', quickCart:'Cart', quickCartCopy:'Review your order', quickEvents:'Experiences', quickEventsCopy:'What is coming next',
     reservationEyebrow:'TABLE RESERVATION', reservationTitle:'Book Your Table',
     reservationLead:'Choose the date, time and number of guests. We will contact you to confirm your reservation.',
     nameLabel:'Name', phoneLabel:'Phone Number', dateLabel:'Date', timeLabel:'Time', guestsLabel:'Guests',
