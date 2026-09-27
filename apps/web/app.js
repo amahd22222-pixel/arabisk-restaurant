@@ -95,11 +95,14 @@ function showPage() {
   const reservation = $('#reservation');
   const home = $('#home');
   const about = $('#about');
+  const homeActions = $('#home-actions');
+  const homeSections = document.querySelectorAll('.app-content > .app-section');
   if (!reservation || !home || !about) return;
 
   const isReservation = location.pathname.replace(/\/$/,'') === '/reservation';
   home.hidden = isReservation;
-  $('.app-content')?.toggleAttribute('hidden', isReservation);
+  if (homeActions) homeActions.hidden = isReservation;
+  homeSections.forEach(section => { section.hidden = isReservation; });
   about.hidden = isReservation;
   reservation.hidden = !isReservation;
   document.body.classList.toggle('reservation-route', isReservation);
