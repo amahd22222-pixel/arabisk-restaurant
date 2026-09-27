@@ -51,7 +51,9 @@ function ensurePwaUi() {
   banner.className = 'pwa-install';
   banner.hidden = true;
   const discount = Number(installOffer?.discountValue || 10);
-  banner.innerHTML = '<div class="pwa-install-copy"><strong>ثبّت ARABISK واحصل على خصم ' + discount + '%</strong><span>' + (installOffer?.message || 'ثبّت ARABISK على شاشتك الرئيسية وخذ خصمك على أول طلب.') + '</span></div><button type="button" data-install>تثبيت</button><button type="button" class="pwa-dismiss" data-dismiss aria-label="إغلاق">×</button>';
+  const title = String(installOffer?.title || ('ثبّت ARABISK واحصل على خصم ' + discount + '%')).replace(/[<>&"]/g, '');
+  const message = String(installOffer?.message || 'ثبّت ARABISK على شاشتك الرئيسية وخذ خصمك على أول طلب.').replace(/[<>&]/g, '');
+  banner.innerHTML = '<div class="pwa-install-copy"><strong>' + title + '</strong><span>' + message + '</span></div><button type="button" data-install>تثبيت</button><button type="button" class="pwa-dismiss" data-dismiss aria-label="إغلاق">×</button>';
   document.body.appendChild(banner);
 
   banner.querySelector('[data-install]')?.addEventListener('click', async () => {
