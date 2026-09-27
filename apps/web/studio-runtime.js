@@ -66,22 +66,22 @@ function renderVideo(item) {
 }
 
 function renderHome(items) {
-  const target = document.querySelector('#app-hero-studio');
-  if (!target || location.pathname.replace(/\/$/,'') !== '') return;
+  const home = document.querySelector('#home');
+  const slot = document.querySelector('#app-hero-studio');
+  if (!home || !slot || location.pathname.replace(/\/$/, '') !== '') return;
 
-  if (!items.length) {
-    target.replaceChildren();
+  slot.innerHTML = '';
+  const videoMarkup = renderVideo(items[0]);
+  if (!videoMarkup) {
+    slot.hidden = true;
     return;
   }
 
-  target.innerHTML = renderVideo(items[0]);
-  const wrapper = target.querySelector('.arabisk-studio-display');
-  if (wrapper) {
-    bindMute(wrapper);
-    target.parentElement?.classList.add('has-studio-media');
-  }
+  slot.hidden = false;
+  slot.innerHTML = videoMarkup;
+  const wrapper = slot.querySelector('.arabisk-studio-display');
+  if (wrapper) bindMute(wrapper);
 }
-
 document.addEventListener('DOMContentLoaded', async () => {
   if (location.pathname.replace(/\/$/,'') !== '') return;
   renderHome(await loadHomeStudio());
