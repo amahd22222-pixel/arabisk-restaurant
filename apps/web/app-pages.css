@@ -90,3 +90,13 @@ footer{background:#0e0c0a!important}
   .panel h1{font-size:43px!important}
   .cart-main{padding-top:26px!important}
 }
+
+@media(max-width:800px){
+  /* The shared bottom navigation is the primary mobile cart entry point. */
+  .ac-fab{display:none!important}
+  .cart-main{padding-bottom:118px!important}
+  .cart-heading{gap:16px!important}
+  .cart-layout{gap:14px!important}
+  .cart-summary{border-radius:22px!important}
+  .cart-submit{min-height:54px!important;font-size:12px!important;box-shadow:0 10px 24px rgba(23,19,15,.12)}
+}

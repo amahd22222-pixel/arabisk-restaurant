@@ -3,6 +3,7 @@
 
 const CHECKOUT_KEY='arabisk-checkout-v3';
 const LAST_ORDER_KEY='arabisk-last-order-v1';
+const PROMO_STORAGE_KEY='arabisk-active-promo-v1';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
 const readJson=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value??fallback}catch{return fallback}};
@@ -33,6 +34,9 @@ const saveCheckout=value=>writeJson(CHECKOUT_KEY,{orderType:['dine_in','pickup']
 const saveLastOrder=(data,{orderType='dine_in',tableNumber='',name='',phone='' }={})=>{if(!data?.id)return;writeJson(LAST_ORDER_KEY,{id:String(data.id),orderType:orderType==='pickup'?'pickup':'dine_in',tableNumber:String(tableNumber||'').trim().slice(0,30),name:String(name||'').trim().slice(0,80),phone:String(phone||'').trim().slice(0,40),total:Number(data.total||0),status:String(data.status||'pending'),updatedAt:data.updatedAt||new Date().toISOString()})};
 const readLastOrder=()=>{const value=readJson(LAST_ORDER_KEY,null);return value&&value.id?value:null};
 let cart=readCart();
+let promoCode='';
+let promoQuote=null;
+try{promoCode=String(new URLSearchParams(location.search).get('promo')||sessionStorage.getItem(PROMO_STORAGE_KEY)||localStorage.getItem('ARABISK_INSTALL_REWARD_CODE')||'').trim().toUpperCase().slice(0,80)}catch{}
 let recoveryToken=new URLSearchParams(location.search).get('recover')||'';
 let recoveryRestorePromise=null;
 const total=()=>cart.reduce((sum,item)=>sum+(Number(item.price)||0)*(Number(item.qty)||0),0);
@@ -125,17 +129,15 @@ async function submitOrder(event){
 }
 document.querySelector('#cart-promo-apply')?.addEventListener('click',()=>void refreshPromoQuote(true));
 document.querySelector('#cart-promo-code')?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();void refreshPromoQuote(true);}});
-document.querySelector('#cart-clear').addEventListener('click',function(){if(!cart.length)return;if(window.confirm('هل تريد إفراغ السلة؟')){cart=[];window.ARABISK_CART?.clear?.();cart=readCart();render();}});
-document.querySelector('#cart-items').addEventListener('click',function(event){const inc=event.target.closest('[data-inc]');const dec=event.target.closest('[data-dec]');const remove=event.target.closest('[data-remove]');const id=inc?.dataset.inc||dec?.dataset.dec||remove?.dataset.remove;if(!id)return;const item=cart.find(row=>row.id===id);if(!item)return;if(remove)setQty(id,0);else setQty(id,item.qty+(inc?1:-1));});
-document.querySelector('#cart-form').addEventListener('submit',submitOrder);
-document.querySelector('#cart-order-type').addEventListener('change',function(){syncOrderTypeUI();persistCheckout();});
+document.querySelector('#cart-clear')?.addEventListener('click',function(){if(!cart.length)return;if(window.confirm('هل تريد إفراغ السلة؟')){cart=[];window.ARABISK_CART?.clear?.();cart=readCart();render();}});
+document.querySelector('#cart-items')?.addEventListener('click',function(event){const inc=event.target.closest('[data-inc]');const dec=event.target.closest('[data-dec]');const remove=event.target.closest('[data-remove]');const id=inc?.dataset.inc||dec?.dataset.dec||remove?.dataset.remove;if(!id)return;const item=cart.find(row=>row.id===id);if(!item)return;if(remove)setQty(id,0);else setQty(id,item.qty+(inc?1:-1));});
+document.querySelector('#cart-form')?.addEventListener('submit',submitOrder);
+document.querySelector('#cart-order-type')?.addEventListener('change',function(){syncOrderTypeUI();persistCheckout();});
 ['cart-table','cart-name','cart-phone'].forEach(function(id){document.querySelector('#'+id)?.addEventListener('input',persistCheckout);});
-document.querySelector('#track-type').addEventListener('change',function(){syncTrackingTypeUI();});
-document.querySelector('#track-table').addEventListener('input',function(){});
-document.querySelector('#track-phone').addEventListener('input',function(){});
+
 window.addEventListener('arabisk-cart-updated',()=>{cart=readCart();render();});
 window.addEventListener('storage',event=>{if(event.key==='arabisk-cart-v4'){cart=readCart();render();}});
-document.querySelector('#cart-success').addEventListener('click',function(event){if(event.target.id==='cart-success')closeModal('#cart-success');});
+document.querySelector('#cart-success')?.addEventListener('click',function(event){if(event.target.id==='cart-success')closeModal('#cart-success');});
 document.addEventListener('keydown',function(event){if(event.key==='Escape')closeModal('#cart-success');});
 syncCheckoutFields();
 void restoreRecoveryCart().then(async()=>{cart=readCart();const input=document.querySelector('#cart-promo-code');if(input)input.value=promoCode;render();if(promoCode)await refreshPromoQuote(false);});
