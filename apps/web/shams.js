@@ -195,7 +195,16 @@
       await speak(error?.message || 'تعذر تشغيل شمس الآن. حاول مرة أخرى.');
     } finally {
       state.busy = false;
-      if (!state.listening && !state.speaking) setVisual('idle');
+      if (!state.listening && !state.speaking) {
+        setVisual('idle');
+        // Keep the conversation voice-first: after Shams answers, she
+        // returns to listening so the customer can continue naturally.
+        window.setTimeout(() => {
+          if (!state.busy && !state.listening && !state.speaking) {
+            startListeningFromUserGesture();
+          }
+        }, 350);
+      }
     }
   }
 
@@ -315,6 +324,10 @@
       showError('الصوت غير متاح في هذا المتصفح.');
       setVisual('error');
     }
+  }
+
+  if ('speechSynthesis' in window) {
+    try { window.speechSynthesis.addEventListener('voiceschanged', () => window.speechSynthesis.getVoices()); } catch {}
   }
 
   if (document.readyState === 'loading') {
