@@ -4,7 +4,7 @@ import { createCollectionRepository } from '../repositories/collection-repositor
 import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
 import { logServiceFailure } from '../utils/service-error.js';
 
-const STATE_KEY='data/arabisk-memories.json';
+const STATE_KEY='data/arabisk-memories-v2.json';
 const IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
 const VIDEO_TYPES=new Set(['video/mp4','video/webm','video/quicktime']);
 const MAX_MEMORIES=5000;
