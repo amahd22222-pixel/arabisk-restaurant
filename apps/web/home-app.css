@@ -376,6 +376,31 @@ body{margin:0;background:var(--app-bg);color:var(--app-ink);font-family:Cairo,sa
 .today-offer-message{max-width:520px;color:#bdb3a7;font-size:12px;line-height:1.9;margin:0}\n.home-empty-wide{grid-column:1/-1}\n.home-empty{padding:28px;border:1px dashed var(--app-line);border-radius:20px;color:var(--app-muted);font-size:11px;text-align:center}
 
 @media(max-width:900px){
+  .app-header .header-nav.is-open{
+    position:absolute;
+    top:100%;
+    right:14px;
+    left:14px;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
+    gap:3px;
+    padding:9px;
+    border:1px solid rgba(197,154,91,.18);
+    border-radius:17px;
+    background:rgba(18,15,12,.98);
+    box-shadow:0 20px 48px rgba(0,0,0,.34);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+  }
+  .app-header .header-nav.is-open a{
+    padding:12px 13px;
+    border-radius:11px;
+    color:rgba(255,255,255,.82);
+  }
+  .app-header .header-nav.is-open a:hover{background:rgba(197,154,91,.10);color:#fff}
+
   .app-header{grid-template-columns:auto auto;justify-content:space-between}
   .app-header .header-nav{display:none}
   .app-menu-button{
