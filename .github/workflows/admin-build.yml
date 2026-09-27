@@ -185,8 +185,9 @@ jobs:
           python - "$promo_quote" <<'PY'
           import json,sys
           data=json.loads(sys.argv[1])
-          assert data['discount'] > 0
-          assert data['total'] < data['subtotal']
+          print("promotion-quote-response:", data)
+          assert data.get('discount', 0) > 0, f"promotion quote missing discount: {data}"
+          assert data.get('total', 0) < data.get('subtotal', 1), f"promotion quote total not discounted: {data}"
           PY
           for i in {1..180}; do
             test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{"event":"menu_view","sessionId":"ci-rate-limit"}' http://127.0.0.1:4187/api/events)" = "202"
