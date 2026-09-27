@@ -18,7 +18,9 @@ const injectMobileNavigation = async (filePath, res) => {
 <script type="module" src="/pwa-ui.js"></script>
 <script type="module" src="/pwa-register.js"></script>
 <script type="module" src="/pwa-profile.js"></script>
-<script type="module" src="/pwa-notifications.js"></script>`;
+<script type="module" src="/pwa-notifications.js"></script>
+<link rel="stylesheet" href="/shams.css">
+<script type="module" src="/shams.js"></script>`;
   res.type('html').send(html.replace('</head>', `${assets}\n</head>`));
 };
 
