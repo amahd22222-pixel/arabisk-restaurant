@@ -80,8 +80,8 @@ function parseTime(text) {
     }
   }
 
-  const match = raw.match(/(?:الساعة|at)\s*(\d{1,2})(?:[:.]([0-5]\d))?\s*(ونصف|و نص|و\s*30)?\s*(ص|م|am|pm)?\b/i)
-    || raw.match(/\b(\d{1,2})(?:[:.]([0-5]\d))?\s*(ونصف|و نص|و\s*30)?\s*(ص|م|am|pm)\b/i);
+  const match = raw.match(/(?:الساعة|at)\s*(\d{1,2})(?:[:.]([0-5]\d))?\s*(ونصف|و نص|و\s*30)?\s*(ص|م|am|pm)?/i)
+    || raw.match(/\b(\d{1,2})(?:[:.]([0-5]\d))?\s*(ونصف|و نص|و\s*30)?\s*(ص|م|am|pm)/i);
 
   let hours = hourValue;
   let minutes = 0;
@@ -106,7 +106,7 @@ function parseTime(text) {
 }
 
 function parseReservationSlots(text, memory) {
-  const raw = clean(text, 1200);
+  const raw = clean(toWesternDigits(text), 1200);
   const slots = {
     name: clean(memory?.name, 80),
     phone: '',
