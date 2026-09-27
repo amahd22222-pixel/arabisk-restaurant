@@ -28,11 +28,17 @@
 
   function syncCartCount() {
     const target = $('#app-cart-count');
-    if (!target) return;
+    const mobileTarget = $('#mobile-cart-count');
     const items = window.ARABISK_CART?.getItems?.() || [];
     const quantity = items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
-    target.textContent = String(quantity);
-    target.hidden = quantity < 1;
+    if (target) {
+      target.textContent = String(quantity);
+      target.hidden = quantity < 1;
+    }
+    if (mobileTarget) {
+      mobileTarget.textContent = String(quantity);
+      mobileTarget.hidden = quantity < 1;
+    }
   }
 
   function renderFeatured() {
