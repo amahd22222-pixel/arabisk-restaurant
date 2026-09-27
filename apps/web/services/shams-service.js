@@ -97,14 +97,14 @@ function localConcierge({ message, customer, repository }) {
   const products = repository.products.all().filter(item => item?.available !== false);
   const matches = findProductMatches(products, raw);
 
-  if (/\b(منيو|المنيو|القائمة|الأكل|اكل|أكل|الأطباق)\\b/i.test(normalized)) {
+  if (/(منيو|المنيو|القائمة|الأكل|اكل|أكل|الأطباق|افتح.*منيو|وريني.*منيو|شوف.*منيو)/i.test(normalized)) {
     return {
       reply: 'أكيد 🌞 أفتح لك المنيو الآن، وبعدها أقدر أساعدك تختار الطبق المناسب.',
       actions: [{ type: 'navigate', url: '/menu', label: 'فتح المنيو' }]
     };
   }
 
-  if (/(حجز|احجز|طاولة|مطعم|موعد)/i.test(normalized)) {
+  if (/(حجز|احجز|احجزي|طاولة|مطعم|موعد|احجز.*طاولة|احجزي.*طاولة)/i.test(normalized)) {
     return {
       reply: customer?.name
         ? `أكيد يا ${customer.name} 🌞 أفتح لك صفحة الحجز ونكمل معك خطوة بخطوة.`
