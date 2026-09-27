@@ -84,7 +84,7 @@ function injectStyles() {
     .arabisk-profile-field input{width:100%;box-sizing:border-box;border:1px solid rgba(255,255,255,.11);border-radius:14px;padding:12px 13px;background:rgba(255,255,255,.055);color:#fff;outline:none;font:600 13px Cairo,sans-serif}
     .arabisk-profile-field input:focus{border-color:#b89455;box-shadow:0 0 0 3px rgba(184,148,85,.12)}
     .arabisk-profile-consent{display:flex;gap:9px;align-items:flex-start;margin:12px 0 18px;color:rgba(255,255,255,.66);font-size:10px;line-height:1.8}
-    .arabisk-profile-consent input{margin-top:4px;accent-color:#b89455}
+    .arabisk-profile-consent input{margin-top:4px;accent-color:#b89455}.arabisk-profile-consent a{color:#d2b16d;text-decoration:underline}
     .arabisk-profile-submit{width:100%;border:0;border-radius:999px;padding:13px 16px;background:#b89455;color:#17130f;font:900 12px Cairo,sans-serif;cursor:pointer}
     .arabisk-profile-submit:disabled{opacity:.55;cursor:wait}
     .arabisk-profile-note{min-height:19px;margin-top:11px;color:#ffb7ad;font-size:10px;text-align:center}
@@ -113,7 +113,7 @@ function mountOnboarding(initialProfile = null) {
       <form id="arabisk-profile-form">
         <label class="arabisk-profile-field"><span>الاسم</span><input name="name" required minlength="2" maxlength="80" autocomplete="name" placeholder="اكتب اسمك"></label>
         <label class="arabisk-profile-field"><span>رقم الهاتف</span><input name="phone" required inputmode="tel" maxlength="20" autocomplete="tel" placeholder="05XXXXXXXX"></label>
-        <label class="arabisk-profile-consent"><input name="privacyConsent" type="checkbox" required><span>أوافق على سياسة الخصوصية واستخدام بياناتي لتشغيل حساب ARABISK وإدارة الحجوزات والطلبات والإشعارات المرتبطة بالتطبيق.</span></label>
+        <label class="arabisk-profile-consent"><input name="privacyConsent" type="checkbox" required><span>أوافق على <a href="/privacy" target="_blank" rel="noopener">سياسة الخصوصية</a> واستخدام بياناتي لتشغيل حساب ARABISK وإدارة الحجوزات والطلبات والإشعارات المرتبطة بالتطبيق.</span></label>
         <button class="arabisk-profile-submit" type="submit">ابدأ استخدام ARABISK</button>
         <div id="arabisk-profile-note" class="arabisk-profile-note" role="alert" aria-live="polite"></div>
       </form>
