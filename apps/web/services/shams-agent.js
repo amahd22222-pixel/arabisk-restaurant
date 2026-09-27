@@ -178,15 +178,49 @@ function normalizeIntent(value) {
 }
 
 function findMatches(products, query) {
-  const q = String(query || '').toLocaleLowerCase('ar').trim();
-  if (!q) return [];
-  return products.filter(product => {
+  const rawQuery = normalizeArabic(query);
+  const normalizedQuery = normalizeDialectText(query);
+  const tokens = significantTokens(query);
+  if (!rawQuery && !tokens.length) return [];
+
+  return products.map(product => {
     const haystack = [
       product.nameAr, product.nameEn, product.descriptionAr, product.descriptionEn,
-      product.categorySlug, product.categoryId, ...(Array.isArray(product.tags) ? product.tags : [])
-    ].join(' ').toLocaleLowerCase('ar');
-    return haystack && q.split(/\s+/).some(token => token.length >= 3 && haystack.includes(token));
-  }).slice(0, 6);
+      product.categorySlug, product.categoryId,
+      ...(Array.isArray(product.tags) ? product.tags : []),
+      ...(Array.isArray(product.aliases) ? product.aliases : [])
+    ].join(' ');
+    const normalizedHaystack = normalizeDialectText(haystack);
+    const hayTokens = new Set(significantTokens(haystack));
+    let score = 0;
+
+    if (normalizedQuery && normalizedHaystack.includes(normalizedQuery)) score += 14;
+    if (rawQuery && normalizeArabic(haystack).includes(rawQuery)) score += 10;
+
+    for (const token of tokens) {
+      if (hayTokens.has(token)) score += 6;
+      else if ([...hayTokens].some(candidate => candidate.startsWith(token) || token.startsWith(candidate))) score += 3;
+    }
+
+    if (product.chefChoice === true) score += 1;
+    if (product.isNew === true) score += 0.5;
+    return { product, score };
+  })
+  .filter(row => row.score > 0)
+  .sort((a, b) => b.score - a.score)
+  .slice(0, 6)
+  .map(row => row.product);
+}
+
+function resolveReferenceProduct(text, matches, latest) {
+  const normalized = normalizeDialectText(text);
+  if (/(التاني|الثاني|تاني واحد|رقم 2)/i.test(normalized) && matches[1]) return matches[1];
+  if (/(التالت|الثالث|تالت واحد|رقم 3)/i.test(normalized) && matches[2]) return matches[2];
+  if (/(الاول|الأول|اول واحد|رقم 1)/i.test(normalized)) return matches[0] || latest || null;
+  if (/(ده|دي|هالطبق|هيدا|هيدي|الطبق ده|الطبق دي|نفسه|نفسها|نفس الطبق|كمان واحد|واحد كمان)/i.test(normalized)) {
+    return latest || matches[0] || null;
+  }
+  return matches[0] || latest || null;
 }
 
 function pickRecommendations(products, preferences, query) {
@@ -216,11 +250,11 @@ function pickRecommendations(products, preferences, query) {
 
 function detectLocalPlan({ message, memory, products }) {
   const text = clean(message);
-  const normalized = text.toLocaleLowerCase('ar');
+  const normalized = normalizeDialectText(text);
   const matches = findMatches(products, text);
   const latest = memory.recentProducts?.[memory.recentProducts.length - 1] || null;
 
-  if (/^(السلام|هلا|اهلا|أهلا|مرحبا|هاي|hello|hi)\b/i.test(normalized)) {
+  if (/^(السلام عليكم|السلام|اهلا|اهلين|يا هلا|هلا|مرحبا|مرحبتين|هاي|hello|hi)/i.test(normalized)) {
     return {
       intent: 'greeting',
       reply: memory.name
@@ -229,38 +263,41 @@ function detectLocalPlan({ message, memory, products }) {
     };
   }
 
-  if (/(ضيف|أضف|اضف|حط|حطي|ضيفي)/i.test(normalized)) {
-    const product = matches[0] || latest;
+  const addRequested = /(ضيف|اضف|حط|زود|زيد|ضيفلي|اضفلي|حطلي|زودلي|زيدلي)/i.test(normalized) ||
+    /(عايز).{0,70}(واحد|اتنين|تلاته|كمان)/i.test(normalized);
+
+  if (addRequested || (latest && /(كمان واحد|واحد كمان|زود|زيد|ضيفه|ضيفها|حطه|حطها)/i.test(normalized))) {
+    const product = resolveReferenceProduct(text, matches, latest);
     if (product) {
       return {
         intent: 'cart_add',
-        toolCalls: [{ name: 'cart_add', args: { productId: product.id, quantity: parseQuantity(text) } }],
-        reply: 'حاضر. أضيف لك ' + (product.nameAr || product.nameEn) + ' إلى طلبك.'
+        toolCalls: [{ name: 'cart_add', args: { productId: product.id, quantity: parseQuantity(normalized) } }],
+        reply: 'حاضر، أضيف لك ' + (product.nameAr || product.nameEn) + '.'
       };
     }
-    return { intent: 'cart_add', reply: 'أكيد. قل لي اسم الطبق الذي تريد إضافته، وسأضيفه لك.' };
+    return { intent: 'cart_add', reply: 'أكيد. قل لي اسم الطبق أو صفه لي، وأنا أضيفه لك.' };
   }
 
-  if (/(اختار|اختيار|محتار|محتارة|رشح|اقترح|اقتراح|recommend|choose)/i.test(normalized)) {
+  if (/(رشح|رشحلي|رشح لي|اقترح|اقترحلي|انصحني|نصحني|شو بتنصحني|شو تقترح|شو بترشح|محتار|محتارة|اختار|اختيار|دلني|دُلني|recommend|choose)/i.test(normalized)) {
     return { intent: 'recommend', toolCalls: [{ name: 'recommend_menu', args: {} }] };
   }
 
-  if (/(منيو|القائمة|الأكل|الأطباق|افتح.*منيو|وريني.*منيو|شوف.*منيو)/i.test(normalized)) {
+  if (/(منيو|القائمة|الأكل|الأطباق|شو عنا|شو عندكم|شو موجود|وريني|ورجيني|جيبلي.*منيو|افتح.*منيو|شوف.*منيو)/i.test(normalized)) {
     return { intent: 'menu', toolCalls: [{ name: 'navigate', args: { path: '/menu' } }], reply: 'أكيد، أفتح لك المنيو الآن.' };
   }
 
-  if (/(احجز|حجز|طاولة|موعد)/i.test(normalized)) {
+  if (/(احجز|حجز|حجزي|طاولة|حاجز|موعد|بدي حجز|بدّي احجز|عايز احجز|عايز حجز)/i.test(normalized)) {
     return { intent: 'reservation', toolCalls: [{ name: 'navigate', args: { path: '/reservation' } }], reply: 'أكيد، نبدأ الحجز من هنا.' };
   }
 
-  if (/(السلة|العربة|cart)/i.test(normalized)) {
-    if (/(فيها|موجود|محتوى|محتويات|المجموع|الإجمالي|بكام|كام|إيه|ايه|اعرض|وريني|شوف)/i.test(normalized)) {
+  if (/(السلة|العربة|شو بالسلة|شو عندي بالسلة|cart)/i.test(normalized)) {
+    if (/(فيها|موجود|محتوى|محتويات|المجموع|الإجمالي|بكام|كام|اعرض|وريني|شوف|شو)/i.test(normalized)) {
       return { intent: 'cart_summary', toolCalls: [{ name: 'cart_summary', args: {} }] };
     }
     return { intent: 'cart', toolCalls: [{ name: 'navigate', args: { path: '/cart' } }], reply: 'حاضر، أفتح لك السلة.' };
   }
 
-  if (/(متابعة|تتبع|الطلب|الطلبات|order)/i.test(normalized)) {
+  if (/(متابعة|تتبع|الطلب|الطلبات|طلبي|شو صار بطلب|وين طلبي|order)/i.test(normalized)) {
     const orderMatch = normalized.match(/\bo\d{5}\b/i);
     if (orderMatch) {
       return { intent: 'order_status', toolCalls: [{ name: 'get_order_status', args: { orderId: orderMatch[0].toUpperCase() } }] };
@@ -268,7 +305,7 @@ function detectLocalPlan({ message, memory, products }) {
     return { intent: 'order_status', toolCalls: [{ name: 'navigate', args: { path: '/track-order' } }], reply: 'أفتح لك متابعة الطلب، وهناك نكمل التتبع.' };
   }
 
-  if (/(فعالي|تجارب|حدث|events)/i.test(normalized)) {
+  if (/(فعالي|تجارب|حدث|شو في فعاليات|events)/i.test(normalized)) {
     return { intent: 'events', toolCalls: [{ name: 'navigate', args: { path: '/events' } }], reply: 'أفتح لك التجارب والفعاليات القادمة.' };
   }
 
@@ -286,8 +323,8 @@ function detectLocalPlan({ message, memory, products }) {
   return {
     intent: 'unknown',
     reply: memory.name
-      ? 'أنا معك يا ' + memory.name + '. أقدر أساعدك في اختيار الأكل، المنيو، السلة، الحجز، متابعة الطلب والفعاليات.'
-      : 'أنا معك. أقدر أساعدك في اختيار الأكل، المنيو، السلة، الحجز، متابعة الطلب والفعاليات.'
+      ? 'أنا معك يا ' + memory.name + '. قل لي مثلًا: رشحي لي حاجة خفيفة، افتحي المنيو، ضيفي الطبق ده، أو احجزي لي طاولة.'
+      : 'أنا معك. قل لي مثلًا: رشحي لي حاجة خفيفة، افتحي المنيو، ضيفي الطبق ده، أو احجزي لي طاولة.'
   };
 }
 
