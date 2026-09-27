@@ -186,11 +186,62 @@ async function loadPromotionSettings(){
     if(stats)stats.textContent='تعذر تحميل إعدادات العرض';
   }
 }
+async function loadTodayOfferSettings(){
+  try{
+    const data=await request('/api/admin/promotions/today');
+    if($('#today-offer-enabled'))$('#today-offer-enabled').checked=data.enabled===true;
+    if($('#today-offer-badge'))$('#today-offer-badge').value=data.badge||'عرض اليوم';
+    if($('#today-offer-cta'))$('#today-offer-cta').value=data.ctaLabel||'اطلب الآن';
+    if($('#today-offer-title'))$('#today-offer-title').value=data.title||'اختيار اليوم من ARABISK';
+    if($('#today-offer-message'))$('#today-offer-message').value=data.message||'عرض خاص متاح اليوم لفترة محدودة.';
+    if($('#today-offer-start'))$('#today-offer-start').value=data.startsAt?toDateTimeLocal(data.startsAt):'';
+    if($('#today-offer-end'))$('#today-offer-end').value=data.endsAt?toDateTimeLocal(data.endsAt):'';
+    if($('#today-offer-product'))$('#today-offer-product').innerHTML='<option value="">بدون صنف محدد</option>'+products.filter(p=>p&&p.available!==false).map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.nameAr||p.nameEn||p.id)}</option>`).join('');
+    if($('#today-offer-product'))$('#today-offer-product').value=data.productId||'';
+    if($('#today-offer-status')){
+      const state=data.live?'نشط الآن':data.enabled?'مفعّل — خارج وقت العرض':'متوقف';
+      $('#today-offer-status').textContent=state;
+    }
+  }catch(error){
+    if($('#today-offer-status'))$('#today-offer-status').textContent='تعذر تحميل العرض';
+  }
+}
+function toDateTimeLocal(value){
+  const d=new Date(value);
+  if(!Number.isFinite(d.getTime()))return '';
+  const pad=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 async function uploadFile(endpoint,productId,file,onProgress,errorText){const prepared=await request(endpoint,{method:'POST',body:JSON.stringify({productId,fileName:file.name,contentType:file.type,size:file.size})});await new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('PUT',prepared.uploadUrl);xhr.setRequestHeader('Content-Type',file.type||'application/octet-stream');xhr.upload.onprogress=event=>{if(event.lengthComputable&&onProgress)onProgress(Math.round(event.loaded/event.total*100))};xhr.onload=()=>xhr.status>=200&&xhr.status<300?resolve():reject(new Error(errorText));xhr.onerror=()=>reject(new Error('تعذر الاتصال بتخزين الوسائط.'));xhr.send(file)});return prepared.key;}
 async function deleteVideo(productId){const prepared=await request('/api/videos/delete-presign',{method:'POST',body:JSON.stringify({productId})});if(prepared.url){const response=await fetch(prepared.url,{method:'DELETE'});if(!response.ok)throw new Error('تعذر حذف الفيديو من التخزين.')}await request(`/api/products/${productId}`,{method:'PATCH',body:JSON.stringify({videoKey:''})});}
 async function deleteImage(productId){const prepared=await request('/api/images/delete-presign',{method:'POST',body:JSON.stringify({productId})});if(prepared.url){const response=await fetch(prepared.url,{method:'DELETE'});if(!response.ok)throw new Error('تعذر حذف الصورة من التخزين.')}await request(`/api/products/${productId}`,{method:'PATCH',body:JSON.stringify({imageKey:''})});}
 document.querySelectorAll('[data-section]').forEach(link=>link.addEventListener('click',()=>setTimeout(()=>showSection(link.dataset.section),0)));
 ['customers-search','customers-filter','customers-sort'].forEach(id=>document.querySelector('#'+id)?.addEventListener(id==='customers-search'?'input':'change',renderCustomers));
+$('#today-offer-form')?.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const button=$('#today-offer-save'),status=$('#today-offer-message-status');
+  if(!button)return;
+  button.disabled=true;
+  if(status)status.textContent='';
+  try{
+    const start=$('#today-offer-start')?.value||'';
+    const end=$('#today-offer-end')?.value||'';
+    const data=await request('/api/admin/promotions/today',{method:'PATCH',body:JSON.stringify({
+      enabled:$('#today-offer-enabled')?.checked===true,
+      badge:$('#today-offer-badge')?.value||'عرض اليوم',
+      ctaLabel:$('#today-offer-cta')?.value||'اطلب الآن',
+      title:$('#today-offer-title')?.value||'اختيار اليوم من ARABISK',
+      message:$('#today-offer-message')?.value||'عرض خاص متاح اليوم لفترة محدودة.',
+      productId:$('#today-offer-product')?.value||'',
+      startsAt:start?new Date(start).toISOString():'',
+      endsAt:end?new Date(end).toISOString():''
+    })});
+    if(status)status.textContent=data.live?'تم حفظ العرض — العرض نشط الآن.':'تم حفظ عرض اليوم.';
+    if($('#today-offer-status'))$('#today-offer-status').textContent=data.live?'نشط الآن':data.enabled?'مفعّل — خارج وقت العرض':'متوقف';
+  }catch(error){
+    if(status)status.textContent=error.message||'تعذر حفظ عرض اليوم.';
+  }finally{button.disabled=false;}
+});
 $('#add-product').addEventListener('click',()=>openModal());$('#cancel').addEventListener('click',closeModal);$('#search').addEventListener('input',renderProducts);$('#refresh-reservations').addEventListener('click',load);$('#refresh-orders').addEventListener('click',load);$('#modal').addEventListener('click',event=>{if(event.target.id==='modal')closeModal()});
 $('#video-file').addEventListener('change',()=>{const file=$('#video-file').files[0];if(!file){$('#selected-file').textContent='';return}$('#selected-file').textContent=`${file.name} — ${(file.size/1024/1024).toFixed(1)} MB`;if($('#video-preview-player').src.startsWith('blob:'))URL.revokeObjectURL($('#video-preview-player').src);updateVideoPreview(URL.createObjectURL(file));$('#remove-video').hidden=false});
 $('#image-file').addEventListener('change',()=>{const file=$('#image-file').files[0];if(!file){$('#selected-image').textContent='';return}$('#selected-image').textContent=`${file.name} — ${(file.size/1024/1024).toFixed(1)} MB`;updateImagePreview(URL.createObjectURL(file));$('#remove-image').hidden=false});
@@ -225,7 +276,8 @@ $('#pwa-offer-form')?.addEventListener('submit',async event=>{
   }catch(error){if(status)status.textContent=error.message||'تعذر حفظ العرض.';}
   finally{if(button)button.disabled=false;}
 });
-syncSidebarState();void loadPromotionSettings();$('#sidebar-toggle')?.addEventListener('click',()=>{const collapsed=!document.body.classList.contains('sidebar-collapsed');localStorage.setItem('ARABISK_SIDEBAR_COLLAPSED',collapsed?'1':'0');syncSidebarState();});loadSettings();showSection(location.hash.replace('#','')||'dashboard');void load().catch(error=>{console.error('Dashboard initialization failed:',error);const connection=$('#connection');if(connection){connection.textContent='تعذر الاتصال';connection.className='disconnected';}const banner=$('#error');if(banner)banner.textContent=error?.message||'تعذر تحميل لوحة التحكم.';});
+syncSidebarState();void loadPromotionSettings();$('#sidebar-toggle')?.addEventListener('click',()=>{const collapsed=!document.body.classList.contains('sidebar-collapsed');localStorage.setItem('ARABISK_SIDEBAR_COLLAPSED',collapsed?'1':'0');syncSidebarState();});loadSettings();
+loadTodayOfferSettings();showSection(location.hash.replace('#','')||'dashboard');void load().catch(error=>{console.error('Dashboard initialization failed:',error);const connection=$('#connection');if(connection){connection.textContent='تعذر الاتصال';connection.className='disconnected';}const banner=$('#error');if(banner)banner.textContent=error?.message||'تعذر تحميل لوحة التحكم.';});
 
 async function openCustomer360(customerId){
   const modal=$('#customer360-modal');
