@@ -40,8 +40,11 @@ function jsonFromText(value) {
 
 function parseQuantity(text) {
   const raw = clean(text, 300).toLowerCase();
-  const digit = raw.match(/(?:عدد|كمية|كم|×|x)?\s*(\d{1,2})\s*(?:من|حبة|قطع|قطعة)?/i);
-  if (digit && /(?:ضيف|أضف|اضف|حط|ضيفي|عايز|عاوز|عدد|كمية|كم)/i.test(raw)) {
+  const digit =
+    raw.match(/(?:عدد|كمية|كم)\s*(\d{1,2})\b/i) ||
+    raw.match(/\b(\d{1,2})\s*(?:من|حبة|حبات|قطع|قطعة)\b/i) ||
+    raw.match(/(?:×|x)\s*(\d{1,2})\b/i);
+  if (digit) {
     const value = Number(digit[1]);
     if (value >= 1 && value <= 20) return value;
   }
