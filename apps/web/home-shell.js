@@ -10,7 +10,7 @@
     style:'currency', currency:'AED', maximumFractionDigits:2
   }).format(Number(value) || 0);
 
-  const state = { products: [], experiences: [], memories: [], installOffer: null, todayOffer: null };
+  const state = { products: [], experiences: [], memories: [] };
 
   const getJson = async (url, fallback) => {
     try {
@@ -91,44 +91,27 @@
     const root = $('#today-offer');
     if (!root) return;
 
-    const today = state.todayOffer;
-    const install = state.installOffer;
-    const featured = state.products.find(item => item && item.available !== false && (item.chefChoice || item.isNew)) || state.products.find(item => item?.available !== false);
-    const image = $('.today-offer-media img', root);
+    const featured = state.products.find(item =>
+      item && item.available !== false && (item.isNew || item.chefChoice)
+    ) || state.products.find(item => item && item.available !== false);
 
-    if (today?.enabled) {
-      const product = state.products.find(item => String(item.id) === String(today.productId));
-      $('.today-offer-badge', root).textContent = today.badge || 'عرض اليوم';
-      $('.today-offer-title', root).textContent = today.title || product?.nameAr || 'عرض اليوم';
-      $('.today-offer-message', root).textContent = today.message || product?.descriptionAr || 'اختيار خاص من ARABISK متاح اليوم.';
-      $('.today-offer-action', root).textContent = `${today.ctaLabel || 'اطلب الآن'} ←`;
-      $('.today-offer-action', root).setAttribute('href', product ? `/menu/${encodeURIComponent(String(product.categoryId || ''))}/${encodeURIComponent(String(product.id || ''))}` : '/menu');
-      if (image && product) { image.src = productImage(product); image.alt = product.nameAr || product.nameEn || 'عرض اليوم'; }
-      return;
+    const offerImage = $('.today-offer-media img', root);
+    if (offerImage && featured) {
+      offerImage.src = productImage(featured);
+      offerImage.alt = featured.nameAr || featured.nameEn || 'اختيار اليوم من ARABISK';
     }
 
-    if (install?.enabled) {
-      $('.today-offer-badge', root).textContent = `عرض التطبيق · خصم ${Math.round(Number(install.discountValue) || 0)}%`;
-      $('.today-offer-title', root).textContent = install.title || 'خصم خاص لعملاء ARABISK';
-      $('.today-offer-message', root).textContent = install.message || 'ثبّت ARABISK على شاشتك الرئيسية واحصل على كودك الشخصي.';
-      $('.today-offer-action', root).textContent = 'فعّل خصمك ←';
-      $('.today-offer-action', root).setAttribute('href', '/cart');
-      if (image) { image.alt = install.title || 'عرض التطبيق'; image.src = featured ? productImage(featured) : image.src; }
-      return;
-    }
+    if (!featured) return;
 
-    if (featured) {
-      $('.today-offer-badge', root).textContent = 'اختيار اليوم';
-      $('.today-offer-title', root).textContent = featured.nameAr || featured.nameEn || 'طبق اليوم';
-      $('.today-offer-message', root).textContent = featured.descriptionAr || featured.descriptionEn || 'اختيار مميز من مطبخ ARABISK.';
-      $('.today-offer-action', root).setAttribute('href', `/menu/${encodeURIComponent(String(featured.categoryId || ''))}/${encodeURIComponent(String(featured.id || ''))}`);
-      if (image) {
-        image.src = productImage(featured);
-        image.alt = featured.nameAr || featured.nameEn || 'طبق اليوم';
-      }
-    }
+    $('.today-offer-badge', root).textContent = featured.isNew ? 'عرض اليوم' : 'اختيار اليوم';
+    $('.today-offer-title', root).textContent = featured.nameAr || featured.nameEn || 'طبق اليوم';
+    $('.today-offer-note', root).textContent =
+      featured.descriptionAr || featured.descriptionEn || 'اختيار مميز من مطبخ ARABISK. التوفر والسعر الحاليان يظهران في صفحة الطبق.';
+    $('.today-offer-action', root).setAttribute(
+      'href',
+      `/menu/${encodeURIComponent(String(featured.categoryId || ''))}/${encodeURIComponent(String(featured.id || ''))}`
+    );
   }
-
   function renderExperience() {
     const root = $('#home-experience');
     if (!root) return;
@@ -179,23 +162,6 @@
     }).join('');
   }
 
-  function setupSectionMotion() {
-    const sections = $('.app-section, .booking-cta, .app-pass, .about-panel');
-    if (!('IntersectionObserver' in window) || !sections.length) return;
-
-    sections.forEach(section => section.classList.add('app-motion-ready'));
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('app-motion-visible');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { rootMargin:'0px 0px -12% 0px', threshold:0.01 });
-
-    sections.forEach(section => observer.observe(section));
-  }
-
   function handleLanguageUpdate() {
     syncCartCount();
     renderFeatured();
@@ -204,22 +170,17 @@
   async function init() {
     if (location.pathname.replace(/\/$/,'') !== '') return;
 
-    setupSectionMotion();
     syncCartCount();
 
-    const [products, experiences, memories, installOffer, todayOffer] = await Promise.all([
+    const [products, experiences, memories] = await Promise.all([
       getJson('/api/products', []),
       getJson('/api/experiences', []),
-      getJson('/api/memories?limit=4', []),
-      getJson('/api/promotions/install', null),
-      getJson('/api/promotions/today', null)
+      getJson('/api/memories?limit=4', [])
     ]);
 
     state.products = Array.isArray(products) ? products : [];
     state.experiences = Array.isArray(experiences) ? experiences : [];
     state.memories = Array.isArray(memories) ? memories : [];
-    state.installOffer = installOffer;
-    state.todayOffer = todayOffer;
 
     renderFeatured();
     renderOffer();
