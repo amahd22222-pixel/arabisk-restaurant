@@ -30,6 +30,39 @@ function jsonFromText(value) {
   }
 }
 
+function parseQuantity(text) {
+  const raw = clean(text, 300).toLowerCase();
+  const digit = raw.match(/(?:عدد|كمية|كم|×|x)?\s*(\d{1,2})\s*(?:من|حبة|قطع|قطعة)?/i);
+  if (digit && /\b(?:ضيف|أضف|اضف|حط|ضيفي|عايز|عاوز|عدد|كمية|كم)\b/i.test(raw)) {
+    const value = Number(digit[1]);
+    if (value >= 1 && value <= 20) return value;
+  }
+  const words = [
+    [/(عشرين)/i, 20], [/(تسعتاشر|تسعة عشر)/i, 19], [/(تمنتاشر|ثمانية عشر)/i, 18],
+    [/(سبعتاشر|سبعة عشر)/i, 17], [/(ستاشر|ستة عشر)/i, 16], [/(خمستاشر|خمسة عشر)/i, 15],
+    [/(اربعتاشر|أربعة عشر)/i, 14], [/(تلتاشر|ثلاثة عشر|ثلاثه عشر)/i, 13],
+    [/(اتناشر|اثنا عشر|اثني عشر)/i, 12], [/(حداشر|أحد عشر)/i, 11],
+    [/(عشرة|عشر)/i, 10], [/(تسعة|تسع)/i, 9], [/(ثمانية|تمانية|تمنية|ثماني)/i, 8],
+    [/(سبعة|سبع)/i, 7], [/(ستة|سته|ست)/i, 6], [/(خمسة|خمسه|خمس)/i, 5],
+    [/(أربعة|اربعه|اربعة|أربع)/i, 4], [/(ثلاثة|ثلاثه|تلاتة|ثلاث)/i, 3],
+    [/(اتنين|اثنين|اثنان|شخصين)/i, 2]
+  ];
+  for (const [pattern, value] of words) {
+    if (pattern.test(raw) && /\b(?:ضيف|أضف|اضف|حط|ضيفي|عايز|عاوز)\b/i.test(raw)) return value;
+  }
+  return 1;
+}
+
+function safeWorkflowSlots(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const allowed = ['date', 'time', 'guests', 'eventSlug', 'orderType', 'tableNumber'];
+  return Object.fromEntries(
+    allowed
+      .filter(key => source[key] !== undefined && source[key] !== null && source[key] !== '')
+      .map(key => [key, source[key]])
+  );
+}
+
 function normalizeIntent(value) {
   const allowed = new Set([
     'greeting', 'menu', 'recommend', 'cart', 'cart_summary', 'reservation',
@@ -96,7 +129,7 @@ function detectLocalPlan({ message, memory, products }) {
     if (product) {
       return {
         intent: 'cart_add',
-        toolCalls: [{ name: 'cart_add', args: { productId: product.id, quantity: 1 } }],
+        toolCalls: [{ name: 'cart_add', args: { productId: product.id, quantity: parseQuantity(text) } }],
         reply: 'حاضر. أضيف لك ' + (product.nameAr || product.nameEn) + ' إلى طلبك.'
       };
     }
@@ -443,7 +476,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       await rememberWorkflow(result.reply, 'reservation', {
         intent: 'reservation',
         step: result.status,
-        slots: result.pending || {}
+        slots: safeWorkflowSlots(result.pending)
       });
       return {
         stage: 'learn',
@@ -470,7 +503,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       await rememberWorkflow(result.reply, 'order', {
         intent: 'order',
         step: result.status,
-        slots: result.pending || {}
+        slots: safeWorkflowSlots(result.pending)
       });
       return {
         stage: 'learn',
@@ -542,7 +575,11 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       journey: {
         intent,
         step: verifiedActions.length ? 'action_executed' : 'conversation',
-        slots: plan.memory && typeof plan.memory === 'object' ? plan.memory : {}
+        slots: plan.memory && typeof plan.memory === 'object' ? {
+          budgetAed: plan.memory.budgetAed ?? '',
+          spicy: typeof plan.memory.spicy === 'boolean' ? plan.memory.spicy : '',
+          vegetarian: typeof plan.memory.vegetarian === 'boolean' ? plan.memory.vegetarian : ''
+        } : {}
       }
     };
     if (plan.memory?.budgetAed !== undefined || plan.memory?.spicy !== undefined || plan.memory?.vegetarian !== undefined) {

@@ -139,8 +139,7 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
       name: slots.name || current.name || memory.name || '',
       phone: slots.phone || current.phone || '',
       eventSlug: slots.eventSlug || current.eventSlug || '',
-      customerId: slots.customerId || current.customerId || '',
-      sessionId: current.sessionId || identity.sessionId || ''
+      customerId: slots.customerId || current.customerId || ''
     };
 
     const missing = reservationSummary(merged).missing;
@@ -187,8 +186,7 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
       name: current.name || memory.name || customer?.name || '',
       phone: current.phone || (customer?.phone ? normalizePhone(customer.phone) : ''),
       guests: guests || current.guests || null,
-      items: Array.isArray(cart) ? cart.slice(0, 20) : (current.items || []),
-      sessionId: current.sessionId || identity.sessionId || ''
+      items: Array.isArray(cart) ? cart.slice(0, 20) : (current.items || [])
     };
 
     const phoneMatch = raw.match(/(?:05\d{8}|9715\d{8}|\+\d[\d\s-]{7,16})/);

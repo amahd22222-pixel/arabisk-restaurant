@@ -8,6 +8,12 @@ const MAX_RECENT_PRODUCTS = 8;
 
 const clean = (value, max = 200) => String(value ?? '').trim().slice(0, max);
 
+function redactForMemory(value, max = 700) {
+  return clean(value, max)
+    .replace(/(?:05\d{8}|9715\d{8}|\+\d[\d\s-]{7,16})/g, '[رقم هاتف مخفي]')
+    .replace(/\b\d{13,19}\b/g, '[رقم مالي مخفي]');
+}
+
 function hash(value) {
   return crypto.createHash('sha256').update(String(value || '')).digest('hex');
 }
@@ -45,7 +51,7 @@ function normalizeMemory(raw, identity) {
           .slice(-MAX_TURNS)
           .map(turn => ({
             role: turn?.role === 'assistant' ? 'assistant' : 'user',
-            content: clean(turn?.content, 700)
+            content: redactForMemory(turn?.content, 700)
           }))
           .filter(turn => turn.content)
       : [],
@@ -156,8 +162,8 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     const preferences = { ...current.preferences, ...detectPreferences(user) };
     const recentTurns = [
       ...current.recentTurns,
-      ...(user ? [{ role: 'user', content: clean(user, 700) }] : []),
-      ...(assistant ? [{ role: 'assistant', content: clean(assistant, 700) }] : [])
+      ...(user ? [{ role: 'user', content: redactForMemory(user, 700) }] : []),
+      ...(assistant ? [{ role: 'assistant', content: redactForMemory(assistant, 700) }] : [])
     ].slice(-MAX_TURNS);
 
     return save(identity, {
