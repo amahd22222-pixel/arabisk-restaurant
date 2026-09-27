@@ -7,12 +7,49 @@
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap');
 :root{--ink:#111;--black:#0d0d0d;--gold:#b89455;--gold2:#d2b16d;--cream:#f6f1e7;--paper:#fffdf8;--muted:#817a6e;--line:#ded6c8}*{box-sizing:border-box}html,body{margin:0}body{background:var(--cream);color:var(--ink);font-family:Cairo,sans-serif}.nav{height:82px;background:var(--black);color:#fff;display:flex;align-items:center;padding:0 6vw;gap:42px;position:sticky;top:0;z-index:10}.brand{font-family:'Playfair Display',serif;font-size:26px;letter-spacing:3px;line-height:1}.brand span{display:block;font-family:Cairo;font-size:8px;letter-spacing:2px;color:var(--gold2);margin-top:7px}.nav nav{display:flex;gap:28px;margin:auto}.nav a{color:#eee;text-decoration:none;font-size:14px}.nav a:hover{color:var(--gold2)}.lang{display:inline-flex;align-items:center;justify-content:center;border:1px solid #6f624f;background:none;color:#fff;border-radius:50%;width:38px;height:38px;text-decoration:none}.menu-page{min-height:calc(100vh - 82px);padding:80px 8vw 110px;background:var(--paper)}.menu-page-head{text-align:center;max-width:760px;margin:0 auto}.eyebrow{color:var(--gold);font-size:11px;letter-spacing:4px;margin:0 0 18px}.menu-page-head h1{font-family:'Playfair Display',serif;font-size:clamp(44px,6vw,72px);font-weight:500;margin:0 0 12px}.menu-page-head p:last-of-type{color:var(--muted);margin:0;line-height:1.9}.category-search{max-width:520px;margin:34px auto 0}.category-search input{width:100%;height:48px;border:1px solid var(--line);border-radius:999px;background:#fff;padding:0 18px;font:inherit;outline:none}.category-search input:focus{border-color:var(--gold)}.category-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:48px}.category-card{position:relative;display:block;min-height:245px;overflow:hidden;border-radius:2px;background:#171717;color:#fff;text-align:right;text-decoration:none;box-shadow:0 12px 30px rgba(0,0,0,.08);transition:.18s}.category-card:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(0,0,0,.12)}.category-image,.category-image img,.category-shade{position:absolute;inset:0;width:100%;height:100%}.category-image img{object-fit:cover}.category-shade{background:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.72))}.category-copy{position:absolute;inset:auto 20px 18px;z-index:2}.cat-en{display:block;color:var(--gold2);font-size:10px;letter-spacing:2px}.category-copy h3{margin:5px 0 8px;font-size:24px;font-weight:600}.category-arrow{font-size:11px;color:#eee}.empty-menu{text-align:center;grid-column:1/-1;color:var(--muted);padding:35px}footer{background:#080808;color:#fff;padding:55px 8vw;display:flex;align-items:center;gap:15px}footer strong{font-family:'Playfair Display';font-size:28px}footer span{color:var(--gold2)}footer small{margin-right:auto;color:#777}@media(max-width:1100px){.category-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:800px){.nav{padding:0 20px}.nav nav{display:none}.menu-page{padding:60px 20px 80px}.category-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:520px){.category-grid{grid-template-columns:1fr}.category-card{min-height:220px}}
 </style>
+
+<style id="arabisk-page-shell">
+body.home-app{background:var(--app-bg)}
+body.home-app .app-content,body.home-app .wrap{max-width:1240px;margin-inline:auto}
+body.home-app .category-page-head,body.home-app .category-page-body{background:var(--app-bg)}
+body.home-app .category-page-head{padding-top:110px;border:0}
+body.home-app .category-page-body{padding-bottom:120px}
+body.home-app .back-btn,body.home-app .back{background:var(--app-paper);border-color:var(--app-line)}
+body.home-app .item{border-radius:20px;border-color:var(--app-line);background:var(--app-paper);box-shadow:0 12px 35px rgba(37,27,17,.06)}
+body.home-app .item-thumb{border-radius:14px;margin:-25px -25px 18px;height:210px}
+body.home-app .item:hover{transform:translateY(-4px);box-shadow:0 20px 42px rgba(37,27,17,.10)}
+body.home-app .grid{gap:14px}
+body.home-app .category-page-head h1{font-family:"Playfair Display",serif}
+body.home-app .wrap{padding-top:110px}
+body.home-app .visual,body.home-app .panel,body.home-app .detail-card,body.home-app .related-card{border-color:var(--app-line);box-shadow:0 16px 38px rgba(37,27,17,.06);border-radius:24px}
+body.home-app .hero-image{height:600px}
+body.home-app .panel{padding:32px}
+body.home-app .add{background:var(--app-dark);border-radius:999px}
+body.home-app .add:hover{background:var(--app-gold)}
+body.home-app footer,body.home-app footer{background:#0d0b09}
+@media(max-width:800px){
+ body.home-app .category-page-head{padding:96px 18px 28px}
+ body.home-app .wrap{padding:96px 16px 80px}
+ body.home-app .hero-image{height:390px}
+}
+</style>
 </head>
-<body>
-<header class="nav"><div class="brand">ARABISK<span>RESTAURANT & CAFE</span></div><nav><a href="/">الرئيسية</a><a href="/menu">استكشف المنيو</a><a href="/events">الفعاليات</a><a href="/reservation">حجز طاولة</a><a href="/#about">عن المطعم</a><a href="/#contact">تواصل معنا</a></nav><a class="lang" href="/menu">AR</a></header>
+<body class="home-app">
+<header class="app-header" aria-label="ARABISK">
+  <a class="brand" href="/" aria-label="ARABISK">ARABISK<span>RESTAURANT & CAFE</span></a>
+  <nav class="header-nav" id="app-header-nav" aria-label="التنقل الرئيسي">
+    <a href="/">الرئيسية</a><a href="/menu">المنيو</a><a href="/events">الفعاليات</a><a href="/reservation">الحجز</a><a href="/memories">الذكريات</a>
+  </nav>
+  <div class="app-header-actions">
+    <a class="app-cart-link" href="/cart" aria-label="فتح السلة">السلة <b id="app-cart-count" hidden>0</b></a>
+    <button class="app-menu-button" id="app-menu-button" type="button" aria-expanded="false" aria-controls="app-header-nav" aria-label="فتح القائمة">☰</button>
+    <button class="lang" id="lang-toggle" type="button" aria-label="تغيير اللغة">EN</button>
+  </div>
+</header>
 <main class="menu-page"><div class="menu-page-head"><p class="eyebrow">A TASTE OF ARABISK</p><h1>اكتشف مذاقاتنا</h1><p>اختر القسم الذي يناسب ذوقك واستكشف القائمة بهدوء. لا نعرض هنا إلا الأقسام؛ التفاصيل تبدأ داخل القسم الذي تختاره.</p><div class="category-search"><input id="category-search" type="search" placeholder="ابحث عن قسم…" autocomplete="off"></div></div><div id="category-view" class="category-grid"></div></main>
 <footer id="contact"><strong>ARABISK</strong><span>Restaurant & Cafe</span><small>© 2026 ARABISK. All rights reserved.</small></footer>
-<script src="/cart.js?v=20260920.8" defer></script>
+<script type="module" src="/cart.js"></script>
+<script type="module" src="/app.js"></script>
 <script>
 const images={Breakfast:'https://images.unsplash.com/photo-1570882716056-9b4919acaf51?auto=format&fit=crop&w=900&q=72',Manakish:'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=900&q=72','Cold Appetizers':'https://images.unsplash.com/photo-1577805947697-89e18249d767?auto=format&fit=crop&w=900&q=72','Hot Appetizers':'https://images.unsplash.com/photo-1623653387945-2fd25214f8fc?auto=format&fit=crop&w=900&q=72',Salads:'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=72',Soups:'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=72',Sandwich:'https://images.unsplash.com/photo-1521305916504-4a1121188589?auto=format&fit=crop&w=900&q=72',Pizza:'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=900&q=72',Pasta:'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=900&q=72','Main Course':'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=72','Mixed Grill':'https://images.unsplash.com/photo-1633857471930-bfa8d0be5e4a?auto=format&fit=crop&w=900&q=72','Mixed Taste':'https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=900&q=72',Desserts:'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=900&q=72','Cheese Cake':'https://images.unsplash.com/photo-1565958011703-44f9829ba187?auto=format&fit=crop&w=900&q=72','Arabisk Ice Cream':'https://images.unsplash.com/photo-1497032205916-ac775f0649ae?auto=format&fit=crop&w=900&q=72','Cocktail & Refreshing Drinks':'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=900&q=72','Energy Drinks':'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=900&q=72',Juices:'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=900&q=72',Mojitos:'https://images.unsplash.com/photo-1568926825354-c277ddca9bec?auto=format&fit=crop&w=900&q=72','Milk Shakes':'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=900&q=72',Tea:'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=900&q=72',Coffee:'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=72',Latte:'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=900&q=72','Soft Drinks':'https://images.unsplash.com/photo-1543253687-c4b3b9c1aa8d?auto=format&fit=crop&w=900&q=72','Drinking Water':'https://images.unsplash.com/photo-1560023907-5f339617ea30?auto=format&fit=crop&w=900&q=72',Sheesha:'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=900&q=72'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -24,4 +61,5 @@ function writeMenuCache(categories){try{sessionStorage.setItem(MENU_CACHE_KEY,JS
 function render(){const q=search.value.trim().toLowerCase();const visible=q?list.filter(c=>`${c.nameAr||''} ${c.nameEn||''}`.toLowerCase().includes(q)):list;root.innerHTML=visible.map(c=>{const image=c.imageUrl||images[c.nameEn]||'';return `<a class="category-card" href="/menu/${slug(c.id)}"><div class="category-image">${image?`<img src="${esc(image)}" alt="${esc(c.nameAr||c.nameEn)}" loading="lazy" onerror="this.style.display='none'">`:''}</div><span class="category-shade"></span><div class="category-copy"><span class="cat-en">${esc(c.nameEn)}</span><h3>${esc(c.nameAr||c.nameEn)}</h3><span class="category-arrow">اكتشف القسم ←</span></div></a>`}).join('')||'<p class="empty-menu">لا يوجد قسم يطابق البحث.</p>'}
 (async()=>{try{const cached=readMenuCache();if(cached){list=cached.filter(c=>c.active!==false).sort((a,b)=>(Number(a.sortOrder)||9999)-(Number(b.sortOrder)||9999));render();search.addEventListener('input',render);return}const r=await fetch('/api/categories',{cache:'no-store'});if(!r.ok)throw new Error();const categories=await r.json();writeMenuCache(categories);list=categories.filter(c=>c.active!==false).sort((a,b)=>(Number(a.sortOrder)||9999)-(Number(b.sortOrder)||9999));render();search.addEventListener('input',render)}catch(e){root.innerHTML='<p class="empty-menu">تعذر تحميل الأقسام حاليًا.</p>';console.error(e)}})();
 </script>
+<script type="module" src="/home-shell.js"></script>
 </body></html>
