@@ -1,5 +1,8 @@
 const $ = selector => document.querySelector(selector);
 
+const currentProfile = () => window.ARABISK_PROFILE?.getProfile?.() || null;
+const profileCustomerId = () => String(currentProfile()?.id || '').trim();
+
 const translations = {
   ar: {
     heroTitleA:'اكتشف مذاقًا', heroTitleB:'عربيًا بروح عصرية', heroKicker:'ARABISK · RESTAURANT & CAFE', heroLead:'طعام، ضيافة وتجارب تُصنع بهدوء. اختر ما يناسبك وابدأ زيارتك التالية إلى ARABISK.', quickMenu:'المنيو', quickMenuCopy:'تصفح القائمة والمنتجات', quickReserve:'الحجز', quickReserveCopy:'اختر الوقت وعدد الضيوف', quickCart:'السلة', quickCartCopy:'راجع طلبك وأكمل الشراء', quickEvents:'الفعاليات', quickEventsCopy:'اكتشف التجارب القادمة',
@@ -141,7 +144,8 @@ async function submitReservation(event) {
         time:$('#reservation-time')?.value || '',
         guests:Number($('#reservation-guests')?.value || 0),
         notes:$('#reservation-notes')?.value || '',
-        eventSlug:new URLSearchParams(location.search).get('event') || ''
+        eventSlug:new URLSearchParams(location.search).get('event') || '',
+        customerId:profileCustomerId()
       })
     });
 
@@ -172,3 +176,13 @@ $('#reservation-form')?.addEventListener('submit', submitReservation);
 setupHeaderMenu();
 showPage();
 window.addEventListener('pageshow', showPage);
+
+
+window.addEventListener('arabisk:profile-updated', () => {
+  const profile = currentProfile();
+  if (!profile) return;
+  const name = $('#reservation-name');
+  const phone = $('#reservation-phone');
+  if (name && !name.value) name.value = profile.name || '';
+  if (phone && !phone.value) phone.value = profile.phone || '';
+});
