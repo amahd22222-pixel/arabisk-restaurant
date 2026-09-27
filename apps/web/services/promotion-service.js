@@ -37,8 +37,8 @@ const createDefaultInstallOffer = () => ({
   minOrderValue: 0,
   maxDiscount: 50,
   claimValidityDays: 14,
-  title: 'خلّي ARABISK أقرب إليك'
-  message: 'ثبّت تطبيق ARABISK واستمتع بتجربة أسرع للمنيو، الحجز والسلة — ومع التثبيت تحصل على خصم 20%.'
+  title: 'خلّي ARABISK أقرب إليك',
+  message: 'ثبّت تطبيق ARABISK واستمتع بتجربة أسرع للمنيو، الحجز والسلة — ومع التثبيت تحصل على خصم 20%.' ,
   updatedAt: new Date().toISOString(),
   claims: []
 });
