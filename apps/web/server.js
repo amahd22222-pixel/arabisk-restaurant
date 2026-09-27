@@ -42,7 +42,7 @@ import { createRateLimiter } from './middleware/rate-limit.js';
 import { configureHttpSecurity } from './middleware/http-security.js';
 import { createNextPrefixedId } from './utils/id-generator.js';
 import { registerPageRoutes } from './routes/page-routes.js';
-import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS, shamsAiApiKey as SHAMS_AI_API_KEY, shamsAiModel as SHAMS_AI_MODEL, shamsAiEndpoint as SHAMS_AI_ENDPOINT, shamsTtsModel as SHAMS_TTS_MODEL, shamsTtsVoice as SHAMS_TTS_VOICE, shamsTtsEndpoint as SHAMS_TTS_ENDPOINT, shamsTtsInstructions as SHAMS_TTS_INSTRUCTIONS, vapidPublicKey as VAPID_PUBLIC_KEY, vapidPrivateKey as VAPID_PRIVATE_KEY, vapidSubject as VAPID_SUBJECT } from './config.js';
+import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS, shamsAiApiKey as SHAMS_AI_API_KEY, shamsAiModel as SHAMS_AI_MODEL, shamsAiEndpoint as SHAMS_AI_ENDPOINT, vapidPublicKey as VAPID_PUBLIC_KEY, vapidPrivateKey as VAPID_PRIVATE_KEY, vapidSubject as VAPID_SUBJECT } from './config.js';
 
 const app = express();
 const serverStartedAt = Date.now();
@@ -247,10 +247,6 @@ const shamsService = createShamsService({
   aiApiKey: SHAMS_AI_API_KEY,
   aiModel: SHAMS_AI_MODEL,
   aiEndpoint: SHAMS_AI_ENDPOINT,
-  ttsModel: SHAMS_TTS_MODEL,
-  ttsVoice: SHAMS_TTS_VOICE,
-  ttsEndpoint: SHAMS_TTS_ENDPOINT,
-  ttsInstructions: SHAMS_TTS_INSTRUCTIONS,
   getOrderService: () => orderService,
   getReservationService: () => reservationService
 });
