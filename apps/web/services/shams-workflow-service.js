@@ -91,7 +91,7 @@ function confirmation(text) {
   return null;
 }
 
-export function createShamsWorkflowService({ memoryService, orderService, reservationService }) {
+export function createShamsWorkflowService({ memoryService, getOrderService, getReservationService }) {
   async function savePending(identity, type, data) {
     return memoryService.save(identity, {
       pendingAction: {
@@ -117,12 +117,14 @@ export function createShamsWorkflowService({ memoryService, orderService, reserv
     return { missing };
   }
 
-  async function handleReservation({ identity, message, memory }) {
+  async function handleReservation({ identity, message, memory, customer }) {
     const current = pendingIsValid(memory.pendingAction) && memory.pendingAction.type === 'reservation'
       ? memory.pendingAction.data
       : {};
 
-    const slots = parseReservationSlots(message, memory);
+    const effectiveMemory = { ...memory, name: memory.name || customer?.name || '' };
+    const slots = parseReservationSlots(message, effectiveMemory);
+    if (!slots.phone && customer?.phone) slots.phone = normalizePhone(customer.phone);
     const merged = {
       ...current,
       ...Object.fromEntries(Object.entries(slots).filter(([, value]) => value !== '' && value !== null)),
@@ -150,7 +152,7 @@ export function createShamsWorkflowService({ memoryService, orderService, reserv
     };
   }
 
-  async function handleOrder({ identity, message, memory, cart }) {
+  async function handleOrder({ identity, message, memory, cart, customer }) {
     const current = pendingIsValid(memory.pendingAction) && memory.pendingAction.type === 'order'
       ? memory.pendingAction.data
       : {};
@@ -168,9 +170,10 @@ export function createShamsWorkflowService({ memoryService, orderService, reserv
     const merged = {
       ...current,
       orderType,
+      customerId: current.customerId || customer?.id || '',
       tableNumber: tableMatch?.[1] || current.tableNumber || '',
-      name: current.name || memory.name || '',
-      phone: current.phone || '',
+      name: current.name || memory.name || customer?.name || '',
+      phone: current.phone || (customer?.phone ? normalizePhone(customer.phone) : ''),
       guests: guests || current.guests || null,
       items: Array.isArray(cart) ? cart.slice(0, 20) : (current.items || [])
     };
@@ -221,6 +224,8 @@ export function createShamsWorkflowService({ memoryService, orderService, reserv
     const pending = memory.pendingAction;
 
     if (pending.type === 'reservation') {
+      const reservationService = getReservationService?.();
+      if (!reservationService) throw new Error('Reservation service unavailable.');
       const reservation = await reservationService.createReservation(pending.data);
       await clearPending(identity);
       return {
@@ -232,6 +237,8 @@ export function createShamsWorkflowService({ memoryService, orderService, reserv
     }
 
     if (pending.type === 'order') {
+      const orderService = getOrderService?.();
+      if (!orderService) throw new Error('Order service unavailable.');
       const order = await orderService.createOrder({
         orderType: pending.data.orderType,
         tableNumber: pending.data.tableNumber,
