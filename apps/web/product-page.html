@@ -34,6 +34,18 @@ body.home-app footer,body.home-app footer{background:#0d0b09}
  body.home-app .hero-image{height:390px}
 }
 </style>
+
+<style id="arabisk-mobile-product-cta">
+.mobile-product-cta{display:none}
+@media(max-width:800px){
+  body.home-app{padding-bottom:calc(144px + env(safe-area-inset-bottom))}
+  .mobile-product-cta{position:fixed;right:12px;left:12px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:9998;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;padding:9px;border:1px solid rgba(197,154,91,.2);border-radius:18px;background:rgba(20,16,12,.96);box-shadow:0 18px 44px rgba(0,0,0,.28);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+  .mobile-product-qty{min-width:72px;height:44px;display:flex;align-items:center;justify-content:space-around;border:1px solid rgba(255,255,255,.14);border-radius:13px;color:#fff;font-size:12px}
+  .mobile-product-qty button{width:30px;height:30px;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#fff;font-size:17px;cursor:pointer}
+  .mobile-product-add{min-width:0;height:44px;border:0;border-radius:13px;background:var(--app-gold,#c59a5b);color:#17130f;font:800 12px/1 Cairo,sans-serif;cursor:pointer}
+  .mobile-product-add:active{transform:scale(.99)}
+}
+</style>
 </head>
 <body class="home-app">
 <header class="app-header" aria-label="ARABISK">
@@ -52,5 +64,6 @@ body.home-app footer,body.home-app footer{background:#0d0b09}
 <script type="module" src="/cart.js"></script>
 <script type="module" src="/app.js"></script>
 <script src="/product-page.js?v=20260920.9" defer></script>
+<div id="mobile-product-cta" class="mobile-product-cta" aria-label="إضافة سريعة إلى السلة"><div class="mobile-product-qty"><button id="mobile-minus" type="button" aria-label="تقليل الكمية">−</button><strong id="mobile-quantity">1</strong><button id="mobile-plus" type="button" aria-label="زيادة الكمية">+</button></div><button id="mobile-add" class="mobile-product-add" type="button">أضف إلى السلة · AED 0</button></div>
 <script type="module" src="/home-shell.js"></script>
 </body></html>

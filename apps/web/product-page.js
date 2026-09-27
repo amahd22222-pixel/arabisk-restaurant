@@ -62,10 +62,18 @@
     }
   }
 
+  function syncMobileProductCta() {
+    const node = document.querySelector('#mobile-quantity');
+    const button = document.querySelector('#mobile-add');
+    if (node) node.textContent = String(quantity);
+    if (button) button.textContent = current ? `أضف إلى السلة · AED ${(Number(current.price || 0) * quantity).toFixed(0)}` : 'أضف إلى السلة · AED 0';
+  }
+
   function setQuantity(delta) {
     quantity = Math.max(1, Math.min(20, quantity + delta));
     const node = document.querySelector('#quantity');
     if (node) node.textContent = String(quantity);
+    syncMobileProductCta();
   }
 
   function renderBadges(product) {
