@@ -259,10 +259,12 @@ registerMediaRoutes(app, {
 registerPageRoutes(app, { rootDir: __dirname, distDir: dist });
 app.use(serviceErrorHandler);
 
-if (dbReady && String(process.env.ARABISK_MIGRATION || '').trim().toLowerCase() === 'legacy-json') {
+if (dbReady && storageReady) {
   const migration = await migrateLegacySnapshots();
   if (!migration.ok) throw new Error(`Legacy data migration failed: ${migration.reason}`);
-  console.log(`ARABISK legacy migration — migrated ${migration.migrated.length}, missing ${migration.missing.length}`);
+  if (!migration.alreadyMigrated) {
+    console.log(`ARABISK legacy migration — migrated ${migration.migrated.length}, missing ${migration.missing.length}`);
+  }
 }
 await stateStore.restore();
 await restoreCategories();
