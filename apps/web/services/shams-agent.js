@@ -5,6 +5,7 @@ const ALLOWED_PATHS = new Set(['/menu', '/reservation', '/cart', '/track-order',
 const ALLOWED_TOOLS = new Set([
   'search_menu',
   'recommend_menu',
+  'product_info',
   'cart_summary',
   'cart_add',
   'navigate',
@@ -106,6 +107,19 @@ function jsonFromText(value) {
     }
   }
 }
+
+function parseToolArgs(value) {
+  if (value && typeof value === 'object') return value;
+  const raw = clean(value, 1200);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 
 function parseQuantity(text) {
   const raw = clean(text, 300).toLowerCase();
@@ -441,6 +455,14 @@ function buildLocalReply(intent, data) {
     return 'وجدت لك ' + products.slice(0, 3).map(item => item.nameAr || item.nameEn).join('، ') + '.';
   }
 
+  if (intent === 'product_info') {
+    const product = data.product;
+    if (!product) return 'لم أجد تفاصيل الطبق في المنيو الحالية.';
+    const description = product.descriptionAr ? ' — ' + product.descriptionAr : '';
+    const price = Number.isFinite(Number(product.price)) ? ' بسعر ' + Number(product.price) + ' درهم' : '';
+    return (product.nameAr || product.nameEn) + price + description + '.';
+  }
+
   if (intent === 'cart_summary') {
     const items = data.cartSummary?.items || [];
     if (!items.length) return 'السلة فارغة حاليًا.';
@@ -493,6 +515,31 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     if (name === 'recommend_menu') {
       const smart = pickSmartLocalRecommendations(catalog, context.memory, context.message);
       return { recommendations: smart.candidates, preferences: smart.preferences };
+    }
+
+    if (name === 'product_info') {
+      const productId = clean(args?.productId, 60);
+      const query = clean(args?.query || context.message, 220);
+      const product = productId
+        ? catalog.find(item => String(item.id) === productId)
+        : findMatches(catalog, query)[0] || null;
+      if (!product) return { error: 'لم أجد هذا الطبق في المنيو الحالية.' };
+      return {
+        product: {
+          id: String(product.id),
+          nameAr: clean(product.nameAr, 160),
+          nameEn: clean(product.nameEn, 160),
+          descriptionAr: clean(product.descriptionAr, 320),
+          descriptionEn: clean(product.descriptionEn, 320),
+          price: Number(product.price || 0),
+          categorySlug: clean(product.categorySlug, 80),
+          tags: Array.isArray(product.tags) ? product.tags.slice(0, 10) : [],
+          dietary: Array.isArray(product.dietary) ? product.dietary.slice(0, 10) : [],
+          spiceLevel: Number(product.spiceLevel || 0),
+          chefChoice: Boolean(product.chefChoice),
+          isNew: Boolean(product.isNew)
+        }
+      };
     }
 
     if (name === 'cart_summary') {
@@ -583,19 +630,27 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
   async function modelPlan(context) {
     if (typeof requestModel !== 'function') return null;
 
-    const catalog = products().slice(0, 36).map(item => ({
+    const catalog = products().slice(0, 48).map(item => ({
       id: String(item.id),
       nameAr: clean(item.nameAr, 100),
+      nameEn: clean(item.nameEn, 100),
+      descriptionAr: clean(item.descriptionAr, 180),
+      descriptionEn: clean(item.descriptionEn, 180),
       price: Number(item.price || 0),
       categoryId: clean(item.categoryId, 80),
-      tags: Array.isArray(item.tags) ? item.tags.slice(0, 6) : []
+      categorySlug: clean(item.categorySlug, 80),
+      tags: Array.isArray(item.tags) ? item.tags.slice(0, 8) : [],
+      dietary: Array.isArray(item.dietary) ? item.dietary.slice(0, 6) : [],
+      spiceLevel: Number(item.spiceLevel || 0),
+      chefChoice: Boolean(item.chefChoice),
+      isNew: Boolean(item.isNew)
     }));
 
     const prompt = [
       'أنتِ شمس Agent لمطعم ARABISK. افهم العربية الفصحى واللهجات المصرية والشامية (السورية واللبنانية) والخليجية.',
       'افهم المعنى والسياق وليس التطابق الحرفي. تعامل مع أخطاء تحويل الصوت إلى نص والألفاظ العامية والاختصارات.',
-      'أخرجي JSON فقط بالشكل: {"intent":"...","reply":"...","toolCalls":[{"name":"...","args":{}}],"memory":{"budgetAed":null,"spicy":null,"vegetarian":null},"workflow":{"date":"","time":"","guests":null,"name":"","phone":"","eventSlug":"","orderType":"","tableNumber":""}}',
-      'الأدوات المسموحة: search_menu, recommend_menu, cart_summary, cart_add, navigate, get_order_status.',
+      'أخرجي JSON فقط بالشكل المحدد في استجابة النظام. عندما تستدعين أداة، اكتبي argsJson كسلسلة JSON صحيحة مثل "{\"productId\":\"P001\"}" ولا تخترعي أي معرّف من خارج الكتالوج.',
+      'الأدوات المسموحة: search_menu, recommend_menu, product_info, cart_summary, cart_add, navigate, get_order_status.',
       'المسارات المسموحة: /menu, /reservation, /cart, /track-order, /events, /memories.',
       'لا تدّعي نجاح إضافة أو تنفيذ أي شيء قبل نتيجة الأداة. التنفيذ النهائي للحجز أو الطلب يحتاج تأكيد العميل.',
       'لا تطلبي كلمات مرور أو OTP أو بيانات بطاقات، ولا تخترعي بيانات غير موجودة.',
@@ -618,8 +673,13 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       const plan = jsonFromText(result);
       if (!plan || !Array.isArray(plan.toolCalls)) return null;
       const intent = normalizeIntent(plan.intent);
-      const toolCalls = sanitizeToolCalls(plan.toolCalls);
-      const toolDependent = new Set(['menu', 'recommend', 'cart', 'cart_summary', 'cart_add', 'order_status']);
+      const toolCalls = sanitizeToolCalls(
+        plan.toolCalls.map(call => ({
+          name: call?.name,
+          args: parseToolArgs(call?.argsJson)
+        }))
+      );
+      const toolDependent = new Set(['menu', 'recommend', 'cart', 'cart_summary', 'cart_add', 'order_status', 'product_info', 'product_search']);
       if (toolDependent.has(intent) && !toolCalls.length) return null;
       return {
         intent,
