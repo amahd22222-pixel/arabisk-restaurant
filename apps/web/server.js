@@ -130,10 +130,10 @@ const smartMenu = createSmartMenuService({
 });
 const { smartSnapshot, withMediaUrls, invalidateSmartSnapshot } = smartMenu;
 
-const revenue=createRevenueService({readJsonWithStatus,writeJson,storageReady:dbReady,repository:stateRepository});
+const revenue=createRevenueService({readJsonWithStatus,writeJson,storageReady,repository:stateRepository});
 registerRevenueRoutes(app,{service:revenue,requireAdminApiKey,analyticsRateLimit,recoveryRateLimit});
 
-const promotionService=createPromotionService({readJsonWithStatus,writeJson,storageReady:dbReady});
+const promotionService=createPromotionService({readJsonWithStatus,writeJson,storageReady});
 registerPromotionRoutes(app,{service:promotionService,requireAdminApiKey,claimRateLimit:promotionClaimRateLimit,quoteRateLimit:promotionQuoteRateLimit});
 const categoryService=createCategoryService({categoriesRepository:stateRepository.categories,productsRepository:stateRepository.products,storageReady,dbReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid});
 registerCategoryRoutes(app,{service:categoryService,requireAdminApiKey});
