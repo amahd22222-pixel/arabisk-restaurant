@@ -12,9 +12,36 @@
     recognition: null,
     voiceEnabled: true,
     restartTimer: null,
+    silenceTimer: null,
+    transcriptBuffer: '',
     restartAttempts: 0,
-    sessionId: ''
+    sessionId: '',
+    dialect: 'gulf'
   };
+
+  const RECOGNITION_LANGUAGES = Object.freeze({
+    gulf: 'ar-AE',
+    egyptian: 'ar-EG',
+    syrian: 'ar-SY',
+    lebanese: 'ar-LB'
+  });
+
+  function detectDialectFromText(value) {
+    const raw = String(value || '')
+      .toLocaleLowerCase('ar')
+      .normalize('NFKD')
+      .replace(/[\u064B-\u065F\u0670]/g, '')
+      .replace(/ـ/g, '');
+
+    const lebanese = /(هيدا|هيدي|هال|شو|وين|كتير|فيك|فينا|عنجد|كرمال)/.test(raw);
+    const syrian = /(هلق|هلأ|لسا|شلون|شو|وين|كتير|بدي|مو|هيك|مشان)/.test(raw);
+    const egyptian = /(عايز|عاوز|نفسي|ايه|إيه|فين|دلوقتي|دلوقت|كده|ليه|مش|احنا|اوي|ازاي)/.test(raw);
+
+    if (lebanese && !egyptian) return 'lebanese';
+    if (syrian && !egyptian) return 'syrian';
+    if (egyptian) return 'egyptian';
+    return 'gulf';
+  }
 
   const rootId = 'arabisk-shams-root';
   const launcherId = 'shams-launcher';
@@ -198,6 +225,29 @@
         return;
       }
     }
+  }
+
+  function clearSilenceTimer() {
+    window.clearTimeout(state.silenceTimer);
+    state.silenceTimer = null;
+  }
+
+  async function flushTranscript() {
+    clearSilenceTimer();
+    const phrase = state.transcriptBuffer.trim();
+    state.transcriptBuffer = '';
+    if (!phrase || state.busy || state.speaking) return;
+    state.listening = false;
+    try { state.recognition?.stop(); } catch {}
+    await sendMessage(phrase);
+  }
+
+  function scheduleTranscriptFlush(delay = 1600) {
+    clearSilenceTimer();
+    if (!state.transcriptBuffer.trim()) return;
+    state.silenceTimer = window.setTimeout(() => {
+      void flushTranscript();
+    }, Math.max(900, Math.min(3000, Number(delay) || 1600)));
   }
 
   function scheduleListeningRestart(delay = 300) {
