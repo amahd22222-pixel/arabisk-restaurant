@@ -1,4 +1,14 @@
-export function registerCustomerRoutes(app, { service, requireAdminApiKey }) {
+export function registerCustomerRoutes(app, { service, requireAdminApiKey, profileRateLimit }) {
+  app.post('/api/customer-profile', profileRateLimit, async (req, res) => {
+    const token = String(req.headers['x-arabisk-profile-token'] || '').trim();
+    return res.status(201).json(await service.saveProfile(req.body || {}, token));
+  });
+
+  app.get('/api/customer-profile', profileRateLimit, (req, res) => {
+    const token = String(req.headers['x-arabisk-profile-token'] || '').trim();
+    return res.json(service.getProfile(token));
+  });
+
   app.get('/api/customers', requireAdminApiKey, (_req, res) => {
     return res.json(service.listCustomers());
   });
