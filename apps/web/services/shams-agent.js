@@ -20,6 +20,73 @@ const STAGES = Object.freeze([
 
 const clean = (value, max = 800) => String(value ?? '').trim().slice(0, max);
 
+const DIALECT_LOCALES = Object.freeze({
+  egyptian: 'ar-EG',
+  syrian: 'ar-SY',
+  lebanese: 'ar-LB',
+  gulf: 'ar-AE'
+});
+
+const ARABIC_STOPWORDS = new Set([
+  'من','في','على','الى','إلى','عن','مع','هذا','هذه','ده','دي','هيدا','هيدي','هال',
+  'اللي','الي','انا','أنا','انت','إنت','انتي','إنتي','هو','هي','هم','همه','و','يا','لو','بس'
+]);
+
+function normalizeArabic(value) {
+  return String(value ?? '')
+    .toLocaleLowerCase('ar')
+    .normalize('NFKD')
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/ـ/g, '')
+    .replace(/[إأآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ؤ/g, 'و')
+    .replace(/ئ/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/[.,،:؛!?؟(){}\[\]"']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeDialectText(value) {
+  const text = normalizeArabic(value);
+  return text
+    .replace(/(بدّي|بدي|حابب|حابه|حاب|نفسي|ممكن)/g, 'عايز')
+    .replace(/(شو|إيش|ايش)/g, 'ايه')
+    .replace(/(وين)/g, 'فين')
+    .replace(/(هلق|هلأ|هلاء)/g, 'دلوقتي')
+    .replace(/(هيدا|هيدي|هالطبق|هالشي|هال)/g, 'ده')
+    .replace(/(مو)/g, 'مش')
+    .replace(/(كتير)/g, 'اوي')
+    .replace(/(فيك|فيني|فينا)/g, 'تقدر')
+    .replace(/(مشان|كرمال)/g, 'عشان')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function detectDialect(value) {
+  const raw = normalizeArabic(value);
+  if (!raw) return 'gulf';
+  const lebanese = /(هيدا|هيدي|هال|شو|وين|كتير|فيك|فينا|عنجد|ليش|كرمال|مشان)/.test(raw);
+  const syrian = /(هلق|هلأ|لسا|شلون|شو|وين|كتير|بدي|مو|هيك|مشان)/.test(raw);
+  const egyptian = /(عايز|عاوز|نفسي|ايه|إيه|فين|دلوقتي|دلوقت|كده|ليه|مش|احنا|اوي|ازاي)/.test(raw);
+  if (lebanese && !egyptian) return 'lebanese';
+  if (syrian && !egyptian) return 'syrian';
+  if (egyptian) return 'egyptian';
+  return 'gulf';
+}
+
+function dialectLocale(value) {
+  return DIALECT_LOCALES[detectDialect(value)] || DIALECT_LOCALES.gulf;
+}
+
+function significantTokens(value) {
+  return normalizeDialectText(value)
+    .split(' ')
+    .map(token => token.trim())
+    .filter(token => token.length >= 2 && !ARABIC_STOPWORDS.has(token));
+}
+
 function jsonFromText(value) {
   const raw = clean(value, 5000);
   try {
