@@ -31,11 +31,13 @@ import { registerProductRoutes } from './routes/product-routes.js';
 import { createSmartMenuService } from './services/smart-menu-service.js';
 import { createReservationService } from './services/reservation-service.js';
 import { registerReservationRoutes } from './routes/reservation-routes.js';
+import { createPushSubscriptionService } from './services/push-subscription-service.js';
+import { registerPushRoutes } from './routes/push-routes.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { configureHttpSecurity } from './middleware/http-security.js';
 import { createNextPrefixedId } from './utils/id-generator.js';
 import { registerPageRoutes } from './routes/page-routes.js';
-import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS } from './config.js';
+import { allowedCorsOrigins, isProductionRuntime, maxVideoBytes as MAX_VIDEO_BYTES, menuVersion as MENU_VERSION, port, stateKey as STATE_KEY, videoTypes as VIDEO_TYPES, smartPopularWindowMs as SMART_POPULAR_WINDOW_MS, smartNewWindowMs as SMART_NEW_WINDOW_MS, vapidPublicKey as VAPID_PUBLIC_KEY } from './config.js';
 
 const app = express();
 const serverStartedAt = Date.now();
@@ -45,7 +47,7 @@ const dist = path.join(__dirname, 'dist');
 configureHttpSecurity(app, { allowedCorsOrigins, isProductionRuntime });
 app.use(express.json({limit:'1mb',strict:true}));
 
-const orders=[]; const customers=[]; const reservations=[];
+const orders=[]; const customers=[]; const reservations=[]; const pushSubscriptions=[];
 const reservationRateLimit=createRateLimiter({
   windowMs:10*60*1000,
   limit:8,
@@ -91,7 +93,12 @@ const memoryMutationRateLimit=createRateLimiter({
   limit:60,
   message:'Too many community actions. Please try again later.'
 });
-const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,promotionClaimRateLimit,promotionQuoteRateLimit,memoryUploadRateLimit,memoryMutationRateLimit];
+const pushSubscribeRateLimit=createRateLimiter({
+  windowMs:10*60*1000,
+  limit:20,
+  message:'Too many push subscription requests. Please try again later.'
+});
+const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,promotionClaimRateLimit,promotionQuoteRateLimit,memoryUploadRateLimit,memoryMutationRateLimit,pushSubscribeRateLimit];
 const rateLimitCleanupTimer=setInterval(() => {
   for (const limiter of rateLimiters) limiter.cleanup();
 }, 10*60*1000);
@@ -106,10 +113,11 @@ const stateStore = createStateStore({
   products,
   customers,
   orders,
-  reservations
+  reservations,
+  pushSubscriptions
 });
 const { persist: persistState, flush: flushPersistState } = stateStore;
-const stateRepository = createStateRepository({ products, categories, orders, customers, reservations, persist: persistState });
+const stateRepository = createStateRepository({ products, categories, orders, customers, reservations, pushSubscriptions, persist: persistState });
 
 const smartMenu = createSmartMenuService({
   repository: stateRepository,
@@ -218,6 +226,18 @@ registerReservationRoutes(app, {
   service: reservationService,
   requireAdminApiKey,
   reservationRateLimit
+});
+
+const pushSubscriptionService = createPushSubscriptionService({
+  repository: stateRepository,
+  cleanText,
+  crypto
+});
+
+registerPushRoutes(app, {
+  service: pushSubscriptionService,
+  pushSubscribeRateLimit,
+  vapidPublicKey: VAPID_PUBLIC_KEY
 });
 
 const mediaService = createMediaService({

@@ -1,11 +1,12 @@
 import { createCollectionRepository } from './collection-repository.js';
 
-export function createStateRepository({ products, categories, orders, customers, reservations, persist }) {
+export function createStateRepository({ products, categories, orders, customers, reservations, pushSubscriptions, persist }) {
   const productRepository = createCollectionRepository(products, { persist });
   const categoryRepository = createCollectionRepository(categories, { persist });
   const orderRepository = createCollectionRepository(orders, { persist });
   const customerRepository = createCollectionRepository(customers, { persist });
   const reservationRepository = createCollectionRepository(reservations, { persist });
+  const pushSubscriptionRepository = createCollectionRepository(pushSubscriptions, { persist });
 
   return {
     products: productRepository,
@@ -20,6 +21,7 @@ export function createStateRepository({ products, categories, orders, customers,
       findDuplicate: (phone, date, time) => reservationRepository.find(
         item => item.status !== 'cancelled' && item.phone === phone && item.date === date && item.time === time
       )
-    }
+    },
+    pushSubscriptions: pushSubscriptionRepository
   };
 }

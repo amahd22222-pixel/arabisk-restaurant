@@ -28,6 +28,7 @@ export const allowedCorsOrigins = configuredOrigins.size
     : new Set([...productionDefaults, ...developmentDefaults]);
 
 export const port = Number(process.env.PORT || 3000);
+export const vapidPublicKey = String(process.env.VAPID_PUBLIC_KEY || '').trim();
 export const stateKey = 'data/arabisk-state.json';
 export const menuVersion = 2;
 export const maxVideoBytes = 120 * 1024 * 1024;

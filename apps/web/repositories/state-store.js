@@ -1,4 +1,4 @@
-export function createStateStore({ readJsonWithStatus, writeJson, storageReady, stateKey, menuVersion, products, customers, orders, reservations }) {
+export function createStateStore({ readJsonWithStatus, writeJson, storageReady, stateKey, menuVersion, products, customers, orders, reservations, pushSubscriptions }) {
   const PERSIST_DEBOUNCE_MS = 250;
   let persistQueue = Promise.resolve(true);
   let persistTimer = null;
@@ -55,6 +55,9 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
     if (Array.isArray(saved.orders)) orders.splice(0, orders.length, ...saved.orders);
     if (Array.isArray(saved.customers)) customers.splice(0, customers.length, ...saved.customers);
     if (Array.isArray(saved.reservations)) reservations.splice(0, reservations.length, ...saved.reservations);
+    if (Array.isArray(saved.pushSubscriptions) && pushSubscriptions) {
+      pushSubscriptions.splice(0, pushSubscriptions.length, ...saved.pushSubscriptions);
+    }
     rebuildCustomerOrderStats();
     restoreStatus = 'restored';
     restoredAt = new Date().toISOString();
@@ -67,7 +70,7 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
     }
     if (!persistRequested) return persistQueue;
     persistRequested = false;
-    const snapshot = structuredClone({ menuVersion, products, orders, customers, reservations });
+    const snapshot = structuredClone({ menuVersion, products, orders, customers, reservations, pushSubscriptions: pushSubscriptions || [] });
     const waiters = persistWaiters;
     persistWaiters = [];
     persistQueue = persistQueue.catch(() => true).then(async () => {
