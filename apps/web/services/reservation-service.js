@@ -55,17 +55,16 @@ export function createReservationService({ repository, cleanText, nextReservatio
     }
 
     const createdAt = new Date().toISOString();
+    const profileCustomer = requestedCustomerId ? customers.findById(requestedCustomerId) : null;
+    const reservationCustomer = profileCustomer || customers.findByPhone(phone);
+    const reservationCustomerId = reservationCustomer?.id || crypto.randomUUID();
+    const beforeCustomer = reservationCustomer ? structuredClone(reservationCustomer) : null;
     const reservation = {
       id: nextReservationId(),
       name, phone, date, time, guests, notes, eventSlug, customerId: reservationCustomerId,
       status: 'pending',
       createdAt
     };
-
-    const profileCustomer = requestedCustomerId ? customers.findById(requestedCustomerId) : null;
-    const reservationCustomer = profileCustomer || customers.findByPhone(phone);
-    const reservationCustomerId = reservationCustomer?.id || crypto.randomUUID();
-    const beforeCustomer = reservationCustomer ? structuredClone(reservationCustomer) : null;
 
     if (reservationCustomer) {
       reservationCustomer.name = name;
