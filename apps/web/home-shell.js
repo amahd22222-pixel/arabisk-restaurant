@@ -197,6 +197,8 @@
   function handleLanguageUpdate() {
     syncCartCount();
     renderFeatured();
+    renderOffer();
+    renderExperience();
   }
 
   async function init() {
@@ -204,15 +206,19 @@
 
     syncCartCount();
 
-    const [products, experiences, memories] = await Promise.all([
+    const [products, experiences, memories, todayOffer, installOffer] = await Promise.all([
       getJson('/api/products', []),
       getJson('/api/experiences', []),
-      getJson('/api/memories?limit=4', [])
+      getJson('/api/memories?limit=4', []),
+      getJson('/api/promotions/today', null),
+      getJson('/api/promotions/install', null)
     ]);
 
     state.products = Array.isArray(products) ? products : [];
     state.experiences = Array.isArray(experiences) ? experiences : [];
     state.memories = Array.isArray(memories) ? memories : [];
+    state.todayOffer = todayOffer && typeof todayOffer === 'object' ? todayOffer : null;
+    state.installOffer = installOffer && typeof installOffer === 'object' ? installOffer : null;
 
     renderFeatured();
     renderOffer();
