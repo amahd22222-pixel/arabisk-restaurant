@@ -316,7 +316,7 @@ const shutdown=(signal)=>{
       await flushPersistState();
       await revenue.flushPersistRevenue();
       await promotionService.flushPersistence();
-      await notificationService.persistenceStatus();
+      await notificationService.flushPersistence();
       await closeDbPool();
     }catch(error){
       logServiceFailure(error, { service: 'web', operation: 'shutdown-flush' });
