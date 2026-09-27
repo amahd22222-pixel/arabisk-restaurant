@@ -156,31 +156,31 @@
       </div>
     </section>
 
-    <section id="reservation" class="reservation-panel" hidden>
-      <div class="reservation-head">
-        <p class="app-eyebrow">TABLE RESERVATION</p>
-        <h2 data-i18n="reservationTitle">احجز طاولتك</h2>
-        <p data-i18n="reservationLead">اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.</p>
-      </div>
-      <form id="reservation-form" class="reservation-form">
-        <label><span data-i18n="nameLabel">الاسم</span><input id="reservation-name" required autocomplete="name"></label>
-        <label><span data-i18n="phoneLabel">رقم الهاتف</span><input id="reservation-phone" type="tel" required autocomplete="tel"></label>
-        <label><span data-i18n="dateLabel">التاريخ</span><input id="reservation-date" type="date" required></label>
-        <label><span data-i18n="timeLabel">الوقت</span><input id="reservation-time" type="time" required></label>
-        <label><span data-i18n="guestsLabel">عدد الأشخاص</span><select id="reservation-guests" required><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select></label>
-        <label class="full"><span data-i18n="notesLabel">ملاحظات</span><textarea id="reservation-notes" rows="3" data-i18n-placeholder="notesPlaceholder" placeholder="مثلاً: طاولة داخلية، مناسبة خاصة…"></textarea></label>
-        <button class="gold-btn full" type="submit" data-i18n="confirmBooking">إرسال طلب الحجز</button>
-        <p id="reservation-event" class="reservation-event" hidden></p>
-        <p id="reservation-message" class="reservation-message" role="status" aria-live="polite"></p>
-      </form>
-    </section>
-
     <section id="about" class="about-panel">
       <p class="app-eyebrow">THE ARABISK EXPERIENCE</p>
       <h2 data-i18n="aboutTitle">أكثر من مجرد وجبة</h2>
       <p data-i18n="aboutLead">هوية عربية دافئة، تفاصيل فاخرة، وأطباق صُممت لتُشارك وتُستمتع بها.</p>
     </section>
   </div>
+  <section id="reservation" class="reservation-panel" hidden>
+    <div class="reservation-head">
+      <p class="app-eyebrow">TABLE RESERVATION</p>
+      <h2 data-i18n="reservationTitle">احجز طاولتك</h2>
+      <p data-i18n="reservationLead">اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.</p>
+    </div>
+    <form id="reservation-form" class="reservation-form">
+      <label><span data-i18n="nameLabel">الاسم</span><input id="reservation-name" required autocomplete="name"></label>
+      <label><span data-i18n="phoneLabel">رقم الهاتف</span><input id="reservation-phone" type="tel" required autocomplete="tel"></label>
+      <label><span data-i18n="dateLabel">التاريخ</span><input id="reservation-date" type="date" required></label>
+      <label><span data-i18n="timeLabel">الوقت</span><input id="reservation-time" type="time" required></label>
+      <label><span data-i18n="guestsLabel">عدد الأشخاص</span><select id="reservation-guests" required><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select></label>
+      <label class="full"><span data-i18n="notesLabel">ملاحظات</span><textarea id="reservation-notes" rows="3" data-i18n-placeholder="notesPlaceholder" placeholder="مثلاً: طاولة داخلية، مناسبة خاصة…"></textarea></label>
+      <button class="gold-btn full" type="submit" data-i18n="confirmBooking">إرسال طلب الحجز</button>
+      <p id="reservation-event" class="reservation-event" hidden></p>
+      <p id="reservation-message" class="reservation-message" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+
 </main>
 
 <footer id="contact">
