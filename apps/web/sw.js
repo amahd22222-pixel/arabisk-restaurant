@@ -5,6 +5,7 @@ const APP_SHELL = [
   '/style.css',
   '/app.js',
   '/pwa-ui.js',
+  '/pwa-register.js',
   '/mobile-nav.css',
   '/mobile-nav.js',
   '/studio-runtime.js',
