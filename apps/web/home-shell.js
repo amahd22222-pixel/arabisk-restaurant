@@ -54,7 +54,7 @@
     root.innerHTML = products.map(product => {
       const badge = product.chefChoice ? 'اختيار الشيف' : (product.isNew ? 'جديد' : 'مختار لـ ARABISK');
       return `
-        <a class="product-teaser" href="/menu/${encodeURIComponent(String(product.categoryId || ''))}/${encodeURIComponent(String(product.id || ''))}" data-product-id="${esc(product.id)}">
+        <a class="product-teaser" href="/menu/${encodeURIComponent(String(product.categoryId || ''))}/${encodeURIComponent(String(product.nameEn || product.nameAr || product.id || ''))}" data-product-id="${esc(product.id)}">
           <div class="product-teaser-media"><img src="${esc(productImage(product))}" alt="${esc(product.nameAr || product.nameEn)}" loading="lazy" decoding="async"></div>
           <div class="product-teaser-copy">
             <span class="product-teaser-badge">${esc(badge)}</span>
