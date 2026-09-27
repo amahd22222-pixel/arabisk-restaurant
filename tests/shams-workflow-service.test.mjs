@@ -30,7 +30,9 @@ test('reservation workflow accepts Arabic-Indic phone, guest count, and half-hou
 
   const result = await service.handleReservation({
     identity: { sessionId: 's1' },
-    message: 'احجزلي بكرة الساعة ٨ ونص مساءً لـ ٤ أشخاص، رقمي ٠٥٠٠٠٠٠٠٠٠'
+    message: 'احجزلي بكرة الساعة ٨ ونص مساءً لـ ٤ أشخاص، رقمي ٠٥٠٠٠٠٠٠٠٠',
+    memory: await memoryService.read({ sessionId: 's1' }),
+    customer: null
   });
 
   assert.equal(result.status, 'awaiting_confirmation');
@@ -50,7 +52,9 @@ test('reservation workflow carries slots across turns', async () => {
 
   const first = await service.handleReservation({
     identity: { sessionId: 's2' },
-    message: 'عايز احجز بكرة الساعة ٧ مساءً لشخصين'
+    message: 'عايز احجز بكرة الساعة ٧ مساءً لشخصين',
+    memory: await memoryService.read({ sessionId: 's2' }),
+    customer: null
   });
   assert.equal(first.status, 'needs_input');
   assert.equal(first.pending.guests, 2);
@@ -58,7 +62,9 @@ test('reservation workflow carries slots across turns', async () => {
 
   const second = await service.handleReservation({
     identity: { sessionId: 's2' },
-    message: 'رقمي ٠٥٠٠٠٠٠٠٠٠'
+    message: 'رقمي ٠٥٠٠٠٠٠٠٠٠',
+    memory: await memoryService.read({ sessionId: 's2' }),
+    customer: null
   });
   assert.equal(second.status, 'needs_input');
   assert.equal(second.pending.phone, '+971500000000');
