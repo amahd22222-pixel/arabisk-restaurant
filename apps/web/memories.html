@@ -468,6 +468,7 @@ async function loadFeed(reset=true){
 }
 function clearMedia(){
   if(selectedObjectUrl){URL.revokeObjectURL(selectedObjectUrl);selectedObjectUrl=''}
+  selectedMediaFile=null;
   $('#imageFile').value='';$('#videoFile').value='';
   $('#preview').classList.remove('show');$('#previewImage').hidden=true;$('#previewVideo').hidden=true;
   $('#previewImage').removeAttribute('src');$('#previewVideo').removeAttribute('src');$('#previewVideo').load();
@@ -482,7 +483,7 @@ function showPreview(file){
   if(file.type.startsWith('image/')){$('#previewImage').src=selectedObjectUrl;$('#previewImage').hidden=false}
   else{$('#previewVideo').src=selectedObjectUrl;$('#previewVideo').hidden=false}
 }
-function selectedFile(){return $('#imageFile').files[0]||$('#videoFile').files[0]||null}
+function selectedFile(){return selectedMediaFile||$('#imageFile').files[0]||$('#videoFile').files[0]||null}
 function validateClientFile(file){
   if(!file)return '';
   if(file.type.startsWith('image/')&&file.size>15*1024*1024)return 'حجم الصورة يجب ألا يتجاوز 15MB.';
@@ -555,15 +556,15 @@ $('#publish').addEventListener('click',()=>void publish());
 $('#text').addEventListener('input',updateTextCount);
 $('#name').addEventListener('input',saveName);
 $('#previewRemove').addEventListener('click',clearMedia);
-$('#imageFile').addEventListener('change',()=>{$('#videoFile').value='';showPreview($('#imageFile').files[0]||null)});
-$('#videoFile').addEventListener('change',()=>{$('#imageFile').value='';showPreview($('#videoFile').files[0]||null)});
+$('#imageFile').addEventListener('change',()=>{selectedMediaFile=$('#imageFile').files[0]||null;$('#videoFile').value='';showPreview(selectedMediaFile)});
+$('#videoFile').addEventListener('change',()=>{selectedMediaFile=$('#videoFile').files[0]||null;$('#imageFile').value='';showPreview(selectedMediaFile)});
 $('#mediaDrop').addEventListener('dragover',e=>{e.preventDefault();$('#mediaDrop').classList.add('drag')});
 $('#mediaDrop').addEventListener('dragleave',()=>$('#mediaDrop').classList.remove('drag'));
 $('#mediaDrop').addEventListener('drop',e=>{
   e.preventDefault();$('#mediaDrop').classList.remove('drag');
   const file=e.dataTransfer.files[0];if(!file)return;
-  if(file.type.startsWith('image/')){$('#imageFile').files=e.dataTransfer.files;$('#videoFile').value=''}
-  else if(file.type.startsWith('video/')){$('#videoFile').files=e.dataTransfer.files;$('#imageFile').value=''}
+  if(file.type.startsWith('image/')){$('#imageFile').files=e.dataTransfer.files;$('#videoFile').value='';selectedMediaFile=file}
+  else if(file.type.startsWith('video/')){$('#videoFile').files=e.dataTransfer.files;$('#imageFile').value='';selectedMediaFile=file}
   else{setMessage('اختر صورة أو فيديو صالحًا.','error');return}
   showPreview(file);
 });
