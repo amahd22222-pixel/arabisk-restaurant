@@ -94,11 +94,17 @@
     const offer = state.installOffer;
     const featured = state.products.find(item => item && item.available !== false && (item.chefChoice || item.isNew)) || state.products.find(item => item?.available !== false);
 
+    const image = $('.today-offer-media img', root);
+
     if (offer?.enabled) {
-      $('.today-offer-badge', root).textContent = `خصم ${Math.round(Number(offer.discountValue) || 0)}% للتطبيق`;
-      $('.today-offer-title', root).textContent = 'خصم خاص لعملاء ARABISK';
+      $('.today-offer-badge', root).textContent = `عرض التطبيق · خصم ${Math.round(Number(offer.discountValue) || 0)}%`;
+      $('.today-offer-title', root).textContent = offer.title || 'خصم خاص لعملاء ARABISK';
       $('.today-offer-message', root).textContent = offer.message || 'ثبّت ARABISK على شاشتك الرئيسية واحصل على كودك الشخصي.';
       $('.today-offer-action', root).setAttribute('href', '/cart');
+      if (image) {
+        image.alt = offer.title || 'عرض التطبيق';
+        image.src = featured ? productImage(featured) : image.src;
+      }
       return;
     }
 
@@ -107,6 +113,10 @@
       $('.today-offer-title', root).textContent = featured.nameAr || featured.nameEn || 'طبق اليوم';
       $('.today-offer-message', root).textContent = featured.descriptionAr || featured.descriptionEn || 'اختيار مميز من مطبخ ARABISK.';
       $('.today-offer-action', root).setAttribute('href', `/menu/${encodeURIComponent(String(featured.categoryId || ''))}/${encodeURIComponent(String(featured.id || ''))}`);
+      if (image) {
+        image.src = productImage(featured);
+        image.alt = featured.nameAr || featured.nameEn || 'طبق اليوم';
+      }
     }
   }
 
@@ -160,6 +170,23 @@
     }).join('');
   }
 
+  function setupSectionMotion() {
+    const sections = $('.app-section, .booking-cta, .app-pass, .about-panel');
+    if (!('IntersectionObserver' in window) || !sections.length) return;
+
+    sections.forEach(section => section.classList.add('app-motion-ready'));
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('app-motion-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin:'0px 0px -12% 0px', threshold:0.01 });
+
+    sections.forEach(section => observer.observe(section));
+  }
+
   function setupMobileMenu() {
     const button = $('#app-menu-button');
     const nav = $('#app-header-nav');
@@ -185,6 +212,7 @@
     if (location.pathname.replace(/\/$/,'') !== '') return;
 
     setupMobileMenu();
+    setupSectionMotion();
     syncCartCount();
 
     const [products, experiences, memories, installOffer] = await Promise.all([
