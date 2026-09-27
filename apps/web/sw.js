@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v5';
+const CACHE_VERSION = 'arabisk-pwa-v6';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -14,7 +14,11 @@ const APP_SHELL = [
   '/manifest.json',
   '/offline.html',
   '/icons/icon.svg',
-  '/icons/maskable.svg'
+  '/icons/maskable.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/maskable-512.png',
+  '/icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (event) => {
