@@ -19,7 +19,7 @@ function mountPwaBottomNav(){
   nav.className='pwa-bottom-nav';
   nav.setAttribute('aria-label','التنقل السريع');
   const path=window.location.pathname.replace(/\/$/,'')||'/';
-  nav.innerHTML=NAV_ITEMS.map(item=>`<a href="${item.href}" aria-current="${item.match(path)?'page':'false'}"><span class="nav-icon" aria-hidden="true">${item.icon}<b class="nav-count" id="${item.href==='/cart'?'pwa-nav-cart-count':''}" hidden>0</b></span><span class="nav-label">${item.label}</span></a>`).join('');
+  nav.innerHTML=NAV_ITEMS.map(item=>{const current=item.match(path);return `<a href="${item.href}"${current?' aria-current="page"':''}><span class="nav-icon" aria-hidden="true">${item.icon}${item.href==='/cart'?'<b class="nav-count" id="pwa-nav-cart-count" hidden>0</b>':''}</span><span class="nav-label">${item.label}</span></a>`}).join('');
   document.body.appendChild(nav);
   syncPwaCartCount();
 }
