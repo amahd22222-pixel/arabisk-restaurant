@@ -4,7 +4,7 @@ import { createCollectionRepository } from '../repositories/collection-repositor
 import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
 import { logServiceFailure } from '../utils/service-error.js';
 
-const EXPERIENCE_STATE_KEY='data/arabisk-experiences.json';
+const EXPERIENCE_STATE_KEY='data/arabisk-experiences-v2.json';
 const IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp','image/avif']);
 const MAX_IMAGE_BYTES=15*1024*1024;
 const MAX_VIDEO_BYTES=120*1024*1024;
