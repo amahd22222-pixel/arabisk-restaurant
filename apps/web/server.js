@@ -295,6 +295,7 @@ await memoryService.restore();
 await revenue.restoreRevenue();
 await promotionService.restore();
 await notificationService.restore();
+console.log(`ARABISK notification bootstrap — configured=${notificationService.getStatus().configured} installedSubscribers=${notificationService.getStatus().subscribers}`);
 if(dbReady){
   persistState();
   await flushPersistState();
