@@ -123,7 +123,7 @@ function encryptPayload(subscription, payload) {
   const ecdh = createECDH('prime256v1');
   ecdh.generateKeys();
   const senderPublicKey = ecdh.getPublicKey(null, 'uncompressed');
-  const sharedSecret = ecdh.computeSecret(createReceiverPublicKey(receiverPublicKey));
+  const sharedSecret = ecdh.computeSecret(receiverPublicKey);
 
   const authInfo = Buffer.concat([
     Buffer.from('WebPush: info\0'),
