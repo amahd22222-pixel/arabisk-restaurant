@@ -245,6 +245,7 @@ export function createNotificationService({
       lastPersistOk
     }),
     list: () => publicList(),
-    persistenceStatus: () => ({ lastPersistAt, lastPersistOk })
+    persistenceStatus: () => ({ lastPersistAt, lastPersistOk }),
+    flushPersistence: persist
   };
 }
