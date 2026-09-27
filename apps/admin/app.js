@@ -167,6 +167,30 @@ async function load(){
   if(location.hash.replace('#','')==='customers')void loadCustomerSegments().catch(error=>{if($('#error'))$('#error').textContent=error.message;});
 }
 function loadSettings(){$('#api-base').value=apiBase();$('#site-name').value=localStorage.getItem('ARABISK_SITE_NAME')||'ARABISK';$('#site-description').value=localStorage.getItem('ARABISK_SITE_DESCRIPTION')||'مطعم وكافيه بطابع عربي عصري.';}
+function renderTodayOfferProductOptions(selectedId=''){
+  const select=$('#today-offer-product');
+  if(!select)return;
+  const items=(products||[]).filter(item=>item?.available!==false).slice().sort((a,b)=>String(a.nameAr||a.nameEn||'').localeCompare(String(b.nameAr||b.nameEn||''),'ar'));
+  select.innerHTML='<option value="">بدون صنف محدد</option>'+items.map(item=>'<option value="'+escapeHtml(String(item.id))+'">'+escapeHtml(String(item.nameAr||item.nameEn||item.id))+' — AED '+Number(item.price||0).toFixed(2)+'</option>').join('');
+  select.value=selectedId||'';
+}
+async function loadTodayOfferSettings(){
+  const status=$('#today-offer-status');
+  try{
+    const data=await request('/api/admin/promotions/today');
+    renderTodayOfferProductOptions(data.productId||'');
+    if($('#today-offer-enabled'))$('#today-offer-enabled').checked=data.configuredEnabled===true;
+    if($('#today-offer-product'))$('#today-offer-product').value=data.productId||'';
+    if($('#today-offer-badge'))$('#today-offer-badge').value=data.badge||'عرض اليوم';
+    if($('#today-offer-start'))$('#today-offer-start').value=data.startsAt||'';
+    if($('#today-offer-end'))$('#today-offer-end').value=data.endsAt||'';
+    if($('#today-offer-title'))$('#today-offer-title').value=data.title||'اختيار اليوم من ARABISK';
+    if($('#today-offer-message'))$('#today-offer-message').value=data.message||'اختيار مميز من القائمة متاح اليوم.';
+    if($('#today-offer-cta'))$('#today-offer-cta').value=data.ctaLabel||'اطلب الآن';
+    if(status)status.textContent=data.enabled?'العرض ظاهر للزوار الآن':'العرض غير مفعل';
+  }catch(error){if(status)status.textContent='تعذر تحميل إعدادات عرض اليوم';}
+}
+
 async function loadPromotionSettings(){
   const stats=$('#pwa-offer-stats');
   try{
@@ -225,7 +249,29 @@ $('#pwa-offer-form')?.addEventListener('submit',async event=>{
   }catch(error){if(status)status.textContent=error.message||'تعذر حفظ العرض.';}
   finally{if(button)button.disabled=false;}
 });
-syncSidebarState();void loadPromotionSettings();$('#sidebar-toggle')?.addEventListener('click',()=>{const collapsed=!document.body.classList.contains('sidebar-collapsed');localStorage.setItem('ARABISK_SIDEBAR_COLLAPSED',collapsed?'1':'0');syncSidebarState();});loadSettings();showSection(location.hash.replace('#','')||'dashboard');void load().catch(error=>{console.error('Dashboard initialization failed:',error);const connection=$('#connection');if(connection){connection.textContent='تعذر الاتصال';connection.className='disconnected';}const banner=$('#error');if(banner)banner.textContent=error?.message||'تعذر تحميل لوحة التحكم.';});
+$('#today-offer-form')?.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const button=$('#today-offer-save'),status=$('#today-offer-message-status');
+  if(button)button.disabled=true;
+  if(status)status.textContent='جارٍ حفظ عرض اليوم…';
+  try{
+    const data=await request('/api/admin/promotions/today',{method:'PATCH',body:JSON.stringify({
+      enabled:$('#today-offer-enabled')?.checked===true,
+      productId:$('#today-offer-product')?.value||'',
+      badge:$('#today-offer-badge')?.value||'عرض اليوم',
+      startsAt:$('#today-offer-start')?.value||'',
+      endsAt:$('#today-offer-end')?.value||'',
+      title:$('#today-offer-title')?.value||'اختيار اليوم من ARABISK',
+      message:$('#today-offer-message')?.value||'اختيار مميز من القائمة متاح اليوم.',
+      ctaLabel:$('#today-offer-cta')?.value||'اطلب الآن'
+    })});
+    if(status)status.textContent=data.enabled?'تم حفظ عرض اليوم وتفعيله.':'تم حفظ عرض اليوم.';
+    if($('#today-offer-status'))$('#today-offer-status').textContent=data.enabled?'العرض ظاهر للزوار الآن':'العرض غير مفعل';
+    setTimeout(()=>{if(status)status.textContent='';},2500);
+  }catch(error){if(status)status.textContent=error.message||'تعذر حفظ عرض اليوم.';}
+  finally{if(button)button.disabled=false;}
+});
+syncSidebarState();void loadPromotionSettings();void loadTodayOfferSettings();$('#sidebar-toggle')?.addEventListener('click',()=>{const collapsed=!document.body.classList.contains('sidebar-collapsed');localStorage.setItem('ARABISK_SIDEBAR_COLLAPSED',collapsed?'1':'0');syncSidebarState();});loadSettings();showSection(location.hash.replace('#','')||'dashboard');void load().catch(error=>{console.error('Dashboard initialization failed:',error);const connection=$('#connection');if(connection){connection.textContent='تعذر الاتصال';connection.className='disconnected';}const banner=$('#error');if(banner)banner.textContent=error?.message||'تعذر تحميل لوحة التحكم.';});
 
 async function openCustomer360(customerId){
   const modal=$('#customer360-modal');
