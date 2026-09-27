@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { logServiceFailure } from './utils/service-error.js';
+import { readJsonWithStatus as readLegacyJsonWithStatus, storageReady } from './storage.js';
 
 const { Pool } = pg;
 
@@ -18,6 +19,18 @@ export const dbReady = Boolean(connectionString);
 
 let pool = null;
 let schemaPromise = null;
+
+const LEGACY_MIGRATION_MARKER = '__system__/legacy-json-to-db/v1';
+const LEGACY_SNAPSHOT_KEYS = Object.freeze([
+  'data/arabisk-state.json',
+  'data/arabisk-categories.json',
+  'data/arabisk-experiences.json',
+  'data/arabisk-studio.json',
+  'data/arabisk-memories.json',
+  'data/arabisk-revenue-v1.json',
+  'data/arabisk-promotions-v1.json',
+  'data/arabisk-product-details.json'
+]);
 
 function getPool() {
   if (!dbReady) return null;
@@ -53,6 +66,56 @@ async function ensureSchema() {
     });
   }
   await schemaPromise;
+}
+
+
+export async function migrateLegacySnapshots() {
+  if (!dbReady) return { ok: false, skipped: true, reason: 'database_not_configured' };
+  if (!storageReady) return { ok: false, skipped: true, reason: 'legacy_storage_not_configured' };
+
+  try {
+    await ensureSchema();
+
+    const marker = await getPool().query(
+      'SELECT value FROM app_state WHERE key = $1',
+      [LEGACY_MIGRATION_MARKER]
+    );
+    if (marker.rows.length > 0) {
+      return { ok: true, alreadyMigrated: true, migrated: [], missing: [] };
+    }
+
+    const migrated = [];
+    const missing = [];
+
+    for (const key of LEGACY_SNAPSHOT_KEYS) {
+      const legacy = await readLegacyJsonWithStatus(key);
+      if (!legacy.ok) {
+        throw new Error(`Legacy snapshot read failed for ${key}: ${legacy.reason}`);
+      }
+      if (!legacy.found) {
+        missing.push(key);
+        continue;
+      }
+
+      const written = await writeJson(key, legacy.value);
+      if (!written) {
+        throw new Error(`Legacy snapshot migration write failed for ${key}`);
+      }
+      migrated.push(key);
+    }
+
+    await writeJson(LEGACY_MIGRATION_MARKER, {
+      version: 1,
+      completedAt: new Date().toISOString(),
+      migrated,
+      missing
+    });
+
+    return { ok: true, alreadyMigrated: false, migrated, missing };
+  } catch (error) {
+    logServiceFailure(error, { service: 'db', operation: 'legacy-migration' });
+    return { ok: false, skipped: false, reason: error.message };
+  }
 }
 
 export async function readJsonWithStatus(key) {
