@@ -3,7 +3,7 @@ import { createShamsWorkflowService } from './shams-workflow-service.js';
 import { createShamsMemoryService } from './shams-memory-service.js';
 
 const MAX_MESSAGE = 1200;
-const DEFAULT_MODEL = 'gpt-5.6-sol';
+const DEFAULT_MODEL = 'gpt-6-sol';
 const DEFAULT_ENDPOINT = 'https://api.openai.com/v1/responses';
 
 class ShamsServiceError extends Error {
@@ -131,7 +131,7 @@ export function createShamsService({
         store: false,
         instructions: prompt,
         input: 'حلّل طلب العميل بمنتهى الدقة. التزم بالمخطط المحدد وأخرج JSON صالح فقط. لا تعتمد على أي مصدر خارج سياق المطعم المرسل لك.',
-        reasoning: { effort: model === 'gpt-5.6-sol' ? 'high' : 'medium' },
+        reasoning: { effort: model === 'gpt-6-sol' ? 'high' : 'medium' },
         max_output_tokens: 1800,
         text: {
           format: {
@@ -170,7 +170,7 @@ export function createShamsService({
     provider: apiKey ? 'openai-compatible' : 'local-agent',
     model: apiKey ? model : 'local',
     brain: apiKey ? 'llm' : 'local-fallback',
-    reasoning: apiKey ? (model === 'gpt-5.6-sol' ? 'high' : 'medium') : 'rule-based',
+    reasoning: apiKey ? (model === 'gpt-6-sol' ? 'high' : 'medium') : 'rule-based',
     agent: true,
     workflows: ['reservation', 'order'],
     confirmations: true,
