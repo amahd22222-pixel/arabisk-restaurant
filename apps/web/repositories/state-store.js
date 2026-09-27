@@ -7,7 +7,8 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
   let restoreStatus = 'not_started';
   let restoredAt = null;
   let lastPersistAt = null;
-  let lastPersistOk = dbReady ? null : true;
+  const persistenceReady = dbReady || storageReady;
+  let lastPersistOk = persistenceReady ? null : true;
 
   const settlePersistWaiters = (result, waiters) => {
     for (const resolve of waiters) resolve(result);
@@ -31,8 +32,8 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
   };
 
   async function restore() {
-    restoreStatus = dbReady ? 'reading' : 'storage_not_configured';
-    if (!dbReady) {
+    restoreStatus = persistenceReady ? 'reading' : 'storage_not_configured';
+    if (!persistenceReady) {
       restoredAt = new Date().toISOString();
       return;
     }
@@ -90,7 +91,7 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
   };
 
   const persist = () => {
-    if (!dbReady) return Promise.resolve(true);
+    if (!persistenceReady) return Promise.resolve(true);
     if (restoreStatus === 'restore_failed') return Promise.resolve(false);
 
     persistRequested = true;
