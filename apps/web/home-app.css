@@ -28,3 +28,23 @@
 @media(max-width:900px){.app-header{grid-template-columns:auto auto;justify-content:space-between}.header-nav{display:none}.app-menu-button{display:inline-flex;align-items:center;justify-content:center}.app-quick-actions{grid-template-columns:repeat(2,1fr)}.today-offer{grid-template-columns:1fr}.today-offer-media{order:-1;min-height:225px}.experience-card{grid-template-columns:1fr}.experience-media{min-height:230px}.memories-strip{grid-template-columns:repeat(2,1fr)}.booking-cta{grid-template-columns:1fr}.booking-cta-action{justify-content:flex-start}}
 @media(max-width:620px){.app-header{min-height:74px;padding:13px 15px}.app-header .brand{font-size:20px}.app-header .brand span{font-size:6px}.app-cart-link{min-height:36px;padding:0 10px}.app-hero{min-height:700px}.app-hero-copy{padding:108px 18px 92px}.app-hero h1{font-size:50px}.app-hero-lead{font-size:13px}.app-hero-meta{margin-top:26px}.app-quick-actions{margin-top:-42px;gap:9px}.app-quick-action{min-height:102px;padding:13px;border-radius:17px}.app-section{padding-top:55px}.app-section-head{align-items:start}.app-section-head h2{font-size:34px}.app-horizontal{grid-auto-columns:minmax(230px,84vw)}.product-teaser{min-height:295px}.today-offer{border-radius:22px}.today-offer-media{min-height:205px}.today-offer-copy{padding:26px 20px}.experience-copy{padding:23px}.experience-copy h3{font-size:29px}.booking-cta{padding:24px 20px;border-radius:22px}.booking-cta h3{font-size:30px}.app-pass{grid-template-columns:auto 1fr;padding:18px}.app-pass-action{grid-column:1/-1;width:100%;text-align:center}.reservation-panel{padding:102px 16px 90px}.reservation-form{grid-template-columns:1fr;padding:18px;border-radius:22px}.reservation-form .full{grid-column:auto}.about-panel{margin-top:55px;padding:52px 14px}#contact{flex-wrap:wrap;padding-bottom:90px}#contact small{width:100%;margin:8px 0 0}.app-menu-button{width:40px;height:40px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+
+/* ARABISK Digital Restaurant Experience — mobile app shell */
+.arabisk-mobile-nav{display:none}
+@media(max-width:800px){
+  .arabisk-mobile-nav{position:fixed;right:10px;left:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:10000;display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:6px;border:1px solid rgba(230,201,145,.2);border-radius:22px;background:rgba(20,16,12,.94);box-shadow:0 20px 55px rgba(0,0,0,.32);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  .arabisk-mobile-nav a{position:relative;display:flex;min-width:0;min-height:54px;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:16px;color:#9e9588;text-decoration:none;font:700 8px/1.2 Cairo,sans-serif;transition:background .18s ease,color .18s ease,transform .18s ease}
+  .arabisk-mobile-nav a:active{transform:scale(.95)}
+  .arabisk-mobile-nav a[aria-current="page"]{background:rgba(197,154,91,.15);color:#fff}
+  .arabisk-mobile-nav a[aria-current="page"]::before{content:"";position:absolute;top:4px;width:17px;height:2px;border-radius:9px;background:var(--app-gold)}
+  .arabisk-mobile-nav .nav-icon{font-family:"Segoe UI Symbol",Arial,sans-serif;font-size:19px;line-height:1}
+  .arabisk-mobile-nav .nav-cart b{position:absolute;top:3px;right:calc(50% - 19px);display:grid;place-items:center;min-width:16px;height:16px;padding:0 4px;border:2px solid #17130f;border-radius:999px;background:var(--app-gold);color:var(--app-dark);font:900 8px/1 Cairo,sans-serif}
+  .arabisk-mobile-nav .nav-cart b[hidden]{display:none}
+  .app-header{position:fixed;background:linear-gradient(180deg,rgba(8,7,6,.88),rgba(8,7,6,.38));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  .app-header .lang{display:none}
+  .app-header .app-cart-link{display:none}
+  .app-hero-copy{padding-top:122px}
+  #contact{padding-bottom:115px}
+}
+@media(max-width:420px){.arabisk-mobile-nav{right:7px;left:7px}.arabisk-mobile-nav a{min-height:52px}.arabisk-mobile-nav .nav-icon{font-size:18px}.app-header .brand{letter-spacing:2px}}
