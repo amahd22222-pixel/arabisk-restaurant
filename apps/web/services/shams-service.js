@@ -98,6 +98,10 @@ export function createShamsService({
     provider: apiKey ? 'openai-compatible' : 'local-agent',
     model: apiKey ? model : 'local',
     agent: true,
+    workflows: ['reservation', 'order'],
+    confirmations: true,
+    memory: true,
+    voiceFirst: true,
     stages: agent.stages
   });
 
