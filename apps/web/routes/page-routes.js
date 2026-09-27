@@ -25,7 +25,7 @@ export function registerPageRoutes(app, { rootDir, distDir }) {
   app.get(/^\/menu\/[^/]+$/, async (_req, res, next) => { try { await injectMobileNavigation(page('category-page.html'), res); } catch (error) { next(error); } });
   app.get(/^\/menu\/[^/]+\/[^/]+$/, async (_req, res, next) => { try { await injectMobileNavigation(page('product-page.html'), res); } catch (error) { next(error); } });
 
-  app.use(express.static(distDir));
+  // Standalone routes intentionally render their own app surface; the home shell stays isolated on /.\n  app.use(express.static(distDir));
 
   app.use('/api', (_req, res) => {
     return res.status(404).json({
