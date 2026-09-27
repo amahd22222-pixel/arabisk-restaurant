@@ -212,6 +212,90 @@ function findMatches(products, query) {
   .map(row => row.product);
 }
 
+function extractLocalPreferences(text) {
+  const raw = normalizeDialectText(text);
+  const preferences = {};
+
+  if (/(حار|سبايسي|spicy)/i.test(raw)) preferences.spicy = true;
+  if (/(مش حار|مو حار|بدون حار|غير حار|ما بدي حار|مش سبايسي|مو سبايسي)/i.test(raw)) preferences.spicy = false;
+  if (/(نباتي|نباتيه|vegetarian|vegan)/i.test(raw)) preferences.vegetarian = true;
+
+  if (/(حلو|حلويات|تحليه|تحلية|ديسرت|dessert|سكر|شوكولاته)/i.test(raw)) preferences.taste = 'sweet';
+  else if (/(مالح|حادق)/i.test(raw)) preferences.taste = 'savory';
+  else if (/(خفيف|خفيفه|خفيفا|light)/i.test(raw)) preferences.weight = 'light';
+  else if (/(مشبع|دسم|تقيل|ثقيل|وجبه كامله)/i.test(raw)) preferences.weight = 'hearty';
+
+  if (/(مشروب|مشروبات|شراب|عصير|قهوه|قهوة|شاي|لاتيه|كوفي|drink)/i.test(raw)) preferences.category = 'drink';
+  if (/(دجاج|فراخ|فراخ|chicken)/i.test(raw)) preferences.protein = 'chicken';
+  if (/(لحمه|لحمة|لحم|ستيك|beef|meat)/i.test(raw)) preferences.protein = 'beef';
+  if (/(سمك|بحري|جمبري|روبيان|seafood|fish|shrimp)/i.test(raw)) preferences.protein = 'seafood';
+
+  const budget = raw.match(/(?:حدي|ميزانيتي|ميزانيه|لحد|حتى|تحت|اقل من|أقل من)\s*(\d{2,4})/) ||
+    raw.match(/(\d{2,4})\s*(?:درهم|aed|د)/i);
+  const budgetValue = Number(budget?.[1] || 0);
+  if (budgetValue > 0) preferences.budgetAed = budgetValue;
+
+  return preferences;
+}
+
+function scoreProductForPreferences(product, preferences) {
+  const p = preferences || {};
+  const haystack = normalizeArabic([
+    product?.nameAr,
+    product?.nameEn,
+    product?.descriptionAr,
+    product?.descriptionEn,
+    product?.categorySlug,
+    ...(Array.isArray(product?.tags) ? product.tags : [])
+  ].join(' '));
+
+  let score = 0;
+
+  if (p.taste === 'sweet' && /(حلو|حلوي|شوكولاته|ديسرت|كيك|ايس كريم|dessert|chocolate)/i.test(haystack)) score += 10;
+  if (p.taste === 'savory' && !/(حلو|ديسرت|كيك|شوكولاته)/i.test(haystack)) score += 3;
+
+  if (p.weight === 'light' && /(سلطه|شوربه|خفيف|خضار|فواكه|grill)/i.test(haystack)) score += 7;
+  if (p.weight === 'hearty' && /(وجبه|لحم|دجاج|رز|ستيك|برجر|باستا)/i.test(haystack)) score += 7;
+
+  if (p.category === 'drink' && /(مشروب|عصير|قهوه|قهوة|شاي|لاتيه|كوفي|drink)/i.test(haystack)) score += 10;
+  if (p.protein === 'chicken' && /(دجاج|فراخ|chicken)/i.test(haystack)) score += 8;
+  if (p.protein === 'beef' && /(لحم|لحمه|ستيك|beef|meat)/i.test(haystack)) score += 8;
+  if (p.protein === 'seafood' && /(سمك|بحري|جمبري|روبيان|seafood|fish|shrimp)/i.test(haystack)) score += 8;
+
+  if (p.spicy === true && (product?.tags?.includes?.('spicy') || Number(product?.spiceLevel || 0) > 0)) score += 5;
+  if (p.spicy === false && (product?.tags?.includes?.('spicy') || Number(product?.spiceLevel || 0) > 0)) score -= 7;
+  if (p.vegetarian === true && (product?.dietary?.includes?.('vegetarian') || product?.dietary?.includes?.('vegan'))) score += 7;
+  if (p.vegetarian === true && !product?.dietary?.includes?.('vegetarian') && !product?.dietary?.includes?.('vegan')) score -= 3;
+  if (p.budgetAed && Number(product?.price || 0) <= p.budgetAed) score += 3;
+  if (p.budgetAed && Number(product?.price || 0) > p.budgetAed) score -= 8;
+
+  return score;
+}
+
+function pickSmartLocalRecommendations(products, memory, text) {
+  const extracted = extractLocalPreferences(text);
+  const stored = memory?.preferences || {};
+  const preferences = {
+    ...stored,
+    ...extracted
+  };
+  const candidates = products
+    .filter(item => item?.available !== false)
+    .map(product => ({
+      product,
+      score:
+        scoreProductForPreferences(product, preferences) +
+        (product.chefChoice ? 3 : 0) +
+        (product.isNew ? 1.5 : 0) +
+        (Number(product.rating || 0) / 5)
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(row => row.product);
+
+  return { candidates, preferences };
+}
+
 function resolveReferenceProduct(text, matches, latest) {
   const normalized = normalizeDialectText(text);
   if (/(التاني|الثاني|تاني واحد|رقم 2)/i.test(normalized) && matches[1]) return matches[1];
@@ -253,6 +337,7 @@ function detectLocalPlan({ message, memory, products }) {
   const normalized = normalizeDialectText(text);
   const matches = findMatches(products, text);
   const latest = memory.recentProducts?.[memory.recentProducts.length - 1] || null;
+  const prefs = extractLocalPreferences(text);
 
   if (/^(السلام عليكم|السلام|اهلا|اهلين|يا هلا|هلا|مرحبا|مرحبتين|هاي|hello|hi)/i.test(normalized)) {
     return {
@@ -263,8 +348,16 @@ function detectLocalPlan({ message, memory, products }) {
     };
   }
 
+  const recommendationSignal =
+    /(رشح|رشحلي|رشح لي|اقترح|اقترحلي|انصحني|نصحني|شو بتنصحني|شو تقترح|شو بترشح|محتار|محتارة|اختار|اختيار|دلني|دُلني|عايز حاجة|عاوز حاجه|نفسي في|بدي شي|بدي اكل|شو اكل|شو آكل|ايه الاحسن|شو الاحسن|what.*recommend)/i.test(normalized) ||
+    Object.keys(prefs).length > 0;
+
+  if (recommendationSignal && !/(ضيف|اضف|حط|زود|زيد|ضيفلي|اضفلي|حطلي|زودلي|زيدلي)/i.test(normalized)) {
+    return { intent: 'recommend', toolCalls: [{ name: 'recommend_menu', args: { ...prefs } }] };
+  }
+
   const addRequested = /(ضيف|اضف|حط|زود|زيد|ضيفلي|اضفلي|حطلي|زودلي|زيدلي)/i.test(normalized) ||
-    /(عايز).{0,70}(واحد|اتنين|تلاته|كمان)/i.test(normalized);
+    /(عايز|عاوز|بدي).{0,70}(واحد|اتنين|تلاته|ثلاثة|كمان)/i.test(normalized);
 
   if (addRequested || (latest && /(كمان واحد|واحد كمان|زود|زيد|ضيفه|ضيفها|حطه|حطها)/i.test(normalized))) {
     const product = resolveReferenceProduct(text, matches, latest);
@@ -275,11 +368,10 @@ function detectLocalPlan({ message, memory, products }) {
         reply: 'حاضر، أضيف لك ' + (product.nameAr || product.nameEn) + '.'
       };
     }
+    if (Object.keys(prefs).length) {
+      return { intent: 'recommend', toolCalls: [{ name: 'recommend_menu', args: { ...prefs } }] };
+    }
     return { intent: 'cart_add', reply: 'أكيد. قل لي اسم الطبق أو صفه لي، وأنا أضيفه لك.' };
-  }
-
-  if (/(رشح|رشحلي|رشح لي|اقترح|اقترحلي|انصحني|نصحني|شو بتنصحني|شو تقترح|شو بترشح|محتار|محتارة|اختار|اختيار|دلني|دُلني|recommend|choose)/i.test(normalized)) {
-    return { intent: 'recommend', toolCalls: [{ name: 'recommend_menu', args: {} }] };
   }
 
   if (/(منيو|القائمة|الأكل|الأطباق|شو عنا|شو عندكم|شو موجود|وريني|ورجيني|جيبلي.*منيو|افتح.*منيو|شوف.*منيو)/i.test(normalized)) {
@@ -314,17 +406,14 @@ function detectLocalPlan({ message, memory, products }) {
   }
 
   if (matches.length) {
-    return {
-      intent: 'product_search',
-      toolCalls: [{ name: 'search_menu', args: { query: text } }]
-    };
+    return { intent: 'product_search', toolCalls: [{ name: 'search_menu', args: { query: text } }] };
   }
 
   return {
     intent: 'unknown',
     reply: memory.name
-      ? 'أنا معك يا ' + memory.name + '. قل لي مثلًا: رشحي لي حاجة خفيفة، افتحي المنيو، ضيفي الطبق ده، أو احجزي لي طاولة.'
-      : 'أنا معك. قل لي مثلًا: رشحي لي حاجة خفيفة، افتحي المنيو، ضيفي الطبق ده، أو احجزي لي طاولة.'
+      ? 'أنا معك يا ' + memory.name + '. قل لي اللي في بالك، حتى لو بالعامية المصرية أو الشامية، وأنا أفهمك ونمشي خطوة خطوة.'
+      : 'أنا معك. قل لي اللي في بالك، حتى لو بالعامية المصرية أو الشامية، وأنا أفهمك ونمشي خطوة خطوة.'
   };
 }
 
@@ -394,7 +483,8 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     }
 
     if (name === 'recommend_menu') {
-      return { recommendations: pickRecommendations(catalog, context.memory.preferences, context.message) };
+      const smart = pickSmartLocalRecommendations(catalog, context.memory, context.message);
+      return { recommendations: smart.candidates, preferences: smart.preferences };
     }
 
     if (name === 'cart_summary') {
