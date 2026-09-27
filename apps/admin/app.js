@@ -157,6 +157,7 @@ async function load(){
     }else failures.push(resources[index][0]+': '+(result.reason?.message||'تعذر تحميل البيانات'));
   });
   dashboardState.products=products;
+  renderTodayOfferProductOptions($('#today-offer-product')?.value||'');
   dashboardState.categories=categories;
   dashboardState.orders=orders;
   dashboardState.reservations=reservations;
