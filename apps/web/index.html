@@ -13,167 +13,173 @@
 <link rel="apple-touch-icon" href="/icons/icon.svg">
 <meta name="description" content="ARABISK Restaurant & Cafe — تجربة ضيافة عربية بطابع عصري.">
 <title>ARABISK — Restaurant & Cafe</title>
-<link rel="stylesheet" href="./style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./home-app.css">
 <link rel="stylesheet" href="./mobile-nav.css">
 </head>
-<body>
-<main class="home-app">
-  <header class="app-header" aria-label="ARABISK">
-    <a class="brand" href="/" aria-label="ARABISK">ARABISK<span>RESTAURANT & CAFE</span></a>
-    <nav class="header-nav" id="app-header-nav" aria-label="التنقل الرئيسي">
-      <a href="/">الرئيسية</a>
-      <a href="/menu">المنيو</a>
-      <a href="/events">الفعاليات</a>
-      <a href="/reservation">الحجز</a>
-      <a href="/memories">الذكريات</a>
-    </nav>
-    <div class="app-header-actions">
-      <a class="app-cart-link" href="/cart" aria-label="فتح السلة">السلة <b id="app-cart-count" hidden>0</b></a>
-      <button class="app-menu-button" id="app-menu-button" type="button" aria-expanded="false" aria-controls="app-header-nav" aria-label="فتح القائمة">☰</button>
-      <button class="lang" id="lang-toggle" type="button" aria-label="تغيير اللغة">EN</button>
-    </div>
-  </header>
+<body class="home-app">
+<header class="app-header">
+  <a class="brand" href="/" aria-label="ARABISK">
+    ARABISK<span>RESTAURANT & CAFE</span>
+  </a>
+  <nav class="header-nav" id="app-header-nav" aria-label="القائمة الرئيسية">
+    <a href="/" data-i18n="home">الرئيسية</a>
+    <a href="/menu" data-i18n="menu">المنيو</a>
+    <a href="/events" data-i18n="events">الفعاليات</a>
+    <a href="/reservation" data-i18n="reservationNav">حجز طاولة</a>
+    <a href="/track-order">متابعة الطلب</a>
+    <a href="/memories">الذكريات</a>
+  </nav>
+  <div class="app-header-actions">
+    <a class="app-cart-link" href="/cart" aria-label="فتح السلة">السلة <b id="app-cart-count" hidden>0</b></a>
+    <button class="lang" id="lang-toggle" type="button" aria-label="تغيير اللغة">EN</button>
+    <button class="app-menu-button" id="app-menu-button" type="button" aria-expanded="false" aria-controls="app-header-nav" aria-label="فتح القائمة">☰</button>
+  </div>
+</header>
 
-  <section id="home" class="app-hero" aria-label="ARABISK">
+<main>
+  <section id="home" class="app-hero" aria-labelledby="hero-title">
     <div class="app-hero-media" aria-hidden="true"></div>
     <div id="app-hero-studio" class="app-hero-studio" aria-hidden="true"></div>
     <div class="app-hero-copy">
       <p class="app-hero-kicker">ARABISK · RESTAURANT & CAFE</p>
-      <h1>اكتشف مذاقًا عربيًا <em>بروح عصرية</em></h1>
-      <p class="app-hero-lead">ضيافة عربية بتفاصيل راقية، أطباق صُممت لتُشارك، وتجارب تجعل كل زيارة مختلفة.</p>
+      <h1 id="hero-title">اكتشف مذاقًا<br><em>عربيًا بروح عصرية</em></h1>
+      <p class="app-hero-lead">طعام، ضيافة وتجارب تُصنع بهدوء. اختر ما يناسبك وابدأ زيارتك التالية إلى ARABISK.</p>
       <div class="app-hero-actions">
-        <a class="app-primary-cta" href="/menu">استكشف المنيو ←</a>
+        <a class="app-primary-cta" href="/menu">استكشف المنيو <span aria-hidden="true">←</span></a>
         <a class="app-secondary-cta" href="/reservation">احجز طاولتك</a>
       </div>
       <div class="app-hero-meta" aria-label="مزايا ARABISK">
-        <span class="app-meta-pill">طعام عربي بروح عصرية</span>
+        <span class="app-meta-pill">منيو يومي متجدد</span>
+        <span class="app-meta-pill">حجز مباشر</span>
         <span class="app-meta-pill">تجارب وفعاليات</span>
-        <span class="app-meta-pill">اطلب واحجز من التطبيق</span>
       </div>
     </div>
   </section>
 
-  <section class="app-content" aria-label="تجربة ARABISK">
-    <div class="app-quick-actions" aria-label="اختصارات">
-      <a class="app-quick-action" href="/menu"><span class="app-quick-icon">≡</span><strong>المنيو</strong><span>اكتشف القائمة</span></a>
-      <a class="app-quick-action" href="/reservation"><span class="app-quick-icon">◷</span><strong>احجز</strong><span>اختر موعدك</span></a>
-      <a class="app-quick-action" href="/cart"><span class="app-quick-icon">🛒</span><strong>السلة</strong><span>راجع طلبك</span></a>
-      <a class="app-quick-action" href="/events"><span class="app-quick-icon">✦</span><strong>الفعاليات</strong><span>تجاربنا القادمة</span></a>
+  <section id="home-actions" class="app-content" aria-label="اختصارات ARABISK">
+    <div class="app-quick-actions">
+      <a class="app-quick-action" href="/menu">
+        <span class="app-quick-icon" aria-hidden="true">≡</span>
+        <strong>المنيو</strong>
+        <span>تصفح القائمة والمنتجات</span>
+      </a>
+      <a class="app-quick-action" href="/reservation">
+        <span class="app-quick-icon" aria-hidden="true">◷</span>
+        <strong>الحجز</strong>
+        <span>اختر الوقت وعدد الضيوف</span>
+      </a>
+      <a class="app-quick-action" href="/cart">
+        <span class="app-quick-icon" aria-hidden="true">🛒</span>
+        <strong>السلة</strong>
+        <span>راجع طلبك وأكمل الشراء</span>
+      </a>
+      <a class="app-quick-action" href="/events">
+        <span class="app-quick-icon" aria-hidden="true">✦</span>
+        <strong>الفعاليات</strong>
+        <span>اكتشف التجارب القادمة</span>
+      </a>
     </div>
+  </section>
 
-    <section class="app-section">
+  <div class="app-content">
+    <section class="app-section" aria-labelledby="featured-title">
       <div class="app-section-head">
         <div>
-          <p class="app-eyebrow">ARABISK PICKS</p>
-          <h2>الأكثر طلبًا</h2>
-          <p class="app-section-note">اختيارات مميزة لتبدأ منها.</p>
+          <p class="app-eyebrow">CURATED FOR YOU</p>
+          <h2 id="featured-title">الأكثر طلبًا</h2>
         </div>
         <a class="app-section-link" href="/menu">عرض المنيو ←</a>
       </div>
+      <p class="app-section-note">اختيارات مميزة من قائمة ARABISK، جاهزة لتبدأ منها طلبك.</p>
       <div id="app-featured-products" class="app-horizontal" aria-live="polite"></div>
     </section>
 
-    <section class="app-section">
-      <div class="app-section-head">
-        <div>
-          <p class="app-eyebrow">TODAY AT ARABISK</p>
-          <h2>عرض اليوم</h2>
-          <p class="app-section-note">مزايا يومية واختيارات خاصة داخل تجربة ARABISK.</p>
-        </div>
-        <a class="app-section-link" href="/menu">اكتشف المزيد ←</a>
-      </div>
-      <article id="today-offer" class="today-offer">
+    <section class="app-section" aria-labelledby="today-offer-title">
+      <div id="today-offer" class="today-offer">
         <div class="today-offer-copy">
-          <span class="today-offer-badge">اختيار اليوم</span>
-          <h2 class="today-offer-title">اختيار مميز من ARABISK</h2>
-          <p class="today-offer-copy">اكتشف ما اخترناه لك اليوم من القائمة والتجارب والعروض المتاحة.</p>
-          <a class="today-offer-action" href="/menu">اطلب الآن ←</a>
+          <span class="today-offer-badge">عرض اليوم</span>
+          <h2 id="today-offer-title" class="today-offer-title">اختيار اليوم من ARABISK</h2>
+          <p class="today-offer-copy">اكتشف اختيارًا مميزًا اليوم، أو فعّل عرض التطبيق للحصول على خصمك الشخصي.</p>
+          <a class="today-offer-action" href="/menu">اكتشف العرض ←</a>
         </div>
         <div class="today-offer-media">
-          <img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1400&q=84" alt="" loading="lazy" decoding="async">
+          <img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1200&q=84" alt="طبق مميز من ARABISK" loading="lazy" decoding="async">
         </div>
-      </article>
+      </div>
     </section>
 
-    <section class="app-section">
+    <section class="app-section" aria-labelledby="experience-title">
       <div class="app-section-head">
         <div>
           <p class="app-eyebrow">ARABISK EXPERIENCES</p>
-          <h2>تجربة قادمة</h2>
-          <p class="app-section-note">فعاليات وتجارب خاصة تتغير مع الوقت.</p>
+          <h2 id="experience-title">تجربة ARABISK القادمة</h2>
         </div>
         <a class="app-section-link" href="/events">كل الفعاليات ←</a>
       </div>
       <div id="home-experience"></div>
     </section>
 
-    <section class="app-section">
+    <section class="app-section" aria-labelledby="memories-title">
       <div class="app-section-head">
         <div>
-          <p class="app-eyebrow">ARABISK MEMORIES</p>
-          <h2>لحظات من المطعم</h2>
-          <p class="app-section-note">صور وفيديوهات من مجتمع ARABISK.</p>
+          <p class="app-eyebrow">REAL MOMENTS</p>
+          <h2 id="memories-title">لحظات من المطعم</h2>
         </div>
-        <a class="app-section-link" href="/memories">شاهد الكل ←</a>
+        <a class="app-section-link" href="/memories">شاهد الذكريات ←</a>
       </div>
-      <div id="home-memories" class="memories-strip"></div>
+      <div id="home-memories" class="memories-strip" aria-live="polite"></div>
     </section>
 
     <section class="app-section">
       <div class="booking-cta">
         <div>
-          <p class="app-eyebrow">TABLE RESERVATION</p>
-          <h3>احجز مكانك في ARABISK</h3>
-          <p>اختر التاريخ والوقت وعدد الأشخاص، ودعنا نهتم ببقية التفاصيل.</p>
+          <p class="app-eyebrow">YOUR TABLE AWAITS</p>
+          <h3>خلّي زيارتك القادمة تبدأ من هنا</h3>
+          <p>اختر الموعد المناسب، وأرسل طلب الحجز مباشرة من التطبيق.</p>
         </div>
-        <div class="booking-cta-action"><a href="/reservation">احجز طاولتك ←</a></div>
+        <div class="booking-cta-action"><a href="/reservation">احجز طاولتك الآن ←</a></div>
       </div>
     </section>
 
-    <section class="app-section">
+    <section class="app-section" aria-labelledby="pass-title">
       <div class="app-pass">
-        <div class="app-pass-mark">A</div>
+        <div class="app-pass-mark" aria-hidden="true">A</div>
         <div>
-          <h3>ARABISK PASS</h3>
-          <p>احتفظ بعروض التطبيق وتجاربك القادمة والوصول السريع إلى طلبك.</p>
+          <h3 id="pass-title">ARABISK PASS</h3>
+          <p>مكافآت وعروض شخصية تتطور مع استخدامك للتطبيق.</p>
         </div>
-        <a class="app-pass-action" href="/cart">عرض المزايا</a>
+        <a class="app-pass-action" href="/cart">استكشف مكافآتك</a>
       </div>
     </section>
-  </section>
 
-  <section id="reservation" class="reservation" hidden>
-    <div class="section-head">
-      <p class="eyebrow" data-i18n="reservationEyebrow">TABLE RESERVATION</p>
-      <h2 data-i18n="reservationTitle">احجز طاولتك</h2>
-      <p data-i18n="reservationLead">اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.</p>
-    </div>
-    <form id="reservation-form" class="reservation-form">
-      <label><span data-i18n="nameLabel">الاسم</span><input id="reservation-name" required autocomplete="name"></label>
-      <label><span data-i18n="phoneLabel">رقم الهاتف</span><input id="reservation-phone" type="tel" required autocomplete="tel"></label>
-      <label><span data-i18n="dateLabel">التاريخ</span><input id="reservation-date" type="date" required></label>
-      <label><span data-i18n="timeLabel">الوقت</span><input id="reservation-time" type="time" required></label>
-      <label>
-        <span data-i18n="guestsLabel">عدد الأشخاص</span>
-        <select id="reservation-guests" required>
-          <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option>
-          <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
-          <option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
-        </select>
-      </label>
-      <label class="full"><span data-i18n="notesLabel">ملاحظات</span><textarea id="reservation-notes" rows="3" data-i18n-placeholder="notesPlaceholder" placeholder="مثلاً: طاولة داخلية، مناسبة خاصة…"></textarea></label>
-      <button class="gold-btn full" type="submit" data-i18n="confirmBooking">إرسال طلب الحجز</button>
-      <p id="reservation-event" class="reservation-event" hidden></p>
-      <p id="reservation-message" class="reservation-message" role="status" aria-live="polite"></p>
-    </form>
-  </section>
+    <section id="reservation" class="reservation-panel" hidden>
+      <div class="reservation-head">
+        <p class="app-eyebrow">TABLE RESERVATION</p>
+        <h2 data-i18n="reservationTitle">احجز طاولتك</h2>
+        <p data-i18n="reservationLead">اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.</p>
+      </div>
+      <form id="reservation-form" class="reservation-form">
+        <label><span data-i18n="nameLabel">الاسم</span><input id="reservation-name" required autocomplete="name"></label>
+        <label><span data-i18n="phoneLabel">رقم الهاتف</span><input id="reservation-phone" type="tel" required autocomplete="tel"></label>
+        <label><span data-i18n="dateLabel">التاريخ</span><input id="reservation-date" type="date" required></label>
+        <label><span data-i18n="timeLabel">الوقت</span><input id="reservation-time" type="time" required></label>
+        <label><span data-i18n="guestsLabel">عدد الأشخاص</span><select id="reservation-guests" required><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select></label>
+        <label class="full"><span data-i18n="notesLabel">ملاحظات</span><textarea id="reservation-notes" rows="3" data-i18n-placeholder="notesPlaceholder" placeholder="مثلاً: طاولة داخلية، مناسبة خاصة…"></textarea></label>
+        <button class="gold-btn full" type="submit" data-i18n="confirmBooking">إرسال طلب الحجز</button>
+        <p id="reservation-event" class="reservation-event" hidden></p>
+        <p id="reservation-message" class="reservation-message" role="status" aria-live="polite"></p>
+      </form>
+    </section>
 
-  <section id="about" class="about">
-    <p class="eyebrow" data-i18n="experience">THE ARABISK EXPERIENCE</p>
-    <h2 data-i18n="aboutTitle">أكثر من مجرد وجبة</h2>
-    <p data-i18n="aboutLead">هوية عربية دافئة، تفاصيل فاخرة، وأطباق صُممت لتُشارك وتُستمتع بها.</p>
-  </section>
+    <section id="about" class="about-panel">
+      <p class="app-eyebrow">THE ARABISK EXPERIENCE</p>
+      <h2 data-i18n="aboutTitle">أكثر من مجرد وجبة</h2>
+      <p data-i18n="aboutLead">هوية عربية دافئة، تفاصيل فاخرة، وأطباق صُممت لتُشارك وتُستمتع بها.</p>
+    </section>
+  </div>
 </main>
 
 <footer id="contact">
