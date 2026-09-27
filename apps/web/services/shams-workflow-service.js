@@ -27,8 +27,12 @@ function localDate(offsetDays = 0) {
 }
 
 function parseGuests(text) {
-  const raw = clean(text, 500);
-  const match = raw.match(/(?:لـ|ل|عدد|مع|حوالي)?\s*(\d{1,2})\s*(?:شخص|أشخاص|فرد|افراد|ضيوف)/i);
+  const raw = clean(text, 500).toLowerCase()
+    .replace(/اتنين/g, 'اثنين')
+    .replace(/تلاته|تلاتة/g, 'ثلاثة')
+    .replace(/اربعه|اربعة/g, 'أربعة')
+    .replace(/خمسه|خمسة/g, 'خمسة');
+  const match = raw.match(/(?:لـ|ل|عدد|مع|حوالي)?\s*(\d{1,2})\s*(?:شخص|أشخاص|فرد|افراد|ضيوف|اشخاص)/i);
   if (match) return Number(match[1]);
   if (/شخصين|اثنين|اتنين/i.test(raw)) return 2;
   if (/ثلاثة|ثلاثه|تلاتة|ثلاث/i.test(raw)) return 3;
@@ -38,7 +42,8 @@ function parseGuests(text) {
 }
 
 function parseTime(text) {
-  const raw = clean(text, 500).toLowerCase();
+  const raw = clean(text, 500).toLowerCase()
+    .replace(/الساعة|الساعه|ساعة|الساعه/g, 'الساعة');
   const match = raw.match(/(?:الساعة|الساعه|at)\s*(\d{1,2})(?::(\d{2}))?\s*(ص|م|am|pm)?\b/i) || raw.match(/\b(\d{1,2}):([0-5]\d)\s*(ص|م|am|pm)?\b/i);
   if (!match) return '';
   let hours = Number(match[1]);
@@ -65,9 +70,9 @@ function parseReservationSlots(text, memory) {
   const phoneMatch = raw.match(/(?:05\d{8}|9715\d{8}|\+\d[\d\s-]{7,16})/);
   if (phoneMatch) slots.phone = normalizePhone(phoneMatch[0]);
 
-  if (/اليوم/i.test(raw)) slots.date = localDate(0);
+  if (/اليوم|هلق|هلا|دلوقتي|دلوقت/i.test(raw)) slots.date = localDate(0);
   else if (/بعد بكرة|بعد غد|بعد غدًا/i.test(raw)) slots.date = localDate(2);
-  else if (/بكرة|غدا|غدًا/i.test(raw)) slots.date = localDate(1);
+  else if (/بكرة|بكره|غدا|غدًا/i.test(raw)) slots.date = localDate(1);
 
   const dateMatch = raw.match(/\b(20\d{2})[-/](\d{1,2})[-/](\d{1,2})\b/);
   if (dateMatch) {
@@ -89,8 +94,8 @@ function pendingIsValid(pending) {
 
 function confirmation(text) {
   const raw = clean(text, 200).toLowerCase();
-  if (/^(نعم|ايوه|أيوه|اه|آه|تمام|موافق|وافق|أكد|تاكيد|تأكيد|نفذ|نفّذ|اعملها|اعمل|yes|ok|okay|confirm)$/i.test(raw)) return true;
-  if (/^(لا|لأ|لا لا|الغى|إلغاء|الغاء|cancel|no)$/i.test(raw)) return false;
+  if (/^(نعم|ايوه|أيوه|اه|آه|تمام|موافق|وافق|أكيد|اكيد|ايوا|يلا|خلاص|تم|أكد|تاكيد|تأكيد|نفذ|نفّذ|اعملها|اعمل|اعملي|خلص|خلصها|yes|ok|okay|confirm)$/i.test(raw)) return true;
+  if (/^(لا|لأ|لا لا|مش موافق|مو موافق|الغى|إلغاء|الغاء|ما بدي|ما بديها|لا خلص|cancel|no)$/i.test(raw)) return false;
   return null;
 }
 
@@ -122,7 +127,7 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
     return { missing };
   }
 
-  async function handleReservation({ identity, message, memory, customer }) {
+  async function handleReservation({ identity, message, memory, customer, hints = {} }) {
     const currentPending = pendingIsValid(memory.pendingAction) && memory.pendingAction.type === 'reservation'
       ? memory.pendingAction
       : null;
@@ -130,7 +135,16 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
     const idempotencyKey = currentPending?.idempotencyKey || crypto.randomUUID();
 
     const effectiveMemory = { ...memory, name: memory.name || customer?.name || '' };
-    const slots = parseReservationSlots(message, effectiveMemory);
+    const parsedSlots = parseReservationSlots(message, effectiveMemory);
+    const slots = {
+      ...parsedSlots,
+      date: clean(hints.date || '', 40) || parsedSlots.date,
+      time: clean(hints.time || '', 20) || parsedSlots.time,
+      guests: Number.isInteger(Number(hints.guests)) && Number(hints.guests) > 0 ? Number(hints.guests) : parsedSlots.guests,
+      eventSlug: clean(hints.eventSlug || '', 90) || parsedSlots.eventSlug,
+      name: clean(hints.name || '', 80) || parsedSlots.name,
+      phone: normalizePhone(hints.phone || '') || parsedSlots.phone
+    };
     slots.customerId = String(customer?.id || '');
     if (!slots.phone && customer?.phone) slots.phone = normalizePhone(customer.phone);
     const merged = {
@@ -161,7 +175,7 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
     };
   }
 
-  async function handleOrder({ identity, message, memory, cart, customer }) {
+  async function handleOrder({ identity, message, memory, cart, customer, hints = {} }) {
     const currentPending = pendingIsValid(memory.pendingAction) && memory.pendingAction.type === 'order'
       ? memory.pendingAction
       : null;
@@ -169,22 +183,23 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
     const idempotencyKey = currentPending?.idempotencyKey || crypto.randomUUID();
 
     const raw = clean(message, 1200).toLowerCase();
-    const orderType = /استلام|تيك أواي|takeaway|pickup/i.test(raw)
+    const hintedOrderType = clean(hints.orderType || '', 30).toLowerCase();
+    const orderType = /pickup|takeaway|استلام|تيك/.test(hintedOrderType) || /استلام|تيك أواي|تيك اواي|takeaway|pickup/i.test(raw)
       ? 'pickup'
-      : /داخل|المطعم|طاولة|dine.?in/i.test(raw)
+      : /dine_in|داخل|المطعم|طاولة|dine.?in/.test(hintedOrderType) || /داخل|المطعم|طاولة|dine.?in/i.test(raw)
         ? 'dine_in'
         : current.orderType || '';
 
     const tableMatch = raw.match(/(?:طاولة|table)\s*(\d{1,4})/i);
-    const guests = parseGuests(raw);
+    const guests = Number.isInteger(Number(hints.guests)) && Number(hints.guests) > 0 ? Number(hints.guests) : parseGuests(raw);
 
     const merged = {
       ...current,
       orderType,
       customerId: current.customerId || customer?.id || '',
-      tableNumber: tableMatch?.[1] || current.tableNumber || '',
-      name: current.name || memory.name || customer?.name || '',
-      phone: current.phone || (customer?.phone ? normalizePhone(customer.phone) : ''),
+      tableNumber: clean(hints.tableNumber || '', 20) || tableMatch?.[1] || current.tableNumber || '',
+      name: clean(hints.name || '', 80) || current.name || memory.name || customer?.name || '',
+      phone: normalizePhone(hints.phone || '') || current.phone || (customer?.phone ? normalizePhone(customer.phone) : ''),
       guests: guests || current.guests || null,
       items: Array.isArray(cart) ? cart.slice(0, 20) : (current.items || [])
     };
