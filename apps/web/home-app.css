@@ -623,3 +623,67 @@ footer small{margin-inline-start:auto;color:#726b62;font-size:9px}
 .today-offer-copy h2{margin:0 0 12px;font:500 clamp(34px,4vw,52px)/1.06 "Playfair Display",serif}
 .today-offer-copy p,.today-offer-note{max-width:520px;color:#bdb3a7;font-size:12px;line-height:1.9;margin:0}
 @media(max-width:900px){.today-offer-copy{padding:26px 22px}}
+
+.app-header .brand{font-family:"Playfair Display",serif;font-size:26px;letter-spacing:3px;line-height:1}
+.app-header .brand span{display:block;margin-top:6px;font-family:Cairo,sans-serif;font-size:7px;letter-spacing:1.8px;color:var(--app-gold-soft)}
+.app-header .lang{
+  width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid rgba(255,255,255,.18);border-radius:50%;background:rgba(255,255,255,.04);
+  color:#fff;cursor:pointer;font:700 10px/1 Cairo,sans-serif;transition:border-color .2s ease,color .2s ease,transform .2s ease;
+}
+.app-header .lang:hover{border-color:rgba(230,201,145,.7);color:var(--app-gold-soft);transform:translateY(-1px)}
+.app-hero-studio .arabisk-studio-display{width:100%;height:100%;min-height:100%;background:transparent}
+.app-hero-studio .arabisk-studio-display video{width:100%;height:100%;object-fit:cover;opacity:.72}
+.app-hero-studio .arabisk-studio-mute{right:clamp(16px,4vw,50px);bottom:clamp(24px,5vw,52px)}
+.reservation-panel{
+  min-height:calc(100vh - 90px);
+  padding:120px clamp(18px,6vw,80px) 110px;
+  background:var(--app-bg);
+}
+.reservation-head{max-width:760px;margin:0 auto;text-align:center}
+.reservation-head h2{margin:0 0 10px;font:500 clamp(38px,6vw,62px)/1.05 "Playfair Display",serif}
+.reservation-head p:last-child{color:var(--app-muted);font-size:12px;line-height:1.9}
+.reservation-form{
+  max-width:900px;margin:38px auto 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;
+  padding:24px;border:1px solid var(--app-line);border-radius:26px;background:var(--app-paper);box-shadow:var(--app-shadow);
+}
+.reservation-form label{display:grid;gap:7px;color:#665f54;font-size:11px}
+.reservation-form input,.reservation-form select,.reservation-form textarea{
+  width:100%;border:1px solid rgba(44,33,20,.12);border-radius:13px;background:#fff;padding:12px 13px;
+  color:var(--app-ink);font:inherit;outline:none;transition:border-color .18s ease,box-shadow .18s ease;
+}
+.reservation-form input:focus,.reservation-form select:focus,.reservation-form textarea:focus{border-color:rgba(197,154,91,.7);box-shadow:0 0 0 3px rgba(197,154,91,.10)}
+.reservation-form .full{grid-column:1/-1}
+.reservation-form .gold-btn{min-height:48px;border-radius:999px;background:var(--app-dark);color:#fff;border:0;font-size:11px;font-weight:900}
+.reservation-form .gold-btn:hover{background:#2a2119;transform:translateY(-1px)}
+.reservation-message{grid-column:1/-1;min-height:24px;margin:0;text-align:center;color:#397353;font-size:11px}
+.reservation-event{grid-column:1/-1;margin:0;padding:8px 13px;border:1px solid rgba(197,154,91,.2);border-radius:999px;background:#f6eddf;color:#725b38;text-align:center;font-size:10px}
+.about-panel{
+  margin-top:72px;padding:66px 24px;border-top:1px solid var(--app-line);border-bottom:1px solid var(--app-line);text-align:center;
+}
+.about-panel h2{margin:0 0 10px;color:var(--app-ink);font:500 clamp(34px,5vw,50px)/1.1 "Playfair Display",serif}
+.about-panel>p:last-child{max-width:680px;margin:0 auto;color:var(--app-muted);font-size:11px;line-height:2}
+#contact{
+  min-height:100px;background:#0d0b09;color:#fff;padding:32px clamp(20px,5vw,70px);display:flex;align-items:center;gap:12px;
+}
+#contact strong{font-family:"Playfair Display",serif;font-size:25px;letter-spacing:2px}
+#contact span{color:var(--app-gold-soft);font-size:10px}
+#contact small{margin-inline-start:auto;color:#766f65;font-size:9px}
+.app-header .header-nav.is-open{
+  display:flex;position:absolute;top:74px;right:14px;left:14px;flex-direction:column;align-items:stretch;gap:2px;
+  padding:10px;border:1px solid rgba(197,154,91,.16);border-radius:16px;background:rgba(20,16,12,.97);
+  box-shadow:0 18px 48px rgba(0,0,0,.3);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+}
+.app-header .header-nav.is-open a{padding:12px 13px;border-radius:10px}
+.app-header .header-nav.is-open a:hover{background:rgba(197,154,91,.10)}
+@media(max-width:620px){
+  .app-header .brand{font-size:20px}
+  .app-header .brand span{font-size:6px;letter-spacing:1.4px}
+  .app-header .lang{width:36px;height:36px}
+  .reservation-panel{padding:102px 16px 90px}
+  .reservation-form{grid-template-columns:1fr;padding:18px;border-radius:22px}
+  .reservation-form .full{grid-column:auto}
+  .about-panel{margin-top:55px;padding:52px 14px}
+  #contact{flex-wrap:wrap;padding-bottom:90px}
+  #contact small{width:100%;margin-inline-start:0;margin-top:8px}
+}
