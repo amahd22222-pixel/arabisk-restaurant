@@ -72,6 +72,8 @@ jobs:
           node --check apps/web/services/reservation-service.js
           node --check apps/web/services/revenue-service.js
           node --check apps/web/routes/revenue-routes.js
+          node --check apps/web/services/promotion-service.js
+          node --check apps/web/routes/promotion-routes.js
           node --check apps/web/pwa-ui.js
           node --check apps/web/pwa-register.js
           node --check apps/web/mobile-nav.js
@@ -164,6 +166,20 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' -H "X-Arabisk-Admin-Key: $CI_ADMIN_KEY" http://127.0.0.1:4186/api/orders)" = "200"
           test -z "$(curl -s -D - -o /dev/null -H 'Origin: http://localhost:5173' http://127.0.0.1:4186/health | grep -i '^Access-Control-Allow-Origin:')"
           test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' --data '{' http://127.0.0.1:4186/api/orders)" = "400"
+          curl -fsS http://127.0.0.1:4186/api/promotions/install > /tmp/ci-promotion.json
+          promo_claim="$(curl -fsS -H 'Content-Type: application/json' --data '{"clientId":"ci-install-client"}' http://127.0.0.1:4186/api/promotions/install/claim)"
+          promo_code="$(python -c 'import json,sys; print(json.loads(sys.argv[1])["code"])' "$promo_claim")"
+          promo_quote="$(curl -fsS -H 'Content-Type: application/json' --data "$(python - "$promo_code" <<'PY'
+          import json,sys
+          print(json.dumps({'code':sys.argv[1],'subtotal':100}))
+          PY
+          )" http://127.0.0.1:4186/api/promotions/install/quote)"
+          python - "$promo_quote" <<'PY'
+          import json,sys
+          data=json.loads(sys.argv[1])
+          assert data['discount'] > 0
+          assert data['total'] < data['subtotal']
+          PY
 
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_WEB_API_URL=http://127.0.0.1:4186 ARABISK_ADMIN_USERNAME=ci ARABISK_ADMIN_PASSWORD=ci ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4175 npm run start --workspace apps/admin > /tmp/arabisk-admin-web-smoke.log 2>&1 &
           admin_pid=$!
@@ -209,7 +225,7 @@ jobs:
           print(next(p['id'] for p in products if p.get('available') is not False))
           PY
           )"
-          order_json="$(python - "$product_id" <<'PY'
+          order_json="$(python - "$product_id" "$promo_code" <<'PY'
           import json, sys
           print(json.dumps({
               "orderType":"pickup",
@@ -218,6 +234,7 @@ jobs:
               "phone":"0500000001",
               "notes":"",
               "sessionId":"ci-order-completion-smoke",
+              "promoCode":sys.argv[2],
               "items":[{"productId":sys.argv[1],"quantity":1}]
           }))
           PY
@@ -225,7 +242,10 @@ jobs:
           curl -fsS -H 'Content-Type: application/json' --data "$order_json" http://127.0.0.1:4187/api/orders > /tmp/ci-order.json
           order_id="$(python - <<'PY'
           import json
-          print(json.load(open('/tmp/ci-order.json'))['id'])
+          data=json.load(open('/tmp/ci-order.json'))
+          assert data['discount'] > 0, 'install promotion must discount order'
+          assert data['total'] < data['subtotal'], 'discounted order total must be below subtotal'
+          print(data['id'])
           PY
           )"
           before_completed="$(curl -fsS -H "X-Arabisk-Admin-Key: $CI_ADMIN_KEY" http://127.0.0.1:4187/api/revenue/summary | python -c 'import json,sys; print(json.load(sys.stdin)["funnel"]["completedOrders"])')"
