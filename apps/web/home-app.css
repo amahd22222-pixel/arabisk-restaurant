@@ -617,3 +617,9 @@ footer small{margin-inline-start:auto;color:#726b62;font-size:9px}
   #contact{flex-wrap:wrap}
   #contact small{width:100%;margin:3px 0 0}
 }
+
+/* Semantic aliases used by the home-shell markup. */
+.today-offer-copy{display:flex;flex-direction:column;justify-content:center;padding:38px clamp(24px,5vw,58px)}
+.today-offer-copy h2{margin:0 0 12px;font:500 clamp(34px,4vw,52px)/1.06 "Playfair Display",serif}
+.today-offer-copy p,.today-offer-note{max-width:520px;color:#bdb3a7;font-size:12px;line-height:1.9;margin:0}
+@media(max-width:900px){.today-offer-copy{padding:26px 22px}}
