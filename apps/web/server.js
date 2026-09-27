@@ -2,7 +2,8 @@ import express from 'express';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'url';
-import { presign, storageReady, readJson, readJsonWithStatus, writeJson, writeObject, deleteObject } from './storage.js';
+import { presign, storageReady, writeObject, deleteObject } from './storage.js';
+import { dbReady, readJsonWithStatus, writeJson, dbHealthCheck, closeDbPool } from './db.js';
 import { serviceErrorHandler, logServiceFailure } from './utils/service-error.js';
 import { cleanText, cleanKey, cleanUrl, normalizeList } from './utils/input.js';
 import { categories, products } from './menu-data.js';
@@ -107,7 +108,7 @@ rateLimitCleanupTimer.unref();
 const stateStore = createStateStore({
   readJsonWithStatus,
   writeJson,
-  storageReady,
+  dbReady,
   stateKey: STATE_KEY,
   menuVersion: MENU_VERSION,
   products,
@@ -129,34 +130,37 @@ const smartMenu = createSmartMenuService({
 });
 const { smartSnapshot, withMediaUrls, invalidateSmartSnapshot } = smartMenu;
 
-const revenue=createRevenueService({readJsonWithStatus,writeJson,storageReady,repository:stateRepository});
+const revenue=createRevenueService({readJsonWithStatus,writeJson,storageReady:dbReady,repository:stateRepository});
 registerRevenueRoutes(app,{service:revenue,requireAdminApiKey,analyticsRateLimit,recoveryRateLimit});
 
-const promotionService=createPromotionService({readJsonWithStatus,writeJson,storageReady});
+const promotionService=createPromotionService({readJsonWithStatus,writeJson,storageReady:dbReady});
 registerPromotionRoutes(app,{service:promotionService,requireAdminApiKey,claimRateLimit:promotionClaimRateLimit,quoteRateLimit:promotionQuoteRateLimit});
-const categoryService=createCategoryService({categoriesRepository:stateRepository.categories,productsRepository:stateRepository.products,storageReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid});
+const categoryService=createCategoryService({categoriesRepository:stateRepository.categories,productsRepository:stateRepository.products,storageReady,dbReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid});
 registerCategoryRoutes(app,{service:categoryService,requireAdminApiKey});
 const restoreCategories=categoryService.restore;
-const studioService=createStudioService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject});
+const studioService=createStudioService({storageReady,dbReady,presign,readJsonWithStatus,writeJson,deleteObject});
 registerStudioRoutes(app,{service:studioService,requireAdminApiKey});
 const restoreStudio=studioService.restore;
-const experienceService=createExperienceService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid});
+const experienceService=createExperienceService({storageReady,dbReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid});
 registerExperienceRoutes(app,{service:experienceService,requireAdminApiKey});
 const restoreExperiences=experienceService.restore;
-const memoryService=createMemoryService({storageReady,presign,readJsonWithStatus,writeJson,writeObject,deleteObject});
+const memoryService=createMemoryService({storageReady,dbReady,presign,readJsonWithStatus,writeJson,writeObject,deleteObject});
 registerMemoriesRoutes(app,{service:memoryService,requireAdminApiKey,memoryUploadRateLimit,memoryMutationRateLimit});
 const nextProductId = createNextPrefixedId(stateRepository.products, 'P', 3);
 
-app.get('/health',(_req,res)=>{
+app.get('/health',async(_req,res)=>{
   const persistence = stateStore.status();
   const revenuePersistence = revenue.persistenceStatus();
   const promotionPersistence = promotionService.persistenceStatus();
-  const ready = (!storageReady || persistence.lastPersistOk !== false) && revenuePersistence.lastPersistOk !== false && promotionPersistence.lastPersistOk !== false;
+  const database = await dbHealthCheck();
+  const ready = (!dbReady || (database.ok && persistence.lastPersistOk !== false)) && revenuePersistence.lastPersistOk !== false && promotionPersistence.lastPersistOk !== false;
   const payload = {
     ok: ready,
     service: 'arabisk-web',
     uptimeSeconds: Math.floor((Date.now()-serverStartedAt)/1000),
-    storageConfigured: storageReady,
+    databaseConfigured: dbReady,
+    database,
+    mediaStorageConfigured: storageReady,
     persistence,
     revenuePersistence,
     promotionPersistence,
@@ -243,6 +247,7 @@ registerPushRoutes(app, {
 const mediaService = createMediaService({
   repository: stateRepository.products,
   storageReady,
+  dbReady,
   readJsonWithStatus,
   writeJson,
   presign
@@ -261,7 +266,7 @@ await restoreExperiences();
 await memoryService.restore();
 await revenue.restoreRevenue();
 await promotionService.restore();
-if(storageReady){
+if(dbReady){
   persistState();
   await flushPersistState();
 }
@@ -282,6 +287,7 @@ const shutdown=(signal)=>{
       await flushPersistState();
       await revenue.flushPersistRevenue();
       await promotionService.flushPersistence();
+      await closeDbPool();
     }catch(error){
       logServiceFailure(error, { service: 'web', operation: 'shutdown-flush' });
     }

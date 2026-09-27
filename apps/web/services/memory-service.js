@@ -15,7 +15,7 @@ class MemoryServiceError extends Error{
   constructor(message,status=400){super(message);this.name='MemoryServiceError';this.status=status;}
 }
 
-export function createMemoryService({storageReady,presign,readJsonWithStatus,writeJson,writeObject,deleteObject,limits={}}){
+export function createMemoryService({storageReady,dbReady=storageReady,presign,readJsonWithStatus,writeJson,writeObject,deleteObject,limits={}}){
   const maxMemories=Number.isInteger(limits.maxMemories)&&limits.maxMemories>0?Math.min(limits.maxMemories,MAX_MEMORIES):MAX_MEMORIES;
   const maxCommentsPerMemory=Number.isInteger(limits.maxCommentsPerMemory)&&limits.maxCommentsPerMemory>0?Math.min(limits.maxCommentsPerMemory,MAX_COMMENTS_PER_MEMORY):MAX_COMMENTS_PER_MEMORY;
   const maxReportsPerMemory=Number.isInteger(limits.maxReportsPerMemory)&&limits.maxReportsPerMemory>0?Math.min(limits.maxReportsPerMemory,MAX_REPORTS_PER_MEMORY):MAX_REPORTS_PER_MEMORY;
@@ -31,7 +31,7 @@ export function createMemoryService({storageReady,presign,readJsonWithStatus,wri
   const memoryRepository=createCollectionRepository(state.memories,{persist});
 
   const restore=async()=>{
-    if(!storageReady)return;
+    if(!dbReady)return;
     const saved=await readRequiredSnapshot(readJsonWithStatus,STATE_KEY,'Memory state could not be restored from storage.');
     if(saved&&Array.isArray(saved.memories))memoryRepository.replaceAll(saved.memories);
   };

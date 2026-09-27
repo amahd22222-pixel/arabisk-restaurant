@@ -8,7 +8,7 @@
 - Storage object keys are validated before signing to prevent traversal-style keys.
 - Admin API failures use safe client messages and do not expose configured secrets.
 - Rate limits are currently process-local. If the service is scaled horizontally, move rate-limit state to a shared store before relying on it for cross-instance protection.
-- Business data currently uses the project's object-storage persistence layer. A transactional database should be introduced before multi-instance writes or high-concurrency order processing.
+- Business/application state (products, orders, customers, reservations, categories, experiences, Studio, Memories, promotions, Revenue Engine) is persisted in PostgreSQL (`DATABASE_URL`). Media files (images/video) remain on S3-compatible object storage — see `docs/DATABASE.md`.
 
 ## Change discipline
 

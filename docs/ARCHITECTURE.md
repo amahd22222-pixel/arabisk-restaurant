@@ -23,7 +23,7 @@ This repository is treated as a production monorepo.
 3. Secrets come only from environment variables; never commit credentials.
 4. API errors must be safe for clients and useful in server logs.
 5. Every public API request should have a request ID.
-6. Persistent business data must have one authoritative storage path; do not introduce a second shadow store.
+6. Persistent business data must have one authoritative storage path; do not introduce a second shadow store. Application/business state lives in PostgreSQL (`DATABASE_URL`); binary media (images/video) lives in S3-compatible object storage. See `docs/DATABASE.md`.
 
 ## Frontend rules
 

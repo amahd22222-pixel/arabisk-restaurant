@@ -18,10 +18,10 @@ const mediaConflict=(imageUrl,imageKey,videoUrl,videoKey)=>hasMedia(imageUrl,ima
 const experiences=[];
 class ExperienceServiceError extends Error{constructor(message,status=400){super(message);this.name='ExperienceServiceError';this.status=status;}}
 
-export function createExperienceService({storageReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid}){
+export function createExperienceService({storageReady,dbReady=storageReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid}){
   const persist=()=>writeRequiredSnapshot(writeJson,EXPERIENCE_STATE_KEY,experiences,'Experience state could not be persisted to storage.');
   const experienceRepository=createCollectionRepository(experiences,{persist});
-  const restore=async()=>{if(!storageReady)return;const saved=await readRequiredSnapshot(readJsonWithStatus,EXPERIENCE_STATE_KEY,'Experience state could not be restored from storage.');if(Array.isArray(saved))experienceRepository.replaceAll(saved);};
+  const restore=async()=>{if(!dbReady)return;const saved=await readRequiredSnapshot(readJsonWithStatus,EXPERIENCE_STATE_KEY,'Experience state could not be restored from storage.');if(Array.isArray(saved))experienceRepository.replaceAll(saved);};
   const nextId=()=> 'E'+crypto.randomUUID().slice(0,8).toUpperCase();
   const publicExperience=item=>({...item,coverImageUrl:item.coverImageKey&&storageReady?presign('GET',item.coverImageKey,900):(item.coverImageUrl||''),videoUrl:item.videoKey&&storageReady?presign('GET',item.videoKey,900):(item.videoUrl||'')});
   const presentExperience=(item,{includePrivate=false}={})=>{

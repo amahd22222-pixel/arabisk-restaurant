@@ -1,4 +1,4 @@
-export function createStateStore({ readJsonWithStatus, writeJson, storageReady, stateKey, menuVersion, products, customers, orders, reservations, pushSubscriptions }) {
+export function createStateStore({ readJsonWithStatus, writeJson, storageReady, dbReady = storageReady, stateKey, menuVersion, products, customers, orders, reservations, pushSubscriptions }) {
   const PERSIST_DEBOUNCE_MS = 250;
   let persistQueue = Promise.resolve(true);
   let persistTimer = null;
@@ -7,7 +7,7 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
   let restoreStatus = 'not_started';
   let restoredAt = null;
   let lastPersistAt = null;
-  let lastPersistOk = storageReady ? null : true;
+  let lastPersistOk = dbReady ? null : true;
 
   const settlePersistWaiters = (result, waiters) => {
     for (const resolve of waiters) resolve(result);
@@ -31,8 +31,8 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
   };
 
   async function restore() {
-    restoreStatus = storageReady ? 'reading' : 'storage_not_configured';
-    if (!storageReady) {
+    restoreStatus = dbReady ? 'reading' : 'storage_not_configured';
+    if (!dbReady) {
       restoredAt = new Date().toISOString();
       return;
     }
@@ -90,7 +90,7 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
   };
 
   const persist = () => {
-    if (!storageReady) return Promise.resolve(true);
+    if (!dbReady) return Promise.resolve(true);
     if (restoreStatus === 'restore_failed') return Promise.resolve(false);
 
     persistRequested = true;

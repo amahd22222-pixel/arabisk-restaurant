@@ -15,6 +15,7 @@ const galleryValues = value =>
 export function createMediaService({
   repository,
   storageReady,
+  dbReady = storageReady,
   readJsonWithStatus,
   writeJson,
   presign
@@ -25,7 +26,7 @@ export function createMediaService({
 
   async function ensureDetails() {
     if (detailsLoaded) return;
-    if (!storageReady) {
+    if (!dbReady) {
       detailsLoaded = true;
       return;
     }

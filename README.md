@@ -17,6 +17,11 @@ Railway is intentionally kept to two application services plus media storage:
 
 The API is embedded in the web service to avoid a separate API service.
 
+Application state (products, orders, customers, reservations, categories,
+experiences, Studio, Memories, promotions, the Revenue Engine) is persisted
+in a real PostgreSQL database via `DATABASE_URL`. Media files (images/video)
+stay on the S3-compatible bucket. See `docs/DATABASE.md`.
+
 ## Current product areas
 
 ### Customer experience
