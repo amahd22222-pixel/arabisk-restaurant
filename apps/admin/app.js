@@ -161,6 +161,7 @@ async function load(){
   dashboardState.orders=orders;
   dashboardState.reservations=reservations;
   renderStats();renderProducts();renderCategories();renderOrders();renderReservations();
+  void loadTodayOfferSettings();
   $('#connection').textContent=failures.length?'متصل جزئيًا':'متصل';
   $('#connection').className='connected';
   $('#error').textContent=failures.length?'تعذر تحميل: '+failures.join(' — '):'';
