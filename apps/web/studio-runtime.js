@@ -18,8 +18,8 @@ function ensureStyle() {
   const style = document.createElement('style');
   style.id = 'arabisk-studio-runtime-style';
   style.textContent = `
-    .app-hero-studio{pointer-events:none}
-    .arabisk-studio-display{position:absolute;inset:0;overflow:hidden;background:#000;z-index:1;opacity:.48}
+    .app-hero-studio{pointer-events:none;position:absolute;inset:0;z-index:0}
+    .arabisk-studio-display{position:absolute;inset:0;overflow:hidden;background:#000;z-index:0;opacity:.48}
     .arabisk-studio-display::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(9,7,5,.82),rgba(9,7,5,.35) 55%,rgba(9,7,5,.58));pointer-events:none}
     .arabisk-studio-display video{display:block;width:100%;height:100%;object-fit:cover;background:#000}
     .arabisk-studio-mute{pointer-events:auto;position:absolute;right:18px;bottom:18px;z-index:5;width:46px;height:46px;border:1px solid rgba(255,255,255,.55);border-radius:999px;background:rgba(0,0,0,.56);color:#fff;display:grid;place-items:center;font-size:20px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
