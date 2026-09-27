@@ -165,7 +165,9 @@
 
     document.querySelector('#minus').onclick = () => setQuantity(-1);
     document.querySelector('#plus').onclick = () => setQuantity(1);
-    document.querySelector('#add').onclick = async () => {
+    document.querySelector('#mobile-minus').onclick = () => setQuantity(-1);
+    document.querySelector('#mobile-plus').onclick = () => setQuantity(1);
+    const addToCart = async () => {
       if (!window.ARABISK_CART?.add) {
         feedback.textContent = 'تعذر فتح السلة حاليًا. حاول إعادة تحميل الصفحة.';
         return;
@@ -177,6 +179,8 @@
       document.querySelector('#quantity').textContent = '1';
       setTimeout(() => { feedback.textContent = ''; }, 2200);
     };
+    document.querySelector('#add').onclick = addToCart;
+    document.querySelector('#mobile-add').onclick = addToCart;
     document.querySelector('#share').onclick = async () => {
       try {
         if (navigator.share) await navigator.share({title:current.nameAr || current.nameEn, text:current.descriptionAr || '', url:location.href});
