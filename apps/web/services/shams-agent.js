@@ -1,5 +1,13 @@
 const MAX_TOOL_CALLS = 4;
 const ALLOWED_PATHS = new Set(['/menu', '/reservation', '/cart', '/track-order', '/events', '/memories']);
+const ALLOWED_TOOLS = new Set([
+  'search_menu',
+  'recommend_menu',
+  'cart_summary',
+  'cart_add',
+  'navigate',
+  'get_order_status'
+]);
 const STAGES = Object.freeze([
   'understand',
   'recall',
@@ -61,6 +69,33 @@ function safeWorkflowSlots(value) {
       .filter(key => source[key] !== undefined && source[key] !== null && source[key] !== '')
       .map(key => [key, source[key]])
   );
+}
+
+function sanitizeToolCalls(calls) {
+  if (!Array.isArray(calls)) return [];
+  return calls
+    .slice(0, MAX_TOOL_CALLS)
+    .map(call => ({
+      name: clean(call?.name, 50),
+      args: call?.args && typeof call.args === 'object' ? call.args : {}
+    }))
+    .filter(call => ALLOWED_TOOLS.has(call.name))
+    .filter(call => {
+      if (call.name === 'navigate') return ALLOWED_PATHS.has(clean(call.args.path, 120));
+      if (call.name === 'get_order_status') return /^O\d{5}$/i.test(clean(call.args.orderId, 20));
+      if (call.name === 'cart_add') return Boolean(clean(call.args.productId, 60));
+      return true;
+    })
+    .map(call => {
+      if (call.name !== 'cart_add') return call;
+      return {
+        ...call,
+        args: {
+          ...call.args,
+          quantity: Math.min(20, Math.max(1, Number(call.args.quantity) || 1))
+        }
+      };
+    });
 }
 
 function normalizeIntent(value) {
@@ -198,6 +233,10 @@ function buildLocalReply(intent, data) {
     return 'رشحت لك ' + lines + '. وإذا أعجبك أول اختيار أضيفه لك للسلة.';
   }
 
+  if (intent === 'menu') return data.menuOpened ? 'أكيد، أفتح لك المنيو الآن.' : 'تعذر فتح المنيو الآن.';
+  if (intent === 'cart') return data.cartOpened ? 'حاضر، أفتح لك السلة.' : 'تعذر فتح السلة الآن.';
+  if (intent === 'events') return data.eventsOpened ? 'أفتح لك التجارب والفعاليات القادمة.' : 'تعذر فتح الفعاليات الآن.';
+  if (intent === 'memories') return data.memoriesOpened ? 'أفتح لك ذكريات ARABISK.' : 'تعذر فتح الذكريات الآن.';
   if (intent === 'product_search') {
     const products = data.matches || [];
     if (!products.length) return 'لم أجد طبقًا مطابقًا تمامًا. قل لي اسمًا آخر أو نوع الأكل الذي تريده.';
@@ -366,13 +405,14 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       const result = await requestModel(prompt);
       const plan = jsonFromText(result);
       if (!plan || !Array.isArray(plan.toolCalls)) return null;
+      const intent = normalizeIntent(plan.intent);
+      const toolCalls = sanitizeToolCalls(plan.toolCalls);
+      const toolDependent = new Set(['menu', 'recommend', 'cart', 'cart_summary', 'cart_add', 'order_status']);
+      if (toolDependent.has(intent) && !toolCalls.length) return null;
       return {
-        intent: normalizeIntent(plan.intent),
+        intent,
         reply: clean(plan.reply, 800),
-        toolCalls: plan.toolCalls.slice(0, MAX_TOOL_CALLS).map(call => ({
-          name: clean(call?.name, 50),
-          args: call?.args && typeof call.args === 'object' ? call.args : {}
-        })),
+        toolCalls,
         memory: plan.memory && typeof plan.memory === 'object' ? plan.memory : {}
       };
     } catch {
@@ -552,7 +592,25 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       order: toolResults.find(item => item.name === 'get_order_status')?.result?.order
     };
 
-    let reply = failedTool?.result?.error || clean(plan.reply, 800) || buildLocalReply(intent, responseData);
+    responseData.menuOpened = verifiedActions.some(action => action.type === 'navigate' && action.url === '/menu');
+    responseData.cartOpened = verifiedActions.some(action => action.type === 'navigate' && action.url === '/cart');
+    responseData.eventsOpened = verifiedActions.some(action => action.type === 'navigate' && action.url === '/events');
+    responseData.memoriesOpened = verifiedActions.some(action => action.type === 'navigate' && action.url === '/memories');
+
+    let reply = failedTool?.result?.error || buildLocalReply(intent, responseData);
+
+    if (!reply && !toolResults.length) {
+      reply = clean(plan.reply, 800);
+    }
+
+    if (intent === 'cart_add' && !responseData.added && !failedTool) {
+      reply = 'لم يتم تنفيذ الإضافة. قل لي اسم الطبق وسأحاول مرة أخرى.';
+    }
+
+    if (intent === 'order_status' && !responseData.order && !failedTool && !verifiedActions.length) {
+      reply = 'أحتاج رقم الطلب المرتبط بحسابك لعرض حالته صوتيًا.';
+    }
+
     if (!reply) reply = 'أنا معك. قل لي ماذا تريد أن نفعل داخل ARABISK.';
 
     stage = 'respond';
