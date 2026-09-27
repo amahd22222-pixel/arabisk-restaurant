@@ -61,3 +61,10 @@ footer{display:grid;gap:6px;padding:40px 20px 110px;text-align:center;background
 footer strong{font:600 24px "Playfair Display",serif}
 footer span,footer small{color:#9e9589;font-size:10px}
 @media(max-width:620px){.reservation-panel{padding:90px 16px 120px}.reservation-form{grid-template-columns:1fr;padding:18px}.reservation-form .full{grid-column:auto}.reservation-message{grid-column:auto}}
+
+
+/* Reservation surface + shell polish */
+.reservation-panel{width:min(920px,calc(100% - 32px));margin:0 auto 120px;padding:32px;border-radius:28px;background:var(--app-paper);border:1px solid var(--app-line);box-shadow:var(--app-shadow)}
+.reservation-head{margin-bottom:24px}.reservation-head h2{margin:0 0 10px;font:500 clamp(34px,5vw,54px)/1.05 "Playfair Display",serif}.reservation-head>p:last-child{margin:0;color:var(--app-muted);font-size:12px;line-height:1.9}
+.reservation-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.reservation-form label{display:grid;gap:7px;color:#554b3e;font-size:10px;font-weight:800}.reservation-form input,.reservation-form select,.reservation-form textarea{width:100%;box-sizing:border-box;border:1px solid var(--app-line);border-radius:13px;background:#fffdf8;color:var(--app-ink);padding:12px 13px;font:500 12px/1.5 Cairo,sans-serif;outline:none}.reservation-form input:focus,.reservation-form select:focus,.reservation-form textarea:focus{border-color:rgba(197,154,91,.8);box-shadow:0 0 0 3px rgba(197,154,91,.12)}.reservation-form .full{grid-column:1/-1}.gold-btn{border:0;min-height:48px;border-radius:999px;background:var(--app-dark);color:#fff;font:800 11px Cairo,sans-serif;cursor:pointer}.reservation-message{min-height:18px;margin:0;color:#756e62;font-size:11px}.reservation-event{margin:0;padding:10px 12px;border-radius:12px;background:#f1e8d9;color:#665743;font-size:10px}
+@media(max-width:620px){.reservation-panel{width:calc(100% - 24px);padding:22px 17px;border-radius:22px}.reservation-form{grid-template-columns:1fr}.reservation-form .full{grid-column:auto}}
