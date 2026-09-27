@@ -8,7 +8,7 @@ class PushSubscriptionServiceError extends Error {
   }
 }
 
-export function createPushSubscriptionService({ repository, cleanText, crypto }) {
+export function createPushSubscriptionService({ repository, cleanText, crypto, findCustomerByProfileToken }) {
   const { pushSubscriptions } = repository;
 
   function parseSubscription(body) {
@@ -26,6 +26,11 @@ export function createPushSubscriptionService({ repository, cleanText, crypto })
       throw new PushSubscriptionServiceError('A valid push subscription (endpoint and keys) is required.');
     }
     const contextTag = cleanText(body?.contextTag, 40);
+    const profileToken = cleanText(body?.profileToken, 300);
+    const linkedCustomer = profileToken && typeof findCustomerByProfileToken === 'function'
+      ? findCustomerByProfileToken(profileToken)
+      : null;
+    const customerId = linkedCustomer?.id || '';
     const now = new Date().toISOString();
     const existing = pushSubscriptions.find(item => item.endpoint === parsed.endpoint);
 
@@ -35,6 +40,7 @@ export function createPushSubscriptionService({ repository, cleanText, crypto })
       existing.auth = parsed.auth;
       existing.updatedAt = now;
       if (contextTag) existing.contextTag = contextTag;
+      if (customerId) existing.customerId = customerId;
       try {
         await pushSubscriptions.save();
       } catch (error) {
@@ -54,6 +60,7 @@ export function createPushSubscriptionService({ repository, cleanText, crypto })
       p256dh: parsed.p256dh,
       auth: parsed.auth,
       contextTag,
+      customerId,
       createdAt: now,
       updatedAt: now
     };
