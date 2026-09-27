@@ -246,7 +246,9 @@ const shamsService = createShamsService({
   writeJson,
   aiApiKey: SHAMS_AI_API_KEY,
   aiModel: SHAMS_AI_MODEL,
-  aiEndpoint: SHAMS_AI_ENDPOINT
+  aiEndpoint: SHAMS_AI_ENDPOINT,
+  getOrderService: () => orderService,
+  getReservationService: () => reservationService
 });
 registerShamsRoutes(app, { service: shamsService, profileRateLimit: shamsRateLimit });
 
