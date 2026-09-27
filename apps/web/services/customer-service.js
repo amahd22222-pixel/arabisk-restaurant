@@ -28,7 +28,20 @@ export function createCustomerService({ repository, cleanText, crypto }) {
   const { customers } = repository;
 
   function listCustomers() {
-    return customers.all();
+    return customers.all().map(customer => ({
+      id: customer.id,
+      name: customer.name || '',
+      phone: customer.phone || '',
+      orderCount: Number(customer.orderCount || 0),
+      lastOrderAt: customer.lastOrderAt || '',
+      reservationCount: Number(customer.reservationCount || 0),
+      lastReservationAt: customer.lastReservationAt || '',
+      phoneVerified: customer.phoneVerified === true,
+      appMember: customer.appMember === true,
+      privacyConsentAt: customer.privacyConsentAt || '',
+      appProfileCreatedAt: customer.appProfileCreatedAt || '',
+      appProfileUpdatedAt: customer.appProfileUpdatedAt || ''
+    }));
   }
 
   function findByProfileToken(token) {
