@@ -86,24 +86,35 @@
       null;
   }
 
-  function speak(text) {
-    if (!state.voiceEnabled || !('speechSynthesis' in window)) return Promise.resolve();
+  function speak(text, { allowWhenDisabled = false } = {}) {
+    if ((!state.voiceEnabled && !allowWhenDisabled) || !('speechSynthesis' in window)) {
+      return Promise.resolve(false);
+    }
+
     const cleanText = String(text || '')
       .replace(/[\n\r]+/g, '. ')
       .replace(/[\*_\`#>]/g, '')
       .trim()
       .slice(0, 900);
 
-    if (!cleanText) return Promise.resolve();
+    if (!cleanText) return Promise.resolve(false);
 
     stopSpeaking();
 
     return new Promise(resolve => {
+      let settled = false;
+      const finish = value => {
+        if (settled) return;
+        settled = true;
+        resolve(Boolean(value));
+      };
+
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'ar-AE';
       utterance.rate = 0.96;
       utterance.pitch = 1.02;
       utterance.volume = 1;
+
       const voice = pickArabicVoice();
       if (voice) utterance.voice = voice;
 
@@ -111,18 +122,24 @@
         state.speaking = true;
         setVisual('speaking');
       };
+
       utterance.onend = () => {
         state.speaking = false;
         if (!state.busy && !state.listening) setVisual('idle');
-        resolve();
+        finish(true);
       };
+
       utterance.onerror = () => {
         state.speaking = false;
         if (!state.busy && !state.listening) setVisual('idle');
-        resolve();
+        finish(false);
       };
 
-      window.speechSynthesis.speak(utterance);
+      try {
+        window.speechSynthesis.speak(utterance);
+      } catch {
+        finish(false);
+      }
     });
   }
 
@@ -222,22 +239,26 @@
     return recognition;
   }
 
-  function startListeningFromUserGesture() {
+  async function startConversationFromUserGesture() {
     const { launcher } = ui();
     const recognition = state.recognition || setupRecognition();
     if (!recognition) return;
 
-    stopSpeaking();
     showError('');
+    stopSpeaking();
 
-    // Critical: start() is called directly from the actual button click.
-    // Delaying this call with setTimeout can cause browsers to reject microphone activation.
+    // Start speech from the real tap/click first. This unlocks audio on
+    // mobile browsers before any asynchronous network work happens.
+    if (state.voiceEnabled && 'speechSynthesis' in window) {
+      await speak('أهلاً بك. أنا شمس، تفضل.', { allowWhenDisabled: true });
+    }
+
     try {
       recognition.start();
       launcher?.classList.add('is-listening');
     } catch (error) {
       if (!/already started|recognition has already started/i.test(String(error?.message || ''))) {
-        showError('تعذر تشغيل الميكروفون. اضغط مرة أخرى.');
+        showError('تعذر تشغيل الميكروفون. اضغط شمس مرة أخرى.');
         setVisual('error');
       }
     }
@@ -261,7 +282,7 @@
       return;
     }
 
-    startListeningFromUserGesture();
+    void startConversationFromUserGesture();
   }
 
   function setup() {
@@ -290,7 +311,7 @@
   }
 
   window.ARABISK_SHAMS = {
-    open: () => startListeningFromUserGesture(),
+    open: () => startConversationFromUserGesture(),
     close: () => {
       stopListening();
       stopSpeaking();
