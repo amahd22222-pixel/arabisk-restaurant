@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-const PROMOTION_STATE_KEY = 'data/arabisk-promotions-v1.json';
+const PROMOTION_STATE_KEY = 'data/arabisk-promotions-v2.json';
 const MAX_CLAIMS = 5000;
 
 class PromotionError extends Error {
