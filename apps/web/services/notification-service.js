@@ -140,17 +140,22 @@ export function createNotificationService({
   function schedule(campaign) {
     const when = Date.parse(campaign.scheduledAt);
     if (!Number.isFinite(when)) return;
-    const remaining = Math.max(0, when - Date.now());
+    const remaining = when - Date.now();
     clearTimeout(timers.get(campaign.id));
+    const delay = Math.max(0, Math.min(remaining, 2_000_000_000));
     const timer = setTimeout(() => {
       timers.delete(campaign.id);
+      if (Date.now() < when) {
+        schedule(campaign);
+        return;
+      }
       void dispatch(campaign).catch(async error => {
         campaign.status = 'failed';
         campaign.error = error.message;
         campaign.completedAt = nowIso();
         await persist();
       });
-    }, Math.min(remaining, 2_147_000_000));
+    }, delay);
     timer.unref?.();
     timers.set(campaign.id, timer);
   }
