@@ -37,7 +37,7 @@ export const maxVideoBytes = 120 * 1024 * 1024;
 export const smartPopularWindowMs = 30 * 24 * 60 * 60 * 1000;
 export const smartNewWindowMs = 14 * 24 * 60 * 60 * 1000;
 export const shamsAiApiKey = String(process.env.SHAMS_AI_API_KEY || '').trim();
-export const shamsAiModel = String(process.env.SHAMS_AI_MODEL || 'gpt-5.6-sol').trim();
+export const shamsAiModel = String(process.env.SHAMS_AI_MODEL || 'gpt-6-sol').trim();
 export const shamsAiEndpoint = String(process.env.SHAMS_AI_ENDPOINT || 'https://api.openai.com/v1/responses').trim();
 
 export const videoTypes = new Set([
