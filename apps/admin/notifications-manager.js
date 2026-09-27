@@ -1,0 +1,214 @@
+import { request } from './api-client.js';
+
+const $ = (selector) => document.querySelector(selector);
+
+const state = {
+  status: null,
+  campaigns: []
+};
+
+const templates = {
+  event: {
+    title: 'فعالية ARABISK غدًا ✨',
+    body: 'ليلة مميزة تنتظركم في ARABISK. احجز طاولتك الآن.',
+    url: '/reservation'
+  },
+  offer: {
+    title: 'عرض جديد من ARABISK 🎁',
+    body: 'استفد من عرضنا الحالي واطلب الآن قبل انتهاء المدة.',
+    url: '/menu'
+  },
+  menu: {
+    title: 'اكتشف الجديد في منيو ARABISK',
+    body: 'أضفنا اختيارات جديدة لتجربتك القادمة.',
+    url: '/menu'
+  },
+  booking: {
+    title: 'تذكير بحجزك في ARABISK',
+    body: 'ننتظركم قريبًا. راجع تفاصيل الحجز من التطبيق.',
+    url: '/reservation'
+  },
+  general: {
+    title: 'جديد من ARABISK',
+    body: 'لدينا خبر جديد نود مشاركته معك.',
+    url: '/'
+  }
+};
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
+function formatDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('ar-AE', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function statusLabel(status) {
+  return ({
+    queued: 'في الانتظار',
+    scheduled: 'مجدول',
+    sending: 'جارٍ الإرسال',
+    sent: 'تم الإرسال',
+    partial: 'إرسال جزئي',
+    failed: 'فشل الإرسال',
+    cancelled: 'ملغي'
+  }[status] || status || '—');
+}
+
+function renderStatus() {
+  const s = state.status || {};
+  const statusNode = $('#notifications-config-status');
+  if (statusNode) {
+    statusNode.textContent = s.configured ? 'Push جاهز للإرسال' : 'إعداد Push غير مكتمل';
+    statusNode.className = s.configured ? 'notification-status ready' : 'notification-status warning';
+  }
+  $('#notifications-subscribers') && ($('#notifications-subscribers').textContent = Number(s.subscribers || 0).toLocaleString('ar-AE'));
+  $('#notifications-campaigns') && ($('#notifications-campaigns').textContent = Number(s.campaigns || 0).toLocaleString('ar-AE'));
+  const delivered = state.campaigns.reduce((sum, item) => sum + Number(item.stats?.delivered || 0), 0);
+  $('#notifications-delivered') && ($('#notifications-delivered').textContent = delivered.toLocaleString('ar-AE'));
+  const scheduled = state.campaigns.filter(item => item.status === 'scheduled').length;
+  $('#notifications-scheduled') && ($('#notifications-scheduled').textContent = scheduled.toLocaleString('ar-AE'));
+}
+
+function renderPreview() {
+  const title = $('#notification-title')?.value.trim() || 'عنوان الإشعار';
+  const body = $('#notification-body')?.value.trim() || 'نص الإشعار سيظهر هنا على هاتف العميل.';
+  const url = $('#notification-url')?.value.trim() || '/';
+  $('#notification-preview-title') && ($('#notification-preview-title').textContent = title);
+  $('#notification-preview-body') && ($('#notification-preview-body').textContent = body);
+  $('#notification-preview-url') && ($('#notification-preview-url').textContent = url);
+}
+
+function renderCampaigns() {
+  const body = $('#notifications-history-body');
+  if (!body) return;
+  body.innerHTML = state.campaigns.map(item => {
+    const stats = item.stats || {};
+    const action = item.status === 'scheduled'
+      ? '<button class="small-action danger" type="button" data-cancel-notification="' + escapeHtml(item.id) + '">إلغاء الجدولة</button>'
+      : '';
+    return '<tr>' +
+      '<td><strong>' + escapeHtml(item.title) + '</strong><small>' + escapeHtml(item.body) + '</small></td>' +
+      '<td><span class="notification-audience">التطبيق المثبت فقط</span></td>' +
+      '<td><span class="status ' + (item.status === 'sent' ? 'on' : item.status === 'failed' ? 'off' : 'pending') + '">' + escapeHtml(statusLabel(item.status)) + '</span></td>' +
+      '<td>' + Number(stats.targeted || 0) + '<small>وصل: ' + Number(stats.delivered || 0) + ' · فشل: ' + Number(stats.failed || 0) + '</small></td>' +
+      '<td>' + escapeHtml(item.scheduledAt ? formatDate(item.scheduledAt) : formatDate(item.sentAt || item.createdAt)) + '</td>' +
+      '<td class="actions">' + action + '</td>' +
+      '</tr>';
+  }).join('') || '<tr><td colspan="6" class="empty">لا توجد إشعارات بعد.</td></tr>';
+}
+
+async function load() {
+  const data = await request('/api/notifications');
+  state.status = data.status || {};
+  state.campaigns = Array.isArray(data.campaigns) ? data.campaigns : [];
+  renderStatus();
+  renderCampaigns();
+  const note = $('#notifications-state');
+  if (note) note.textContent = state.status.configured
+    ? 'جاهز لإرسال إشعارات Push إلى مستخدمي تطبيق ARABISK المثبت.'
+    : 'أكمل إعداد مفاتيح VAPID على الخادم أولًا لتفعيل الإرسال.';
+}
+
+function applyTemplate(key) {
+  const template = templates[key];
+  if (!template) return;
+  $('#notification-title').value = template.title;
+  $('#notification-body').value = template.body;
+  $('#notification-url').value = template.url;
+  renderPreview();
+}
+
+function getFormData() {
+  const title = $('#notification-title').value.trim();
+  const body = $('#notification-body').value.trim();
+  const url = $('#notification-url').value.trim() || '/';
+  const urgency = $('#notification-urgency').value;
+  if (!title || !body) throw new Error('اكتب عنوان الإشعار ونصه أولًا.');
+  return { title, body, url, urgency, topic: $('#notification-topic').value.trim() };
+}
+
+async function sendNow() {
+  const data = getFormData();
+  const button = $('#notification-send-now');
+  button.disabled = true;
+  button.textContent = 'جارٍ الإرسال…';
+  try {
+    await request('/api/notifications/send', { method: 'POST', body: JSON.stringify(data), timeoutMs: 30000 });
+    $('#notifications-feedback').textContent = 'تم تنفيذ الإرسال على أجهزة التطبيق المثبتة.';
+    $('#notifications-feedback').className = 'success-message';
+    await load();
+  } finally {
+    button.disabled = false;
+    button.textContent = 'إرسال الآن';
+  }
+}
+
+async function schedule() {
+  const data = getFormData();
+  const value = $('#notification-schedule-at').value;
+  if (!value) throw new Error('حدد موعد الإرسال أولًا.');
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw new Error('موعد الإرسال غير صالح.');
+  const button = $('#notification-schedule');
+  button.disabled = true;
+  button.textContent = 'جارٍ الحفظ…';
+  try {
+    await request('/api/notifications/schedule', {
+      method: 'POST',
+      body: JSON.stringify({ ...data, scheduleAt: date.toISOString() }),
+      timeoutMs: 15000
+    });
+    $('#notifications-feedback').textContent = 'تمت جدولة الإشعار بنجاح.';
+    $('#notifications-feedback').className = 'success-message';
+    await load();
+  } finally {
+    button.disabled = false;
+    button.textContent = 'جدولة الإشعار';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-notification-template]').forEach((button) => {
+    button.addEventListener('click', () => applyTemplate(button.dataset.notificationTemplate));
+  });
+  ['#notification-title', '#notification-body', '#notification-url'].forEach((selector) => {
+    $(selector)?.addEventListener('input', renderPreview);
+  });
+  $('#notifications-refresh')?.addEventListener('click', () => load().catch((error) => {
+    $('#notifications-feedback').textContent = error.message;
+    $('#notifications-feedback').className = 'error';
+  }));
+  $('#notification-send-now')?.addEventListener('click', () => sendNow().catch((error) => {
+    $('#notifications-feedback').textContent = error.message;
+    $('#notifications-feedback').className = 'error';
+  }));
+  $('#notification-schedule')?.addEventListener('click', () => schedule().catch((error) => {
+    $('#notifications-feedback').textContent = error.message;
+    $('#notifications-feedback').className = 'error';
+  }));
+  $('#notification-template')?.addEventListener('change', (event) => applyTemplate(event.target.value));
+  $('#notifications-history-body')?.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-cancel-notification]');
+    if (!button) return;
+    if (!window.confirm('إلغاء جدولة هذا الإشعار؟')) return;
+    button.disabled = true;
+    try {
+      await request('/api/notifications/' + encodeURIComponent(button.dataset.cancelNotification) + '/cancel', { method: 'POST' });
+      await load();
+    } catch (error) {
+      $('#notifications-feedback').textContent = error.message;
+      $('#notifications-feedback').className = 'error';
+      button.disabled = false;
+    }
+  });
+  renderPreview();
+  void load().catch((error) => {
+    $('#notifications-feedback').textContent = error.message;
+    $('#notifications-feedback').className = 'error';
+  });
+});
