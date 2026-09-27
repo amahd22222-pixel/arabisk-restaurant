@@ -48,6 +48,7 @@ function applyLanguage() {
 
   const toggle = $('#lang-toggle');
   if (toggle) toggle.textContent = language === 'ar' ? 'EN' : 'ع';
+  window.dispatchEvent(new CustomEvent('arabisk:language-updated', { detail: { language } }));
   window.dispatchEvent(new CustomEvent('arabisk:language-updated', { detail:{ language } }));
 }
 
