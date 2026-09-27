@@ -1,139 +1,145 @@
 (() => {
+  'use strict';
+
   const state = {
-    open: false,
     listening: false,
     speaking: false,
-    history: []
+    busy: false,
+    history: [],
+    recognition: null,
+    voiceEnabled: true
   };
 
-  const esc = (value) => String(value ?? '').replace(/[&<>"']/g, char => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  })[char]);
+  const rootId = 'arabisk-shams-root';
+  const launcherId = 'shams-launcher';
 
-  const ensureStyles = () => {
+  function ensureStyles() {
     if (document.getElementById('arabisk-shams-style')) return;
     const link = document.createElement('link');
     link.id = 'arabisk-shams-style';
     link.rel = 'stylesheet';
     link.href = '/shams.css';
     document.head.appendChild(link);
-  };
+  }
 
-  const createUi = () => {
-    if (document.getElementById('arabisk-shams-root')) return;
+  function createUi() {
+    if (document.getElementById(rootId)) return;
     const root = document.createElement('section');
-    root.id = 'arabisk-shams-root';
+    root.id = rootId;
+    root.setAttribute('aria-label', 'شمس — المساعدة الصوتية');
     root.innerHTML = `
-      <button class="shams-launcher" id="shams-launcher" type="button" aria-label="تحدث مع شمس" aria-expanded="false">
+      <button id="${launcherId}" class="shams-launcher shams-voice-only" type="button"
+        aria-label="تحدث مع شمس" aria-pressed="false" title="تحدث مع شمس">
         <span class="shams-sun" aria-hidden="true">☀</span>
-        <span class="shams-launcher-label">شمس</span>
+        <span class="shams-launcher-label" aria-hidden="true">شمس</span>
       </button>
-      <div class="shams-shell" id="shams-shell" hidden>
-        <div class="shams-head">
-          <div class="shams-identity">
-            <span class="shams-avatar" aria-hidden="true">☀</span>
-            <div>
-              <strong>شمس</strong>
-              <small>مساعدة ARABISK</small>
-            </div>
-          </div>
-          <div class="shams-head-actions">
-            <button id="shams-voice-toggle" type="button" class="shams-icon-button" aria-label="تفعيل الصوت">🔊</button>
-            <button id="shams-close" type="button" class="shams-icon-button" aria-label="إغلاق">×</button>
-          </div>
-        </div>
-        <div class="shams-messages" id="shams-messages" aria-live="polite"></div>
-        <div class="shams-suggestions" id="shams-suggestions">
-          <button type="button" data-shams-prompt="ساعديني أختار أكلي">✨ اختاري لي</button>
-          <button type="button" data-shams-prompt="أريد حجز طاولة">📅 حجز طاولة</button>
-          <button type="button" data-shams-prompt="افتحي المنيو">🍽 المنيو</button>
-        </div>
-        <div class="shams-input-row">
-          <button id="shams-mic" type="button" class="shams-mic" aria-label="تحدث مع شمس">🎙️</button>
-          <input id="shams-input" type="text" maxlength="1200" autocomplete="off" placeholder="قولي لشمس ماذا تحتاجين…" aria-label="رسالتك لشمس">
-          <button id="shams-send" type="button" class="shams-send" aria-label="إرسال">➤</button>
-        </div>
-        <div class="shams-status" id="shams-status">يمكنك الكتابة أو التحدث مع شمس.</div>
-      </div>
+      <div class="shams-voice-error" id="shams-voice-error" aria-live="polite"></div>
     `;
     document.body.appendChild(root);
-  };
+  }
 
-  const ui = () => ({
-    root: document.getElementById('arabisk-shams-root'),
-    launcher: document.getElementById('shams-launcher'),
-    shell: document.getElementById('shams-shell'),
-    messages: document.getElementById('shams-messages'),
-    input: document.getElementById('shams-input'),
-    send: document.getElementById('shams-send'),
-    mic: document.getElementById('shams-mic'),
-    status: document.getElementById('shams-status'),
-    voiceToggle: document.getElementById('shams-voice-toggle'),
-    close: document.getElementById('shams-close'),
-    suggestions: document.getElementById('shams-suggestions')
-  });
+  function ui() {
+    return {
+      root: document.getElementById(rootId),
+      launcher: document.getElementById(launcherId),
+      error: document.getElementById('shams-voice-error')
+    };
+  }
 
-  const addMessage = (role, content, actions = []) => {
-    const { messages } = ui();
-    if (!messages) return;
-    const item = document.createElement('div');
-    item.className = 'shams-message ' + role;
-    item.innerHTML = `
-      <div class="shams-message-bubble">${esc(content).replace(/\\n/g,'<br>')}</div>
-      ${Array.isArray(actions) && actions.length ? '<div class="shams-actions">' + actions.map(action => `
-        <button type="button" data-shams-action="${esc(action?.url || '')}">${esc(action?.label || 'فتح')}</button>
-      `).join('') + '</div>' : ''}
-    `;
-    messages.appendChild(item);
-    messages.scrollTop = messages.scrollHeight;
-    state.history.push({ role, content: String(content || '').slice(0, 1200) });
-    state.history = state.history.slice(-12);
-    item.querySelectorAll('[data-shams-action]').forEach(button => {
-      button.addEventListener('click', () => {
-        const url = button.getAttribute('data-shams-action') || '/';
-        if (/^\/(?!\/)/.test(url)) window.location.assign(url);
-      });
+  function setVisual(mode) {
+    const { launcher } = ui();
+    if (!launcher) return;
+    launcher.classList.toggle('is-listening', mode === 'listening');
+    launcher.classList.toggle('is-speaking', mode === 'speaking');
+    launcher.classList.toggle('is-thinking', mode === 'thinking');
+    launcher.classList.toggle('is-error', mode === 'error');
+    launcher.setAttribute('aria-pressed', String(Boolean(state.listening)));
+    launcher.title =
+      mode === 'listening' ? 'شمس تستمع إليك' :
+      mode === 'speaking' ? 'شمس تتحدث' :
+      mode === 'thinking' ? 'شمس تفكر' :
+      'تحدث مع شمس';
+  }
+
+  function showError(message) {
+    const node = ui().error;
+    if (!node) return;
+    node.textContent = String(message || '');
+    node.classList.toggle('has-error', Boolean(message));
+    window.clearTimeout(showError.timer);
+    if (message) showError.timer = window.setTimeout(() => {
+      node.textContent = '';
+      node.classList.remove('has-error');
+    }, 5000);
+  }
+
+  function stopSpeaking() {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    state.speaking = false;
+  }
+
+  function pickArabicVoice() {
+    if (!('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    return voices.find(v => /^ar(-|_)/i.test(v.lang)) ||
+      voices.find(v => /arabic|العربي/i.test(v.name)) ||
+      null;
+  }
+
+  function speak(text) {
+    if (!state.voiceEnabled || !('speechSynthesis' in window)) return Promise.resolve();
+    const cleanText = String(text || '')
+      .replace(/[\n\r]+/g, '. ')
+      .replace(/[\*_\`#>]/g, '')
+      .trim()
+      .slice(0, 900);
+
+    if (!cleanText) return Promise.resolve();
+
+    stopSpeaking();
+
+    return new Promise(resolve => {
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'ar-AE';
+      utterance.rate = 0.96;
+      utterance.pitch = 1.02;
+      utterance.volume = 1;
+      const voice = pickArabicVoice();
+      if (voice) utterance.voice = voice;
+
+      utterance.onstart = () => {
+        state.speaking = true;
+        setVisual('speaking');
+      };
+      utterance.onend = () => {
+        state.speaking = false;
+        if (!state.busy && !state.listening) setVisual('idle');
+        resolve();
+      };
+      utterance.onerror = () => {
+        state.speaking = false;
+        if (!state.busy && !state.listening) setVisual('idle');
+        resolve();
+      };
+
+      window.speechSynthesis.speak(utterance);
     });
-  };
+  }
 
-  const setStatus = (message) => {
-    const node = ui().status;
-    if (node) node.textContent = message;
-  };
+  async function performActions(actions) {
+    if (!Array.isArray(actions)) return;
+    const action = actions.find(item => /^\/(?!\/)/.test(String(item?.url || '')));
+    if (!action) return;
+    await new Promise(resolve => window.setTimeout(resolve, 600));
+    window.location.assign(action.url);
+  }
 
-  const setOpen = (open) => {
-    state.open = open;
-    const { shell, launcher } = ui();
-    if (!shell || !launcher) return;
-    shell.hidden = !open;
-    launcher.setAttribute('aria-expanded', String(open));
-    if (open) {
-      if (!ui().messages?.children.length) {
-        addMessage('assistant', 'أهلاً بك 🌞 أنا شمس، قولي لي ماذا تحتاج.');
-      }
-    }
-  };
+  async function sendMessage(message) {
+    const text = String(message || '').trim();
+    if (!text || state.busy) return;
 
-  const speak = (text) => {
-    if (!state.speaking || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(String(text).slice(0, 900));
-    utterance.lang = 'ar-AE';
-    utterance.rate = 0.97;
-    utterance.pitch = 1.02;
-    utterance.onstart = () => setStatus('شمس تتحدث الآن…');
-    utterance.onend = () => setStatus('يمكنك الكتابة أو التحدث مع شمس.');
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const send = async (forcedMessage = '') => {
-    const { input, send: sendButton } = ui();
-    const message = String(forcedMessage || input?.value || '').trim();
-    if (!message) return;
-    if (input) input.value = '';
-    if (sendButton) sendButton.disabled = true;
-    addMessage('user', message);
-    setStatus('شمس تفكر…');
+    state.busy = true;
+    setVisual('thinking');
 
     try {
       const profileToken = window.ARABISK_PROFILE?.getToken?.() || '';
@@ -144,34 +150,42 @@
           ...(profileToken ? { 'X-ARABISK-PROFILE-TOKEN': profileToken } : {})
         },
         body: JSON.stringify({
-          message,
-          history: state.history.slice(-11, -1)
+          message: text,
+          history: state.history.slice(-10)
         })
       });
+
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || 'تعذر تشغيل شمس الآن.');
-      addMessage('assistant', data.reply || 'أنا هنا لمساعدتك.', data.actions || []);
-      speak(data.reply || '');
-      setStatus('جاهزة لك.');
+      if (!response.ok) {
+        throw new Error(data.message || 'تعذر تشغيل شمس الآن.');
+      }
+
+      const reply = String(data.reply || 'أنا هنا لمساعدتك.').trim();
+
+      state.history.push({ role: 'user', content: text });
+      state.history.push({ role: 'assistant', content: reply });
+      state.history = state.history.slice(-12);
+
+      await speak(reply);
+      await performActions(data.actions);
     } catch (error) {
-      addMessage('assistant', error.message || 'تعذر تشغيل شمس الآن.');
-      setStatus('حدث خطأ بسيط، جرّب مرة أخرى.');
+      showError(error?.message || 'تعذر تشغيل شمس الآن.');
+      await speak(error?.message || 'تعذر تشغيل شمس الآن. حاول مرة أخرى.');
     } finally {
-      if (sendButton) sendButton.disabled = false;
+      state.busy = false;
+      if (!state.listening && !state.speaking) setVisual('idle');
     }
-  };
+  }
 
-  const setupVoice = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const { mic } = ui();
-    if (!mic) return;
-    if (!SpeechRecognition) {
-      mic.disabled = true;
-      mic.title = 'المتصفح لا يدعم التعرف الصوتي هنا';
-      return;
+  function setupRecognition() {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      showError('التحدث الصوتي غير مدعوم في هذا المتصفح.');
+      setVisual('error');
+      return null;
     }
 
-    const recognition = new SpeechRecognition();
+    const recognition = new Recognition();
     recognition.lang = 'ar-AE';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
@@ -179,72 +193,108 @@
 
     recognition.onstart = () => {
       state.listening = true;
-      mic.classList.add('is-listening');
-      setStatus('شمس تستمع… تكلم الآن.');
+      showError('');
+      setVisual('listening');
     };
-    recognition.onresult = (event) => {
+
+    recognition.onresult = event => {
       const phrase = event.results?.[0]?.[0]?.transcript?.trim() || '';
-      if (phrase) void send(phrase);
-    };
-    recognition.onerror = () => {
       state.listening = false;
-      mic.classList.remove('is-listening');
-      setStatus('لم ألتقط الصوت. جرّب مرة أخرى.');
+      if (phrase) void sendMessage(phrase);
     };
+
+    recognition.onerror = event => {
+      state.listening = false;
+      if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
+        showError('اسمح بالميكروفون من إعدادات المتصفح حتى تسمعك شمس.');
+      } else if (event?.error !== 'aborted' && event?.error !== 'no-speech') {
+        showError('لم ألتقط الصوت بوضوح. اضغط شمس وتحدث مرة أخرى.');
+      }
+      if (!state.busy && !state.speaking) setVisual(event?.error === 'not-allowed' ? 'error' : 'idle');
+    };
+
     recognition.onend = () => {
       state.listening = false;
-      mic.classList.remove('is-listening');
-      if (!state.speaking) setStatus('يمكنك الكتابة أو التحدث مع شمس.');
+      if (!state.busy && !state.speaking) setVisual('idle');
     };
 
-    mic.addEventListener('click', () => {
-      if (state.listening) recognition.stop();
-      else {
-        setOpen(true);
-        try { recognition.start(); } catch {}
-      }
-    });
-  };
+    state.recognition = recognition;
+    return recognition;
+  }
 
-  const setup = () => {
+  function startListeningFromUserGesture() {
+    const { launcher } = ui();
+    const recognition = state.recognition || setupRecognition();
+    if (!recognition) return;
+
+    stopSpeaking();
+    showError('');
+
+    // Critical: start() is called directly from the actual button click.
+    // Delaying this call with setTimeout can cause browsers to reject microphone activation.
+    try {
+      recognition.start();
+      launcher?.classList.add('is-listening');
+    } catch (error) {
+      if (!/already started|recognition has already started/i.test(String(error?.message || ''))) {
+        showError('تعذر تشغيل الميكروفون. اضغط مرة أخرى.');
+        setVisual('error');
+      }
+    }
+  }
+
+  function stopListening() {
+    try { state.recognition?.stop(); } catch {}
+    state.listening = false;
+    setVisual('idle');
+  }
+
+  function toggleVoice() {
+    if (state.listening) {
+      stopListening();
+      return;
+    }
+
+    if (state.speaking) {
+      stopSpeaking();
+      setVisual('idle');
+      return;
+    }
+
+    startListeningFromUserGesture();
+  }
+
+  function setup() {
     ensureStyles();
     createUi();
-    const { launcher, close, send: sendButton, input, voiceToggle, suggestions } = ui();
-    if (!launcher || !close || !sendButton || !input) return;
 
-    state.speaking = 'speechSynthesis' in window;
-    voiceToggle?.classList.toggle('is-active', state.speaking);
-    voiceToggle?.addEventListener('click', () => {
-      state.speaking = !state.speaking;
-      voiceToggle.classList.toggle('is-active', state.speaking);
-      voiceToggle.setAttribute('aria-pressed', String(state.speaking));
-      if (!state.speaking && 'speechSynthesis' in window) window.speechSynthesis.cancel();
-    });
-    launcher.addEventListener('click', () => setOpen(!state.open));
-    launcher.addEventListener('click', () => {
-      window.setTimeout(() => ui().mic?.click(), 0);
-    });
-    close.addEventListener('click', () => setOpen(false));
-    sendButton.addEventListener('click', () => void send());
-    input.addEventListener('keydown', event => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        void send();
-      }
-    });
-    suggestions?.addEventListener('click', event => {
-      const button = event.target.closest('[data-shams-prompt]');
-      if (button) void send(button.getAttribute('data-shams-prompt') || '');
-    });
-    setupVoice();
-  };
+    const { launcher } = ui();
+    if (!launcher) return;
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup, { once: true });
-  else setup();
+    state.voiceEnabled = 'speechSynthesis' in window;
+    setupRecognition();
+
+    // Keep the microphone activation inside the real click handler.
+    launcher.addEventListener('click', toggleVoice);
+
+    if (!state.voiceEnabled) {
+      showError('الصوت غير متاح في هذا المتصفح.');
+      setVisual('error');
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setup, { once: true });
+  } else {
+    setup();
+  }
 
   window.ARABISK_SHAMS = {
-    open: () => setOpen(true),
-    close: () => setOpen(false),
-    send
+    open: () => startListeningFromUserGesture(),
+    close: () => {
+      stopListening();
+      stopSpeaking();
+    },
+    send: sendMessage
   };
 })();
