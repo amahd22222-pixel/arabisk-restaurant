@@ -15,7 +15,7 @@ class OrderServiceError extends Error {
   }
 }
 
-export function createOrderService({ repository, cleanText, nextOrderId, invalidateSmartSnapshot, revenue, crypto }) {
+export function createOrderService({ repository, cleanText, nextOrderId, invalidateSmartSnapshot, revenue, crypto, promotions }) {
   const { orders, products, customers } = repository;
 
   function getOrThrow(id) {
@@ -92,6 +92,7 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
     const phone = cleanText(body.phone, 40);
     const notes = cleanText(body.notes, 300);
     const recoveryToken = cleanText(body.recoveryToken, 80);
+    const promoCode = cleanText(body.promoCode, 80).toUpperCase();
     const rawItems = Array.isArray(body.items) ? body.items : [];
 
     if (!rawItems.length || rawItems.length > 30) throw new OrderServiceError('At least one order item is required');
@@ -128,14 +129,18 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
     }
 
     const now = new Date().toISOString();
+    const orderId = nextOrderId();
     const order = {
-      id: nextOrderId(),
+      id: orderId,
       name: orderType === 'dine_in' ? 'طاولة ' + tableNumber : name,
       phone: orderType === 'dine_in' ? '' : phone,
       orderType,
       tableNumber,
       notes,
       items,
+      subtotal: total,
+      discount: 0,
+      promoCode: '',
       total,
       status: 'pending',
       createdAt: now,
@@ -162,8 +167,16 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
     }
 
     orders.add(order);
+    let promotionReservation = null;
 
     try {
+      if (promoCode) {
+        if (!promotions) throw new OrderServiceError('Promotion is unavailable right now.', 503);
+        promotionReservation = await promotions.reserveInstallReward(promoCode, total, order.id);
+        order.discount = promotionReservation.discount;
+        order.promoCode = promotionReservation.code;
+        order.total = promotionReservation.total;
+      }
       await orders.save();
     } catch (error) {
       orders.removeById(order.id);
@@ -172,10 +185,17 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
       } else if (!existingCustomer && orderCustomerId) {
         customers.removeById(orderCustomerId);
       }
+      if (promotionReservation && promotions) {
+        await promotions.rollbackReservation(promotionReservation);
+      }
       throw error;
     }
 
     invalidateSmartSnapshot();
+
+    if (promotionReservation && promotions) {
+      void promotions.commitReservation(promotionReservation);
+    }
 
     revenue.recordEvent({
       eventName: 'order_created',
@@ -201,6 +221,8 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
     if (!authorizedByTable && !authorizedByPhone) throw new OrderServiceError('Order not found.', 404);
     return {
       id: order.id,
+      subtotal: order.subtotal ?? order.total,
+      discount: Number(order.discount || 0),
       total: order.total,
       status: order.status,
       orderType: order.orderType,
