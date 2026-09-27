@@ -94,7 +94,7 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
 .cart-order-meta small{display:block;color:var(--cart-muted);font-size:10px}
 .cart-order-meta strong{display:block;margin-top:4px;color:var(--cart-gold);font-size:14px}
 .cart-modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}
-@media(max-width:900px){.cart-layout{grid-template-columns:1fr}.cart-summary{position:static}.cart-heading{align-items:flex-start;flex-direction:column}}
+.cart-promo{margin:16px 0;padding:14px;border:1px solid var(--cart-line);border-radius:16px;background:#fbfaf8}.cart-promo-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.cart-promo-head strong{font-size:13px}.cart-promo-head span{font-size:10px;color:var(--cart-muted)}.cart-promo-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px}.cart-promo-form input{min-width:0;padding:11px 12px;border:1px solid var(--cart-line);border-radius:11px;background:#fff;font:12px Cairo,sans-serif;text-transform:uppercase}.cart-promo-form button{border:0;border-radius:11px;padding:10px 14px;background:var(--cart-gold);color:#fff;font:700 11px Cairo,sans-serif;cursor:pointer}.cart-promo-status{margin:8px 0 0;font-size:10px;color:var(--cart-muted);min-height:1.4em}.cart-summary-row.discount{color:#2d7a4d}.cart-summary-row.discount strong{color:#2d7a4d}@media(max-width:900px){.cart-layout{grid-template-columns:1fr}.cart-summary{position:static}.cart-heading{align-items:flex-start;flex-direction:column}}
 @media(max-width:620px){.cart-main{padding:30px 14px 60px}.cart-heading{padding-bottom:22px}.cart-title{font-size:45px}.cart-back{width:100%;justify-content:center}.cart-item{grid-template-columns:72px minmax(0,1fr);gap:12px;padding:15px}.cart-item-image{width:72px;height:72px}.cart-item-actions{grid-column:1/-1;justify-content:space-between;padding-top:5px}.cart-card-head,.cart-summary{padding:17px}.cart-card-head{align-items:flex-start}.cart-head-actions{justify-content:flex-start}.cart-modal{padding:22px 17px}.cart-modal-actions{grid-template-columns:1fr}}
 </style>
 </head>
@@ -132,7 +132,14 @@ body{background:var(--cart-cream);color:var(--cart-ink)}
       <p class="cart-summary-kicker">CHECKOUT</p>
       <h2>إتمام الطلب</h2>
       <div class="cart-summary-row"><span>عدد الأصناف</span><strong id="cart-summary-count">0</strong></div>
+      <div class="cart-summary-row"><span>المجموع قبل الخصم</span><strong id="cart-summary-subtotal">AED 0</strong></div>
+      <div class="cart-summary-row discount" id="cart-summary-discount-row" hidden><span>خصم تثبيت التطبيق</span><strong id="cart-summary-discount">- AED 0</strong></div>
       <div class="cart-summary-row total"><span>الإجمالي</span><strong id="cart-summary-total">AED 0</strong></div>
+      <div class="cart-promo" id="cart-promo">
+        <div class="cart-promo-head"><strong>لديك كود خصم؟</strong><span>خاص بعرض تثبيت ARABISK</span></div>
+        <div class="cart-promo-form"><input id="cart-promo-code" maxlength="80" autocomplete="off" placeholder="ARAB-PWA-XXXXXX" aria-label="كود الخصم"><button id="cart-promo-apply" type="button">تطبيق</button></div>
+        <p id="cart-promo-status" class="cart-promo-status" role="status" aria-live="polite"></p>
+      </div>
       <div id="cart-form-wrap">
         <h3 class="cart-form-title">بيانات الطلب</h3>
         <form id="cart-form" class="cart-form">

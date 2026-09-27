@@ -11,6 +11,9 @@ export function registerOrderRoutes(app, { service, requireAdminApiKey, orderRat
     const order = await service.createOrder(req.body || {});
     return res.status(201).json({
       id: order.id,
+      subtotal: order.subtotal ?? order.total,
+      discount: Number(order.discount || 0),
+      promoCode: order.promoCode || '',
       total: order.total,
       status: order.status,
       orderType: order.orderType,

@@ -18,6 +18,8 @@ import { registerExperienceRoutes } from './routes/experience-routes.js';
 import { createMemoryService } from './services/memory-service.js';
 import { registerMemoriesRoutes } from './routes/memory-routes.js';
 import { createRevenueService } from './services/revenue-service.js';
+import { createPromotionService } from './services/promotion-service.js';
+import { registerPromotionRoutes } from './routes/promotion-routes.js';
 import { registerRevenueRoutes } from './routes/revenue-routes.js';
 import { createStateRepository } from './repositories/state-repository.js';
 import { createStateStore } from './repositories/state-store.js';
@@ -69,6 +71,16 @@ const recoveryRateLimit=createRateLimiter({
   limit:60,
   message:'Too many recovery link requests. Please try again later.'
 });
+const promotionClaimRateLimit=createRateLimiter({
+  windowMs:10*60*1000,
+  limit:5,
+  message:'Too many promotion claims. Please try again later.'
+});
+const promotionQuoteRateLimit=createRateLimiter({
+  windowMs:10*60*1000,
+  limit:120,
+  message:'Too many promotion quote requests. Please try again later.'
+});
 const memoryUploadRateLimit=createRateLimiter({
   windowMs:10*60*1000,
   limit:20,
@@ -79,7 +91,7 @@ const memoryMutationRateLimit=createRateLimiter({
   limit:60,
   message:'Too many community actions. Please try again later.'
 });
-const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,memoryUploadRateLimit,memoryMutationRateLimit];
+const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,promotionClaimRateLimit,promotionQuoteRateLimit,memoryUploadRateLimit,memoryMutationRateLimit];
 const rateLimitCleanupTimer=setInterval(() => {
   for (const limiter of rateLimiters) limiter.cleanup();
 }, 10*60*1000);
@@ -111,6 +123,9 @@ const { smartSnapshot, withMediaUrls, invalidateSmartSnapshot } = smartMenu;
 
 const revenue=createRevenueService({readJsonWithStatus,writeJson,storageReady,repository:stateRepository});
 registerRevenueRoutes(app,{service:revenue,requireAdminApiKey,analyticsRateLimit,recoveryRateLimit});
+
+const promotionService=createPromotionService({readJsonWithStatus,writeJson,storageReady});
+registerPromotionRoutes(app,{service:promotionService,requireAdminApiKey,claimRateLimit:promotionClaimRateLimit,quoteRateLimit:promotionQuoteRateLimit});
 const categoryService=createCategoryService({categoriesRepository:stateRepository.categories,productsRepository:stateRepository.products,storageReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid});
 registerCategoryRoutes(app,{service:categoryService,requireAdminApiKey});
 const restoreCategories=categoryService.restore;
@@ -127,7 +142,8 @@ const nextProductId = createNextPrefixedId(stateRepository.products, 'P', 3);
 app.get('/health',(_req,res)=>{
   const persistence = stateStore.status();
   const revenuePersistence = revenue.persistenceStatus();
-  const ready = (!storageReady || persistence.lastPersistOk !== false) && revenuePersistence.lastPersistOk !== false;
+  const promotionPersistence = promotionService.persistenceStatus();
+  const ready = (!storageReady || persistence.lastPersistOk !== false) && revenuePersistence.lastPersistOk !== false && promotionPersistence.lastPersistOk !== false;
   const payload = {
     ok: ready,
     service: 'arabisk-web',
@@ -135,6 +151,7 @@ app.get('/health',(_req,res)=>{
     storageConfigured: storageReady,
     persistence,
     revenuePersistence,
+    promotionPersistence,
     environment: isProductionRuntime ? 'production' : 'development'
   };
   return res.status(ready ? 200 : 503).json(payload);
@@ -167,7 +184,8 @@ const orderService = createOrderService({
   nextOrderId: createNextPrefixedId(stateRepository.orders, 'O', 5),
   invalidateSmartSnapshot,
   revenue,
-  crypto
+  crypto,
+  promotions: promotionService
 });
 
 registerOrderRoutes(app, {
@@ -222,6 +240,7 @@ await restoreStudio();
 await restoreExperiences();
 await memoryService.restore();
 await revenue.restoreRevenue();
+await promotionService.restore();
 if(storageReady){
   persistState();
   await flushPersistState();
@@ -242,6 +261,7 @@ const shutdown=(signal)=>{
     try{
       await flushPersistState();
       await revenue.flushPersistRevenue();
+      await promotionService.flushPersistence();
     }catch(error){
       logServiceFailure(error, { service: 'web', operation: 'shutdown-flush' });
     }
