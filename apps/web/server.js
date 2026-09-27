@@ -247,6 +247,10 @@ const shamsService = createShamsService({
   aiApiKey: SHAMS_AI_API_KEY,
   aiModel: SHAMS_AI_MODEL,
   aiEndpoint: SHAMS_AI_ENDPOINT,
+  ttsModel: SHAMS_TTS_MODEL,
+  ttsVoice: SHAMS_TTS_VOICE,
+  ttsEndpoint: SHAMS_TTS_ENDPOINT,
+  ttsInstructions: SHAMS_TTS_INSTRUCTIONS,
   getOrderService: () => orderService,
   getReservationService: () => reservationService
 });

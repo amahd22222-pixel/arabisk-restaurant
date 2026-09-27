@@ -11,6 +11,10 @@
     history: [],
     recognition: null,
     voiceEnabled: true,
+    serverTtsEnabled: false,
+    serverTtsChecked: false,
+    serverAudio: null,
+    serverAudioUrl: '',
     restartTimer: null,
     restartAttempts: 0,
     sessionId: ''
@@ -97,7 +101,74 @@
 
   function stopSpeaking() {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    if (state.serverAudio) {
+      try { state.serverAudio.pause(); } catch {}
+      state.serverAudio = null;
+    }
+    if (state.serverAudioUrl) {
+      try { URL.revokeObjectURL(state.serverAudioUrl); } catch {}
+      state.serverAudioUrl = '';
+    }
     state.speaking = false;
+  }
+
+  async function detectServerTts() {
+    if (state.serverTtsChecked) return state.serverTtsEnabled;
+    state.serverTtsChecked = true;
+    try {
+      const response = await fetch('/api/shams/status', { cache: 'no-store' });
+      const data = await response.json().catch(() => ({}));
+      state.serverTtsEnabled = Boolean(response.ok && data?.ttsConfigured);
+    } catch {
+      state.serverTtsEnabled = false;
+    }
+    return state.serverTtsEnabled;
+  }
+
+  async function speakFromServer(text) {
+    const response = await fetch('/api/shams/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text.slice(0, 900) }),
+      cache: 'no-store'
+    });
+    if (!response.ok) throw new Error('تعذر تشغيل الصوت الطبيعي.');
+    const blob = await response.blob();
+    if (!blob.size) throw new Error('تعذر تشغيل الصوت الطبيعي.');
+
+    stopSpeaking();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    state.serverAudio = audio;
+    state.serverAudioUrl = url;
+    audio.preload = 'auto';
+
+    return new Promise(resolve => {
+      let settled = false;
+      const finish = value => {
+        if (settled) return;
+        settled = true;
+        state.speaking = false;
+        state.serverAudio = null;
+        if (state.serverAudioUrl === url) {
+          try { URL.revokeObjectURL(url); } catch {}
+          state.serverAudioUrl = '';
+        }
+        if (!state.busy && !state.listening) setVisual('idle');
+        resolve(Boolean(value));
+      };
+      audio.onplay = () => {
+        state.speaking = true;
+        setVisual('speaking');
+      };
+      audio.onended = () => finish(true);
+      audio.onerror = () => finish(false);
+      audio.onpause = () => {
+        if (audio.ended) return;
+        if (!state.conversationActive) finish(false);
+      };
+      audio.play().catch(() => finish(false));
+    });
   }
 
   function pickArabicVoice() {
@@ -108,8 +179,8 @@
       null;
   }
 
-  function speak(text) {
-    if (!state.voiceEnabled || !('speechSynthesis' in window)) return Promise.resolve(false);
+  async function speak(text) {
+    if (!state.voiceEnabled) return false;
 
     const cleanText = String(text || '')
       .replace(/[\n\r]+/g, '. ')
@@ -117,7 +188,19 @@
       .trim()
       .slice(0, 900);
 
-    if (!cleanText) return Promise.resolve(false);
+    if (!cleanText) return false;
+
+    const serverTts = await detectServerTts();
+    if (serverTts) {
+      try {
+        const ok = await speakFromServer(cleanText);
+        if (ok) return true;
+      } catch {
+        state.serverTtsEnabled = false;
+      }
+    }
+
+    if (!('speechSynthesis' in window)) return false;
 
     stopSpeaking();
 
@@ -387,8 +470,9 @@
     if (!launcher) return;
 
     state.sessionId = getSessionId();
-    state.voiceEnabled = 'speechSynthesis' in window;
+    state.voiceEnabled = 'speechSynthesis' in window || true;
     setupRecognition();
+    void detectServerTts();
 
     launcher.addEventListener('click', toggleVoice);
 

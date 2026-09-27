@@ -39,6 +39,12 @@ export const smartNewWindowMs = 14 * 24 * 60 * 60 * 1000;
 export const shamsAiApiKey = String(process.env.SHAMS_AI_API_KEY || '').trim();
 export const shamsAiModel = String(process.env.SHAMS_AI_MODEL || 'gpt-5.6-luna').trim();
 export const shamsAiEndpoint = String(process.env.SHAMS_AI_ENDPOINT || 'https://api.openai.com/v1/responses').trim();
+export const shamsTtsModel = String(process.env.SHAMS_TTS_MODEL || 'gpt-4o-mini-tts').trim();
+export const shamsTtsVoice = String(process.env.SHAMS_TTS_VOICE || 'coral').trim();
+export const shamsTtsEndpoint = String(process.env.SHAMS_TTS_ENDPOINT || 'https://api.openai.com/v1/audio/speech').trim();
+export const shamsTtsInstructions = String(
+  process.env.SHAMS_TTS_INSTRUCTIONS || 'صوت عربي طبيعي وهادئ، ودود، واضح، بإيقاع مطعم راقٍ، مع نطق عربي خليجي مفهوم.'
+).trim();
 
 export const videoTypes = new Set([
   'video/mp4',
