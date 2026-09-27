@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { readRequiredSnapshot, writeRequiredSnapshot } from '../repositories/restore-helper.js';
 import { logServiceFailure } from '../utils/service-error.js';
 
-const REVENUE_STATE_KEY = 'data/arabisk-revenue-v1.json';
+const REVENUE_STATE_KEY = 'data/arabisk-revenue-v2.json';
 const MAX_EVENTS = 8000;
 const MAX_CAMPAIGNS = 1000;
 const ALLOWED_EVENTS = new Set([
