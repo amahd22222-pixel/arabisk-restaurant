@@ -259,12 +259,11 @@ registerMediaRoutes(app, {
 registerPageRoutes(app, { rootDir: __dirname, distDir: dist });
 app.use(serviceErrorHandler);
 
+console.log(`ARABISK persistence bootstrap — database=${dbReady} storage=${storageReady}`);
 if (dbReady && storageReady) {
   const migration = await migrateLegacySnapshots();
   if (!migration.ok) throw new Error(`Legacy data migration failed: ${migration.reason}`);
-  if (!migration.alreadyMigrated) {
-    console.log(`ARABISK legacy migration — migrated ${migration.migrated.length}, missing ${migration.missing.length}`);
-  }
+  console.log(`ARABISK legacy migration — alreadyMigrated=${migration.alreadyMigrated} migrated=${migration.migrated.length} missing=${migration.missing.length}`);
 }
 await stateStore.restore();
 await restoreCategories();
@@ -277,7 +276,7 @@ if(dbReady){
   persistState();
   await flushPersistState();
 }
-const server=app.listen(port,()=>console.log(`ARABISK web listening on ${port} — ${products.length} menu items, ${categories.length} categories`));
+const server=app.listen(port,()=>console.log(`ARABISK web listening on ${port} — ${products.length} menu items, ${categories.length} categories, ${orders.length} orders, ${customers.length} customers, ${reservations.length} reservations`));
 server.requestTimeout=30_000;
 server.headersTimeout=35_000;
 server.keepAliveTimeout=5_000;
