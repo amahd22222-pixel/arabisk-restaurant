@@ -171,3 +171,12 @@
     animation:none;
   }
 }
+
+
+/* Keep Shams above the mobile bottom navigation. */
+@media(max-width:800px){
+  #arabisk-shams-root{
+    bottom:calc(88px + env(safe-area-inset-bottom));
+    z-index:10010;
+  }
+}
