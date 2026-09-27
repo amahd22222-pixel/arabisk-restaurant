@@ -1,5 +1,17 @@
 let deferredInstallPrompt = null;
 
+function isIosSafari() {
+  const ua = navigator.userAgent || '';
+  const iosDevice = /iPhone|iPad|iPod/i.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const safariBrowser = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
+  return iosDevice && safariBrowser;
+}
+
+function isStandaloneMode() {
+  return window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+}
+
 function ensurePwaUi() {
   if (document.getElementById('pwa-install')) return;
   const style = document.createElement('style');
@@ -20,6 +32,10 @@ function ensurePwaUi() {
     deferredInstallPrompt = null;
     banner.hidden = true;
   });
+  banner.querySelector('[data-ios-install]')?.addEventListener('click', () => {
+    banner.querySelector('.pwa-install-copy span').textContent =
+      'في Safari اضغط مشاركة ثم «إضافة إلى الشاشة الرئيسية».';
+  });
   banner.querySelector('[data-dismiss]')?.addEventListener('click', () => {
     banner.hidden = true;
     sessionStorage.setItem('ARABISK_PWA_INSTALL_DISMISSED', '1');
@@ -35,6 +51,23 @@ async function checkForPwaUpdate() {
   } catch {
     // A transient network failure must not affect the restaurant experience.
   }
+}
+
+function showIosInstallHint() {
+  if (!isIosSafari() || isStandaloneMode()) return;
+  if (sessionStorage.getItem('ARABISK_PWA_INSTALL_DISMISSED') === '1') return;
+  ensurePwaUi();
+  const banner = document.getElementById('pwa-install');
+  if (!banner) return;
+  const installButton = banner.querySelector('[data-install]');
+  if (installButton) {
+    installButton.removeAttribute('data-install');
+    installButton.setAttribute('data-ios-install', '');
+    installButton.textContent = 'طريقة التثبيت';
+  }
+  banner.querySelector('.pwa-install-copy span').textContent =
+    'في iPhone وiPad: استخدم زر مشاركة في Safari لإضافة ARABISK إلى الشاشة الرئيسية.';
+  banner.hidden = false;
 }
 
 window.addEventListener('beforeinstallprompt', (event) => {
@@ -61,6 +94,9 @@ window.addEventListener('arabisk:pwa-update', () => {
   document.body.appendChild(banner);
 });
 
+window.addEventListener('load', () => {
+  if (!deferredInstallPrompt) showIosInstallHint();
+});
 window.addEventListener('online', checkForPwaUpdate);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') checkForPwaUpdate();
