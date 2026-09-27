@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 
 const injectMobileNavigation = async (filePath, res) => {
   const html = await fs.readFile(filePath, 'utf8');
-  const assets = '<link rel="stylesheet" href="/mobile-nav.css">\n<script type="module" src="/mobile-nav.js"></script>';
+  const assets = '<meta name="theme-color" content="#17130f">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n<meta name="apple-mobile-web-app-title" content="ARABISK">\n<link rel="manifest" href="/manifest.json">\n<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">\n<link rel="apple-touch-icon" href="/icons/icon.svg">\n<link rel="stylesheet" href="/mobile-nav.css">\n<script type="module" src="/mobile-nav.js"></script>\n<script type="module" src="/pwa-ui.js"></script>\n<script type="module" src="/pwa-register.js"></script>';
   res.type('html').send(html.replace('</head>', `${assets}\n</head>`));
 };
 
