@@ -858,6 +858,14 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
           price: Number(item.price || 0)
         });
       }
+      const addedItem = result.result?.added;
+      if (addedItem?.id) {
+        recentProducts.push({
+          id: String(addedItem.id),
+          nameAr: clean(addedItem.nameAr || addedItem.nameEn, 120),
+          price: Number(addedItem.price || 0)
+        });
+      }
     }
     const memoryPatch = {
       lastIntent: intent,
