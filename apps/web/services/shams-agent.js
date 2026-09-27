@@ -1,3 +1,5 @@
+import { buildSmartLocalPlan, isNegatedAction } from './shams-local-intelligence.js';
+
 const MAX_TOOL_CALLS = 4;
 const ALLOWED_PATHS = new Set(['/menu', '/reservation', '/cart', '/track-order', '/events', '/memories']);
 const ALLOWED_TOOLS = new Set([
@@ -171,7 +173,7 @@ function sanitizeToolCalls(calls) {
 function normalizeIntent(value) {
   const allowed = new Set([
     'greeting', 'menu', 'recommend', 'cart', 'cart_summary', 'reservation', 'order',
-    'order_status', 'events', 'memories', 'product_search',
+    'order_status', 'events', 'memories', 'product_search', 'product_info',
     'cart_add', 'unknown'
   ]);
   return allowed.has(value) ? value : 'unknown';
@@ -479,7 +481,13 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
 
     if (name === 'search_menu') {
       const query = clean(args?.query || context.message, 220);
-      return { matches: findMatches(catalog, query) };
+      const preferredIds = Array.isArray(args?.productIds)
+        ? args.productIds.map(id => String(id)).slice(0, 6)
+        : [];
+      const matches = preferredIds.length
+        ? preferredIds.map(id => catalog.find(item => String(item.id) === id)).filter(Boolean)
+        : findMatches(catalog, query);
+      return { matches };
     }
 
     if (name === 'recommend_menu') {
@@ -591,6 +599,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       'المسارات المسموحة: /menu, /reservation, /cart, /track-order, /events, /memories.',
       'لا تدّعي نجاح إضافة أو تنفيذ أي شيء قبل نتيجة الأداة. التنفيذ النهائي للحجز أو الطلب يحتاج تأكيد العميل.',
       'لا تطلبي كلمات مرور أو OTP أو بيانات بطاقات، ولا تخترعي بيانات غير موجودة.',
+      'استخدمي workflow لكل حقول الحجز والطلب الموجودة فعليًا، ولا تعيدي طلب حقل موجود بالفعل في الذاكرة أو الحساب.',
       'استخدمي السياق السابق لفهم عبارات مثل: ده، دي، هيدا، هيدي، هالطبق، التاني، الأول، اللي فات، كمان واحد.',
       'إذا كانت الرسالة حجزًا أو طلبًا ناقصًا، استخرجي كل الحقول الموجودة فقط في workflow ولا تخترعي أي حقل.',
       'اللهجة المكتشفة مبدئيًا: ' + dialectLocale(context.message),
@@ -616,7 +625,8 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
         intent,
         reply: clean(plan.reply, 800),
         toolCalls,
-        memory: plan.memory && typeof plan.memory === 'object' ? plan.memory : {}
+        memory: plan.memory && typeof plan.memory === 'object' ? plan.memory : {},
+        workflow: plan.workflow && typeof plan.workflow === 'object' ? safeWorkflowSlots(plan.workflow) : {}
       };
     } catch {
       return null;
@@ -711,10 +721,14 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     const semanticPlan = await modelPlan(context);
     const semanticIntent = normalizeIntent(semanticPlan?.intent);
     const normalizedMessage = normalizeDialectText(message);
-    const reservationRequested = semanticIntent === 'reservation' ||
-      /(احجز|حجز|حجزي|طاولة|حاجز|موعد|بدي حجز|بدّي احجز|عايز احجز|عايز حجز)/i.test(normalizedMessage);
-    const orderRequested = semanticIntent === 'order' ||
-      /(اطلب|طلبلي|اطلبلي|بدّي طلب|بدي طلب|عايز طلب|عاوز طلب|اعمل طلب|سوّي طلب|سوي طلب|checkout)/i.test(normalizedMessage);
+    const reservationRequested = !isNegatedAction(message, 'reservation') && (
+      semanticIntent === 'reservation' ||
+      /(احجز|حجز|حجزي|طاولة|حاجز|موعد|بدي حجز|بدّي احجز|عايز احجز|عايز حجز)/i.test(normalizedMessage)
+    );
+    const orderRequested = !isNegatedAction(message, 'order') && (
+      semanticIntent === 'order' ||
+      /(اطلب|طلبلي|اطلبلي|بدّي طلب|بدي طلب|عايز طلب|عاوز طلب|اعمل طلب|سوّي طلب|سوي طلب|اوردر|checkout)/i.test(normalizedMessage)
+    );
 
     if (workflowService && (reservationRequested || pendingType === 'reservation')) {
       const result = await workflowService.handleReservation({
@@ -772,8 +786,14 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     }
 
     stage = 'plan';
-    const localPlan = detectLocalPlan({ message, memory, products: products() });
-    const model = semanticPlan || await modelPlan(context);
+    const localPlan = buildSmartLocalPlan({
+      message,
+      memory,
+      products: products(),
+      cart: context.cart,
+      page: context.page
+    }) || detectLocalPlan({ message, memory, products: products() });
+    const model = semanticPlan || localPlan;
     const plan = model || localPlan;
     const intent = normalizeIntent(plan.intent);
 
