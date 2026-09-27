@@ -150,6 +150,10 @@ function detectLocalPlan({ message, memory, products }) {
   };
 }
 
+function pendingActionIsUsable(pending) {
+  return Boolean(pending?.type && Number(pending.expiresAt || 0) > Date.now());
+}
+
 function buildLocalReply(intent, data) {
   if (intent === 'recommend') {
     const products = data.recommendations || [];
@@ -182,7 +186,7 @@ function buildLocalReply(intent, data) {
   return null;
 }
 
-export function createShamsAgent({ repository, memoryService, requestModel = null }) {
+export function createShamsAgent({ repository, memoryService, workflowService, requestModel = null }) {
   const products = () => repository.products.all().filter(item => item?.available !== false);
 
   function buildIdentity({ customer, sessionId }) {
@@ -327,6 +331,123 @@ export function createShamsAgent({ repository, memoryService, requestModel = nul
       history: Array.isArray(input.history) ? input.history.slice(-10) : [],
       memory
     };
+
+    const rememberWorkflow = async (reply, intent, journey, extraProducts = []) => {
+      await memoryService.rememberTurn(identity, {
+        user: message,
+        assistant: reply,
+        intent,
+        products: extraProducts.length ? extraProducts : memory.recentProducts,
+        journey,
+        name: customer?.name || memory.name
+      });
+    };
+
+    const confirmationDecision = workflowService?.confirmation?.(message);
+    if (workflowService && pendingActionIsUsable(memory.pendingAction)) {
+      if (confirmationDecision === true) {
+        const executed = await workflowService.confirmPending({ identity, memory });
+        if (executed) {
+          const actions = executed.type === 'order'
+            ? [{ type: 'navigate', url: '/track-order' }]
+            : [];
+          await rememberWorkflow(executed.reply, executed.type, {
+            intent: executed.type,
+            step: 'confirmed_and_executed',
+            slots: {}
+          });
+          return {
+            stage: 'learn',
+            stages: STAGES,
+            intent: executed.type,
+            reply: executed.reply,
+            actions,
+            memory: {
+              scope: identity.customerId ? 'customer' : 'session',
+              remembered: true,
+              preferences: memory.preferences
+            }
+          };
+        }
+      }
+
+      if (confirmationDecision === false) {
+        const cancelled = await workflowService.cancelPending(identity);
+        await rememberWorkflow(cancelled.reply, memory.pendingAction.type, {
+          intent: memory.pendingAction.type,
+          step: 'cancelled',
+          slots: {}
+        });
+        return {
+          stage: 'learn',
+          stages: STAGES,
+          intent: memory.pendingAction.type,
+          reply: cancelled.reply,
+          actions: [],
+          memory: {
+            scope: identity.customerId ? 'customer' : 'session',
+            remembered: true,
+            preferences: memory.preferences
+          }
+        };
+      }
+    }
+
+    const reservationRequested = /(احجز|حجز|حجزي|طاولة|حاجز|موعد)/i.test(message);
+    const orderRequested = /(اطلب|طلبلي|اطلبلي|عاوز طلب|عايز طلب|اعمل طلب|سوّي طلب|سوي طلب|checkout|checkout)/i.test(message);
+    const pendingType = pendingActionIsUsable(memory.pendingAction) ? memory.pendingAction.type : '';
+
+    if (workflowService && (reservationRequested || pendingType === 'reservation')) {
+      const result = await workflowService.handleReservation({
+        identity,
+        message,
+        memory
+      });
+      await rememberWorkflow(result.reply, 'reservation', {
+        intent: 'reservation',
+        step: result.status,
+        slots: result.pending || {}
+      });
+      return {
+        stage: 'learn',
+        stages: STAGES,
+        intent: 'reservation',
+        reply: result.reply,
+        actions: [],
+        memory: {
+          scope: identity.customerId ? 'customer' : 'session',
+          remembered: true,
+          preferences: memory.preferences
+        }
+      };
+    }
+
+    if (workflowService && (orderRequested || pendingType === 'order')) {
+      const result = await workflowService.handleOrder({
+        identity,
+        message,
+        memory,
+        cart: context.cart,
+        customer
+      });
+      await rememberWorkflow(result.reply, 'order', {
+        intent: 'order',
+        step: result.status,
+        slots: result.pending || {}
+      });
+      return {
+        stage: 'learn',
+        stages: STAGES,
+        intent: 'order',
+        reply: result.reply,
+        actions: [],
+        memory: {
+          scope: identity.customerId ? 'customer' : 'session',
+          remembered: true,
+          preferences: memory.preferences
+        }
+      };
+    }
 
     stage = 'plan';
     const localPlan = detectLocalPlan({ message, memory, products: products() });
