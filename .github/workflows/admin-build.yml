@@ -172,6 +172,18 @@ jobs:
           NODE_ENV=production RAILWAY_ENVIRONMENT_NAME=production ARABISK_ADMIN_API_KEY="$CI_ADMIN_KEY" PORT=4187 npm run start --workspace apps/web > /tmp/arabisk-web-revenue.log 2>&1 &
           revenue_pid=$!
           wait_for_http "$revenue_pid" http://127.0.0.1:4187/health "revenue web"
+          today_status="$(curl -sS -o /tmp/ci-today.json -w '%{http_code}' http://127.0.0.1:4187/api/promotions/today)"
+          test "$today_status" = "200" || { cat /tmp/ci-today.json; exit 1; }
+          today_admin_status="$(curl -sS -o /tmp/ci-today-admin.json -w '%{http_code}' -H "X-Arabisk-Admin-Key: $CI_ADMIN_KEY" http://127.0.0.1:4187/api/admin/promotions/today)"
+          test "$today_admin_status" = "200" || { cat /tmp/ci-today-admin.json; exit 1; }
+          today_save_status="$(curl -sS -o /tmp/ci-today-saved.json -w '%{http_code}' -X PATCH -H "X-Arabisk-Admin-Key: $CI_ADMIN_KEY" -H 'Content-Type: application/json' --data '{"enabled":true,"productId":"","badge":"عرض اليوم","title":"اختيار اليوم","message":"عرض يومي للاختبار","ctaLabel":"اطلب الآن","startsAt":"","endsAt":""}' http://127.0.0.1:4187/api/admin/promotions/today)"
+          test "$today_save_status" = "200" || { cat /tmp/ci-today-saved.json; exit 1; }
+          python - <<'PY'
+          import json
+          data=json.load(open('/tmp/ci-today-saved.json'))
+          assert data.get('enabled') is True
+          assert data.get('title') == 'اختيار اليوم'
+          PY
           promotion_status="$(curl -sS -o /tmp/ci-promotion.json -w '%{http_code}' http://127.0.0.1:4187/api/promotions/install)"
           test "$promotion_status" = "200" || { cat /tmp/ci-promotion.json; exit 1; }
           promo_claim_status="$(curl -sS -o /tmp/ci-promo-claim.json -w '%{http_code}' -H 'Content-Type: application/json' --data '{"clientId":"ci-install-client"}' http://127.0.0.1:4187/api/promotions/install/claim)"

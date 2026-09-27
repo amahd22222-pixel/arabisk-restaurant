@@ -18,6 +18,18 @@ const number = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const createDefaultTodayOffer = () => ({
+  enabled: false,
+  productId: '',
+  badge: 'عرض اليوم',
+  title: 'اختيار اليوم من ARABISK',
+  message: 'اختيار مميز من القائمة متاح اليوم.',
+  ctaLabel: 'اطلب الآن',
+  startsAt: '',
+  endsAt: '',
+  updatedAt: new Date().toISOString()
+});
+
 const createDefaultInstallOffer = () => ({
   enabled: true,
   discountType: 'percent',
@@ -32,12 +44,24 @@ const createDefaultInstallOffer = () => ({
 });
 
 export function createPromotionService({ readJsonWithStatus, writeJson, storageReady }) {
+  let todayOffer = createDefaultTodayOffer();
   let installOffer = createDefaultInstallOffer();
   let lastPersistAt = null;
   let lastPersistOk = storageReady ? null : true;
 
   const snapshot = () => ({
-    version: 1,
+    version: 2,
+    today: {
+      enabled: todayOffer.enabled,
+      productId: todayOffer.productId,
+      badge: todayOffer.badge,
+      title: todayOffer.title,
+      message: todayOffer.message,
+      ctaLabel: todayOffer.ctaLabel,
+      startsAt: todayOffer.startsAt,
+      endsAt: todayOffer.endsAt,
+      updatedAt: todayOffer.updatedAt
+    },
     install: {
       enabled: installOffer.enabled,
       discountType: installOffer.discountType,
@@ -75,6 +99,7 @@ export function createPromotionService({ readJsonWithStatus, writeJson, storageR
   };
 
   async function restore() {
+    todayOffer = createDefaultTodayOffer();
     installOffer = createDefaultInstallOffer();
     if (!storageReady) return;
     const result = await readJsonWithStatus(PROMOTION_STATE_KEY);
@@ -83,6 +108,8 @@ export function createPromotionService({ readJsonWithStatus, writeJson, storageR
       throw new PromotionError('Promotion state could not be restored from storage.', 503);
     }
     if (result.found && result.value && typeof result.value === 'object') {
+      const savedToday = result.value.today || {};
+      todayOffer = { ...createDefaultTodayOffer(), ...savedToday };
       const saved = result.value.install || {};
       installOffer = {
         ...createDefaultInstallOffer(),
@@ -92,6 +119,59 @@ export function createPromotionService({ readJsonWithStatus, writeJson, storageR
     }
     prune();
     if (result.found) await persistSnapshot();
+  }
+
+  function getPublicTodayOffer() {
+    const now = Date.now();
+    const startsAt = Date.parse(todayOffer.startsAt || '');
+    const endsAt = Date.parse(todayOffer.endsAt || '');
+    const active = todayOffer.enabled === true &&
+      (!Number.isFinite(startsAt) || startsAt <= now) &&
+      (!Number.isFinite(endsAt) || endsAt > now);
+    return {
+      enabled: active,
+      productId: clean(todayOffer.productId, 50),
+      badge: clean(todayOffer.badge, 80),
+      title: clean(todayOffer.title, 160),
+      message: clean(todayOffer.message, 320),
+      ctaLabel: clean(todayOffer.ctaLabel, 60) || 'اطلب الآن',
+      startsAt: todayOffer.startsAt || '',
+      endsAt: todayOffer.endsAt || ''
+    };
+  }
+
+  function getAdminTodayOffer() {
+    return {
+      ...getPublicTodayOffer(),
+      configuredEnabled: todayOffer.enabled === true,
+      updatedAt: todayOffer.updatedAt
+    };
+  }
+
+  async function updateTodayOffer(body = {}) {
+    const startsAt = clean(body.startsAt === undefined ? todayOffer.startsAt : body.startsAt, 40);
+    const endsAt = clean(body.endsAt === undefined ? todayOffer.endsAt : body.endsAt, 40);
+    if (startsAt && !Number.isFinite(Date.parse(startsAt))) throw new PromotionError('وقت بداية عرض اليوم غير صالح.');
+    if (endsAt && !Number.isFinite(Date.parse(endsAt))) throw new PromotionError('وقت نهاية عرض اليوم غير صالح.');
+    if (startsAt && endsAt && Date.parse(endsAt) <= Date.parse(startsAt)) {
+      throw new PromotionError('وقت نهاية عرض اليوم يجب أن يكون بعد وقت البداية.');
+    }
+
+    todayOffer = {
+      ...todayOffer,
+      enabled: body.enabled === undefined ? todayOffer.enabled : body.enabled === true,
+      productId: clean(body.productId === undefined ? todayOffer.productId : body.productId, 50),
+      badge: clean(body.badge === undefined ? todayOffer.badge : body.badge, 80) || 'عرض اليوم',
+      title: clean(body.title === undefined ? todayOffer.title : body.title, 160) || 'اختيار اليوم من ARABISK',
+      message: clean(body.message === undefined ? todayOffer.message : body.message, 320) || 'اختيار مميز من القائمة متاح اليوم.',
+      ctaLabel: clean(body.ctaLabel === undefined ? todayOffer.ctaLabel : body.ctaLabel, 60) || 'اطلب الآن',
+      startsAt,
+      endsAt,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (!(await persistSnapshot())) throw new PromotionError('تعذر حفظ عرض اليوم.', 503);
+    return getAdminTodayOffer();
   }
 
   function getPublicInstallOffer() {
@@ -264,6 +344,9 @@ export function createPromotionService({ readJsonWithStatus, writeJson, storageR
 
   return {
     restore,
+    getPublicTodayOffer,
+    getAdminTodayOffer,
+    updateTodayOffer,
     getPublicInstallOffer,
     getAdminInstallOffer,
     updateInstallOffer,

@@ -10,7 +10,7 @@
     style:'currency', currency:'AED', maximumFractionDigits:2
   }).format(Number(value) || 0);
 
-  const state = { products: [], experiences: [], memories: [], installOffer: null };
+  const state = { products: [], experiences: [], memories: [], installOffer: null, todayOffer: null };
 
   const getJson = async (url, fallback) => {
     try {
@@ -91,20 +91,29 @@
     const root = $('#today-offer');
     if (!root) return;
 
-    const offer = state.installOffer;
+    const today = state.todayOffer;
+    const install = state.installOffer;
     const featured = state.products.find(item => item && item.available !== false && (item.chefChoice || item.isNew)) || state.products.find(item => item?.available !== false);
-
     const image = $('.today-offer-media img', root);
 
-    if (offer?.enabled) {
-      $('.today-offer-badge', root).textContent = `عرض التطبيق · خصم ${Math.round(Number(offer.discountValue) || 0)}%`;
-      $('.today-offer-title', root).textContent = offer.title || 'خصم خاص لعملاء ARABISK';
-      $('.today-offer-message', root).textContent = offer.message || 'ثبّت ARABISK على شاشتك الرئيسية واحصل على كودك الشخصي.';
+    if (today?.enabled) {
+      const product = state.products.find(item => String(item.id) === String(today.productId));
+      $('.today-offer-badge', root).textContent = today.badge || 'عرض اليوم';
+      $('.today-offer-title', root).textContent = today.title || product?.nameAr || 'عرض اليوم';
+      $('.today-offer-message', root).textContent = today.message || product?.descriptionAr || 'اختيار خاص من ARABISK متاح اليوم.';
+      $('.today-offer-action', root).textContent = `${today.ctaLabel || 'اطلب الآن'} ←`;
+      $('.today-offer-action', root).setAttribute('href', product ? `/menu/${encodeURIComponent(String(product.categoryId || ''))}/${encodeURIComponent(String(product.id || ''))}` : '/menu');
+      if (image && product) { image.src = productImage(product); image.alt = product.nameAr || product.nameEn || 'عرض اليوم'; }
+      return;
+    }
+
+    if (install?.enabled) {
+      $('.today-offer-badge', root).textContent = `عرض التطبيق · خصم ${Math.round(Number(install.discountValue) || 0)}%`;
+      $('.today-offer-title', root).textContent = install.title || 'خصم خاص لعملاء ARABISK';
+      $('.today-offer-message', root).textContent = install.message || 'ثبّت ARABISK على شاشتك الرئيسية واحصل على كودك الشخصي.';
+      $('.today-offer-action', root).textContent = 'فعّل خصمك ←';
       $('.today-offer-action', root).setAttribute('href', '/cart');
-      if (image) {
-        image.alt = offer.title || 'عرض التطبيق';
-        image.src = featured ? productImage(featured) : image.src;
-      }
+      if (image) { image.alt = install.title || 'عرض التطبيق'; image.src = featured ? productImage(featured) : image.src; }
       return;
     }
 
@@ -215,17 +224,19 @@
     setupSectionMotion();
     syncCartCount();
 
-    const [products, experiences, memories, installOffer] = await Promise.all([
+    const [products, experiences, memories, installOffer, todayOffer] = await Promise.all([
       getJson('/api/products', []),
       getJson('/api/experiences', []),
       getJson('/api/memories?limit=4', []),
-      getJson('/api/promotions/install', null)
+      getJson('/api/promotions/install', null),
+      getJson('/api/promotions/today', null)
     ]);
 
     state.products = Array.isArray(products) ? products : [];
     state.experiences = Array.isArray(experiences) ? experiences : [];
     state.memories = Array.isArray(memories) ? memories : [];
     state.installOffer = installOffer;
+    state.todayOffer = todayOffer;
 
     renderFeatured();
     renderOffer();
