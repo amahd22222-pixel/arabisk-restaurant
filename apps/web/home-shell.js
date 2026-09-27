@@ -91,8 +91,7 @@
     const root = $('#today-offer');
     if (!root) return;
 
-    const offer = state.installOffer;
-    const featured = state.products.find(item => item && item.available !== false && (item.chefChoice || item.isNew)) || state.products.find(item => item?.available !== false);
+      const featured = state.products.find(item => item && item.available !== false && (item.chefChoice || item.isNew)) || state.products.find(item => item?.available !== false);
 
     const offerImage = $('.today-offer-media img', root);
     if (offerImage && featured) {
@@ -176,17 +175,15 @@
 
     syncCartCount();
 
-    const [products, experiences, memories, installOffer] = await Promise.all([
+    const [products, experiences, memories] = await Promise.all([
       getJson('/api/products', []),
       getJson('/api/experiences', []),
-      getJson('/api/memories?limit=4', []),
-      getJson('/api/promotions/install', null)
+      getJson('/api/memories?limit=4', [])
     ]);
 
     state.products = Array.isArray(products) ? products : [];
     state.experiences = Array.isArray(experiences) ? experiences : [];
     state.memories = Array.isArray(memories) ? memories : [];
-    state.installOffer = installOffer;
 
     renderFeatured();
     renderOffer();
