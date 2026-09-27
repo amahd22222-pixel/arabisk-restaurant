@@ -72,6 +72,10 @@ jobs:
           node --check apps/web/services/reservation-service.js
           node --check apps/web/services/revenue-service.js
           node --check apps/web/routes/revenue-routes.js
+          node --check apps/web/pwa-ui.js
+          node --check apps/web/pwa-register.js
+          node --check apps/web/mobile-nav.js
+          node --check apps/web/sw.js
 
       - name: Verify Railway private API fallback
         shell: bash
@@ -87,6 +91,17 @@ jobs:
 
       - name: Build web
         run: npm run build --workspace apps/web
+
+      - name: Verify PWA build assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in manifest.json sw.js offline.html pwa-ui.js pwa-register.js mobile-nav.js mobile-nav.css; do
+            test -f "apps/web/dist/$file"
+          done
+          test -f apps/web/dist/icons/icon.svg
+          test -f apps/web/dist/icons/maskable.svg
+          grep -q '"display": "standalone"' apps/web/dist/manifest.json
 
       - name: Domain unit tests
         run: npm test
