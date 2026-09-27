@@ -97,7 +97,7 @@
     if (offer?.enabled) {
       $('.today-offer-badge', root).textContent = `خصم ${Math.round(Number(offer.discountValue) || 0)}% للتطبيق`;
       $('.today-offer-title', root).textContent = 'خصم خاص لعملاء ARABISK';
-      $('.today-offer-message', root).textContent = offer.message || 'ثبّت ARABISK على شاشتك الرئيسية واحصل على كودك الشخصي.';
+      $('.today-offer-note', root).textContent = offer.message || 'ثبّت ARABISK على شاشتك الرئيسية واحصل على كودك الشخصي.';
       $('.today-offer-action', root).setAttribute('href', '/cart');
       return;
     }
@@ -105,7 +105,7 @@
     if (featured) {
       $('.today-offer-badge', root).textContent = 'اختيار اليوم';
       $('.today-offer-title', root).textContent = featured.nameAr || featured.nameEn || 'طبق اليوم';
-      $('.today-offer-message', root).textContent = featured.descriptionAr || featured.descriptionEn || 'اختيار مميز من مطبخ ARABISK.';
+      $('.today-offer-note', root).textContent = featured.descriptionAr || featured.descriptionEn || 'اختيار مميز من مطبخ ARABISK.';
       $('.today-offer-action', root).setAttribute('href', `/menu/${encodeURIComponent(String(featured.categoryId || ''))}/${encodeURIComponent(String(featured.id || ''))}`);
     }
   }
