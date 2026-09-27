@@ -401,7 +401,8 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       const result = await workflowService.handleReservation({
         identity,
         message,
-        memory
+        memory,
+        customer
       });
       await rememberWorkflow(result.reply, 'reservation', {
         intent: 'reservation',
