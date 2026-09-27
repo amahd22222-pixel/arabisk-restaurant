@@ -33,12 +33,12 @@ const createDefaultTodayOffer = () => ({
 const createDefaultInstallOffer = () => ({
   enabled: true,
   discountType: 'percent',
-  discountValue: 10,
+  discountValue: 20,
   minOrderValue: 0,
   maxDiscount: 50,
   claimValidityDays: 14,
-  title: 'ثبّت ARABISK واحصل على خصم 10%',
-  message: 'ثبّت ARABISK على شاشتك الرئيسية وخذ خصمك على أول طلب باستخدام الكود الشخصي.',
+  title: 'خلّي ARABISK أقرب إليك'
+  message: 'ثبّت تطبيق ARABISK واستمتع بتجربة أسرع للمنيو، الحجز والسلة — ومع التثبيت تحصل على خصم 20%.'
   updatedAt: new Date().toISOString(),
   claims: []
 });
