@@ -78,6 +78,8 @@ jobs:
           node --check apps/web/pwa-register.js
           node --check apps/web/mobile-nav.js
           node --check apps/web/home-shell.js
+          node --check apps/web/app.js
+          node --check apps/web/studio-runtime.js
           node --check apps/web/sw.js
 
       - name: Verify Railway private API fallback
@@ -99,7 +101,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for file in manifest.json sw.js offline.html pwa-ui.js pwa-register.js mobile-nav.js mobile-nav.css home-app.css home-shell.js; do
+          for file in manifest.json sw.js offline.html pwa-ui.js pwa-register.js mobile-nav.js mobile-nav.css home-app.css home-polish.css home-shell.js; do
             test -f "apps/web/dist/$file"
           done
           test -f apps/web/dist/icons/icon.svg
@@ -162,6 +164,9 @@ jobs:
           web_pid=$!
           wait_for_http "$web_pid" http://127.0.0.1:4186/health "web" 
           curl -fsS http://127.0.0.1:4186/health | grep -q '"ok":true'
+          curl -fsS http://127.0.0.1:4186/ | grep -q 'app-featured-products'
+          curl -fsS http://127.0.0.1:4186/ | grep -q 'today-offer'
+          curl -fsS http://127.0.0.1:4186/ | grep -q 'home-polish.css'
           curl -fsSI http://127.0.0.1:4186/health | grep -qi '^X-Content-Type-Options: nosniff'
           curl -fsSI http://127.0.0.1:4186/health | grep -qi '^X-Request-Id:'
           test "$(curl -s -o /dev/null -w '%{http_code}' -H "X-Arabisk-Admin-Key: $CI_ADMIN_KEY" http://127.0.0.1:4186/api/orders)" = "200"
