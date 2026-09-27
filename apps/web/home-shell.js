@@ -213,25 +213,8 @@
     }).join('');
   }
 
-  function setupMobileMenu() {
-    const button = $('#app-menu-button');
-    const nav = $('#app-header-nav');
-    if (!button || !nav) return;
-    button.addEventListener('click', () => {
-      const open = nav.classList.toggle('is-open');
-      button.setAttribute('aria-expanded', String(open));
-      button.textContent = open ? '×' : '☰';
-    });
-    nav.addEventListener('click', () => {
-      nav.classList.remove('is-open');
-      button.setAttribute('aria-expanded','false');
-      button.textContent = '☰';
-    });
-  }
-
   async function init() {
     if (location.pathname.replace(/\/$/,'') !== '') return;
-    setupMobileMenu();
     syncCartCount();
 
     const [products, experiences, memories, installOffer, todayOffer] = await Promise.all([
@@ -256,6 +239,10 @@
     window.addEventListener('arabisk-cart-updated', syncCartCount);
     window.addEventListener('storage', syncCartCount);
     window.addEventListener('pageshow', syncCartCount);
+    window.addEventListener('arabisk:language-updated', () => {
+      renderFeatured();
+      renderTodayOffer();
+    });
   }
 
   document.readyState === 'loading'
