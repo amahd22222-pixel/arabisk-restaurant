@@ -91,6 +91,7 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
     const name = cleanText(body.name, 80);
     const phone = cleanText(body.phone, 40);
     const notes = cleanText(body.notes, 300);
+    const customerId = cleanText(body.customerId, 80);
     const recoveryToken = cleanText(body.recoveryToken, 80);
     const promoCode = cleanText(body.promoCode, 80).toUpperCase();
     const rawItems = Array.isArray(body.items) ? body.items : [];
@@ -146,6 +147,7 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
       createdAt: now,
       updatedAt: now,
       sessionId: cleanText(body.sessionId, 100),
+      customerId: '',
       revenueRecoveryToken: recoveryToken,
       completedAt: ''
     };
@@ -155,9 +157,12 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
     let beforeCustomer = null;
 
     if (orderType === 'pickup' && phone) {
-      existingCustomer = customers.findByPhone(phone);
+      existingCustomer = customerId ? customers.findById(customerId) : null;
+      if (existingCustomer && existingCustomer.phone && existingCustomer.phone !== phone) existingCustomer = null;
+      if (!existingCustomer) existingCustomer = customers.findByPhone(phone);
       if (existingCustomer) {
         orderCustomerId = existingCustomer.id;
+        order.customerId = orderCustomerId;
         beforeCustomer = structuredClone(existingCustomer);
         existingCustomer.name = name;
       } else {
