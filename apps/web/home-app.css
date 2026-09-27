@@ -440,3 +440,17 @@
   }
   .app-header .header-nav.is-open a:hover{background:rgba(197,154,91,.10);color:#fff}
 }
+
+.app-section,.booking-cta,.app-pass,.about-panel{animation:arabisk-section-in .55s ease both}
+@keyframes arabisk-section-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.app-primary-cta,.app-secondary-cta,.app-section-link,.booking-cta-action a,.app-pass-action,.today-offer-action{transition:transform .2s ease,background-color .2s ease,color .2s ease,box-shadow .2s ease}
+.app-primary-cta:hover,.today-offer-action:hover,.booking-cta-action a:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(197,154,91,.18)}
+.app-secondary-cta:hover,.app-pass-action:hover{transform:translateY(-2px)}
+.app-quick-action:active,.product-teaser:active{transform:scale(.985)}
+.today-offer-content{min-width:0}
+.today-offer-media{overflow:hidden}
+.today-offer-media img{transition:transform .6s ease}
+.today-offer:hover .today-offer-media img{transform:scale(1.045)}
+.app-hero-copy{animation:arabisk-hero-in .7s cubic-bezier(.22,.78,.23,1) both}
+@keyframes arabisk-hero-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.app-section,.booking-cta,.app-pass,.about-panel,.app-hero-copy{animation:none!important}}
