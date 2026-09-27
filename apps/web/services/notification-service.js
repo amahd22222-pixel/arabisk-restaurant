@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { createWebPushService } from './web-push-service.js';
 
 const STATE_KEY = 'data/arabisk-notifications-v1.json';
