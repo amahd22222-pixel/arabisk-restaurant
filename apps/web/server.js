@@ -37,6 +37,7 @@ import { registerPushRoutes } from './routes/push-routes.js';
 import { createNotificationService } from './services/notification-service.js';
 import { registerNotificationRoutes } from './routes/notification-routes.js';
 import { createShamsService } from './services/shams-service.js';
+import { createShamsMemoryService } from './services/shams-memory-service.js';
 import { registerShamsRoutes } from './routes/shams-routes.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { configureHttpSecurity } from './middleware/http-security.js';
@@ -242,6 +243,8 @@ registerCustomerRoutes(app, {
 const shamsService = createShamsService({
   repository: stateRepository,
   findCustomerByProfileToken: customerService.findByProfileToken,
+  readJsonWithStatus,
+  writeJson,
   aiApiKey: SHAMS_AI_API_KEY,
   aiModel: SHAMS_AI_MODEL,
   aiEndpoint: SHAMS_AI_ENDPOINT
