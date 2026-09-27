@@ -60,6 +60,12 @@ function normalizeMemory(raw, identity) {
           .filter(item => item.id)
       : [],
     lastIntent: clean(source.lastIntent, 60),
+    pendingAction: source.pendingAction && typeof source.pendingAction === 'object' ? {
+      type: clean(source.pendingAction.type, 40),
+      data: source.pendingAction.data && typeof source.pendingAction.data === 'object' ? source.pendingAction.data : {},
+      createdAt: clean(source.pendingAction.createdAt, 40),
+      expiresAt: Number(source.pendingAction.expiresAt || 0) || 0
+    } : null,
     journey: {
       intent: clean(source.journey?.intent, 60),
       step: clean(source.journey?.step, 60),
@@ -136,6 +142,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       recentProducts,
       recentTurns: Array.isArray(patch.recentTurns) ? patch.recentTurns.slice(-MAX_TURNS) : current.recentTurns,
       lastIntent: clean(patch.lastIntent ?? current.lastIntent, 60),
+      pendingAction: patch.pendingAction !== undefined ? patch.pendingAction : current.pendingAction,
       journey: patch.journey && typeof patch.journey === 'object' ? patch.journey : current.journey,
       updatedAt: now,
       expiresAt
