@@ -3,7 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'url';
 import { presign, storageReady, writeObject, deleteObject } from './storage.js';
-import { dbReady, readJsonWithStatus, writeJson, dbHealthCheck, closeDbPool } from './db.js';
+import { dbReady, readJsonWithStatus, writeJson, dbHealthCheck, closeDbPool, migrateLegacySnapshots } from './db.js';
 import { serviceErrorHandler, logServiceFailure } from './utils/service-error.js';
 import { cleanText, cleanKey, cleanUrl, normalizeList } from './utils/input.js';
 import { categories, products } from './menu-data.js';
@@ -259,6 +259,11 @@ registerMediaRoutes(app, {
 registerPageRoutes(app, { rootDir: __dirname, distDir: dist });
 app.use(serviceErrorHandler);
 
+if (dbReady && String(process.env.ARABISK_MIGRATION || '').trim().toLowerCase() === 'legacy-json') {
+  const migration = await migrateLegacySnapshots();
+  if (!migration.ok) throw new Error(`Legacy data migration failed: ${migration.reason}`);
+  console.log(`ARABISK legacy migration — migrated ${migration.migrated.length}, missing ${migration.missing.length}`);
+}
 await stateStore.restore();
 await restoreCategories();
 await restoreStudio();
