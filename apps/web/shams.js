@@ -1,17 +1,36 @@
 (() => {
   'use strict';
 
+  const SESSION_KEY = 'ARABISK_SHAMS_SESSION_V1';
+
   const state = {
     listening: false,
     speaking: false,
     busy: false,
+    conversationActive: false,
     history: [],
     recognition: null,
-    voiceEnabled: true
+    voiceEnabled: true,
+    restartTimer: null,
+    restartAttempts: 0,
+    sessionId: ''
   };
 
   const rootId = 'arabisk-shams-root';
   const launcherId = 'shams-launcher';
+
+  function getSessionId() {
+    try {
+      let value = localStorage.getItem(SESSION_KEY);
+      if (!value) {
+        value = crypto.randomUUID?.() || ('shams-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+        localStorage.setItem(SESSION_KEY, value);
+      }
+      return value;
+    } catch {
+      return 'shams-' + Date.now();
+    }
+  }
 
   function ensureStyles() {
     if (document.getElementById('arabisk-shams-style')) return;
@@ -27,14 +46,13 @@
     const root = document.createElement('section');
     root.id = rootId;
     root.setAttribute('aria-label', 'شمس — المساعدة الصوتية');
-    root.innerHTML = `
-      <button id="${launcherId}" class="shams-launcher shams-voice-only" type="button"
-        aria-label="تحدث مع شمس" aria-pressed="false" title="تحدث مع شمس">
-        <span class="shams-sun" aria-hidden="true">☀</span>
-        <span class="shams-launcher-label" aria-hidden="true">شمس</span>
-      </button>
-      <div class="shams-voice-error" id="shams-voice-error" aria-live="polite"></div>
-    `;
+    root.innerHTML =
+      '<button id="' + launcherId + '" class="shams-launcher shams-voice-only" type="button" ' +
+      'aria-label="تحدث مع شمس" aria-pressed="false" title="تحدث مع شمس">' +
+      '<span class="shams-sun" aria-hidden="true">☀</span>' +
+      '<span class="shams-launcher-label" aria-hidden="true">شمس</span>' +
+      '</button>' +
+      '<div class="shams-voice-error" id="shams-voice-error" aria-live="polite"></div>';
     document.body.appendChild(root);
   }
 
@@ -53,11 +71,13 @@
     launcher.classList.toggle('is-speaking', mode === 'speaking');
     launcher.classList.toggle('is-thinking', mode === 'thinking');
     launcher.classList.toggle('is-error', mode === 'error');
+    launcher.classList.toggle('is-active', state.conversationActive);
     launcher.setAttribute('aria-pressed', String(Boolean(state.listening)));
     launcher.title =
       mode === 'listening' ? 'شمس تستمع إليك' :
       mode === 'speaking' ? 'شمس تتحدث' :
       mode === 'thinking' ? 'شمس تفكر' :
+      state.conversationActive ? 'شمس متصلة بالمحادثة' :
       'تحدث مع شمس';
   }
 
@@ -67,10 +87,12 @@
     node.textContent = String(message || '');
     node.classList.toggle('has-error', Boolean(message));
     window.clearTimeout(showError.timer);
-    if (message) showError.timer = window.setTimeout(() => {
-      node.textContent = '';
-      node.classList.remove('has-error');
-    }, 5000);
+    if (message) {
+      showError.timer = window.setTimeout(() => {
+        node.textContent = '';
+        node.classList.remove('has-error');
+      }, 5000);
+    }
   }
 
   function stopSpeaking() {
@@ -86,14 +108,12 @@
       null;
   }
 
-  function speak(text, { allowWhenDisabled = false } = {}) {
-    if ((!state.voiceEnabled && !allowWhenDisabled) || !('speechSynthesis' in window)) {
-      return Promise.resolve(false);
-    }
+  function speak(text) {
+    if (!state.voiceEnabled || !('speechSynthesis' in window)) return Promise.resolve(false);
 
     const cleanText = String(text || '')
       .replace(/[\n\r]+/g, '. ')
-      .replace(/[\*_\`#>]/g, '')
+      .replace(/[\*_\#>]/g, '')
       .trim()
       .slice(0, 900);
 
@@ -136,24 +156,74 @@
       };
 
       try {
-        try {
         window.speechSynthesis.resume();
         window.speechSynthesis.speak(utterance);
-      } catch {
-        finish(false);
-      }
       } catch {
         finish(false);
       }
     });
   }
 
+  function readCart() {
+    try {
+      const items = window.ARABISK_CART?.getItems?.();
+      if (!Array.isArray(items)) return [];
+      return items.slice(0, 20).map(item => ({
+        id: String(item.id || ''),
+        nameAr: String(item.nameAr || item.nameEn || ''),
+        price: Number(item.price || 0),
+        quantity: Number(item.qty || 1)
+      })).filter(item => item.id);
+    } catch {
+      return [];
+    }
+  }
+
   async function performActions(actions) {
     if (!Array.isArray(actions)) return;
-    const action = actions.find(item => /^\/(?!\/)/.test(String(item?.url || '')));
-    if (!action) return;
-    await new Promise(resolve => window.setTimeout(resolve, 600));
-    window.location.assign(action.url);
+
+    for (const action of actions.slice(0, 4)) {
+      if (action?.type === 'cart.add') {
+        const product = action.product;
+        const quantity = Number(action.quantity || 1);
+        if (product?.id && window.ARABISK_CART?.add) {
+          window.ARABISK_CART.add(product, quantity);
+        }
+        continue;
+      }
+
+      if (action?.type === 'navigate' && /^\/(?!\/)/.test(String(action.url || ''))) {
+        await new Promise(resolve => window.setTimeout(resolve, 500));
+        window.location.assign(action.url);
+        return;
+      }
+    }
+  }
+
+  function scheduleListeningRestart(delay = 300) {
+    if (!state.conversationActive || state.busy || state.speaking) return;
+    window.clearTimeout(state.restartTimer);
+
+    state.restartTimer = window.setTimeout(() => {
+      if (!state.conversationActive || state.busy || state.speaking || state.listening) return;
+      const recognition = state.recognition;
+      if (!recognition) return;
+
+      try {
+        recognition.start();
+        state.restartAttempts = 0;
+      } catch (error) {
+        state.restartAttempts += 1;
+        if (state.restartAttempts <= 6) {
+          scheduleListeningRestart(Math.min(2500, 250 * state.restartAttempts));
+        } else {
+          showError('شمس جاهزة. اضغط عليها للمتابعة.');
+          state.restartAttempts = 0;
+          state.conversationActive = false;
+          setVisual('idle');
+        }
+      }
+    }, delay);
   }
 
   async function sendMessage(message) {
@@ -173,17 +243,17 @@
         },
         body: JSON.stringify({
           message: text,
-          history: state.history.slice(-10)
+          history: state.history.slice(-10),
+          sessionId: state.sessionId,
+          page: window.location.pathname || '/',
+          cart: readCart()
         })
       });
 
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(data.message || 'تعذر تشغيل شمس الآن.');
-      }
+      if (!response.ok) throw new Error(data.message || 'تعذر تشغيل شمس الآن.');
 
-      const reply = String(data.reply || 'أنا هنا لمساعدتك.').trim();
-
+      const reply = String(data.reply || 'أنا معك.').trim();
       state.history.push({ role: 'user', content: text });
       state.history.push({ role: 'assistant', content: reply });
       state.history = state.history.slice(-12);
@@ -197,13 +267,7 @@
       state.busy = false;
       if (!state.listening && !state.speaking) {
         setVisual('idle');
-        // Keep the conversation voice-first: after Shams answers, she
-        // returns to listening so the customer can continue naturally.
-        window.setTimeout(() => {
-          if (!state.busy && !state.listening && !state.speaking) {
-            startListeningFromUserGesture();
-          }
-        }, 350);
+        scheduleListeningRestart(350);
       }
     }
   }
@@ -224,6 +288,7 @@
 
     recognition.onstart = () => {
       state.listening = true;
+      state.restartAttempts = 0;
       showError('');
       setVisual('listening');
     };
@@ -232,21 +297,32 @@
       const phrase = event.results?.[0]?.[0]?.transcript?.trim() || '';
       state.listening = false;
       if (phrase) void sendMessage(phrase);
+      else scheduleListeningRestart(250);
     };
 
     recognition.onerror = event => {
       state.listening = false;
-      if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
+      const code = String(event?.error || '');
+      if (code === 'not-allowed' || code === 'service-not-allowed') {
+        state.conversationActive = false;
         showError('اسمح بالميكروفون من إعدادات المتصفح حتى تسمعك شمس.');
-      } else if (event?.error !== 'aborted' && event?.error !== 'no-speech') {
-        showError('لم ألتقط الصوت بوضوح. اضغط شمس وتحدث مرة أخرى.');
+        setVisual('error');
+        return;
       }
-      if (!state.busy && !state.speaking) setVisual(event?.error === 'not-allowed' ? 'error' : 'idle');
+      if (code !== 'aborted' && code !== 'no-speech') {
+        showError('لم ألتقط الصوت بوضوح. شمس جاهزة للمحاولة مرة أخرى.');
+      }
+      if (state.conversationActive && !state.busy && !state.speaking) scheduleListeningRestart(300);
+      else if (!state.busy && !state.speaking) setVisual('idle');
     };
 
     recognition.onend = () => {
       state.listening = false;
-      if (!state.busy && !state.speaking) setVisual('idle');
+      if (state.conversationActive && !state.busy && !state.speaking) {
+        scheduleListeningRestart(300);
+      } else if (!state.busy && !state.speaking) {
+        setVisual('idle');
+      }
     };
 
     state.recognition = recognition;
@@ -257,7 +333,6 @@
     if (!('speechSynthesis' in window)) return;
     try {
       window.speechSynthesis.resume();
-      // Warm the speech engine without producing a spoken greeting.
       const warmup = new SpeechSynthesisUtterance('');
       warmup.lang = 'ar-AE';
       warmup.volume = 0;
@@ -270,11 +345,12 @@
     const recognition = state.recognition || setupRecognition();
     if (!recognition) return;
 
+    state.conversationActive = true;
+    state.restartAttempts = 0;
     showError('');
     stopSpeaking();
     unlockAudio();
 
-    // Start listening immediately from the actual tap/click.
     try {
       recognition.start();
       launcher?.classList.add('is-listening');
@@ -286,25 +362,21 @@
     }
   }
 
-  function stopListening() {
-    try { state.recognition?.stop(); } catch {}
+  function stopConversation() {
+    state.conversationActive = false;
+    window.clearTimeout(state.restartTimer);
+    try { state.recognition?.abort(); } catch {}
     state.listening = false;
+    stopSpeaking();
     setVisual('idle');
   }
 
   function toggleVoice() {
-    if (state.listening) {
-      stopListening();
+    if (state.listening || state.conversationActive) {
+      stopConversation();
       return;
     }
-
-    if (state.speaking) {
-      stopSpeaking();
-      setVisual('idle');
-      return;
-    }
-
-    void startConversationFromUserGesture();
+    startConversationFromUserGesture();
   }
 
   function setup() {
@@ -314,10 +386,10 @@
     const { launcher } = ui();
     if (!launcher) return;
 
+    state.sessionId = getSessionId();
     state.voiceEnabled = 'speechSynthesis' in window;
     setupRecognition();
 
-    // Keep the microphone activation inside the real click handler.
     launcher.addEventListener('click', toggleVoice);
 
     if (!state.voiceEnabled) {
@@ -327,7 +399,9 @@
   }
 
   if ('speechSynthesis' in window) {
-    try { window.speechSynthesis.addEventListener('voiceschanged', () => window.speechSynthesis.getVoices()); } catch {}
+    try {
+      window.speechSynthesis.addEventListener('voiceschanged', () => window.speechSynthesis.getVoices());
+    } catch {}
   }
 
   if (document.readyState === 'loading') {
@@ -338,10 +412,7 @@
 
   window.ARABISK_SHAMS = {
     open: () => startConversationFromUserGesture(),
-    close: () => {
-      stopListening();
-      stopSpeaking();
-    },
+    close: stopConversation,
     send: sendMessage
   };
 })();
