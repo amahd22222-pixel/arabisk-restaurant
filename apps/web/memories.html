@@ -5,16 +5,20 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="ARABISK Memories — شارك لحظاتك وتعليقاتك مع مجتمع ARABISK.">
 <title>ARABISK — ذكريات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/home-app.css">
 <style>
 :root{
-  --bg:#f3eee5;--surface:#fffdf9;--surface-2:#faf6ee;--surface-3:#f4ecdf;--ink:#1c1814;
-  --muted:#7d7368;--line:#e5dbce;--gold:#b88a3b;--gold-2:#d8bc8a;--dark:#17130f;
-  --danger:#8b3f38;--success:#496d59;--shadow:0 22px 60px rgba(45,32,19,.09);--radius:26px
+  --bg:var(--app-bg);--surface:#fffdf9;--surface-2:#faf6ee;--surface-3:#f4ecdf;--ink:var(--app-ink);
+  --muted:var(--app-muted);--line:var(--app-line);--gold:var(--app-gold);--gold-2:var(--app-gold-soft);--dark:var(--app-dark);
+  --danger:#8b3f38;--success:#496d59;--shadow:var(--app-shadow);--radius:26px
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
-  margin:0;color:var(--ink);font-family:Arial,sans-serif;
+  margin:0;color:var(--ink);font-family:Cairo,sans-serif;
   background:
     radial-gradient(circle at 50% -18%,rgba(255,252,246,.95) 0,rgba(255,252,246,0) 38%),
     linear-gradient(145deg,#f7f2e9 0,#f1eadf 58%,#ece3d6 100%);
@@ -24,17 +28,6 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;background:lin
 button,input,textarea{font:inherit}
 button{cursor:pointer}
 a{text-decoration:none;color:inherit}
-.nav{
-  position:sticky;top:0;z-index:50;padding:14px max(18px,5vw);
-  display:flex;align-items:center;justify-content:space-between;
-  background:rgba(247,242,233,.78);backdrop-filter:blur(18px);
-  border-bottom:1px solid rgba(229,219,206,.9)
-}
-.brand{font-weight:900;letter-spacing:3px;font-size:19px}
-.back{
-  padding:10px 17px;border:1px solid var(--line);background:rgba(255,255,255,.88);
-  border-radius:999px;font-weight:800;box-shadow:0 7px 18px rgba(26,19,12,.04)
-}
 .wrap{width:min(900px,calc(100% - 28px));margin:auto;padding:32px 0 100px}
 .hero{text-align:center;padding:12px 0 26px}
 .eyebrow{font-size:10px;letter-spacing:5px;color:var(--gold);font-weight:900}
@@ -225,10 +218,17 @@ a{text-decoration:none;color:inherit}
 }
 </style>
 </head>
-<body>
-<header class="nav">
-  <strong class="brand">ARABISK</strong>
-  <a class="back" href="/">الرئيسية</a>
+<body class="home-app">
+<header class="app-header is-page" aria-label="ARABISK">
+  <a class="brand" href="/" aria-label="ARABISK">ARABISK<span>RESTAURANT & CAFE</span></a>
+  <nav class="header-nav" id="app-header-nav" aria-label="التنقل الرئيسي">
+    <a href="/">الرئيسية</a><a href="/menu">المنيو</a><a href="/events">الفعاليات</a><a href="/reservation">حجز طاولة</a><a href="/track-order">متابعة الطلب</a><a href="/memories" aria-current="page">الذكريات</a>
+  </nav>
+  <div class="app-header-actions">
+    <a class="app-cart-link" href="/cart" aria-label="فتح السلة">السلة <b id="app-cart-count" hidden>0</b></a>
+    <button class="lang" id="lang-toggle" type="button" aria-label="تغيير اللغة">EN</button>
+    <button class="app-menu-button" id="app-menu-button" type="button" aria-expanded="false" aria-controls="app-header-nav" aria-label="فتح القائمة">☰</button>
+  </div>
 </header>
 
 <main class="wrap">
@@ -297,6 +297,9 @@ a{text-decoration:none;color:inherit}
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div><div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="عرض الصورة"><button id="lightboxClose" class="lightbox-close" type="button" aria-label="إغلاق">×</button><img id="lightboxImage" alt=""></div>
 
+<footer id="contact"><strong>ARABISK</strong><span>Restaurant & Cafe</span><small>© 2026 ARABISK. All rights reserved.</small></footer>
+
+<script type="module" src="/app-header.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));

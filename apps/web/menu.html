@@ -3,36 +3,13 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="ARABISK — اكتشف مذاقاتنا"><title>ARABISK — اكتشف مذاقاتنا</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap');
-:root{--ink:#111;--black:#0d0d0d;--gold:#b89455;--gold2:#d2b16d;--cream:#f6f1e7;--paper:#fffdf8;--muted:#817a6e;--line:#ded6c8}*{box-sizing:border-box}html,body{margin:0}body{background:var(--cream);color:var(--ink);font-family:Cairo,sans-serif}.nav{height:82px;background:var(--black);color:#fff;display:flex;align-items:center;padding:0 6vw;gap:42px;position:sticky;top:0;z-index:10}.brand{font-family:'Playfair Display',serif;font-size:26px;letter-spacing:3px;line-height:1}.brand span{display:block;font-family:Cairo;font-size:8px;letter-spacing:2px;color:var(--gold2);margin-top:7px}.nav nav{display:flex;gap:28px;margin:auto}.nav a{color:#eee;text-decoration:none;font-size:14px}.nav a:hover{color:var(--gold2)}.lang{display:inline-flex;align-items:center;justify-content:center;border:1px solid #6f624f;background:none;color:#fff;border-radius:50%;width:38px;height:38px;text-decoration:none}.menu-page{min-height:calc(100vh - 82px);padding:80px 8vw 110px;background:var(--paper)}.menu-page-head{text-align:center;max-width:760px;margin:0 auto}.eyebrow{color:var(--gold);font-size:11px;letter-spacing:4px;margin:0 0 18px}.menu-page-head h1{font-family:'Playfair Display',serif;font-size:clamp(44px,6vw,72px);font-weight:500;margin:0 0 12px}.menu-page-head p:last-of-type{color:var(--muted);margin:0;line-height:1.9}.category-search{max-width:520px;margin:34px auto 0}.category-search input{width:100%;height:48px;border:1px solid var(--line);border-radius:999px;background:#fff;padding:0 18px;font:inherit;outline:none}.category-search input:focus{border-color:var(--gold)}.category-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:48px}.category-card{position:relative;display:block;min-height:245px;overflow:hidden;border-radius:2px;background:#171717;color:#fff;text-align:right;text-decoration:none;box-shadow:0 12px 30px rgba(0,0,0,.08);transition:.18s}.category-card:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(0,0,0,.12)}.category-image,.category-image img,.category-shade{position:absolute;inset:0;width:100%;height:100%}.category-image img{object-fit:cover}.category-shade{background:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.72))}.category-copy{position:absolute;inset:auto 20px 18px;z-index:2}.cat-en{display:block;color:var(--gold2);font-size:10px;letter-spacing:2px}.category-copy h3{margin:5px 0 8px;font-size:24px;font-weight:600}.category-arrow{font-size:11px;color:#eee}.empty-menu{text-align:center;grid-column:1/-1;color:var(--muted);padding:35px}footer{background:#080808;color:#fff;padding:55px 8vw;display:flex;align-items:center;gap:15px}footer strong{font-family:'Playfair Display';font-size:28px}footer span{color:var(--gold2)}footer small{margin-right:auto;color:#777}@media(max-width:1100px){.category-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:800px){.nav{padding:0 20px}.nav nav{display:none}.menu-page{padding:60px 20px 80px}.category-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:520px){.category-grid{grid-template-columns:1fr}.category-card{min-height:220px}}
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/home-app.css">
+<style>body{background:var(--app-bg);color:var(--app-ink);font-family:Cairo,sans-serif}.menu-page{min-height:calc(100vh - 82px);padding:80px 8vw 110px;background:var(--app-paper)}.menu-page-head{text-align:center;max-width:760px;margin:0 auto}.eyebrow{color:var(--app-gold);font-size:11px;letter-spacing:4px;margin:0 0 18px}.menu-page-head h1{font-family:'Playfair Display',serif;font-size:clamp(44px,6vw,72px);font-weight:500;margin:0 0 12px}.menu-page-head p:last-of-type{color:var(--app-muted);margin:0;line-height:1.9}.category-search{max-width:520px;margin:34px auto 0}.category-search input{width:100%;height:48px;border:1px solid var(--app-line);border-radius:999px;background:#fff;padding:0 18px;font:inherit;outline:none}.category-search input:focus{border-color:var(--app-gold)}.category-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:48px}.category-card{position:relative;display:block;min-height:245px;overflow:hidden;border-radius:2px;background:#171717;color:#fff;text-align:right;text-decoration:none;box-shadow:0 12px 30px rgba(0,0,0,.08);transition:.18s}.category-card:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(0,0,0,.12)}.category-image,.category-image img,.category-shade{position:absolute;inset:0;width:100%;height:100%}.category-image img{object-fit:cover}.category-shade{background:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.72))}.category-copy{position:absolute;inset:auto 20px 18px;z-index:2}.cat-en{display:block;color:var(--app-gold-soft);font-size:10px;letter-spacing:2px}.category-copy h3{margin:5px 0 8px;font-size:24px;font-weight:600}.category-arrow{font-size:11px;color:#eee}.empty-menu{text-align:center;grid-column:1/-1;color:var(--app-muted);padding:35px}@media(max-width:1100px){.category-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:800px){.menu-page{padding:60px 20px 80px}.category-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:520px){.category-grid{grid-template-columns:1fr}.category-card{min-height:220px}}</style>
+<link rel="stylesheet" href="/app-pages.css">
 
-<style id="arabisk-page-shell">
-body.home-app{background:var(--app-bg)}
-body.home-app .app-content,body.home-app .wrap{max-width:1240px;margin-inline:auto}
-body.home-app .category-page-head,body.home-app .category-page-body{background:var(--app-bg)}
-body.home-app .category-page-head{padding-top:110px;border:0}
-body.home-app .category-page-body{padding-bottom:120px}
-body.home-app .back-btn,body.home-app .back{background:var(--app-paper);border-color:var(--app-line)}
-body.home-app .item{border-radius:20px;border-color:var(--app-line);background:var(--app-paper);box-shadow:0 12px 35px rgba(37,27,17,.06)}
-body.home-app .item-thumb{border-radius:14px;margin:-25px -25px 18px;height:210px}
-body.home-app .item:hover{transform:translateY(-4px);box-shadow:0 20px 42px rgba(37,27,17,.10)}
-body.home-app .grid{gap:14px}
-body.home-app .category-page-head h1{font-family:"Playfair Display",serif}
-body.home-app .wrap{padding-top:110px}
-body.home-app .visual,body.home-app .panel,body.home-app .detail-card,body.home-app .related-card{border-color:var(--app-line);box-shadow:0 16px 38px rgba(37,27,17,.06);border-radius:24px}
-body.home-app .hero-image{height:600px}
-body.home-app .panel{padding:32px}
-body.home-app .add{background:var(--app-dark);border-radius:999px}
-body.home-app .add:hover{background:var(--app-gold)}
-body.home-app footer,body.home-app footer{background:#0d0b09}
-@media(max-width:800px){
- body.home-app .category-page-head{padding:96px 18px 28px}
- body.home-app .wrap{padding:96px 16px 80px}
- body.home-app .hero-image{height:390px}
-}
-</style>
 </head>
 <body class="home-app">
 <header class="app-header" aria-label="ARABISK">
