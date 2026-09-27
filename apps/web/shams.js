@@ -136,7 +136,12 @@
       };
 
       try {
+        try {
+        window.speechSynthesis.resume();
         window.speechSynthesis.speak(utterance);
+      } catch {
+        finish(false);
+      }
       } catch {
         finish(false);
       }
@@ -239,20 +244,28 @@
     return recognition;
   }
 
-  async function startConversationFromUserGesture() {
+  function unlockAudio() {
+    if (!('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.resume();
+      // Warm the speech engine without producing a spoken greeting.
+      const warmup = new SpeechSynthesisUtterance('');
+      warmup.lang = 'ar-AE';
+      warmup.volume = 0;
+      window.speechSynthesis.speak(warmup);
+    } catch {}
+  }
+
+  function startConversationFromUserGesture() {
     const { launcher } = ui();
     const recognition = state.recognition || setupRecognition();
     if (!recognition) return;
 
     showError('');
     stopSpeaking();
+    unlockAudio();
 
-    // Start speech from the real tap/click first. This unlocks audio on
-    // mobile browsers before any asynchronous network work happens.
-    if (state.voiceEnabled && 'speechSynthesis' in window) {
-      await speak('أهلاً بك. أنا شمس، تفضل.', { allowWhenDisabled: true });
-    }
-
+    // Start listening immediately from the actual tap/click.
     try {
       recognition.start();
       launcher?.classList.add('is-listening');
