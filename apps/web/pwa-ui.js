@@ -26,15 +26,20 @@ function ensurePwaUi() {
   document.body.appendChild(banner);
 
   banner.querySelector('[data-install]')?.addEventListener('click', async () => {
-    if (!deferredInstallPrompt) return;
+    if (isIosSafari()) {
+      banner.querySelector('.pwa-install-copy span').textContent =
+        'في Safari اضغط مشاركة ثم «إضافة إلى الشاشة الرئيسية».';
+      return;
+    }
+    if (!deferredInstallPrompt) {
+      banner.querySelector('.pwa-install-copy span').textContent =
+        'افتح قائمة المتصفح واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».';
+      return;
+    }
     deferredInstallPrompt.prompt();
     await deferredInstallPrompt.userChoice.catch(() => null);
     deferredInstallPrompt = null;
     banner.hidden = true;
-  });
-  banner.querySelector('[data-ios-install]')?.addEventListener('click', () => {
-    banner.querySelector('.pwa-install-copy span').textContent =
-      'في Safari اضغط مشاركة ثم «إضافة إلى الشاشة الرئيسية».';
   });
   banner.querySelector('[data-dismiss]')?.addEventListener('click', () => {
     banner.hidden = true;
@@ -95,7 +100,19 @@ window.addEventListener('arabisk:pwa-update', () => {
 });
 
 window.addEventListener('load', () => {
-  if (!deferredInstallPrompt) showIosInstallHint();
+  if (isStandaloneMode()) return;
+  if (isIosSafari()) {
+    showIosInstallHint();
+    return;
+  }
+  if (sessionStorage.getItem('ARABISK_PWA_INSTALL_DISMISSED') === '1') return;
+  ensurePwaUi();
+  const banner = document.getElementById('pwa-install');
+  if (banner) {
+    window.setTimeout(() => {
+      if (!deferredInstallPrompt && !isStandaloneMode()) banner.hidden = false;
+    }, 1200);
+  }
 });
 window.addEventListener('online', checkForPwaUpdate);
 document.addEventListener('visibilitychange', () => {
