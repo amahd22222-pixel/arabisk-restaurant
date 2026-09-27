@@ -32,7 +32,7 @@ function findProductMatches(products, message) {
       const haystack = [product.nameAr, product.nameEn, product.descriptionAr, product.descriptionEn, product.categorySlug]
         .join(' ')
         .toLocaleLowerCase('ar');
-      return haystack && query && haystack.split(/\\s+/).some(token => token.length >= 3 && query.includes(token));
+      return haystack && query && haystack.split(/\s+/).some(token => token.length >= 3 && query.includes(token));
     })
     .slice(0, 4);
 }
@@ -97,7 +97,7 @@ function localConcierge({ message, customer, repository }) {
   const products = repository.products.all().filter(item => item?.available !== false);
   const matches = findProductMatches(products, raw);
 
-  if (/\\b(منيو|المنيو|القائمة|الأكل|اكل|أكل|الأطباق)\\b/i.test(normalized)) {
+  if (/\b(منيو|المنيو|القائمة|الأكل|اكل|أكل|الأطباق)\\b/i.test(normalized)) {
     return {
       reply: 'أكيد 🌞 أفتح لك المنيو الآن، وبعدها أقدر أساعدك تختار الطبق المناسب.',
       actions: [{ type: 'navigate', url: '/menu', label: 'فتح المنيو' }]
