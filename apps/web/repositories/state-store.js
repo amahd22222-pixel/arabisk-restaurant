@@ -1,3 +1,5 @@
+import { normalizePhone } from '../utils/phone.js';
+
 export function createStateStore({ readJsonWithStatus, writeJson, storageReady, dbReady = storageReady, stateKey, menuVersion, products, customers, orders, reservations, pushSubscriptions, notificationDevices }) {
   const PERSIST_DEBOUNCE_MS = 250;
   let persistQueue = Promise.resolve(true);
@@ -14,20 +16,62 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
     for (const resolve of waiters) resolve(result);
   };
 
-  const rebuildCustomerOrderStats = () => {
-    const statsByPhone = new Map();
-    for (const order of orders) {
-      if (order.status !== 'completed' || order.orderType !== 'pickup' || !order.phone) continue;
-      const current = statsByPhone.get(order.phone) || { count: 0, lastOrderAt: '' };
-      current.count += 1;
-      const completedAt = order.completedAt || order.createdAt || '';
-      if (completedAt && (!current.lastOrderAt || completedAt > current.lastOrderAt)) current.lastOrderAt = completedAt;
-      statsByPhone.set(order.phone, current);
-    }
+  const rebuildCustomerStats = () => {
+    const byId = new Map();
+    const byPhone = new Map();
+
     for (const customer of customers) {
-      const stats = statsByPhone.get(customer.phone);
-      customer.orderCount = stats?.count || 0;
-      customer.lastOrderAt = stats?.lastOrderAt || '';
+      if (!customer || typeof customer !== 'object') continue;
+      byId.set(String(customer.id || ''), customer);
+      const phone = normalizePhone(customer.phone);
+      if (phone) byPhone.set(phone, customer);
+      customer.orderCount = 0;
+      customer.lastOrderAt = '';
+      customer.reservationCount = 0;
+      customer.lastReservationAt = '';
+      customer.totalOrderValue = 0;
+      customer.lastActivityAt = customer.appProfileUpdatedAt || customer.appProfileCreatedAt || customer.createdAt || '';
+      if (!customer.firstSeenAt) {
+        customer.firstSeenAt = customer.appProfileCreatedAt || customer.createdAt || '';
+      }
+    }
+
+    const touch = (customer, activityAt) => {
+      if (!customer || !activityAt) return;
+      if (!customer.firstSeenAt || Date.parse(activityAt) < Date.parse(customer.firstSeenAt || '')) {
+        customer.firstSeenAt = activityAt;
+      }
+      if (!customer.lastActivityAt || Date.parse(activityAt) > Date.parse(customer.lastActivityAt || '')) {
+        customer.lastActivityAt = activityAt;
+      }
+    };
+
+    for (const order of orders) {
+      if (order?.status !== 'completed') continue;
+      const customer = order.customerId
+        ? byId.get(String(order.customerId))
+        : (order.phone ? byPhone.get(normalizePhone(order.phone)) : null);
+      if (!customer) continue;
+      customer.orderCount += 1;
+      customer.totalOrderValue = Math.round((Number(customer.totalOrderValue || 0) + Number(order.total || 0)) * 100) / 100;
+      const activityAt = order.completedAt || order.updatedAt || order.createdAt || '';
+      if (activityAt && (!customer.lastOrderAt || Date.parse(activityAt) > Date.parse(customer.lastOrderAt || ''))) {
+        customer.lastOrderAt = activityAt;
+      }
+      touch(customer, activityAt);
+    }
+
+    for (const reservation of reservations) {
+      const customer = reservation?.customerId
+        ? byId.get(String(reservation.customerId))
+        : (reservation?.phone ? byPhone.get(normalizePhone(reservation.phone)) : null);
+      if (!customer) continue;
+      customer.reservationCount += 1;
+      const activityAt = reservation.createdAt || '';
+      if (activityAt && (!customer.lastReservationAt || Date.parse(activityAt) > Date.parse(customer.lastReservationAt || ''))) {
+        customer.lastReservationAt = activityAt;
+      }
+      touch(customer, activityAt);
     }
   };
 
@@ -62,7 +106,7 @@ export function createStateStore({ readJsonWithStatus, writeJson, storageReady, 
     if (Array.isArray(saved.notificationDevices) && notificationDevices) {
       notificationDevices.splice(0, notificationDevices.length, ...saved.notificationDevices);
     }
-    rebuildCustomerOrderStats();
+    rebuildCustomerStats();
     restoreStatus = 'restored';
     restoredAt = new Date().toISOString();
   }
