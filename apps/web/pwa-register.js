@@ -2,7 +2,18 @@ function registerStandalonePwa() {
   if (!('serviceWorker' in navigator)) return;
 
   const refreshAfterActivation = () => {
-    window.location.reload();
+    const startedAt = Date.now();
+    const reloadWhenIdle = () => {
+      const shamsBusy = Boolean(
+        document.querySelector('#shams-launcher.is-listening, #shams-launcher.is-speaking, #shams-launcher.is-thinking')
+      );
+      if (!shamsBusy || Date.now() - startedAt > 15000) {
+        window.location.reload();
+        return;
+      }
+      window.setTimeout(reloadWhenIdle, 500);
+    };
+    reloadWhenIdle();
   };
 
   navigator.serviceWorker.addEventListener('controllerchange', refreshAfterActivation);
