@@ -10,6 +10,7 @@ const readJson=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(
 const writeJson=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value))}catch{}};
 const readCart=()=>window.ARABISK_CART?.getItems?.()||[];
 const readProfile=()=>window.ARABISK_PROFILE?.getProfile?.()||null;
+const getPwaClientId=()=>{try{return String(localStorage.getItem('ARABISK_PWA_CLIENT_ID')||'').trim().slice(0,100)}catch{return ''}};
 const profileCustomerId=()=>String(readProfile()?.id||'').trim();
 async function hydrateCartView(){
   const currentItems=readCart();
@@ -102,7 +103,7 @@ async function refreshPromoQuote(showErrors=true){
   if(input)input.value=promoCode;
   if(!promoCode||!cart.length){promoQuote=null;render();if(status)status.textContent='';return false;}
   try{
-    const response=await fetch('/api/promotions/install/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:promoCode,subtotal:total()})});
+    const response=await fetch('/api/promotions/install/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:promoCode,subtotal:total(),clientId:getPwaClientId()})});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(data.message||'كود الخصم غير صالح.');
     promoQuote=data;
@@ -140,6 +141,7 @@ async function submitOrder(event){
       notes,
       sessionId,
       customerId:profileCustomerId(),
+      clientId:getPwaClientId(),
       recoveryToken,
       promoCode:promoCode||'',
       items:cart.map(item=>({productId:item.id,quantity:item.qty}))
