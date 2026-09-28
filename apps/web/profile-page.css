@@ -154,3 +154,89 @@
 .profile-data-item strong{display:block;overflow:hidden;color:#2c261f;font-size:11px;line-height:1.7;text-overflow:ellipsis}
 .profile-status:empty{display:none}
 @media(max-width:560px){.profile-data-grid{grid-template-columns:1fr}.profile-data-item.wide{grid-column:auto}}
+
+
+/* Premium customer identity card — account display only. Registration lives in the installed-app onboarding. */
+.profile-customer-card{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:18px;
+  padding:20px 22px;
+  border:1px solid rgba(197,154,91,.17);
+  border-radius:24px;
+  background:linear-gradient(135deg,#fffdf8,#f1e8da);
+  box-shadow:0 18px 42px rgba(36,26,16,.07);
+}
+.profile-customer-avatar-wrap{position:relative;flex:0 0 auto}
+.profile-customer-avatar{
+  width:76px;
+  height:76px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(197,154,91,.45);
+  border-radius:22px;
+  background:linear-gradient(145deg,#3a2d20,#17130f);
+  color:#f5dfb6;
+  font:500 30px "Playfair Display",serif;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 12px 26px rgba(35,24,14,.18);
+}
+.profile-customer-dot{
+  position:absolute;
+  right:1px;
+  bottom:1px;
+  width:13px;
+  height:13px;
+  border:3px solid #f7efe3;
+  border-radius:50%;
+  background:#6fb27b;
+}
+.profile-customer-main{min-width:0}
+.profile-customer-main .profile-section-kicker{margin-bottom:5px}
+.profile-customer-main h2{
+  margin:0;
+  color:var(--app-ink);
+  font:500 clamp(25px,3vw,34px)/1.1 "Playfair Display",serif;
+}
+.profile-customer-main p:not(.profile-section-kicker){
+  margin:6px 0 0;
+  color:var(--app-muted);
+  font-size:10px;
+  line-height:1.8;
+}
+.profile-customer-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px}
+.profile-customer-meta>span:first-child{color:#62594e;font-size:10px;font-weight:700;direction:ltr}
+.profile-customer-side{
+  display:grid;
+  justify-items:end;
+  align-self:stretch;
+  gap:10px;
+  min-width:150px;
+}
+.profile-customer-side .profile-member-badge{
+  background:#1b1510;
+  border-color:rgba(197,154,91,.28);
+  color:#e1c58f;
+}
+.profile-customer-caption{
+  align-self:end;
+  color:#8a7a68;
+  font-size:8px;
+  font-weight:800;
+  text-align:right;
+}
+@media(max-width:720px){
+  .profile-customer-card{grid-template-columns:auto minmax(0,1fr);gap:13px;padding:16px}
+  .profile-customer-side{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:9px;min-width:0}
+  .profile-customer-caption{text-align:left}
+}
+@media(max-width:560px){
+  .profile-customer-card{border-radius:20px;padding:14px}
+  .profile-customer-avatar{width:62px;height:62px;border-radius:18px;font-size:24px}
+  .profile-customer-main h2{font-size:25px}
+  .profile-customer-main p:not(.profile-section-kicker){font-size:9px}
+  .profile-customer-meta{margin-top:8px}
+  .profile-customer-meta>span:first-child{font-size:9px}
+  .profile-customer-side .profile-member-badge{padding:7px 9px}
+  .profile-customer-caption{font-size:7px}
+}
