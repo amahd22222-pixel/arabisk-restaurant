@@ -1,0 +1,146 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+import { createCustomerRelationshipService } from '../apps/web/services/customer-relationship-service.js';
+import { createShamsAgent } from '../apps/web/services/shams-agent.js';
+import { buildSmartLocalPlan } from '../apps/web/services/shams-local-intelligence.js';
+
+test('Shams local planner understands habitual-choice language as a recommendation', () => {
+  const plan = buildSmartLocalPlan({
+    message: 'هاتلي اللي باخده دايمًا',
+    memory: { recentProducts: [] },
+    products: [
+      { id: 'P1', nameAr: 'طبق مميز', nameEn: 'Signature Dish', price: 60, available: true }
+    ]
+  });
+
+  assert.equal(plan?.intent, 'recommend');
+  assert.equal(plan?.toolCalls?.[0]?.name, 'recommend_menu');
+});
+
+test('Shams customer context exposes journey signals without phone or spend telemetry', () => {
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const pad = value => String(value).padStart(2, '0');
+  const date = tomorrow.getFullYear() + '-' + pad(tomorrow.getMonth() + 1) + '-' + pad(tomorrow.getDate());
+
+  const customer = {
+    id: 'C1',
+    name: 'أحمد',
+    phone: '+971500000000',
+    appMember: true,
+    phoneVerified: true,
+    createdAt: new Date().toISOString()
+  };
+
+  const service = createCustomerRelationshipService({
+    repository: {
+      customers: {
+        all: () => [customer],
+        findById: id => String(id) === 'C1' ? customer : null
+      },
+      orders: [],
+      reservations: [{
+        id: 'R1',
+        customerId: 'C1',
+        date,
+        time: '20:00',
+        guests: 2,
+        status: 'confirmed',
+        createdAt: new Date().toISOString()
+      }],
+      products: [],
+      notificationDevices: []
+    }
+  });
+
+  const context = service.shamsContext('C1');
+  assert.equal(context?.journey?.stage, 'upcoming_reservation');
+  assert.equal(context?.journey?.nextBestAction, 'reservation_support');
+  assert.equal('phone' in context, false);
+  assert.equal('totalOrderValue' in context, false);
+  assert.equal('averageOrderValue' in context, false);
+});
+
+test('Shams local agent prioritizes a known favorite when customer asks for their usual choice', async () => {
+  let saved = null;
+  const memoryService = {
+    async read() {
+      return {
+        version: 1,
+        scope: 'customer',
+        customerId: 'C1',
+        sessionId: '',
+        name: 'أحمد',
+        preferences: {
+          budgetAed: null,
+          spicy: null,
+          vegetarian: null,
+          taste: null,
+          weight: null,
+          category: '',
+          protein: null,
+          favoriteCategories: [],
+          favoriteProducts: []
+        },
+        recentTurns: [],
+        recentProducts: [],
+        lastIntent: '',
+        pendingAction: null,
+        journey: { intent: '', step: '', slots: {} },
+        updatedAt: '',
+        expiresAt: Date.now() + 86400000
+      };
+    },
+    async rememberTurn(identity, patch) {
+      saved = { identity, patch };
+      return true;
+    }
+  };
+
+  const workflowService = {
+    confirmation: () => null
+  };
+
+  const agent = createShamsAgent({
+    repository: {
+      categories: { all: () => [] },
+      products: {
+        all: () => [
+          { id: 'P1', nameAr: 'طبق مفضل', nameEn: 'Favorite Dish', price: 70, available: true, chefChoice: false, isNew: false, rating: 3 },
+          { id: 'P2', nameAr: 'طبق آخر', nameEn: 'Another Dish', price: 70, available: true, chefChoice: true, isNew: false, rating: 5 }
+        ]
+      }
+    },
+    memoryService,
+    workflowService,
+    requestModel: null
+  });
+
+  const result = await agent.handle({
+    message: 'هاتلي اللي باخده دايمًا',
+    sessionId: 'session-1',
+    customer: { id: 'C1', name: 'أحمد' },
+    customerContext: {
+      customerId: 'C1',
+      name: 'أحمد',
+      appMember: true,
+      phoneVerified: true,
+      lifecycle: { key: 'active', label: 'نشط' },
+      orderCount: 4,
+      reservationCount: 0,
+      favoriteProducts: [{ name: 'طبق مفضل', quantity: 5 }],
+      favoriteCategories: [],
+      nextReservation: null,
+      journey: {
+        stage: 'returning_favorite',
+        nextBestAction: 'favorite_recommendation',
+        reason: 'history'
+      }
+    }
+  });
+
+  assert.equal(result.intent, 'recommend');
+  assert.match(result.reply, /طبق مفضل/);
+  assert.equal(saved?.patch?.journey?.intent, 'recommend');
+  assert.equal(saved?.identity?.customerId, 'C1');
+});
