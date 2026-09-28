@@ -48,7 +48,30 @@ export function registerPageRoutes(app, { rootDir, distDir }) {
   app.get(/^\/menu\/[^/]+$/, async (_req, res, next) => { try { await injectMobileNavigation(page('category-page.html'), res); } catch (error) { next(error); } });
   app.get(/^\/menu\/[^/]+\/[^/]+$/, async (_req, res, next) => { try { await injectMobileNavigation(page('product-page.html'), res); } catch (error) { next(error); } });
 
-  app.use(express.static(distDir));
+  app.use(express.static(distDir, {
+    setHeaders: (res, filePath) => {
+      const normalized = filePath.replace(/\\/g, '/');
+      const filename = normalized.split('/').pop() || '';
+      const noCacheFiles = new Set([
+        'index.html',
+        'sw.js',
+        'pwa-register.js',
+        'pwa-ui.js',
+        'pwa-profile.js',
+        'pwa-notifications.js',
+        'shams.js',
+        'shams.css',
+        'mobile-nav.js',
+        'mobile-nav.css',
+        'manifest.json'
+      ]);
+      if (noCacheFiles.has(filename)) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    }
+  }));
 
   app.use('/api', (_req, res) => {
     return res.status(404).json({
