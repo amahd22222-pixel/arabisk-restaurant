@@ -108,8 +108,18 @@ function jsonFromText(value) {
   }
 }
 
-function isSafeMenuSlug(value) {
+function isSafeInternalSlug(value) {
   return /^[a-z0-9\u0600-\u06ff-]{1,160}$/i.test(String(value ?? ''));
+}
+
+function isSafeInternalPath(value) {
+  const path = clean(value, 180);
+  if (ALLOWED_PATHS.has(path)) return true;
+  if (/^\/menu\//.test(path) || /^\/events\//.test(path)) {
+    const parts = path.split('/').filter(Boolean);
+    return (parts.length === 2 || parts.length === 3) && parts.slice(1).every(isSafeInternalSlug);
+  }
+  return false;
 }
 
 function slug(value) {
@@ -186,8 +196,7 @@ function sanitizeToolCalls(calls) {
         const path = clean(call.args.path, 180);
         const hasStructuredTarget = Boolean(clean(call.args.categoryId, 80) || clean(call.args.productId, 80));
         if (ALLOWED_PATHS.has(path) || hasStructuredTarget) return true;
-        if (!path.startsWith('/menu/')) return false;
-        return path.split('/').slice(2).every(isSafeMenuSlug) && path.split('/').length <= 4;
+        return isSafeInternalPath(path);
       }
       if (call.name === 'get_order_status') return /^O\d{5}$/i.test(clean(call.args.orderId, 20));
       if (call.name === 'cart_add') return Boolean(clean(call.args.productId, 60));
@@ -553,6 +562,9 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     }
 
     if (ALLOWED_PATHS.has(currentPath)) return currentPath;
+    if (/^\/events\//.test(currentPath)) {
+      return isSafeInternalPath(currentPath) ? currentPath : null;
+    }
     if (!currentPath.startsWith('/menu/')) return null;
 
     const parts = currentPath.split('/').filter(Boolean);
