@@ -6,8 +6,14 @@ export function registerNotificationRoutes(app, {
   app.get('/api/notifications', requireAdminApiKey, (_req, res) => {
     return res.json({
       status: service.getStatus(),
+      devices: service.listDevices(),
       campaigns: service.list()
     });
+  });
+
+  app.post('/api/notifications/devices/:id/uninstall', requireAdminApiKey, sendRateLimit, async (req, res) => {
+    const result = await service.markDeviceUninstalled(req.params.id);
+    return res.json(result);
   });
 
   app.post('/api/notifications/send', requireAdminApiKey, sendRateLimit, async (req, res) => {
