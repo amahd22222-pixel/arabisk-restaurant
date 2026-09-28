@@ -94,7 +94,7 @@ test('reservation date validation follows Abu Dhabi calendar date, not server UT
       name: 'أحمد',
       phone: '0500000000',
       date: '2026-09-28',
-      time: '23:59',
+      time: '00:15',
       guests: 2
     }),
     /future for Abu Dhabi time/
