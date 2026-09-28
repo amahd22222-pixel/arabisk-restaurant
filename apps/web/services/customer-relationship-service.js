@@ -8,6 +8,13 @@ function safeNumber(value) {
   return Number.isFinite(number) ? number : 0;
 }
 
+function recencyWeight(value, halfLifeDays = 45) {
+  const timestamp = Date.parse(value || '');
+  if (!Number.isFinite(timestamp)) return 0;
+  const ageDays = Math.max(0, (Date.now() - timestamp) / DAY_MS);
+  return Math.pow(0.5, ageDays / halfLifeDays);
+}
+
 function maxIso(...values) {
   return values
     .map(value => String(value || ''))
@@ -60,16 +67,28 @@ export function createCustomerRelationshipService({ repository }) {
         const key = String(item?.productId || item?.nameAr || '').trim();
         if (!key) continue;
         const quantity = Math.max(0, Math.round(safeNumber(item?.quantity)));
-        const row = productCounts.get(key) || { productId: key, name: String(item?.nameAr || item?.nameEn || key), quantity: 0 };
+        const row = productCounts.get(key) || {
+          productId: key,
+          name: String(item?.nameAr || item?.nameEn || key),
+          quantity: 0,
+          lastOrderedAt: ''
+        };
         row.quantity += quantity;
+        row.lastOrderedAt = maxIso(row.lastOrderedAt, order.completedAt || order.updatedAt || order.createdAt);
         productCounts.set(key, row);
 
         const product = productById.get(String(item?.productId || ''));
         const categoryId = product?.categoryId || item?.categoryId || '';
         const categoryName = product?.categoryNameAr || product?.categoryName || item?.categoryNameAr || item?.categoryName || categoryId;
         if (categoryId && quantity > 0) {
-          const category = categoryCounts.get(String(categoryId)) || { categoryId: String(categoryId), name: String(categoryName || categoryId), quantity: 0 };
+          const category = categoryCounts.get(String(categoryId)) || {
+            categoryId: String(categoryId),
+            name: String(categoryName || categoryId),
+            quantity: 0,
+            lastOrderedAt: ''
+          };
           category.quantity += quantity;
+          category.lastOrderedAt = maxIso(category.lastOrderedAt, order.completedAt || order.updatedAt || order.createdAt);
           if (!category.name || category.name === category.categoryId) category.name = String(categoryName || category.categoryId);
           categoryCounts.set(String(categoryId), category);
         }
@@ -77,8 +96,13 @@ export function createCustomerRelationshipService({ repository }) {
     }
 
     const favoriteProducts = [...productCounts.values()]
-      .sort((a, b) => b.quantity - a.quantity || a.name.localeCompare(b.name, 'ar'))
-      .slice(0, 5);
+      .map(item => ({
+        ...item,
+        _behaviorScore: item.quantity * (0.65 + 0.35 * recencyWeight(item.lastOrderedAt))
+      }))
+      .sort((a, b) => b._behaviorScore - a._behaviorScore || b.quantity - a.quantity || a.name.localeCompare(b.name, 'ar'))
+      .slice(0, 5)
+      .map(({ _behaviorScore, lastOrderedAt, ...item }) => item);
 
     const totalOrderValue = spend;
     const firstSeenAt = customer.firstSeenAt || customer.appProfileCreatedAt || customer.createdAt || maxIso(
@@ -111,7 +135,14 @@ export function createCustomerRelationshipService({ repository }) {
       futureReservations,
       totalOrderValue,
       favoriteProducts,
-      favoriteCategories: [...categoryCounts.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 5),
+      favoriteCategories: [...categoryCounts.values()]
+        .map(item => ({
+          ...item,
+          _behaviorScore: item.quantity * (0.65 + 0.35 * recencyWeight(item.lastOrderedAt))
+        }))
+        .sort((a, b) => b._behaviorScore - a._behaviorScore || b.quantity - a.quantity)
+        .slice(0, 5)
+        .map(({ _behaviorScore, lastOrderedAt, ...item }) => item),
       firstSeenAt,
       lastActivityAt,
       lifecycle,
