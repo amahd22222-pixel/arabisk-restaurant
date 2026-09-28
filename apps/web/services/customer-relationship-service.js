@@ -14,6 +14,14 @@ function maxIso(...values) {
     .sort((a, b) => Date.parse(b) - Date.parse(a))[0] || '';
 }
 
+function dubaiTimestamp(date, time = '00:00') {
+  const rawDate = String(date || '').trim();
+  const rawTime = String(time || '00:00').trim();
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(rawDate)) return NaN;
+  const safeTime = /^\\d{2}:\\d{2}$/.test(rawTime) ? rawTime : '00:00';
+  return Date.parse(rawDate + 'T' + safeTime + ':00+04:00');
+}
+
 function lifecycleFor(customer) {
   const orders = safeNumber(customer.orderCount);
   const reservations = safeNumber(customer.reservationCount);
@@ -46,8 +54,8 @@ export function createCustomerRelationshipService({ repository }) {
     const linkedReservations = reservations.filter(item => customerMatches(item, customer));
     const activeReservations = linkedReservations.filter(item => item?.status !== 'cancelled');
     const futureReservations = activeReservations
-      .filter(item => item?.status !== 'cancelled' && item?.date && new Date(item.date + 'T' + String(item.time || '00:00')).getTime() >= Date.now())
-      .sort((a, b) => String(a.date + 'T' + a.time).localeCompare(String(b.date + 'T' + b.time)));
+      .filter(item => item?.status !== 'cancelled' && item?.date && dubaiTimestamp(item.date, item.time) >= Date.now())
+      .sort((a, b) => dubaiTimestamp(a.date, a.time) - dubaiTimestamp(b.date, b.time));
 
     const spend = Math.round(completedOrders.reduce((sum, order) => sum + safeNumber(order.total), 0) * 100) / 100;
 
@@ -227,7 +235,7 @@ export function createCustomerRelationshipService({ repository }) {
       : null;
     const nextReservation = data.nextReservation || null;
     const reservationTimestamp = nextReservation?.date
-      ? new Date(nextReservation.date + 'T' + String(nextReservation.time || '00:00')).getTime()
+      ? dubaiTimestamp(nextReservation.date, nextReservation.time)
       : NaN;
     const hoursToReservation = Number.isFinite(reservationTimestamp)
       ? Math.round((reservationTimestamp - now) / (60 * 60 * 1000))
