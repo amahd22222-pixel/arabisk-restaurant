@@ -1,6 +1,4 @@
 (() => {
-  const UPDATE_RELOAD_KEY = 'ARABISK_PWA_UPDATE_RELOADED_V2';
-
   let hasControllerAtStartup = Boolean(navigator.serviceWorker.controller);
 
   function attachControllerGuard() {
