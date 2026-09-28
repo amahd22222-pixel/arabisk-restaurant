@@ -326,6 +326,33 @@ function recommendationArgs(preferences) {
   return Object.fromEntries(Object.entries(preferences).filter(([, value]) => value !== undefined && value !== null && value !== ''));
 }
 
+function resolvePageMenuContext(page, categories, catalog) {
+  const raw = String(page ?? '').split('?')[0].replace(/\/$/, '');
+  const parts = raw.split('/').filter(Boolean);
+  if (parts[0] !== 'menu' || parts.length < 2) return { category: null, product: null, products: [] };
+
+  const categoryKey = decodeURIComponent(parts[1]);
+  const category = (Array.isArray(categories) ? categories : []).find(item =>
+    normalizeDialect(item?.id) === normalizeDialect(categoryKey) ||
+    normalizeDialect(item?.nameAr) === normalizeDialect(categoryKey) ||
+    normalizeDialect(item?.nameEn) === normalizeDialect(categoryKey)
+  ) || null;
+
+  if (!category) return { category: null, product: null, products: [] };
+
+  const categoryItems = categoryProducts(catalog, category);
+  if (parts.length < 3) return { category, product: null, products: categoryItems };
+
+  const productKey = decodeURIComponent(parts[2]);
+  const product = categoryItems.find(item =>
+    String(item.id).toLowerCase() === productKey.toLowerCase() ||
+    normalizeDialect(item.nameAr) === normalizeDialect(productKey) ||
+    normalizeDialect(item.nameEn) === normalizeDialect(productKey)
+  ) || null;
+
+  return { category, product, products: categoryItems };
+}
+
 function resolveStaticPage(raw) {
   const query = normalizeDialect(raw)
     .replace(/^(افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)\s+/i, '')
@@ -351,6 +378,7 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
   const ranked = rankProducts(catalog, text, 6);
   const preferences = extractPreferences(text);
   const latest = latestCatalogProduct(memory, catalog);
+  const pageContext = resolvePageMenuContext(page, categories, catalog);
 
   if (/^(السلام عليكم|السلام|اهلا|اهلين|يا هلا|هلا|مرحبا|مرحبتين|هاي|hello|hi|ازيك|ازيكم)/i.test(raw)) {
     return {
@@ -383,7 +411,12 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
   const pageNavigationRequested = /(افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)/i.test(raw);
 
   if (isAddRequest(raw)) {
-    const product = resolveReference(raw, ranked, memory, catalog);
+    const referencePool = pageContext.products.length ? pageContext.products : ranked;
+    const product = (
+      pageContext.product && isReference(raw)
+        ? pageContext.product
+        : resolveReference(raw, referencePool, memory, catalog)
+    );
     const categoryFallback = matchedCategory && (!product || (product.categoryId !== matchedCategory.id));
     const categoryCandidates = categoryFallback ? categoryProducts(catalog, matchedCategory) : [];
     const selectedCategoryProduct = explicitAnyChoice && categoryCandidates.length
@@ -435,7 +468,7 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
     };
   }
 
-  const matchedProduct = ranked[0] || resolveReference(raw, ranked, memory, catalog);
+  const matchedProduct = pageContext.product || ranked[0] || resolveReference(raw, pageContext.products.length ? pageContext.products : ranked, memory, catalog);
   if (matchedProduct?.id && pageNavigationRequested && !/(منيو|القائمة|السلة|العربة|الحجز|فعالي|ذكريات)/i.test(raw)) {
     return {
       intent: 'navigate',
