@@ -10,7 +10,7 @@
     style:'currency', currency:'AED', maximumFractionDigits:2
   }).format(Number(value) || 0);
 
-  const state = { products: [], experiences: [], memories: [], todayOffer: null, installOffer: null };
+  const state = { products: [], experiences: [], memories: [], todayOffer: null, installOffer: null, customerExperience: null };
   let offerTimer = 0;
 
   const getJson = async (url, fallback) => {
@@ -38,6 +38,94 @@
     if (mobileTarget) {
       mobileTarget.textContent = String(quantity);
       mobileTarget.hidden = quantity < 1;
+    }
+  }
+
+  function renderCustomerExperience() {
+    const root = $('#customer-experience');
+    if (!root || location.pathname.replace(/\/$/,'') !== '') return;
+    const data = state.customerExperience;
+    if (!data) {
+      root.hidden = true;
+      root.dataset.hasData = '0';
+      return;
+    }
+
+    const title = $('#customer-experience-title', root);
+    const status = $('#customer-experience-status', root);
+    const kicker = $('#customer-experience-kicker', root);
+    const headline = $('#customer-experience-headline', root);
+    const note = $('#customer-experience-note', root);
+    const action = $('#customer-experience-action', root);
+
+    const name = data.name || 'ضيفنا';
+    const next = data.nextReservation;
+    const favorite = data.favoriteProduct;
+    const lifecycleKey = data.lifecycle?.key || 'new';
+
+    if (next) {
+      const statusText = next.status === 'confirmed' ? 'مؤكد' : (next.status || 'قيد المتابعة');
+      kicker.textContent = 'YOUR NEXT VISIT';
+      headline.textContent = name + '، موعدك القادم جاهز';
+      note.textContent = 'موعدك يوم ' + next.date + ' الساعة ' + next.time + ' لعدد ' + next.guests + ' أشخاص. حالة الحجز: ' + statusText + '.';
+      status.textContent = 'حجز قادم';
+      action.textContent = 'عرض الحجز ←';
+      action.href = '/reservation';
+    } else if (favorite?.id) {
+      const product = state.products.find(item => String(item.id) === String(favorite.id));
+      kicker.textContent = 'YOUR USUAL';
+      headline.textContent = name + '، نرجع لاختيارك المعتاد؟';
+      note.textContent = 'آخر اختياراتك تشير إلى ' + (favorite.name || product?.nameAr || 'طبق مفضل') + '. تقدر تفتحه وتضيفه للسلة مباشرة.';
+      status.textContent = 'من اختياراتك';
+      action.textContent = 'افتح اختيارك ←';
+      action.href = product
+        ? '/menu/' + encodeURIComponent(String(product.categoryId || '')) + '/' + encodeURIComponent(String(product.id))
+        : '/menu';
+    } else if (lifecycleKey === 'new') {
+      kicker.textContent = 'WELCOME TO ARABISK';
+      headline.textContent = 'أهلاً ' + name + '، نبدأ تجربتك';
+      note.textContent = 'كل ما تستخدم ARABISK، التطبيق يقدر يسهّل عليك الحجز والطلبات ويرتب تجربتك القادمة.';
+      status.textContent = 'عضو التطبيق';
+      action.textContent = 'استكشف المنيو ←';
+      action.href = '/menu';
+    } else {
+      kicker.textContent = 'WELCOME BACK';
+      headline.textContent = 'نورت تاني يا ' + name;
+      note.textContent = 'ابدأ من المنيو، واحجز زيارتك القادمة، وخلي ARABISK يكمل معاك من آخر خطوة.';
+      status.textContent = 'عودة العميل';
+      action.textContent = 'ابدأ من المنيو ←';
+      action.href = '/menu';
+    }
+
+    title.textContent = 'تجربتك مع ARABISK';
+    root.hidden = false;
+    root.dataset.hasData = '1';
+  }
+
+  async function loadCustomerExperience() {
+    if (location.pathname.replace(/\/$/,'') !== '/') return null;
+    const token = window.ARABISK_PROFILE?.getToken?.() || '';
+    if (!token) {
+      state.customerExperience = null;
+      renderCustomerExperience();
+      return null;
+    }
+    const data = await getJsonWithHeaders('/api/customer-experience', null, {
+      'X-ARABISK-PROFILE-TOKEN': token
+    });
+    state.customerExperience = data && typeof data === 'object' ? data : null;
+    renderCustomerExperience();
+    return state.customerExperience;
+  }
+
+  async function getJsonWithHeaders(url, fallback, headers = {}) {
+    try {
+      const response = await fetch(url, { cache:'no-store', headers });
+      if (!response.ok) return fallback;
+      const data = await response.json();
+      return data ?? fallback;
+    } catch {
+      return fallback;
     }
   }
 
@@ -247,6 +335,7 @@
     state.todayOffer = todayOffer && typeof todayOffer === 'object' ? todayOffer : null;
     state.installOffer = installOffer && typeof installOffer === 'object' ? installOffer : null;
 
+    renderCustomerExperience();
     renderFeatured();
     renderOffer();
     renderExperience();
@@ -256,6 +345,11 @@
     window.addEventListener('storage', syncCartCount);
     window.addEventListener('arabisk:language-updated', handleLanguageUpdate);
     window.addEventListener('pageshow', syncCartCount);
+    window.addEventListener('pageshow', () => void loadCustomerExperience());
+    window.addEventListener('arabisk:profile-ready', () => void loadCustomerExperience());
+    window.addEventListener('arabisk:profile-updated', () => void loadCustomerExperience());
+
+    void loadCustomerExperience();
   }
 
   document.readyState === 'loading'
