@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { createCustomerRelationshipService } from '../apps/web/services/customer-relationship-service.js';
 import { createShamsAgent } from '../apps/web/services/shams-agent.js';
-import { buildSmartLocalPlan } from '../apps/web/services/shams-local-intelligence.js';
+import { buildSmartLocalPlan, pickSmartLocalRecommendations } from '../apps/web/services/shams-local-intelligence.js';
 import { __test as shamsAgentTest } from '../apps/web/services/shams-agent.js';
 
 test('Shams sanitizes browser-supplied conversation history before model planning', () => {
@@ -127,6 +127,32 @@ test('Shams keeps returning-customer recommendations familiar but not repetitive
   assert.equal(result.intent, 'recommend');
   assert.match(result.reply, /المفضل/);
   assert.match(result.reply, /اكتشاف جديد|من نفس القسم/);
+});
+
+test('Shams behavior-aware recommendations prefer known favorites and avoid cart duplicates', () => {
+  const result = pickSmartLocalRecommendations(
+    [
+      { id: 'P1', nameAr: 'المفضل', nameEn: 'Favorite', price: 60, available: true, categoryNameAr: 'أطباق رئيسية', chefChoice: false },
+      { id: 'P2', nameAr: 'في السلة', nameEn: 'In Cart', price: 55, available: true, categoryNameAr: 'أطباق رئيسية', chefChoice: true },
+      { id: 'P3', nameAr: 'اكتشاف', nameEn: 'Discovery', price: 65, available: true, categoryNameAr: 'مشروبات', isNew: true },
+      { id: 'P4', nameAr: 'اختيار ثالث', nameEn: 'Third Choice', price: 50, available: true, categoryNameAr: 'حلويات' }
+    ],
+    {
+      preferences: { spicy: null, vegetarian: null, taste: null, weight: null, category: '', protein: null },
+      recentProducts: []
+    },
+    'رشحلي',
+    {
+      favoriteProducts: [{ name: 'المفضل', quantity: 6 }],
+      favoriteCategories: [{ name: 'أطباق رئيسية', quantity: 6 }]
+    },
+    [{ id: 'P2', quantity: 1 }]
+  );
+
+  const ids = result.candidates.map(item => item.id);
+  assert.equal(ids[0], 'P1');
+  assert.equal(ids.includes('P2'), false);
+  assert.equal(new Set(result.candidates.map(item => item.categoryNameAr)).size >= 2, true);
 });
 
 test('Shams remembers the exact workflow step that needs the next input', async () => {
