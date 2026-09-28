@@ -107,7 +107,9 @@ function setupHeaderMenu() {
   }, { passive: true });
 
   window.addEventListener('pageshow', () => setOpen(false), { passive: true });
-}\n\nfunction localToday() {
+}
+
+function localToday() {
   return new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
