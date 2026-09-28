@@ -314,6 +314,50 @@ export function createCustomerRelationshipService({ repository }) {
     };
   }
 
+  function appExperienceContext(id) {
+    const customer = customers.findById(id);
+    if (!customer) return null;
+    const data = collectCustomerData(customer);
+    const favorite = data.favoriteProducts[0] || null;
+    const favoriteCategory = data.favoriteCategories[0] || null;
+    const nextReservation = data.nextReservation ? {
+      date: String(data.nextReservation.date || ''),
+      time: String(data.nextReservation.time || ''),
+      guests: Number(data.nextReservation.guests || data.nextReservation.partySize || 0) || 0,
+      status: String(data.nextReservation.status || '')
+    } : null;
+    const action = nextReservation
+      ? { type: 'reservation', label: 'عرض حجزي القادم', href: '/reservation' }
+      : favorite?.productId
+        ? { type: 'favorite', label: 'ارجع لاختيارك المعتاد', productId: String(favorite.productId) }
+        : { type: 'menu', label: 'استكشف المنيو', href: '/menu' };
+
+    return {
+      customerId: String(customer.id),
+      name: String(customer.name || ''),
+      lifecycle: data.lifecycle,
+      orderCount: data.completedOrders.length,
+      reservationCount: data.linkedReservations.filter(item => item?.status !== 'cancelled').length,
+      favoriteProduct: favorite ? {
+        id: String(favorite.productId || ''),
+        name: String(favorite.name || ''),
+        quantity: Number(favorite.quantity || 0)
+      } : null,
+      favoriteCategory: favoriteCategory ? {
+        id: String(favoriteCategory.categoryId || ''),
+        name: String(favoriteCategory.name || ''),
+        quantity: Number(favoriteCategory.quantity || 0)
+      } : null,
+      nextReservation,
+      lastActivityAt: data.lastActivityAt || '',
+      action: nextReservation
+        ? action
+        : favorite?.productId
+          ? { ...action, href: '/menu/' + encodeURIComponent(String(favoriteCategory?.categoryId || '')) + '/' + encodeURIComponent(String(favorite.productId)) }
+          : action
+    };
+  }
+
   function shamsContext(id) {
     const customer = customers.findById(id);
     if (!customer) return null;
@@ -339,5 +383,5 @@ export function createCustomerRelationshipService({ repository }) {
     };
   }
 
-  return { summary, customerRelationship, shamsContext };
+  return { summary, customerRelationship, shamsContext, appExperienceContext };
 }
