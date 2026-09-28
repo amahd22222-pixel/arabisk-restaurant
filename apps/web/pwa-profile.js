@@ -50,20 +50,47 @@ function setProfile(profile) {
   window.dispatchEvent(new CustomEvent('arabisk:profile-updated', { detail: { profile } }));
 }
 
+async function recoverCachedProfile() {
+  const cached = getProfile();
+  if (!cached?.name || !cached?.phone) return null;
+
+  try {
+    const response = await fetch('/api/customer-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      body: JSON.stringify({
+        name: String(cached.name).trim(),
+        phone: String(cached.phone).trim(),
+        privacyConsent: true,
+        deviceId: getDeviceId()
+      })
+    });
+    if (!response.ok) return null;
+    const profile = await response.json();
+    if (!profile?.profileToken) return null;
+    setProfile(profile);
+    return profile;
+  } catch {
+    return null;
+  }
+}
+
 async function refresh() {
   const token = getToken();
-  if (!token) return null;
+  if (!token) return recoverCachedProfile();
+
   const response = await fetch('/api/customer-profile', {
     headers: { 'X-ARABISK-PROFILE-TOKEN': token },
     cache: 'no-store'
   });
+
   if (response.status === 401) {
-    try {
-      localStorage.removeItem(PROFILE_TOKEN_KEY);
-      localStorage.removeItem(PROFILE_DATA_KEY);
-    } catch {}
+    const recovered = await recoverCachedProfile();
+    if (recovered) return recovered;
     return null;
   }
+
   if (!response.ok) throw new Error('تعذر تحميل حسابك الآن.');
   const profile = await response.json();
   setProfile({ ...profile, profileToken: token });
@@ -166,12 +193,15 @@ function mountOnboarding(initialProfile = null) {
 
 async function bootstrap() {
   if (!isStandaloneMode()) return;
-  if (getToken()) {
-    try {
-      const profile = await refresh();
-      if (profile) return;
-    } catch {}
-  }
+
+  try {
+    const profile = await refresh();
+    if (profile) return;
+  } catch {}
+
+  const recovered = await recoverCachedProfile();
+  if (recovered) return;
+
   mountOnboarding(getProfile());
 }
 
