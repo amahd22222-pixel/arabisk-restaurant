@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="متابعة حالة طلبك من ARABISK Restaurant & Cafe.">
+<title>ARABISK — متابعة الطلب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/home-app.css">
+<style>:root{--danger:#a34b38;--soft:#f3ece2}html,body{margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--app-bg);color:var(--app-ink);font-family:Cairo,sans-serif} button{font:inherit} .nav nav a,.nav-cart{color:#eee;text-decoration:none;font-size:12px;transition:.2s}
+.nav nav a:hover,.nav nav a[aria-current=page]{color:var(--app-gold-soft)}
+.nav-cart{display:inline-flex;align-items:center;justify-content:center;min-width:54px;height:38px;padding:0 14px;border:1px solid #554a3c;border-radius:999px;font-weight:800}
+.nav-cart:hover{border-color:var(--app-gold-soft);color:var(--app-gold-soft)}
+.track-main{width:min(1120px,calc(100% - 40px));margin:0 auto;padding:32px 0 88px}
+.breadcrumb{display:flex;align-items:center;gap:8px;margin:0 0 14px;color:var(--app-muted);font-size:10px}
+.breadcrumb a{color:inherit;text-decoration:none}.breadcrumb a:hover{color:var(--app-gold)}
+.breadcrumb b{font-weight:500;color:#c9bca9}
+.track-hero{position:relative;min-height:270px;display:flex;align-items:flex-end;padding:34px 42px;border:1px solid #3a3024;border-radius:26px;overflow:hidden;background:linear-gradient(135deg,#17130f,#251f17);color:#fff;box-shadow:var(--app-shadow)}
+.track-hero:before,.track-hero:after{content:"";position:absolute;border:1px solid rgba(210,177,109,.12);border-radius:50%;pointer-events:none}
+.track-hero:before{width:360px;height:360px;right:-120px;bottom:-210px;box-shadow:0 0 0 34px rgba(210,177,109,.02),0 0 0 68px rgba(210,177,109,.012)}
+.track-hero:after{width:250px;height:250px;left:-110px;top:-150px;border-color:rgba(255,255,255,.05)}
+.hero-content{position:relative;z-index:1;max-width:800px}
+.eyebrow{margin:0 0 10px;color:var(--app-gold-soft);font-size:10px;font-weight:800;letter-spacing:4px}
+.track-title{margin:0;font:500 clamp(44px,6vw,68px)/1.02 'Playfair Display',serif}
+.track-lead{max-width:720px;margin:15px 0 0;color:#d1c8bb;font-size:13px;line-height:2}
+.hero-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.hero-chip{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(255,255,255,.055);color:#ddd4c8;font-size:9px}
+.hero-chip i{width:7px;height:7px;border-radius:50%;background:var(--app-gold-soft);display:block}.hero-chip.live i{box-shadow:0 0 0 5px rgba(210,177,109,.08)}
+.result{margin-top:16px;border:1px solid var(--app-line);border-radius:26px;background:var(--app-paper);box-shadow:var(--app-shadow);overflow:hidden}
+.result-empty{min-height:420px;display:grid;place-items:center;text-align:center;padding:42px 24px}
+.empty-icon{width:82px;height:82px;display:grid;place-items:center;margin:0 auto 17px;border:1px solid #ded4c6;border-radius:50%;background:var(--soft);color:var(--app-gold);font-size:29px}
+.result-empty h2{margin:0;font:500 32px/1.15 'Playfair Display',serif}
+.result-empty p{max-width:450px;margin:10px auto 0;color:var(--app-muted);font-size:11px;line-height:1.9}
+.status-hero{position:relative;padding:28px 32px 24px;background:linear-gradient(180deg,#1b1813,#11100e);color:#fff}
+.status-hero:after{content:"";position:absolute;left:-60px;top:-110px;width:250px;height:250px;border:1px solid rgba(210,177,109,.1);border-radius:50%}
+.status-top{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.status-kicker{margin:0;color:var(--app-gold-soft);font-size:9px;font-weight:800;letter-spacing:3px}
+.order-id{margin:5px 0 0;font:500 34px/1 'Playfair Display',serif}
+.status-badge{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid rgba(255,255,255,.13);border-radius:999px;background:rgba(255,255,255,.06);font-size:10px;font-weight:800;white-space:nowrap}
+.status-badge i{width:7px;height:7px;border-radius:50%;background:var(--app-gold-soft)}
+.status-body{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr) 126px;align-items:center;gap:22px;margin-top:20px}
+.status-message h2{margin:0;font:500 28px/1.25 'Playfair Display',serif}
+.status-message p{margin:7px 0 0;color:#bcb3a7;font-size:11px;line-height:1.9}
+.progress-ring{width:112px;height:112px;display:grid;place-items:center;margin:auto;border-radius:50%;background:radial-gradient(circle,#1b1813 58%,transparent 59%);position:relative}
+.progress-ring:before{content:"";position:absolute;inset:0;border-radius:50%;border:7px solid rgba(255,255,255,.07);border-top-color:var(--app-gold-soft);border-right-color:var(--app-gold-soft);transform:rotate(-38deg)}
+.progress-ring strong{display:block;text-align:center;color:var(--app-gold-soft);font:600 22px/1 'Playfair Display',serif}.progress-ring small{display:block;margin-top:5px;color:#a79e92;text-align:center;font-size:8px}
+.content-section{padding:25px 30px;border-bottom:1px solid var(--app-line)}.content-section:last-child{border-bottom:0}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:15px}.section-head h3{margin:0;font-size:16px}.section-head span{color:var(--app-muted);font-size:9px}
+.timeline{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative;padding-top:4px}
+.timeline:before{content:"";position:absolute;right:10%;left:10%;top:18px;height:2px;background:#ebe3d7}
+.step{position:relative;z-index:1;display:grid;justify-items:center;gap:8px;text-align:center}
+.step-dot{width:29px;height:29px;display:grid;place-items:center;border:1px solid #ddd3c6;border-radius:50%;background:#fff;color:#81796e;font-size:10px;font-weight:800}
+.step.done .step-dot,.step.active .step-dot{border-color:var(--app-gold);background:var(--app-gold);color:#fff;box-shadow:0 0 0 5px rgba(184,148,85,.09)}
+.step strong{font-size:9px}.step small{min-height:15px;color:var(--app-muted);font-size:8px}
+.timeline.cancelled{grid-template-columns:1fr}.timeline.cancelled:before{display:none}
+.cancel-step{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #ead8d1;border-radius:14px;background:#fff8f5}
+.cancel-step .step-dot{border-color:#dbaea0;color:var(--danger)}.cancel-step strong{font-size:10px}.cancel-step small{color:var(--danger);font-size:8px}
+.meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.meta-card{padding:13px;border:1px solid var(--app-line);border-radius:15px;background:#fff;min-width:0}
+.meta-card span{display:block;color:var(--app-muted);font-size:9px}.meta-card strong{display:block;margin-top:5px;font-size:11px;overflow-wrap:anywhere}
+.items{display:grid}.item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid #eee7dc}.item:last-child{border-bottom:0}
+.item-name{font-size:11px}.item-name small{color:var(--app-muted);font-size:9px}.item-price{color:#8e6f38;font-size:10px;white-space:nowrap}
+.result-foot{display:flex;align-items:center;justify-content:space-between;gap:12px}.result-foot strong{font:600 24px/1 'Playfair Display',serif}
+.refresh{border:1px solid var(--app-line);border-radius:999px;background:#fff;color:var(--app-ink);padding:9px 14px;cursor:pointer;font-size:9px;font-weight:800}.refresh:hover{border-color:var(--app-gold)}
+.actions{display:flex;justify-content:center;flex-wrap:wrap;gap:9px;padding:21px 0 0}.action-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 18px;border:1px solid var(--app-line);border-radius:999px;background:#fff;color:var(--app-ink);text-decoration:none;font-size:10px;font-weight:800}.action-link.primary{background:#111;color:#fff;border-color:#111} @media(max-width:760px){ .nav-cart{margin-right:auto} .track-main{width:min(100% - 24px,640px);padding:22px 0 58px} .track-hero{min-height:235px;padding:27px 21px;border-radius:22px} .track-title{font-size:47px}.track-lead{font-size:11px}.hero-meta{gap:6px}.hero-chip{font-size:8px;padding:7px 9px} .result{margin-top:12px;border-radius:22px} .status-hero{padding:21px 18px}.status-top{flex-direction:column}.status-badge{align-self:flex-start} .status-body{grid-template-columns:1fr;gap:16px}.progress-ring{width:96px;height:96px} .content-section{padding:20px 18px}.timeline{grid-template-columns:1fr;gap:8px}.timeline:before{display:none} .step{display:flex;align-items:center;justify-items:initial;text-align:right;gap:10px;padding:10px 11px;border:1px solid #eee7dc;border-radius:13px;background:#fff} .step small{margin-right:auto}.step-dot{flex:0 0 29px}.meta-grid{grid-template-columns:1fr} .result-empty{min-height:330px;padding:30px 18px}.result-empty h2{font-size:28px} .result-foot strong{font-size:21px}
+}</style>
+</head>
+<body class="home-app">
+<header class="app-header is-page" aria-label="ARABISK">
+  <a class="brand" href="/" aria-label="ARABISK">ARABISK<span>RESTAURANT & CAFE</span></a>
+  <nav class="header-nav" id="app-header-nav" aria-label="التنقل الرئيسي">
+    <a href="/">الرئيسية</a><a href="/menu">المنيو</a><a href="/events">الفعاليات</a><a href="/reservation">حجز طاولة</a><a href="/track-order">متابعة الطلب</a><a href="/memories">الذكريات</a>
+  </nav>
+  <div class="app-header-actions">
+    <a class="app-cart-link" href="/cart" aria-label="فتح السلة">السلة <b id="app-cart-count" hidden>0</b></a>
+    <button class="lang" id="lang-toggle" type="button" aria-label="تغيير اللغة">EN</button>
+    <button class="app-menu-button" id="app-menu-button" type="button" aria-expanded="false" aria-controls="app-header-nav" aria-label="فتح القائمة">☰</button>
+  </div>
+</header>
+
+<main class="track-main">
+  <div class="breadcrumb"><a href="/">الرئيسية</a><b>•</b><span>متابعة الطلب</span></div>
+
+  <section class="track-hero">
+    <div class="hero-content">
+      <p class="eyebrow">ARABISK ORDER EXPERIENCE</p>
+      <h1 class="track-title">طلبك، لحظة بلحظة.</h1>
+      <p class="track-lead">صفحة واحدة مخصصة لمتابعة طلبك من لحظة الاستلام وحتى اكتماله. الحالة تتحدث تلقائيًا أثناء تجهيز الطلب.</p>
+      <div class="hero-meta">
+        <span class="hero-chip live"><i></i>تحديث مباشر</span>
+        <span class="hero-chip">حماية ببيانات الطلب</span>
+        <span class="hero-chip">يعمل للطلبات داخل المطعم والاستلام</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card result" aria-label="حالة الطلب">
+      <div id="result-empty" class="result-empty">
+        <div>
+          <div class="empty-icon">◷</div>
+          <h2>جاهز لمتابعة طلبك</h2>
+          <p id="track-error">بمجرد إرسال طلب، ستظهر حالته هنا تلقائيًا.</p>
+        </div>
+      </div>
+
+      <div id="result-loaded" class="loaded" hidden>
+        <section class="status-hero">
+          <div class="status-top">
+            <div><p class="status-kicker">CURRENT ORDER</p><h2 id="result-id" class="order-id">O00000</h2></div>
+            <span id="result-pill" class="status-badge"><i></i><span>حالة الطلب</span></span>
+          </div>
+          <div class="status-body">
+            <div class="status-message"><h2 id="status-heading">حالة الطلب</h2><p id="status-copy">يتم تحديث حالة الطلب أثناء التجهيز.</p></div>
+            <div class="progress-ring"><div><strong id="progress-percent">0%</strong><small>اكتمال الرحلة</small></div></div>
+          </div>
+        </section>
+
+        <section class="content-section">
+          <div class="section-head"><h3>رحلة الطلب</h3><span id="track-updated"></span></div>
+          <div id="timeline" class="timeline"></div>
+        </section>
+
+        <section class="content-section">
+          <div class="section-head"><h3>معلومات الطلب</h3><span>تفاصيل مؤكدة</span></div>
+          <div class="meta-grid">
+            <div class="meta-card"><span>نوع الطلب</span><strong id="meta-type">—</strong></div>
+            <div class="meta-card"><span>المرجع</span><strong id="meta-reference">—</strong></div>
+            <div class="meta-card"><span>آخر تحديث</span><strong id="meta-time">—</strong></div>
+          </div>
+        </section>
+
+        <section class="content-section">
+          <div class="section-head"><h3>الأصناف</h3><span id="items-count">—</span></div>
+          <div id="items" class="items"></div>
+        </section>
+
+        <section class="content-section">
+          <div class="result-foot">
+            <strong id="result-foot-total">الإجمالي AED 0</strong>
+            <button id="track-refresh" class="refresh" type="button">تحديث الآن</button>
+          </div>
+        </section>
+      </div>
+  </section>
+
+  <div class="actions">
+    <a class="action-link primary" href="/menu">اختيار المزيد من الأصناف</a>
+    <a class="action-link" href="/cart">العودة إلى السلة</a>
+  </div>
+</main>
+
+<footer id="contact"><strong>ARABISK</strong><span>Restaurant & Cafe</span><small>© 2026 ARABISK. All rights reserved.</small></footer>
+
+<script type="module" src="/app-header.js"></script>
+<script>
+(() => {
+'use strict';
+const LAST_ORDER_KEY='arabisk-last-order-v1';
+const $=selector=>document.querySelector(selector);
+const readLast=()=>{try{const value=JSON.parse(localStorage.getItem(LAST_ORDER_KEY)||'null');return value&&value.id?value:null}catch{return null}};
+const writeLast=value=>{try{localStorage.setItem(LAST_ORDER_KEY,JSON.stringify(value))}catch{}};
+const statusMeta={
+  pending:{label:'تم استلام الطلب',heading:'تم استلام طلبك',copy:'وصل طلبك إلى فريق المطعم ويجري مراجعته الآن.',step:1,percent:20},
+  confirmed:{label:'تم تأكيد الطلب',heading:'تم تأكيد الطلب',copy:'تم اعتماد طلبك وبدأت عملية التجهيز.',step:2,percent:40},
+  preparing:{label:'جاري التحضير',heading:'طلبك قيد التحضير',copy:'الفريق يعمل على تجهيز طلبك الآن.',step:3,percent:60},
+  ready:{label:'الطلب جاهز',heading:'طلبك جاهز',copy:'تم تجهيز الطلب وأصبح جاهزًا للاستلام أو التقديم.',step:4,percent:80},
+  completed:{label:'تم إكمال الطلب',heading:'اكتمل طلبك',copy:'تم إكمال الطلب بنجاح. شكرًا لاختيارك ARABISK.',step:5,percent:100},
+  cancelled:{label:'تم إلغاء الطلب',heading:'تم إلغاء الطلب',copy:'تم إلغاء هذا الطلب. يرجى التواصل مع المطعم عند الحاجة.',step:0,percent:0}
+};
+const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+const money=value=>'AED '+Number(value||0).toFixed(0);
+let timer=null;
+
+function renderTimeline(data,meta){
+  const root=$('#timeline');
+  if(data?.status==='cancelled'){root.className='timeline cancelled';root.innerHTML='<div class="cancel-step"><span class="step-dot">!</span><div><strong>تم إلغاء الطلب</strong><small>لم يعد الطلب قيد التنفيذ.</small></div></div>';return}
+  root.className='timeline';
+  const steps=[['pending','استلام الطلب'],['confirmed','تأكيد الطلب'],['preparing','التحضير'],['ready','جاهز'],['completed','مكتمل']];
+  root.innerHTML=steps.map(([key,label],index)=>{
+    const done=meta.step>=index+1;
+    const active=data?.status===key;
+    return '<div class="step '+(done?'done ':'')+(active?'active':'')+'"><span class="step-dot">'+(done?'✓':index+1)+'</span><div><strong>'+label+'</strong><small>'+(active?'الحالة الحالية':done?'تم':'بانتظار التحديث')+'</small></div></div>';
+  }).join('');
+}
+function renderData(data){
+  const meta=statusMeta[data?.status]||statusMeta.pending;
+  $('#result-empty').hidden=true;
+  $('#result-loaded').hidden=false;
+  $('#result-id').textContent=data?.id||'—';
+  $('#result-pill span').textContent=meta.label;
+  $('#status-heading').textContent=meta.heading;
+  $('#status-copy').textContent=meta.copy;
+  $('#progress-percent').textContent=meta.percent+'%';
+  $('#result-foot-total').textContent='الإجمالي '+money(data?.total);
+  const updated=data?.updatedAt?new Date(data.updatedAt):null;
+  const updatedLabel=updated&&Number.isFinite(updated.getTime())?updated.toLocaleString('ar-AE',{dateStyle:'medium',timeStyle:'short'}):'—';
+  $('#track-updated').textContent=updatedLabel==='—'?'':'آخر تحديث: '+updatedLabel;
+  $('#meta-type').textContent=data?.orderType==='pickup'?'استلام من المطعم':'داخل المطعم';
+  $('#meta-reference').textContent=data?.orderType==='pickup'?'طلب استلام':'طاولة '+(data?.tableNumber||'—');
+  $('#meta-time').textContent=updatedLabel;
+  const items=Array.isArray(data?.items)?data.items:[];
+  $('#items-count').textContent=items.length+' أصناف';
+  $('#items').innerHTML=items.length?items.map(item=>'<div class="item"><span class="item-name">'+esc(item.nameAr||item.nameEn||'صنف')+' <small>× '+Number(item.quantity||0)+'</small></span><span class="item-price">'+money(item.lineTotal??((Number(item.unitPrice)||0)*(Number(item.quantity)||0)))+'</span></div>').join(''):'<div class="item"><span class="item-name">لا توجد تفاصيل أصناف.</span></div>';
+  renderTimeline(data,meta);
+}
+async function load(last,showError=true){
+  const orderId=String(last?.id||'').trim().toUpperCase();
+  const type=last?.orderType||'dine_in';
+  const tableNumber=String(last?.tableNumber||'').trim();
+  const phone=String(last?.phone||'').trim();
+  const error=$('#track-error');
+  if(!/^O\d{5}$/.test(orderId)){if(showError)error.textContent='لا يوجد طلب محفوظ على هذا الجهاز.';return false}
+  if(type==='dine_in'&&!tableNumber){if(showError)error.textContent='بيانات الطلب غير مكتملة.';return false}
+  if(type==='pickup'&&(phone.length<5||phone.length>40)){if(showError)error.textContent='بيانات الطلب غير مكتملة.';return false}
+  $('#track-error').textContent=showError?'جاري تحديث حالة الطلب…':'';
+  try{
+    const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),10000);
+    let response;
+    try{response=await fetch('/api/orders/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(type==='dine_in'?{orderId,tableNumber}:{orderId,phone}),signal:controller.signal})}finally{clearTimeout(timeout)}
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.message||'تعذر تحديث حالة الطلب.');
+    renderData(data);
+    writeLast({...last,id:data.id,orderType:type,tableNumber:type==='dine_in'?tableNumber:'',phone:type==='pickup'?phone:'',total:Number(data.total||0),status:data.status,updatedAt:data.updatedAt||new Date().toISOString()});
+    $('#track-error').textContent='';
+    return true;
+  }catch(err){
+    $('#track-error').textContent=err.name==='AbortError'?'انتهت مهلة الاتصال.':(err.message||'تعذر تحديث حالة الطلب.');
+    return false;
+  }
+}
+function startPolling(){clearInterval(timer);timer=setInterval(()=>{if($('#result-loaded')&&!$('#result-loaded').hidden){const current=readLast();if(current)void load(current,false)}},20000)}
+$('#track-refresh').addEventListener('click',()=>{const current=readLast();if(current)void load(current,true)});
+const last=readLast();
+if(last){
+  void load(last,false).then(ok=>{if(ok)startPolling()});
+}else{
+  $('#result-empty').hidden=false;
+  $('#result-empty h2').textContent='لا يوجد طلب محفوظ';
+  $('#result-empty p').textContent='بعد إرسال طلب من ARABISK، ستفتح هذه الصفحة تلقائيًا على آخر طلب محفوظ.';
+}
+})();
+</script>
+</body>
+</html>

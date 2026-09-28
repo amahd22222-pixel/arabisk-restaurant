@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="ARABISK Memories — شارك لحظاتك وتعليقاتك مع مجتمع ARABISK.">
+<title>ARABISK — ذكريات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/home-app.css">
+<style>
+:root{
+  --bg:var(--app-bg);--surface:#fffdf9;--surface-2:#faf6ee;--surface-3:#f4ecdf;--ink:var(--app-ink);
+  --muted:var(--app-muted);--line:var(--app-line);--gold:var(--app-gold);--gold-2:var(--app-gold-soft);--dark:var(--app-dark);
+  --danger:#8b3f38;--success:#496d59;--shadow:var(--app-shadow);--radius:26px
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;color:var(--ink);font-family:Cairo,sans-serif;
+  background:
+    radial-gradient(circle at 50% -18%,rgba(255,252,246,.95) 0,rgba(255,252,246,0) 38%),
+    linear-gradient(145deg,#f7f2e9 0,#f1eadf 58%,#ece3d6 100%);
+  min-height:100vh
+}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(184,138,59,.035),transparent 34%,rgba(23,19,15,.025));z-index:-1}
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+a{text-decoration:none;color:inherit}
+.wrap{width:min(900px,calc(100% - 28px));margin:auto;padding:32px 0 100px}
+.hero{text-align:center;padding:12px 0 26px}
+.eyebrow{font-size:10px;letter-spacing:5px;color:var(--gold);font-weight:900}
+.hero h1{font:500 54px Georgia,serif;margin:7px 0 4px}
+.hero p{max-width:650px;margin:0 auto;color:var(--muted);font-size:15px;line-height:1.95}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:8px 12px;
+  border-radius:999px;background:rgba(255,253,249,.8);border:1px solid var(--line);
+  color:#7a6a54;font-size:11px;font-weight:800
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 4px var(--gold-2)}
+.panel{background:rgba(255,253,249,.95);border:1px solid rgba(229,219,206,.95);border-radius:var(--radius);box-shadow:var(--shadow)}
+.composer{overflow:hidden;margin-bottom:22px}
+.composer-head{padding:18px 20px 0;display:flex;gap:12px;align-items:center}
+.avatar{
+  width:46px;height:46px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;
+  background:linear-gradient(145deg,#201a15,#54473a);color:white;font-weight:900
+}
+.composer-head h2{margin:0;font-size:17px}
+.composer-head small{display:block;color:var(--muted);margin-top:3px}
+.composer-main{padding:12px 20px 0}
+.composer textarea{
+  width:100%;min-height:108px;border:0;outline:0;background:transparent;resize:vertical;
+  font-size:17px;line-height:1.85;color:var(--ink)
+}
+.composer textarea::placeholder{color:#aaa093}
+.field-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:7px;color:var(--muted);font-size:10px}
+.char-count{font-variant-numeric:tabular-nums}
+.identity{margin-top:8px}
+.memory-context{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.memory-context label{display:grid;gap:5px;font-size:10px;color:var(--muted);font-weight:800}
+.memory-context select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:13px;outline:0;background:var(--surface-2);color:var(--ink)}
+.memory-context select:focus{border-color:#d4bc91;box-shadow:0 0 0 3px rgba(184,138,59,.08)}
+.memory-context span{font-size:10px}
+.memory-tags{display:flex;flex-wrap:wrap;gap:7px;padding:0 18px 14px}
+.memory-context-tag{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border:1px solid var(--line);border-radius:999px;background:#faf6ee;color:#776651;font-size:10px;font-weight:800}
+.memory-context-tag a{color:inherit}
+@media(max-width:640px){.memory-context{grid-template-columns:1fr}.memory-tags{padding:0 15px 13px}}
+.identity input{
+  width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:13px;
+  outline:0;background:var(--surface-2)
+}
+.identity input:focus{border-color:#d4bc91;box-shadow:0 0 0 3px rgba(184,138,59,.08)}
+.media-drop{
+  margin:14px 20px 0;padding:14px;border:1px dashed #d5c5ae;border-radius:18px;
+  background:linear-gradient(180deg,#fbf7f0,#f7f0e6);text-align:center;transition:.2s
+}
+.media-drop.drag{border-color:var(--gold);background:#fff8ec}
+.media-drop strong{display:block;font-size:13px}
+.media-drop span{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.media-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.media-btn{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 13px;border:1px solid var(--line);
+  border-radius:13px;background:#fff;color:var(--ink);font-weight:800;transition:.18s
+}
+.media-btn:hover{transform:translateY(-1px);background:#fffbf4;border-color:#d4c3aa}
+.media-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7}
+.file input{display:none}
+.preview{display:none;margin-top:12px;overflow:hidden;border:1px solid var(--line);border-radius:16px;background:#111;position:relative}
+.preview.show{display:block}
+.preview img,.preview video{display:block;width:100%;max-height:360px;object-fit:contain;background:#111}.preview img[hidden],.preview video[hidden]{display:none!important}
+.preview-remove{
+  position:absolute;top:10px;left:10px;border:0;border-radius:999px;
+  background:rgba(23,19,15,.82);color:#fff;padding:8px 11px;font-size:11px;font-weight:800
+}
+.composer-footer{
+  margin-top:16px;padding:14px 20px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap
+}
+.publish-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.publish{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:12px 18px;
+  border:1px solid var(--dark);border-radius:14px;background:var(--dark);color:#fff;font-weight:900;
+  box-shadow:0 9px 22px rgba(23,19,15,.12);min-width:145px
+}
+.publish:disabled{opacity:.65;cursor:wait}
+.publish svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9}
+.status-message{font-size:12px;color:var(--muted);min-height:18px}
+.status-message.ok{color:var(--success)}
+.status-message.error{color:var(--danger)}
+.feed-tools{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:4px 0 16px;flex-wrap:wrap}
+.feed-title{font-size:13px;font-weight:900}
+.sort-tabs{display:flex;gap:7px}
+.tab{
+  padding:9px 14px;border:1px solid var(--line);border-radius:999px;
+  background:rgba(255,255,255,.82);color:var(--muted);font-weight:800
+}
+.tab.active{background:var(--dark);border-color:var(--dark);color:#fff}
+.memory{
+  overflow:hidden;margin-bottom:20px;background:rgba(255,253,249,.97);
+  border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);
+  content-visibility:auto;contain-intrinsic-size:520px
+}
+.memory.highlight{box-shadow:0 0 0 2px rgba(184,138,59,.42),var(--shadow)}
+.post-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 18px}
+.publisher{display:flex;align-items:center;gap:10px;min-width:0}
+.mini-avatar{
+  width:39px;height:39px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;
+  color:#fff;font-weight:900;background:linear-gradient(145deg,#c8aa77,#6d5536)
+}
+.name{font-weight:900;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:560px}
+.date{font-size:11px;color:var(--muted);display:block;margin-top:3px}
+.post-badges{display:flex;align-items:center;gap:7px;margin-top:4px;flex-wrap:wrap}.pinned-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:#f4e8d2;color:#7f622f;font-size:9px;font-weight:900;border:1px solid #ead8b8}
+.more{
+  width:38px;height:38px;border:1px solid var(--line);border-radius:50%;background:#fff;
+  color:#6c6155;font-size:20px;line-height:1
+}
+.more:hover{background:var(--surface-2)}
+.text{padding:0 18px 17px;font-size:16px;line-height:2;white-space:pre-wrap}
+.media{display:block;width:100%;max-height:700px;object-fit:cover;background:#111}
+.video-shell{position:relative;background:#111}
+.media-play{
+  position:absolute;inset:50% auto auto 50%;transform:translate(-50%,-50%);
+  width:70px;height:70px;border:0;border-radius:50%;background:rgba(255,255,255,.94);
+  box-shadow:0 15px 34px rgba(0,0,0,.18);font-size:20px;color:var(--dark)
+}
+.meta-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 18px;color:var(--muted);font-size:11px}
+.reactions{display:flex;gap:12px;align-items:center}
+.reactions span{display:inline-flex;align-items:center;gap:5px}
+.reactions svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.action-btn{
+  border:0;border-left:1px solid var(--line);background:transparent;padding:13px 8px;
+  display:flex;justify-content:center;align-items:center;gap:8px;color:#6d6358;font-weight:800;transition:.18s
+}
+.action-btn:last-child{border-left:0}
+.action-btn:hover{background:#faf6ee;color:var(--ink)}
+.action-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7}
+.action-btn b{font-size:12px;color:#8b7d6d}
+.action-btn.liked{color:#9f3c35;background:#fbf5ed}
+.action-btn.pending{opacity:.55;pointer-events:none}
+.comments{padding:15px 18px 14px;background:linear-gradient(180deg,#fffdf9,#faf6ef)}
+.comments-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}
+.comments-head strong{font-size:13px}
+.comments-head span{font-size:11px;color:var(--muted)}
+.comment-list{display:flex;flex-direction:column;gap:10px}
+.comment-item{display:flex;align-items:flex-start;gap:9px}
+.comment-avatar{width:31px;height:31px;border-radius:50%;background:#e8dfd2;color:#6a5a48;display:grid;place-items:center;flex:0 0 auto;font-size:11px;font-weight:900}
+.comment-bubble{min-width:0;flex:1;background:#f0eadf;border-radius:17px;padding:8px 11px}
+.comment-author{font-size:12px;font-weight:900}
+.comment-text{font-size:13px;line-height:1.7;margin-top:2px;white-space:pre-wrap;overflow-wrap:anywhere}
+.comment-date{font-size:10px;color:var(--muted);margin-top:3px}
+.comment-form{display:flex;gap:8px;margin-top:12px}
+.comment-form input{
+  min-width:0;flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:13px;
+  background:#fff;outline:0
+}
+.comment-form input:focus{border-color:#d4bc91;box-shadow:0 0 0 3px rgba(184,138,59,.08)}
+.comment-form button{padding:10px 15px;border:1px solid var(--dark);border-radius:13px;background:var(--dark);color:#fff;font-weight:900}
+.empty{padding:42px 20px;text-align:center;color:var(--muted);border:1px dashed #d9cdbc;border-radius:20px;background:rgba(255,253,249,.72)}
+.skeleton-card{overflow:hidden;margin-bottom:20px;background:rgba(255,253,249,.97);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow)}
+.skeleton-line,.skeleton-media{position:relative;overflow:hidden;background:#eee7dc}
+.skeleton-line:after,.skeleton-media:after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.58),transparent);animation:skeleton-shimmer 1.25s infinite}
+.skeleton-head{display:flex;gap:10px;padding:16px 18px}
+.skeleton-avatar{width:39px;height:39px;border-radius:50%;background:#e8dfd2;flex:0 0 auto}
+.skeleton-copy{flex:1;padding-top:4px}.skeleton-line{height:10px;border-radius:999px;margin-bottom:9px}.skeleton-line.wide{width:44%}.skeleton-line.narrow{width:22%}
+.skeleton-media{height:300px}.skeleton-body{padding:16px 18px}.skeleton-body .skeleton-line{width:92%}.skeleton-body .skeleton-line:last-child{width:68%;margin-bottom:0}
+@keyframes skeleton-shimmer{100%{transform:translateX(100%)}}
+@media(max-width:640px){.skeleton-media{height:220px}}
+@media(prefers-reduced-motion:reduce){.skeleton-line:after,.skeleton-media:after{animation:none!important}}
+.load-more-wrap{text-align:center;padding:5px 0 6px}
+.load-more{
+  padding:11px 20px;border:1px solid var(--line);border-radius:999px;background:#fff;font-weight:900;color:#65594c
+}
+.load-more:disabled{opacity:.6}
+.toast{
+  position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);opacity:0;pointer-events:none;
+  padding:11px 16px;border-radius:999px;background:var(--dark);color:#fff;font-size:12px;font-weight:800;
+  transition:.22s;z-index:100
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.hidden{display:none!important}
+.lightbox{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(15,12,9,.86);backdrop-filter:blur(10px)}
+.lightbox.show{display:flex}
+.lightbox img{max-width:min(1100px,94vw);max-height:88vh;object-fit:contain;border-radius:16px;box-shadow:0 25px 80px rgba(0,0,0,.35)}
+.lightbox-close{position:absolute;top:18px;left:18px;width:42px;height:42px;border:1px solid rgba(255,255,255,.28);border-radius:50%;background:rgba(0,0,0,.4);color:#fff;font-size:24px}
+@media(max-width:640px){
+  .wrap{width:min(100% - 18px,900px);padding-top:21px}
+  .hero h1{font-size:43px}.hero p{font-size:14px}
+  .composer-head{padding:15px 15px 0}.composer-main{padding:10px 15px 0}.composer-footer{padding:13px 15px}
+  .media-drop{margin:12px 15px 0}.composer textarea{font-size:15px;min-height:92px}
+  .publish{width:100%}.publish-wrap{width:100%}.status-message{width:100%}
+  .post-head{padding:14px 15px}.text{padding:0 15px 15px}.meta-row{padding:10px 15px}.comments{padding:14px 15px}
+  .action-btn{font-size:12px}.media{max-height:520px}.name{max-width:190px}
+}
+@media(prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important}
+}
+</style>
+</head>
+<body class="home-app">
+<header class="app-header is-page" aria-label="ARABISK">
+  <a class="brand" href="/" aria-label="ARABISK">ARABISK<span>RESTAURANT & CAFE</span></a>
+  <nav class="header-nav" id="app-header-nav" aria-label="التنقل الرئيسي">
+    <a href="/">الرئيسية</a><a href="/menu">المنيو</a><a href="/events">الفعاليات</a><a href="/reservation">حجز طاولة</a><a href="/track-order">متابعة الطلب</a><a href="/memories" aria-current="page">الذكريات</a>
+  </nav>
+  <div class="app-header-actions">
+    <a class="app-cart-link" href="/cart" aria-label="فتح السلة">السلة <b id="app-cart-count" hidden>0</b></a>
+    <button class="lang" id="lang-toggle" type="button" aria-label="تغيير اللغة">EN</button>
+    <button class="app-menu-button" id="app-menu-button" type="button" aria-expanded="false" aria-controls="app-header-nav" aria-label="فتح القائمة">☰</button>
+  </div>
+</header>
+
+<main class="wrap">
+<section class="hero">
+  <div class="eyebrow">ARABISK MEMORIES</div>
+  <h1>ذكريات</h1>
+  <p>مساحة بسيطة وأنيقة لمشاركة لحظاتك من ARABISK. كل منشور عام، والتعليقات تظهر للجميع.</p>
+  <div class="hero-badge"><span class="dot"></span> مجتمع ARABISK مفتوح للجميع</div>
+</section>
+
+<section class="panel composer" aria-label="نشر ذكرى">
+  <div class="composer-head">
+    <div class="avatar">A</div>
+    <div><h2>شارك لحظتك</h2><small>صورة، فيديو أو كلماتك — أنت تختار ما تريد مشاركته.</small></div>
+  </div>
+  <div class="composer-main">
+    <textarea id="text" maxlength="1200" placeholder="اكتب ذكرى أو لحظة جميلة من ARABISK…"></textarea>
+    <div class="field-meta"><span>الحد الأقصى 1200 حرف</span><span id="textCount" class="char-count" aria-live="polite">0 / 1200</span></div>
+    <div class="identity"><input id="name" maxlength="80" placeholder="اسمك أو اسم مستعار — اتركه فارغًا ليظهر «مجهول»"></div>
+    <div class="memory-context">
+      <label><span>اربط الذكرى بطبق</span><select id="productLink"><option value="">بدون طبق مرتبط</option></select></label>
+      <label><span>اربط الذكرى بفعالية</span><select id="experienceLink"><option value="">بدون فعالية مرتبطة</option></select></label>
+    </div>
+  </div>
+  <div id="mediaDrop" class="media-drop">
+    <strong>أضف وسائط للمنشور</strong>
+    <span>JPG / PNG / WebP / AVIF حتى 15MB — MP4 / WebM / MOV حتى 120MB</span>
+    <div class="media-actions">
+      <label class="media-btn file">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m4 17 5-5 4 4 2-2 5 5"></path></svg>
+        <span>إضافة صورة</span><input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
+      </label>
+      <label class="media-btn file">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="13" height="14" rx="2"></rect><path d="m16 10 5-3v10l-5-3z"></path></svg>
+        <span>إضافة فيديو</span><input id="videoFile" type="file" accept="video/mp4,video/webm,video/quicktime">
+      </label>
+    </div>
+    <div id="preview" class="preview">
+      <button id="previewRemove" class="preview-remove" type="button">إزالة الوسائط</button>
+      <img id="previewImage" alt="معاينة الصورة" loading="lazy" hidden>
+      <video id="previewVideo" controls playsinline preload="metadata" hidden></video>
+    </div>
+  </div>
+  <div class="composer-footer">
+    <div class="status-message" id="message" aria-live="polite"></div>
+    <div class="publish-wrap">
+      <button id="publish" class="publish" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 16-8-6 16-3-6-7-2Z"></path><path d="M11 14 20 4"></path></svg>
+        <span>نشر الذكرى</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<div class="feed-tools">
+  <strong class="feed-title">منشورات المجتمع</strong>
+  <div class="sort-tabs">
+    <button class="tab active" data-sort="latest" type="button">الأحدث</button>
+    <button class="tab" data-sort="popular" type="button">الأكثر تفاعلًا</button>
+  </div>
+</div>
+
+<section id="feed" aria-live="polite"></section>
+<div id="loadMoreWrap" class="load-more-wrap hidden"><button id="loadMore" class="load-more" type="button">تحميل المزيد</button></div>
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div><div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="عرض الصورة"><button id="lightboxClose" class="lightbox-close" type="button" aria-label="إغلاق">×</button><img id="lightboxImage" alt=""></div>
+
+<footer id="contact"><strong>ARABISK</strong><span>Restaurant & Cafe</span><small>© 2026 ARABISK. All rights reserved.</small></footer>
+
+<script type="module" src="/app-header.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+let sort='latest',page=0,hasMore=false,busy=false,selectedObjectUrl='',selectedMediaFile=null,memoryProducts=new Map(),memoryExperiences=new Map();
+const NAME_KEY='arabisk_memories_display_name';
+const LIKED_KEY='arabisk_memories_liked_ids';
+async function loadMemoryContextOptions(){
+  try{
+    const [productsResult,experiencesResult]=await Promise.all([
+      fetch('/api/products?limit=200',{cache:'no-store'}).then(r=>r.json()),
+      fetch('/api/experiences',{cache:'no-store'}).then(r=>r.json())
+    ]);
+    const products=Array.isArray(productsResult)?productsResult:(productsResult.products||[]);
+    const experiences=Array.isArray(experiencesResult)?experiencesResult:(experiencesResult.experiences||[]);
+    memoryProducts=new Map(products.map(item=>[item.id,item.nameAr||item.nameEn||item.id]));
+    memoryExperiences=new Map(experiences.map(item=>[item.slug||item.id,item.titleAr||item.titleEn||item.title||item.slug||item.id]));
+    const productSelect=$('#productLink'),experienceSelect=$('#experienceLink');
+    if(productSelect)productSelect.insertAdjacentHTML('beforeend',products.slice(0,200).map(item=>'<option value="'+esc(item.id)+'">'+esc(item.nameAr||item.nameEn||item.id)+'</option>').join(''));
+    if(experienceSelect)experienceSelect.insertAdjacentHTML('beforeend',experiences.filter(item=>item.status!=='archived').slice(0,100).map(item=>'<option value="'+esc(item.slug||item.id)+'">'+esc(item.titleAr||item.titleEn||item.title||item.slug||item.id)+'</option>').join(''));
+  }catch{}
+}
+function memoryContextHtml(m){
+  const parts=[];
+  if(m.productId)parts.push('<span class="memory-context-tag">طبق: '+esc(memoryProducts.get(m.productId)||m.productId)+'</span>');
+  if(m.experienceSlug)parts.push('<span class="memory-context-tag"><a href="/events/'+encodeURIComponent(m.experienceSlug)+'">فعالية: '+esc(memoryExperiences.get(m.experienceSlug)||m.experienceSlug)+'</a></span>');
+  return parts.length?'<div class="memory-tags">'+parts.join('')+'</div>':'';
+}
+let likedIds=new Set();
+
+function api(url,opt={}){
+  return fetch(url,{headers:{'Content-Type':'application/json',...(opt.headers||{})},...opt})
+    .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.message||'حدث خطأ');return {data:d,headers:r.headers}})
+}
+function showToast(text){
+  const t=$('#toast');t.textContent=text;t.classList.add('show');clearTimeout(showToast.timer);
+  showToast.timer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function loadLikedIds(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(LIKED_KEY)||'[]');
+    if(Array.isArray(saved))likedIds=new Set(saved.filter(v=>typeof v==='string').slice(-500));
+  }catch{}
+}
+function saveLikedIds(){
+  try{localStorage.setItem(LIKED_KEY,JSON.stringify(Array.from(likedIds).slice(-500)))}catch{}
+}
+function syncLikedButtons(){
+  document.querySelectorAll('[data-action="like"][data-id]').forEach(button=>{
+    const liked=likedIds.has(button.dataset.id);
+    button.classList.toggle('liked',liked);
+    button.setAttribute('aria-pressed',liked?'true':'false');
+  });
+}
+function loadSavedName(){
+  try{const saved=localStorage.getItem(NAME_KEY);if(saved)$('#name').value=saved.slice(0,80)}catch{}
+}
+function saveName(){
+  try{const value=$('#name').value.trim();if(value)localStorage.setItem(NAME_KEY,value);else localStorage.removeItem(NAME_KEY)}catch{}
+}
+function updateTextCount(){const el=$('#textCount'),value=$('#text').value.length; if(el)el.textContent=value+' / 1200'}
+function setMessage(text,type=''){
+  const el=$('#message');el.textContent=text;el.className='status-message '+type;
+}
+function initial(name){return (String(name||'مجهول').trim()[0]||'م').toUpperCase()}
+function relativeTime(value){
+  const ts=Date.parse(value||''),diff=Date.now()-ts;
+  if(!Number.isFinite(ts))return '';
+  const mins=Math.floor(diff/60000);
+  if(mins<1)return 'الآن';
+  if(mins<60)return 'منذ '+mins+' دقيقة';
+  const hours=Math.floor(mins/60);if(hours<24)return 'منذ '+hours+' ساعة';
+  const days=Math.floor(hours/24);if(days<7)return 'منذ '+days+' أيام';
+  return new Date(ts).toLocaleDateString('ar-AE');
+}
+function icon(name){
+  const map={
+    like:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.9c0 5-8.8 10-8.8 10s-8.8-5-8.8-10A4.8 4.8 0 0 1 8 4.2c1.4 0 2.7.6 4 1.9 1.3-1.3 2.6-1.9 4-1.9a4.8 4.8 0 0 1 4.8 4.7Z"></path></svg>',
+    comment:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7a2.5 2.5 0 0 1-2.5 2.5H11l-4.8 4v-4.2H6.5A2.5 2.5 0 0 1 4 12.5v-7Z"></path></svg>',
+    share:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"></path><path d="m7 9 5-5 5 5"></path><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"></path></svg>'
+  };
+  return map[name]||'';
+}
+function getCard(id){return document.querySelector('#memory-'+CSS.escape(id))}
+function updateStat(card,key,value){if(!card)return;const count=Number(value||0);const b=card.querySelector('[data-count="'+key+'"]');if(b)b.textContent=String(count);const stat=card.querySelector('[data-stat="'+key+'"]');if(stat){if(key==='shares')stat.textContent=count+' مشاركة';else if(stat.childNodes.length)stat.lastChild.textContent=' '+count}if(key==='comments'){const label=card.querySelector('[data-count="comments-label"]');if(label)label.textContent=count+' تعليق ظاهر للجميع'}}
+function postBadge(m){return m.pinned?'<div class="post-badges"><span class="pinned-badge">✦ ذكرى مميزة</span></div>':''}
+function commentHtml(c){
+  return '<div class="comment-item"><div class="comment-avatar">'+esc(initial(c.displayName))+'</div><div class="comment-bubble"><div class="comment-author">'+esc(c.displayName||'مجهول')+'</div><div class="comment-text">'+esc(c.text)+'</div><div class="comment-date">'+relativeTime(c.createdAt)+'</div></div></div>';
+}
+function updateCommentEmptyState(card){
+  const list=card?.querySelector('.comment-list');if(!list)return;
+  const empty=list.querySelector('.no-comments');
+  if(empty)empty.remove();
+}
+function postHtml(m){
+  const comments=Array.isArray(m.comments)?m.comments:[];
+  const media=m.mediaType==='image'&&m.imageUrl
+    ?'<img class="media" src="'+esc(m.imageUrl)+'" alt="صورة ذكرى من ARABISK" loading="lazy" decoding="async" data-action="image" data-image-url="'+esc(m.imageUrl)+'">'
+    :m.mediaType==='video'&&m.videoUrl
+      ?'<div class="video-shell"><video class="media" src="'+esc(m.videoUrl)+'" controls playsinline preload="metadata"></video><button class="media-play" type="button" data-action="play">▶</button></div>'
+      :'';
+  const commentList=comments.length?comments.map(commentHtml).join(''):'<div class="no-comments" style="color:var(--muted);font-size:12px;padding:5px 0 7px">لا توجد تعليقات بعد — كن أول من يعلق.</div>';
+  return '<article class="memory" id="memory-'+esc(m.id)+'" data-memory-id="'+esc(m.id)+'">'+
+    '<div class="post-head"><div class="publisher"><div class="mini-avatar">'+esc(initial(m.displayName))+'</div><div><span class="name">'+esc(m.displayName||'مجهول')+'</span><span class="date" title="'+esc(new Date(m.createdAt).toLocaleString('ar-AE'))+'">'+relativeTime(m.createdAt)+'</span>'+postBadge(m)+'</div></div><button class="more" type="button" data-action="report" data-id="'+esc(m.id)+'" aria-label="إبلاغ">⋯</button></div>'+
+    media+
+    memoryContextHtml(m)+
+    (m.text?'<div class="text">'+esc(m.text)+'</div>':'')+
+    '<div class="meta-row"><div class="reactions"><span data-stat="likes">'+icon('like')+' '+Number(m.likes||0)+'</span><span data-stat="comments">'+icon('comment')+' '+Number(m.commentsCount||comments.length)+'</span></div><span data-stat="shares">'+Number(m.shareCount||0)+' مشاركة</span></div>'+
+    '<div class="actions">'+
+      '<button class="action-btn" type="button" data-action="like" data-id="'+esc(m.id)+'" aria-label="إعجاب">'+icon('like')+'<span>إعجاب</span><b data-count="likes">'+Number(m.likes||0)+'</b></button>'+
+      '<button class="action-btn" type="button" data-action="comment" data-id="'+esc(m.id)+'" aria-label="تعليق">'+icon('comment')+'<span>تعليق</span><b data-count="comments">'+Number(m.commentsCount||comments.length)+'</b></button>'+
+      '<button class="action-btn" type="button" data-action="share" data-id="'+esc(m.id)+'" aria-label="مشاركة">'+icon('share')+'<span>مشاركة</span><b data-count="shares">'+Number(m.shareCount||0)+'</b></button>'+
+    '</div>'+
+    '<div class="comments"><div class="comments-head"><strong>التعليقات</strong><span data-count="comments-label">'+comments.length+' تعليق ظاهر للجميع</span></div><div class="comment-list">'+commentList+'</div>'+
+    '<form class="comment-form" data-memory-id="'+esc(m.id)+'"><input name="comment" maxlength="500" placeholder="اكتب تعليقًا للجميع…" autocomplete="off"><button type="submit">إرسال</button></form></div>'+
+  '</article>';
+}
+async function revealMemory(memoryId){
+  if(!memoryId)return;
+  const highlight=()=>{
+    const target=document.getElementById('memory-'+CSS.escape(memoryId));
+    if(!target)return false;
+    target.classList.add('highlight');
+    setTimeout(()=>target.classList.remove('highlight'),2600);
+    setTimeout(()=>target.scrollIntoView({behavior:'smooth',block:'center'}),60);
+    return true;
+  };
+  if(highlight())return;
+  if(!hasMore)return;
+  const previousSort=sort;
+  while(hasMore&&!busy&&sort===previousSort){
+    await loadFeed(false);
+    if(highlight())return;
+  }
+}
+function skeletonHtml(count=2){
+  return Array.from({length:count},()=>'<div class="skeleton-card" aria-hidden="true"><div class="skeleton-head"><div class="skeleton-avatar"></div><div class="skeleton-copy"><div class="skeleton-line wide"></div><div class="skeleton-line narrow"></div></div></div><div class="skeleton-media"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line"></div></div></div>').join('');
+}
+function updateLoadMore(){
+  $('#loadMoreWrap').classList.toggle('hidden',!hasMore);
+  $('#loadMore').disabled=false;
+}
+async function loadFeed(reset=true){
+  if(busy)return;
+  busy=true;
+  if(reset){page=0;hasMore=false;$('#feed').innerHTML=skeletonHtml(2)}
+  try{
+    const next=page+1;
+    const result=await api('/api/memories?sort='+encodeURIComponent(sort)+'&page='+next+'&limit=8');
+    const items=Array.isArray(result.data)?result.data:[];
+    if(reset)$('#feed').innerHTML='';
+    if(!items.length&&!page)$('#feed').innerHTML='<div class="empty">لا توجد ذكريات بعد. كن أول من يشارك لحظته.</div>';
+    else{
+      const html=items.map(postHtml).join('');
+      $('#feed').insertAdjacentHTML('beforeend',html);
+      syncLikedButtons();
+      page=next;
+      hasMore=(result.headers.get('X-Memories-Has-More')==='true');
+    }
+    updateLoadMore();
+    if(location.hash&&!location.hash.slice(1).startsWith('M')) location.hash='';
+    if(reset&&location.hash){
+      const memoryId=location.hash.slice(1);
+      await revealMemory(memoryId);
+    }
+  }catch(e){
+    if(reset)$('#feed').innerHTML='<div class="empty">'+esc(e.message)+'</div>';
+    else showToast(e.message);
+  }finally{busy=false}
+}
+function clearMedia(){
+  if(selectedObjectUrl){URL.revokeObjectURL(selectedObjectUrl);selectedObjectUrl=''}
+  selectedMediaFile=null;
+  $('#imageFile').value='';$('#videoFile').value='';
+  $('#preview').classList.remove('show');$('#previewImage').hidden=true;$('#previewVideo').hidden=true;
+  $('#previewImage').removeAttribute('src');$('#previewVideo').removeAttribute('src');$('#previewVideo').load();
+}
+function showPreview(file){
+  if(selectedObjectUrl){URL.revokeObjectURL(selectedObjectUrl);selectedObjectUrl=''}
+  $('#preview').classList.remove('show');$('#previewImage').hidden=true;$('#previewVideo').hidden=true;
+  $('#previewImage').removeAttribute('src');$('#previewVideo').removeAttribute('src');$('#previewVideo').load();
+  if(!file)return;
+  selectedObjectUrl=URL.createObjectURL(file);
+  $('#preview').classList.add('show');
+  if(file.type.startsWith('image/')){$('#previewImage').src=selectedObjectUrl;$('#previewImage').hidden=false}
+  else{$('#previewVideo').src=selectedObjectUrl;$('#previewVideo').hidden=false}
+}
+function selectedFile(){return selectedMediaFile||$('#imageFile').files[0]||$('#videoFile').files[0]||null}
+function validateClientFile(file){
+  if(!file)return '';
+  if(file.type.startsWith('image/')&&file.size>15*1024*1024)return 'حجم الصورة يجب ألا يتجاوز 15MB.';
+  if(file.type.startsWith('video/')&&file.size>120*1024*1024)return 'حجم الفيديو يجب ألا يتجاوز 120MB.';
+  return '';
+}
+async function publish(){
+  const b=$('#publish'),file=selectedFile(),text=$('#text').value.trim(),name=$('#name').value.trim();
+  if(!text&&!file){setMessage('أضف نصًا أو صورة أو فيديو أولًا.','error');return}
+  const fileError=validateClientFile(file);if(fileError){setMessage(fileError,'error');return}
+  b.disabled=true;setMessage('جاري تجهيز المنشور…');
+  try{
+    let imageKey='',videoKey='';
+    if(file){
+      setMessage('جاري رفع الوسائط…');
+      const uploadResponse=await fetch('/api/memories/upload',{
+        method:'POST',
+        headers:{
+          'Content-Type':file.type,
+          'X-File-Name':encodeURIComponent(file.name)
+        },
+        body:file
+      });
+      const uploadData=await uploadResponse.json().catch(()=>({}));
+      if(!uploadResponse.ok)throw Error(uploadData.message||'فشل رفع الوسائط.');
+      if(uploadData.kind==='image')imageKey=uploadData.key;else if(uploadData.kind==='video')videoKey=uploadData.key;else throw Error('نوع الوسائط غير مدعوم.');
+    }
+    await api('/api/memories',{method:'POST',body:JSON.stringify({text,displayName:name,imageKey,videoKey,productId:$('#productLink').value,experienceSlug:$('#experienceLink').value})});
+    $('#productLink').value='';$('#experienceLink').value='';
+    $('#text').value='';updateTextCount();saveName();clearMedia();setMessage('تم نشر الذكرى بنجاح.','ok');showToast('تم نشر الذكرى');
+    await loadSavedName();loadLikedIds();updateTextCount();loadFeed(true);window.scrollTo({top:360,behavior:'smooth'});
+  }catch(e){setMessage(e.message,'error')}finally{b.disabled=false}
+}
+async function actLike(id){
+  const card=getCard(id),button=card?.querySelector('[data-action="like"]');if(!button||button.classList.contains('pending')||button.classList.contains('liked'))return;
+  button.classList.add('pending');
+  try{const result=await api('/api/memories/'+encodeURIComponent(id)+'/like',{method:'POST'});updateStat(card,'likes',result.data.likes);likedIds.add(id);saveLikedIds();button.classList.add('liked');button.setAttribute('aria-pressed','true');showToast('تم تسجيل إعجابك')}catch(e){showToast(e.message)}finally{button.classList.remove('pending')}
+}
+async function actShare(id){
+  const card=getCard(id),button=card?.querySelector('[data-action="share"]');if(!button||button.classList.contains('pending'))return;
+  button.classList.add('pending');
+  try{const url=location.origin+'/memories#'+id;if(navigator.share){try{await navigator.share({title:'ARABISK — ذكريات',text:'شارك هذه الذكرى من ARABISK',url})}catch(err){if(err?.name==='AbortError')return}}else{let copied=false;try{await navigator.clipboard.writeText(url);copied=true}catch{}if(!copied)prompt('انسخ رابط الذكرى:',url)}const result=await api('/api/memories/'+encodeURIComponent(id)+'/share',{method:'POST'});updateStat(card,'shares',result.data.shareCount);showToast('تمت مشاركة الذكرى')}catch(e){showToast(e.message)}finally{button.classList.remove('pending')}
+}
+async function actReport(id){
+  const reason=prompt('سبب الإبلاغ؟');if(!reason)return;
+  try{await api('/api/memories/'+encodeURIComponent(id)+'/report',{method:'POST',body:JSON.stringify({reason})});showToast('تم إرسال البلاغ للمراجعة')}catch(e){showToast(e.message)}
+}
+async function addComment(id,text,input){
+  const card=getCard(id),button=input?.nextElementSibling;if(!card||!input||!text||button?.disabled)return;if(button)button.disabled=true;
+  try{const result=await api('/api/memories/'+encodeURIComponent(id)+'/comments',{method:'POST',body:JSON.stringify({text,displayName:$('#name').value.trim()||'مجهول'})});input.value='';const c=result.data.comment;if(c){card.querySelector('.comment-list')?.insertAdjacentHTML('afterbegin',commentHtml(c));updateCommentEmptyState(card);updateStat(card,'comments',result.data.commentsCount)}showToast('تم نشر التعليق للجميع')}catch(e){showToast(e.message)}finally{if(button)button.disabled=false}
+}
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-action]');if(!el)return;
+  const action=el.dataset.action,id=el.dataset.id;
+  if(action==='like')void actLike(id);
+  else if(action==='comment'){const input=document.querySelector('#memory-'+CSS.escape(id)+' input[name="comment"]');if(input){input.focus();input.scrollIntoView({behavior:'smooth',block:'center'})}}
+  else if(action==='share')void actShare(id);
+  else if(action==='report')void actReport(id);
+  else if(action==='play'){const video=el.previousElementSibling;if(video){video.play();el.remove()}}
+  else if(action==='image'){openLightbox(el.dataset.imageUrl)}
+});
+function openLightbox(src){if(!src)return;$('#lightboxImage').src=src;$('#lightbox').classList.add('show');document.body.style.overflow='hidden';$('#lightboxClose').focus()}
+function closeLightbox(){$('#lightbox').classList.remove('show');$('#lightboxImage').removeAttribute('src');document.body.style.overflow=''}
+$('#lightboxClose').addEventListener('click',closeLightbox);$('#lightbox').addEventListener('click',e=>{if(e.target.id==='lightbox')closeLightbox()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox()});
+document.addEventListener('submit',e=>{
+  const form=e.target.closest('.comment-form');if(!form)return;
+  e.preventDefault();const input=form.querySelector('input[name="comment"]'),text=input?.value.trim();if(text)void addComment(form.dataset.memoryId,text,input);
+});
+$('#publish').addEventListener('click',()=>void publish());
+$('#text').addEventListener('input',updateTextCount);
+$('#name').addEventListener('input',saveName);
+$('#previewRemove').addEventListener('click',clearMedia);
+$('#imageFile').addEventListener('change',()=>{selectedMediaFile=$('#imageFile').files[0]||null;$('#videoFile').value='';showPreview(selectedMediaFile)});
+$('#videoFile').addEventListener('change',()=>{selectedMediaFile=$('#videoFile').files[0]||null;$('#imageFile').value='';showPreview(selectedMediaFile)});
+$('#mediaDrop').addEventListener('dragover',e=>{e.preventDefault();$('#mediaDrop').classList.add('drag')});
+$('#mediaDrop').addEventListener('dragleave',()=>$('#mediaDrop').classList.remove('drag'));
+$('#mediaDrop').addEventListener('drop',e=>{
+  e.preventDefault();$('#mediaDrop').classList.remove('drag');
+  const file=e.dataTransfer.files[0];if(!file)return;
+  if(file.type.startsWith('image/')){$('#imageFile').files=e.dataTransfer.files;$('#videoFile').value='';selectedMediaFile=file}
+  else if(file.type.startsWith('video/')){$('#videoFile').files=e.dataTransfer.files;$('#imageFile').value='';selectedMediaFile=file}
+  else{setMessage('اختر صورة أو فيديو صالحًا.','error');return}
+  showPreview(file);
+});
+$('#loadMore').addEventListener('click',async()=>{if(busy||!hasMore)return;$('#loadMore').disabled=true;$('#loadMore').textContent='جاري التحميل…';try{await loadFeed(false)}finally{$('#loadMore').textContent='تحميل المزيد';updateLoadMore()}});
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');sort=btn.dataset.sort;history.replaceState(null,'','#');void loadFeed(true)}));
+window.addEventListener('beforeunload',()=>{if(selectedObjectUrl)URL.revokeObjectURL(selectedObjectUrl)});
+loadMemoryContextOptions();loadFeed(true);
+</script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+import crypto from 'node:crypto';
+import { isSecureRequest } from './http-utils.js';
+import {
+  adminUsername,
+  adminPassword,
+  SESSION_TTL_MS,
+  SESSION_ABSOLUTE_TTL_MS,
+  AUTH_RATE_WINDOW_MS,
+  AUTH_RATE_LIMIT,
+  MAX_AUTH_RATE_KEYS,
+  MAX_ADMIN_SESSIONS
+} from './config.js';
+
+function parseCookies(header = '') {
+  return Object.fromEntries(header.split(';').map((part) => part.trim()).filter(Boolean).map((part) => {
+    const separator = part.indexOf('=');
+    if (separator < 0) return [part, ''];
+    const name = part.slice(0, separator);
+    const rawValue = part.slice(separator + 1);
+    try { return [name, decodeURIComponent(rawValue)]; } catch { return [name, rawValue]; }
+  }));
+}
+
+function getClientKey(req) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',').map((value) => value.trim()).filter(Boolean);
+  const remote = String(req.socket?.remoteAddress || 'unknown');
+  // The admin service runs behind Railway's trusted proxy. Use the last forwarded
+  // address so a client cannot prepend an arbitrary value to bypass the limiter.
+  return String(forwarded.at(-1) || remote).slice(0, 120) || 'unknown';
+}
+
+function constantTimeTextMatch(provided, expected) {
+  const providedBuffer = Buffer.from(String(provided));
+  const expectedBuffer = Buffer.from(String(expected));
+  if (providedBuffer.length !== expectedBuffer.length) return false;
+  return crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+}
+
+export function createAdminAuth() {
+  const authRate = new Map();
+  const sessionSecret = String(process.env.ARABISK_ADMIN_SESSION_SECRET || adminPassword || '').trim();
+
+  function base64UrlEncode(value) {
+    return Buffer.from(value).toString('base64url');
+  }
+
+  function base64UrlDecode(value) {
+    return Buffer.from(value, 'base64url').toString('utf8');
+  }
+
+  function signSession(payload) {
+    return crypto.createHmac('sha256', sessionSecret).update(payload).digest('base64url');
+  }
+
+  function encodeSession(session) {
+    const payload = base64UrlEncode(JSON.stringify(session));
+    return payload + '.' + signSession(payload);
+  }
+
+  function decodeSession(token) {
+    if (!sessionSecret || !token) return null;
+    const separator = token.lastIndexOf('.');
+    if (separator <= 0) return null;
+
+    const payload = token.slice(0, separator);
+    const signature = token.slice(separator + 1);
+    const expected = signSession(payload);
+    const signatureBuffer = Buffer.from(signature);
+    const expectedBuffer = Buffer.from(expected);
+    if (
+      signatureBuffer.length !== expectedBuffer.length ||
+      !crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
+    ) return null;
+
+    try {
+      const session = JSON.parse(base64UrlDecode(payload));
+      return session && typeof session === 'object' ? session : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function consumeAuthAttempt(req, res) {
+    const now = Date.now();
+    const key = getClientKey(req);
+    const previous = authRate.get(key);
+    if (!previous || now - previous.startedAt >= AUTH_RATE_WINDOW_MS) {
+      if (!previous && authRate.size >= MAX_AUTH_RATE_KEYS) {
+        for (const [oldKey, oldEntry] of authRate) {
+          if (now - oldEntry.startedAt >= AUTH_RATE_WINDOW_MS) {
+            authRate.delete(oldKey);
+            break;
+          }
+        }
+        if (authRate.size >= MAX_AUTH_RATE_KEYS) {
+          const oldest = authRate.keys().next().value;
+          if (oldest !== undefined) authRate.delete(oldest);
+        }
+      }
+      authRate.set(key, { startedAt: now, count: 1 });
+      return false;
+    }
+    if (previous.count >= AUTH_RATE_LIMIT) {
+      const retryAfter = Math.max(1, Math.ceil((AUTH_RATE_WINDOW_MS - (now - previous.startedAt)) / 1000));
+      res.setHeader('Retry-After', String(retryAfter));
+      res.writeHead(429, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8','X-Content-Type-Options':'nosniff'});
+      res.end(JSON.stringify({ ok: false, message: 'Too many login attempts. Please try again later.', retryAfter }));
+      return true;
+    }
+    previous.count += 1;
+    return false;
+  }
+
+  function sessionCookie(token, req, maxAge = Math.floor(SESSION_TTL_MS / 1000)) {
+    const secure = isSecureRequest(req) ? '; Secure' : '';
+    return `arabisk_admin_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`;
+  }
+
+  function getSession(req) {
+    const token = parseCookies(req.headers.cookie || '').arabisk_admin_session;
+    if (!token) return null;
+
+    const session = decodeSession(token);
+    if (!session) return null;
+
+    const now = Date.now();
+    if (
+      session.version !== 1 ||
+      !session.username ||
+      !adminUsername ||
+      !constantTimeTextMatch(session.username, adminUsername) ||
+      !Number.isFinite(Number(session.expiresAt)) ||
+      !Number.isFinite(Number(session.absoluteExpiresAt)) ||
+      Number(session.expiresAt) <= now ||
+      Number(session.absoluteExpiresAt) <= now
+    ) return null;
+
+    return { token, session };
+  }
+
+  function createSession(res, req, username) {
+    if (!sessionSecret) {
+      res.writeHead(503, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8','X-Content-Type-Options':'nosniff'});
+      res.end(JSON.stringify({ ok: false, message: 'Admin session secret is not configured.' }));
+      return;
+    }
+
+    const now = Date.now();
+    const token = encodeSession({
+      version: 1,
+      username: String(username),
+      issuedAt: now,
+      expiresAt: now + SESSION_TTL_MS,
+      absoluteExpiresAt: now + SESSION_ABSOLUTE_TTL_MS,
+      nonce: crypto.randomBytes(16).toString('hex')
+    });
+    res.setHeader('Set-Cookie', sessionCookie(token, req));
+  }
+
+  function resetAuthAttempts(req) {
+    authRate.delete(getClientKey(req));
+  }
+
+  function clearSession(res, req) {
+    res.setHeader('Set-Cookie', sessionCookie('', req, 0));
+  }
+
+  function credentialsMatch(username, password) {
+    return Boolean(
+      adminUsername &&
+      adminPassword &&
+      constantTimeTextMatch(username, adminUsername) &&
+      constantTimeTextMatch(password, adminPassword)
+    );
+  }
+
+  const cleanupTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of authRate) if (now - entry.startedAt >= AUTH_RATE_WINDOW_MS) authRate.delete(key);
+  }, 15 * 60 * 1000);
+  cleanupTimer.unref();
+
+  return { consumeAuthAttempt, credentialsMatch, getSession, createSession, clearSession, resetAuthAttempts };
+}

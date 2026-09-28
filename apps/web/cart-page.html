@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="سلة طلبك وإتمام طلبك من ARABISK Restaurant & Cafe.">
+<title>ARABISK — سلة الطلب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/home-app.css">
+<style>:root{--cart-danger:#a64b35}body{margin:0;background:var(--app-bg);color:var(--app-ink);font-family:Cairo,sans-serif} body{background:var(--app-bg);color:var(--app-ink)}
+.cart-main{max-width:1180px;margin:0 auto;padding:54px 24px 90px}
+.cart-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding-bottom:28px;border-bottom:1px solid var(--app-line)}
+.cart-heading-copy{max-width:700px}
+.cart-eyebrow{margin:0 0 10px;color:var(--app-gold);font-size:10px;font-weight:800;letter-spacing:4px}
+.cart-title{margin:0;font:500 clamp(42px,6vw,68px)/1 'Playfair Display',serif}
+.cart-lead{margin:14px 0 0;color:var(--app-muted);font-size:13px;line-height:1.9}
+.cart-back{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border:1px solid var(--app-line);border-radius:999px;color:var(--app-ink);text-decoration:none;background:#fff}
+.cart-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(330px,.72fr);gap:20px;margin-top:22px;align-items:start}
+.cart-card{border:1px solid var(--app-line);border-radius:24px;background:var(--app-paper);box-shadow:0 14px 36px rgba(41,29,16,.06)}
+.cart-items-card{overflow:hidden}
+.cart-card-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:20px 22px;border-bottom:1px solid var(--app-line)}
+.cart-card-head h2{margin:0;font-size:17px}.cart-card-head>div:first-child{display:grid;gap:5px}.cart-head-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.cart-head-btn{border:1px solid var(--app-line);border-radius:999px;background:#fff;color:var(--app-ink);padding:8px 12px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;text-decoration:none}.cart-head-btn:hover{border-color:var(--app-gold)}.cart-head-btn.danger{color:var(--cart-danger)}
+.cart-count{color:var(--app-muted);font-size:11px}
+.cart-items{display:grid}
+.cart-item{display:grid;grid-template-columns:92px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid #eee7dc}
+.cart-item:last-child{border-bottom:0}
+.cart-item-image{width:92px;height:92px;border-radius:16px;object-fit:cover;background:#eee6da}
+.cart-item-copy{min-width:0}
+.cart-item-name{margin:0;font-size:16px;font-weight:800}
+.cart-item-price{margin:6px 0 0;color:var(--app-muted);font-size:11px}
+.cart-item-total{margin-top:7px;color:var(--app-gold);font:600 20px/1 'Playfair Display',serif}
+.cart-item-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px}
+.cart-qty{display:inline-flex;align-items:center;gap:8px;padding:5px;border:1px solid var(--app-line);border-radius:999px;background:#fff}
+.cart-qty button{width:30px;height:30px;border:0;border-radius:50%;background:#f3ede4;color:var(--app-ink);font-size:18px;line-height:1;cursor:pointer}
+.cart-qty button:hover{background:#e7dbc8}
+.cart-qty span{min-width:22px;text-align:center;font-size:12px;font-weight:800}
+.cart-remove{border:0;background:none;color:var(--cart-danger);font:inherit;font-size:11px;cursor:pointer;padding:5px}
+.cart-empty{padding:72px 24px;text-align:center}
+.cart-empty-icon{width:66px;height:66px;display:grid;place-items:center;margin:0 auto 16px;border-radius:50%;background:#f1e9de;font-size:27px}
+.cart-empty h2{margin:0;font:500 32px/1.2 'Playfair Display',serif}
+.cart-empty p{max-width:420px;margin:10px auto 20px;color:var(--app-muted);font-size:12px;line-height:1.9}
+.cart-primary{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 21px;border:0;border-radius:999px;background:#111;color:#fff;text-decoration:none;font:inherit;font-weight:800;cursor:pointer}
+.cart-secondary{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border:1px solid var(--app-line);border-radius:999px;background:#fff;color:var(--app-ink);text-decoration:none;font:inherit;font-weight:700;cursor:pointer}
+.cart-summary{padding:22px;position:sticky;top:104px}
+.cart-summary-kicker{margin:0;color:var(--app-gold);font-size:10px;font-weight:800;letter-spacing:3px}
+.cart-summary h2{margin:8px 0 16px;font:500 29px/1.15 'Playfair Display',serif}
+.cart-summary-row{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:10px 0;color:var(--app-muted);font-size:12px}
+.cart-summary-row.total{margin-top:7px;padding-top:16px;border-top:1px solid var(--app-line);color:var(--app-ink)}
+.cart-summary-row.total strong{color:var(--app-gold);font:600 27px/1 'Playfair Display',serif}
+.cart-form{display:grid;gap:11px;margin-top:18px}
+.cart-form-title{margin:8px 0 3px;font-size:14px}.cart-order-type{display:grid;gap:8px}.cart-order-type label{font-size:11px}.cart-order-type select{width:100%;border:1px solid var(--app-line);border-radius:12px;background:#fff;padding:11px 12px;font:inherit;font-size:12px;outline:0}.cart-order-type select:focus{border-color:var(--app-gold)}.cart-context-note{margin:0;color:var(--app-muted);font-size:10px;line-height:1.7}
+.cart-form label{display:grid;gap:6px;color:#5f584f;font-size:11px}
+.cart-form input,.cart-form select,.cart-form textarea{width:100%;border:1px solid var(--app-line);border-radius:12px;background:#fff;padding:11px 12px;font:inherit;font-size:12px;outline:0}
+.cart-form input:focus,.cart-form select:focus,.cart-form textarea:focus{border-color:var(--app-gold)}
+.cart-form textarea{resize:vertical;min-height:78px}
+.cart-form small{color:var(--app-muted);font-size:10px;line-height:1.7}
+.cart-table-wrap{display:grid}.cart-pickup-fields{display:grid;gap:11px}.cart-pickup-fields{display:grid;gap:11px}
+.cart-submit{width:100%;min-height:50px;border:0;border-radius:999px;background:#111;color:#fff;font:inherit;font-weight:800;cursor:pointer}
+.cart-submit:disabled{opacity:.55;cursor:wait}
+.cart-form-status{min-height:18px;margin:0;color:var(--cart-danger);font-size:11px;line-height:1.6}
+.cart-trust{display:grid;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--app-line)}
+.cart-trust div{display:flex;align-items:center;gap:9px;color:var(--app-muted);font-size:10px}
+.cart-trust i{width:25px;height:25px;display:grid;place-items:center;border-radius:50%;background:#f2eadf;color:var(--app-gold);font-style:normal}
+.cart-success{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(10,8,6,.64);z-index:120}.cart-success.show{display:flex}
+.cart-modal{width:min(520px,100%);max-height:90vh;overflow:auto;padding:30px;border:1px solid var(--app-line);border-radius:24px;background:var(--app-paper);box-shadow:0 24px 80px rgba(0,0,0,.24)}
+.cart-modal.center{text-align:center}
+.cart-success-icon{width:68px;height:68px;margin:0 auto 15px;display:grid;place-items:center;border-radius:50%;background:#f1eadf;color:#9d7438;font-size:28px}
+.cart-modal-eyebrow{margin:0;color:var(--app-gold);font-size:9px;font-weight:800;letter-spacing:3px}
+.cart-modal h3{margin:8px 0;font:500 30px/1.2 'Playfair Display',serif}
+.cart-modal p{margin:0;color:var(--app-muted);font-size:12px;line-height:1.9}
+.cart-order-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+.cart-order-meta div{padding:13px;border:1px solid var(--app-line);border-radius:14px;background:#fff}
+.cart-order-meta small{display:block;color:var(--app-muted);font-size:10px}
+.cart-order-meta strong{display:block;margin-top:4px;color:var(--app-gold);font-size:14px}
+.cart-modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}.cart-success-home{display:block;margin-top:12px;color:var(--app-muted);font-size:10px;text-align:center;text-decoration:none}.cart-success-home:hover{color:var(--app-gold)}
+.cart-promo{margin:16px 0;padding:14px;border:1px solid var(--app-line);border-radius:16px;background:#fbfaf8}.cart-promo-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.cart-promo-head strong{font-size:13px}.cart-promo-head span{font-size:10px;color:var(--app-muted)}.cart-promo-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px}.cart-promo-form input{min-width:0;padding:11px 12px;border:1px solid var(--app-line);border-radius:11px;background:#fff;font:12px Cairo,sans-serif;text-transform:uppercase}.cart-promo-form button{border:0;border-radius:11px;padding:10px 14px;background:var(--app-gold);color:#fff;font:700 11px Cairo,sans-serif;cursor:pointer}.cart-promo-status{margin:8px 0 0;font-size:10px;color:var(--app-muted);min-height:1.4em}.cart-summary-row.discount{color:#2d7a4d}.cart-summary-row.discount strong{color:#2d7a4d}@media(max-width:900px){.cart-layout{grid-template-columns:1fr}.cart-summary{position:static}.cart-heading{align-items:flex-start;flex-direction:column}}
+@media(max-width:620px){.cart-main{padding:30px 14px 60px}.cart-heading{padding-bottom:22px}.cart-title{font-size:45px}.cart-back{width:100%;justify-content:center}.cart-item{grid-template-columns:72px minmax(0,1fr);gap:12px;padding:15px}.cart-item-image{width:72px;height:72px}.cart-item-actions{grid-column:1/-1;justify-content:space-between;padding-top:5px}.cart-card-head,.cart-summary{padding:17px}.cart-card-head{align-items:flex-start}.cart-head-actions{justify-content:flex-start}.cart-modal{padding:22px 17px}.cart-modal-actions{grid-template-columns:1fr}}</style>
+<link rel="stylesheet" href="/app-pages.css">
+</head>
+<body class="home-app">
+<header class="app-header is-page" aria-label="ARABISK">
+  <a class="brand" href="/" aria-label="ARABISK">ARABISK<span>RESTAURANT & CAFE</span></a>
+  <nav class="header-nav" id="app-header-nav" aria-label="التنقل الرئيسي">
+    <a href="/">الرئيسية</a><a href="/menu">المنيو</a><a href="/events">الفعاليات</a><a href="/reservation">حجز طاولة</a><a href="/track-order">متابعة الطلب</a><a href="/memories">الذكريات</a>
+  </nav>
+  <div class="app-header-actions">
+    <a class="app-cart-link" href="/cart" aria-label="فتح السلة">السلة <b id="app-cart-count" hidden>0</b></a>
+    <button class="lang" id="lang-toggle" type="button" aria-label="تغيير اللغة">EN</button>
+    <button class="app-menu-button" id="app-menu-button" type="button" aria-expanded="false" aria-controls="app-header-nav" aria-label="فتح القائمة">☰</button>
+  </div>
+</header>
+
+<main class="cart-main">
+  <section class="cart-heading">
+    <div class="cart-heading-copy">
+      <p class="cart-eyebrow">ARABISK ORDER</p>
+      <h1 class="cart-title">سلة طلبك</h1>
+      <p class="cart-lead">راجع أطباقك، عدّل الكميات، ثم أدخل رقم طاولتك وملاحظاتك لإرسال الطلب مباشرة إلى فريق المطعم.</p>
+    </div>
+    <a class="cart-back" href="/menu">← العودة إلى استكشف المنيو</a>
+  </section>
+
+  <section class="cart-layout" aria-label="السلة وإتمام الطلب">
+    <article class="cart-card cart-items-card">
+      <div class="cart-card-head"><div><h2>الأصناف المختارة</h2><span id="cart-count-label" class="cart-count">لا توجد أصناف</span></div><div class="cart-head-actions"><a id="cart-track-last" class="cart-head-btn" href="/track-order" hidden>متابعة آخر طلب</a><button id="cart-clear" class="cart-head-btn danger" type="button" hidden>إفراغ السلة</button></div></div>
+      <div id="cart-items" class="cart-items"></div>
+    </article>
+    <aside id="cart-summary" class="cart-card cart-summary">
+      <p class="cart-summary-kicker">CHECKOUT</p>
+      <h2>إتمام الطلب</h2>
+      <div class="cart-summary-row"><span>عدد الأصناف</span><strong id="cart-summary-count">0</strong></div>
+      <div class="cart-summary-row"><span>المجموع قبل الخصم</span><strong id="cart-summary-subtotal">AED 0</strong></div>
+      <div class="cart-summary-row discount" id="cart-summary-discount-row" hidden><span>خصم تثبيت التطبيق</span><strong id="cart-summary-discount">- AED 0</strong></div>
+      <div class="cart-summary-row total"><span>الإجمالي</span><strong id="cart-summary-total">AED 0</strong></div>
+      <div class="cart-promo" id="cart-promo">
+        <div class="cart-promo-head"><strong>لديك كود خصم؟</strong><span>خاص بعرض تثبيت ARABISK</span></div>
+        <div class="cart-promo-form"><input id="cart-promo-code" maxlength="80" autocomplete="off" placeholder="ARAB-PWA-XXXXXX" aria-label="كود الخصم"><button id="cart-promo-apply" type="button">تطبيق</button></div>
+        <p id="cart-promo-status" class="cart-promo-status" role="status" aria-live="polite"></p>
+      </div>
+      <div id="cart-form-wrap">
+        <h3 class="cart-form-title">بيانات الطلب</h3>
+        <form id="cart-form" class="cart-form">
+          <div class="cart-order-type">
+            <label for="cart-order-type">نوع الطلب</label>
+            <select id="cart-order-type">
+              <option value="dine_in">داخل المطعم</option>
+              <option value="pickup">استلام من المطعم</option>
+            </select>
+            <p id="cart-context-note" class="cart-context-note">لطلب داخل المطعم أدخل رقم الطاولة. لا نحتاج إلى اسم أو رقم هاتف.</p>
+          </div>
+          <label id="cart-table-wrap" class="cart-table-wrap">رقم الطاولة<input id="cart-table" maxlength="30" inputmode="numeric" pattern="[0-9٠-٩]{1,4}" placeholder="مثال: 12"><small>أدخل رقم الطاولة الموجودة أمامك في المطعم.</small></label>
+          <div id="cart-pickup-fields" hidden>
+            <label>الاسم<input id="cart-name" maxlength="80" autocomplete="name"></label>
+            <label>رقم الهاتف<input id="cart-phone" maxlength="40" inputmode="tel" autocomplete="tel"></label>
+          </div>
+          <label>ملاحظات الطلب<textarea id="cart-notes" maxlength="300" placeholder="مثلاً: بدون بصل، درجة الاستواء، إضافة صوص…"></textarea></label>
+          <button id="cart-submit" class="cart-submit" type="submit">تأكيد وإرسال الطلب</button>
+          <p id="cart-form-status" class="cart-form-status" role="status" aria-live="polite"></p>
+        </form>
+        <div class="cart-trust">
+          <div><i>✓</i><span>سيصل الطلب إلى فريق المطعم مع رقم طاولتك.</span></div>
+          <div><i>⌂</i><span>يمكنك تعديل أو حذف الأصناف قبل الإرسال.</span></div>
+          <div><i>◷</i><span>يمكنك متابعة حالة الطلب برقم الطلب والطاولة.</span></div>
+        </div>
+      </div>
+      <div id="cart-empty-summary" hidden><a class="cart-primary" href="/menu">استكشف المنيو</a></div>
+    </aside>
+  </section>
+<aside id="mobile-checkout-dock" class="mobile-checkout-dock" hidden aria-label="إتمام الطلب على الهاتف"><div><small>الإجمالي</small><strong id="mobile-checkout-total">AED 0</strong></div><button id="mobile-checkout-submit" type="button">إرسال الطلب</button></aside>
+</main>
+
+<footer id="contact"><strong>ARABISK</strong><span>Restaurant & Cafe</span><small>© 2026 ARABISK. All rights reserved.</small></footer>
+
+<div id="cart-success" class="cart-success" role="dialog" aria-modal="true">
+  <div class="cart-modal center">
+    <div class="cart-success-icon">✓</div>
+    <p class="cart-modal-eyebrow">ARABISK ORDER</p>
+    <h3>تم استلام طلبك</h3>
+    <p>تم إرسال الطلب بنجاح إلى المطعم. احتفظ برقم الطلب لمتابعة حالته.</p>
+    <div class="cart-order-meta"><div><small>رقم الطلب</small><strong id="success-order-id">—</strong></div><div><small>الإجمالي</small><strong id="success-order-total">AED 0</strong></div></div>
+    <div class="cart-modal-actions">
+  <a id="success-track" class="cart-secondary" href="/track-order">متابعة الطلب</a>
+  <a class="cart-primary" href="/menu">اختيار المزيد</a>
+</div>
+<a class="cart-success-home" href="/">العودة إلى الرئيسية</a>
+  </div>
+</div>
+
+<script type="module" src="/app-header.js"></script>
+<script src="/cart.js?v=20260920.8" defer></script>
+<script src="/cart-page.js?v=20260920.9" defer></script>
+</body>
+</html>
