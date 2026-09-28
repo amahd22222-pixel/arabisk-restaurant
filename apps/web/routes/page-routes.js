@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 
 const injectMobileNavigation = async (filePath, res) => {
   const html = await fs.readFile(filePath, 'utf8');
-  const assets = `<meta name="theme-color" content="#17130f">
+  const baseAssets = `<meta name="theme-color" content="#17130f">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,14 +13,19 @@ const injectMobileNavigation = async (filePath, res) => {
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
 <link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="stylesheet" href="/mobile-nav.css">
-<script type="module" src="/mobile-nav.js"></script>
 <script type="module" src="/pwa-ui.js"></script>
 <script type="module" src="/pwa-register.js"></script>
 <script type="module" src="/pwa-profile.js"></script>
 <script type="module" src="/pwa-notifications.js"></script>
-<link rel="stylesheet" href="/shams.css">
-<script type="module" src="/shams.js"></script>`;
+`;
+  const appAssets = [
+    !html.includes('href="/mobile-nav.css"') ? '<link rel="stylesheet" href="/mobile-nav.css">' : '',
+    !html.includes('src="/mobile-nav.js"') ? '<script type="module" src="/mobile-nav.js"></script>' : '',
+    !html.includes('href="/shams.css"') ? '<link rel="stylesheet" href="/shams.css">' : '',
+    !html.includes('src="/shams.js"') ? '<script type="module" src="/shams.js"></script>' : ''
+  ].filter(Boolean).join('\n');
+  const assets = [baseAssets, appAssets].filter(Boolean).join('\n');
+
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
