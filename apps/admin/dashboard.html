@@ -134,7 +134,7 @@
   <section class="panel admin-section" id="notifications">
   <div class="panelhead"><div><h2>مركز الإشعارات</h2><span id="notifications-state">إدارة وإرسال إشعارات Push إلى مستخدمي تطبيق ARABISK المثبت.</span></div><div class="header-actions"><span id="notifications-config-status" class="notification-status warning">جارٍ التحقق…</span><button id="notifications-refresh" class="small-action" type="button">تحديث</button></div></div>
   <div class="notifications-stats">
-    <article><span>أجهزة التطبيق المشتركة</span><b id="notifications-subscribers">0</b></article>
+    <article><span>أجهزة التطبيق المسجلة</span><b id="notifications-devices">0</b></article><article><span>أجهزة مشتركة في Push</span><b id="notifications-subscribers">0</b></article>
     <article><span>الحملات</span><b id="notifications-campaigns">0</b></article>
     <article><span>تم الإرسال</span><b id="notifications-delivered">0</b></article>
     <article><span>مجدولة</span><b id="notifications-scheduled">0</b></article>
@@ -175,6 +175,10 @@
         </div>
       </div>
     </div>
+  </div>
+  <div class="notifications-card notifications-devices">
+    <div class="panelhead"><div><h3>أجهزة التطبيق</h3><span>كل جهاز يثبت ARABISK يتم حفظه هنا. لا يتم حذفه تلقائيًا؛ تسجيل إلغاء التثبيت يتم يدويًا من لوحة التحكم.</span></div></div>
+    <div class="table-wrap"><table><thead><tr><th>الجهاز</th><th>حالة التثبيت</th><th>الإشعارات</th><th>أول تثبيت</th><th>آخر ظهور</th><th></th></tr></thead><tbody id="notifications-devices-body"></tbody></table></div>
   </div>
   <div class="notifications-card notifications-history">
     <div class="panelhead"><div><h3>سجل الإشعارات</h3><span>الحملات الأخيرة وحالة وصولها إلى أجهزة التطبيق.</span></div></div>

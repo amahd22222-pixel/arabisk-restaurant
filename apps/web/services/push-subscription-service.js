@@ -9,7 +9,7 @@ class PushSubscriptionServiceError extends Error {
 }
 
 export function createPushSubscriptionService({ repository, cleanText, crypto, findCustomerByProfileToken }) {
-  const { pushSubscriptions } = repository;
+  const { pushSubscriptions, notificationDevices } = repository;
 
   function parseSubscription(body) {
     const endpoint = cleanText(body?.endpoint, 500);
@@ -20,12 +20,66 @@ export function createPushSubscriptionService({ repository, cleanText, crypto, f
     return { endpoint, p256dh, auth };
   }
 
+  async function registerDevice(body = {}) {
+    const clientId = cleanText(body?.clientId, 100);
+    if (!clientId) throw new PushSubscriptionServiceError('clientId is required.', 400);
+    const profileToken = cleanText(body?.profileToken, 300);
+    const linkedCustomer = profileToken && typeof findCustomerByProfileToken === 'function'
+      ? findCustomerByProfileToken(profileToken)
+      : null;
+    const now = new Date().toISOString();
+    const existing = notificationDevices.find(item => item.clientId === clientId);
+    const deviceData = {
+      platform: cleanText(body?.platform, 80) || 'unknown',
+      userAgent: cleanText(body?.userAgent, 240),
+      standalone: body?.standalone !== false,
+      customerId: linkedCustomer?.id || ''
+    };
+
+    if (existing) {
+      existing.platform = deviceData.platform || existing.platform;
+      existing.userAgent = deviceData.userAgent || existing.userAgent;
+      existing.standalone = deviceData.standalone;
+      if (deviceData.customerId) existing.customerId = deviceData.customerId;
+      existing.lastSeenAt = now;
+      existing.status = 'installed';
+      existing.uninstalledAt = '';
+      await notificationDevices.save();
+      const related = pushSubscriptions.filter(item => item.clientId === clientId);
+      for (const subscription of related) {
+        subscription.deviceStatus = 'installed';
+        if (subscription.deliveryStatus === 'uninstalled') subscription.deliveryStatus = 'active';
+      }
+      if (related.length) await pushSubscriptions.save();
+      return { id: existing.id, registered: true };
+    }
+
+    const device = {
+      id: crypto.randomUUID(),
+      clientId,
+      ...deviceData,
+      status: 'installed',
+      installedAt: now,
+      lastSeenAt: now,
+      uninstalledAt: ''
+    };
+    notificationDevices.add(device);
+    try {
+      await notificationDevices.save();
+    } catch (error) {
+      notificationDevices.removeById(device.id);
+      throw error;
+    }
+    return { id: device.id, registered: true };
+  }
+
   async function saveSubscription(body) {
     const parsed = parseSubscription(body);
     if (!parsed) {
       throw new PushSubscriptionServiceError('A valid push subscription (endpoint and keys) is required.');
     }
     const contextTag = cleanText(body?.contextTag, 40);
+    const clientId = cleanText(body?.clientId, 100);
     const profileToken = cleanText(body?.profileToken, 300);
     const linkedCustomer = profileToken && typeof findCustomerByProfileToken === 'function'
       ? findCustomerByProfileToken(profileToken)
@@ -40,7 +94,11 @@ export function createPushSubscriptionService({ repository, cleanText, crypto, f
       existing.auth = parsed.auth;
       existing.updatedAt = now;
       if (contextTag) existing.contextTag = contextTag;
+      if (clientId) existing.clientId = clientId;
       if (customerId) existing.customerId = customerId;
+      existing.deviceStatus = 'installed';
+      existing.deliveryStatus = 'active';
+      existing.lastDeliveryError = '';
       try {
         await pushSubscriptions.save();
       } catch (error) {
@@ -60,7 +118,12 @@ export function createPushSubscriptionService({ repository, cleanText, crypto, f
       p256dh: parsed.p256dh,
       auth: parsed.auth,
       contextTag,
+      clientId,
       customerId,
+      deviceStatus: 'installed',
+      deliveryStatus: 'active',
+      lastDeliveryAt: '',
+      lastDeliveryError: '',
       createdAt: now,
       updatedAt: now
     };
@@ -83,20 +146,15 @@ export function createPushSubscriptionService({ repository, cleanText, crypto, f
     const existing = pushSubscriptions.find(item => item.endpoint === endpoint);
     if (!existing) return { subscribed: false };
 
-    pushSubscriptions.removeById(existing.id);
-    try {
-      await pushSubscriptions.save();
-    } catch (error) {
-      pushSubscriptions.add(existing);
-      throw error;
-    }
-
-    return { subscribed: false };
+    existing.deliveryStatus = 'unsubscribed';
+    existing.updatedAt = new Date().toISOString();
+    await pushSubscriptions.save();
+    return { subscribed: false, preserved: true };
   }
 
   function listSubscriptions() {
     return pushSubscriptions.all();
   }
 
-  return { saveSubscription, removeSubscription, listSubscriptions };
+  return { registerDevice, saveSubscription, removeSubscription, listSubscriptions };
 }

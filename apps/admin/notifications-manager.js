@@ -4,7 +4,8 @@ const $ = (selector) => document.querySelector(selector);
 
 const state = {
   status: null,
-  campaigns: []
+  campaigns: [],
+  devices: []
 };
 
 const templates = {
@@ -68,6 +69,7 @@ function renderStatus() {
     statusNode.className = s.configured ? 'notification-status ready' : 'notification-status warning';
   }
   $('#notifications-subscribers') && ($('#notifications-subscribers').textContent = Number(s.subscribers || 0).toLocaleString('ar-AE'));
+  $('#notifications-devices') && ($('#notifications-devices').textContent = Number(s.installedDevices || 0).toLocaleString('ar-AE'));
   $('#notifications-campaigns') && ($('#notifications-campaigns').textContent = Number(s.campaigns || 0).toLocaleString('ar-AE'));
   const delivered = state.campaigns.reduce((sum, item) => sum + Number(item.stats?.delivered || 0), 0);
   $('#notifications-delivered') && ($('#notifications-delivered').textContent = delivered.toLocaleString('ar-AE'));
@@ -89,6 +91,30 @@ function renderPreview() {
   $('#notification-preview-title') && ($('#notification-preview-title').textContent = title);
   $('#notification-preview-body') && ($('#notification-preview-body').textContent = body);
   $('#notification-preview-url') && ($('#notification-preview-url').textContent = url);
+}
+
+function renderDevices() {
+  const body = $('#notifications-devices-body');
+  if (!body) return;
+  body.innerHTML = state.devices.map(device => {
+    const notification = device.subscribed
+      ? '<span class="status on">مشترك</span>'
+      : '<span class="status pending">غير مفعّل</span>';
+    const stateLabel = device.status === 'installed'
+      ? '<span class="status on">مثبت</span>'
+      : '<span class="status off">تم إلغاء التثبيت</span>';
+    const action = device.status === 'installed'
+      ? '<button class="small-action danger" type="button" data-uninstall-device="' + escapeHtml(device.id) + '">تسجيل إلغاء التثبيت</button>'
+      : '<span class="muted">مؤرشف</span>';
+    return '<tr>' +
+      '<td><strong>' + escapeHtml(device.platform || 'جهاز') + '</strong><small>' + (device.standalone ? 'تطبيق مثبت' : 'ويب') + '</small></td>' +
+      '<td>' + stateLabel + '</td>' +
+      '<td>' + notification + '</td>' +
+      '<td>' + escapeHtml(formatDate(device.installedAt)) + '</td>' +
+      '<td>' + escapeHtml(formatDate(device.lastSeenAt)) + '</td>' +
+      '<td class="actions">' + action + '</td>' +
+      '</tr>';
+  }).join('') || '<tr><td colspan="6" class="empty">لا توجد أجهزة مسجلة.</td></tr>';
 }
 
 function renderCampaigns() {
@@ -116,7 +142,9 @@ async function load() {
   const data = await request('/api/notifications');
   state.status = data.status || {};
   state.campaigns = Array.isArray(data.campaigns) ? data.campaigns : [];
+  state.devices = Array.isArray(data.devices) ? data.devices : [];
   renderStatus();
+  renderDevices();
   renderCampaigns();
   const note = $('#notifications-state');
   if (note) {
@@ -215,6 +243,20 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#notifications-feedback').className = 'error';
   }));
   $('#notification-template')?.addEventListener('change', (event) => applyTemplate(event.target.value));
+  $('#notifications-devices-body')?.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-uninstall-device]');
+    if (!button) return;
+    if (!window.confirm('تسجيل هذا الجهاز كمُلغى التثبيت؟ سيبقى محفوظًا في السجل ولن يتم حذف بياناته.')) return;
+    button.disabled = true;
+    try {
+      await request('/api/notifications/devices/' + encodeURIComponent(button.dataset.uninstallDevice) + '/uninstall', { method: 'POST' });
+      await load();
+    } catch (error) {
+      $('#notifications-feedback').textContent = error.message;
+      $('#notifications-feedback').className = 'error';
+      button.disabled = false;
+    }
+  });
   $('#notifications-history-body')?.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-cancel-notification]');
     if (!button) return;

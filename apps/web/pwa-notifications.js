@@ -1,5 +1,6 @@
 const DISMISS_KEY = 'ARABISK_PUSH_PERMISSION_DISMISSED_AT';
 const DISMISS_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const CLIENT_ID_KEY = 'ARABISK_PWA_CLIENT_ID';
 
 function isStandaloneMode() {
   return window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -21,6 +22,42 @@ async function getRegistration() {
     navigator.serviceWorker.ready;
 }
 
+function getClientId() {
+  try {
+    let value = localStorage.getItem(CLIENT_ID_KEY);
+    if (!value) {
+      value = globalThis.crypto?.randomUUID?.() || ('pwa-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+      localStorage.setItem(CLIENT_ID_KEY, value);
+    }
+    return value.slice(0, 100);
+  } catch {
+    return '';
+  }
+}
+
+async function registerInstalledDevice() {
+  if (!isStandaloneMode()) return false;
+  const clientId = getClientId();
+  if (!clientId) return false;
+  try {
+    const response = await fetch('/api/push/device', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId,
+        platform: navigator.platform || 'unknown',
+        userAgent: navigator.userAgent || '',
+        standalone: true,
+        profileToken: window.ARABISK_PROFILE?.getToken?.() || ''
+      }),
+      cache: 'no-store'
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function syncSubscription(subscription) {
   const response = await fetch('/api/push/subscribe', {
     method: 'POST',
@@ -29,6 +66,7 @@ async function syncSubscription(subscription) {
       endpoint: subscription.endpoint,
       keys: subscription.toJSON().keys,
       contextTag: 'installed-pwa',
+      clientId: getClientId(),
       profileToken: window.ARABISK_PROFILE?.getToken?.() || ''
     }),
     cache: 'no-store'
@@ -109,6 +147,8 @@ function mountPermissionPrompt() {
 }
 
 async function bootstrapPush() {
+  if (!isStandaloneMode()) return;
+  await registerInstalledDevice();
   if (!supportsPush()) return;
   if (!window.ARABISK_PROFILE?.getToken?.()) return;
   try {

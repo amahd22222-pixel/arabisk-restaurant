@@ -42,6 +42,7 @@ export function createNotificationService({
   writeJson,
   storageReady,
   pushSubscriptionsRepository,
+  notificationDevicesRepository,
   vapidPrivateKey,
   vapidPublicKey,
   vapidSubject
@@ -71,8 +72,58 @@ export function createNotificationService({
     }
   };
 
-  const installedSubscriptions = () =>
-    pushSubscriptionsRepository.all().filter(item => item?.contextTag === 'installed-pwa');
+  const installedDevices = () =>
+    notificationDevicesRepository.all().filter(item => item?.status === 'installed');
+
+  const installedSubscriptions = () => {
+    const devices = new Map(notificationDevicesRepository.all().map(item => [item.clientId, item]));
+    return pushSubscriptionsRepository.all().filter(item => {
+      if (item?.contextTag !== 'installed-pwa') return false;
+      if (item?.deviceStatus === 'uninstalled') return false;
+      if (item?.deliveryStatus === 'unsubscribed' || item?.deliveryStatus === 'unreachable') return false;
+      const device = item?.clientId ? devices.get(item.clientId) : null;
+      return !device || device.status === 'installed';
+    });
+  };
+
+  const listDevices = () => {
+    const subscriptions = pushSubscriptionsRepository.all();
+    return installedDevices().concat(
+      notificationDevicesRepository.all().filter(item => item?.status === 'uninstalled')
+    ).map(item => {
+      const related = subscriptions.find(subscription => subscription.clientId === item.clientId && subscription.contextTag === 'installed-pwa');
+      return {
+        id: item.id,
+        platform: item.platform || 'unknown',
+        standalone: item.standalone !== false,
+        status: item.status || 'installed',
+        customerId: item.customerId || '',
+        installedAt: item.installedAt || '',
+        lastSeenAt: item.lastSeenAt || '',
+        uninstalledAt: item.uninstalledAt || '',
+        notificationStatus: related?.deliveryStatus || 'not-enabled',
+        subscribed: Boolean(related && related.deliveryStatus === 'active')
+      };
+    }).sort((a,b) => String(b.lastSeenAt || b.installedAt).localeCompare(String(a.lastSeenAt || a.installedAt)));
+  };
+
+  const markDeviceUninstalled = async (id) => {
+    const device = notificationDevicesRepository.find(item => item.id === clean(id, 100));
+    if (!device) throw new NotificationServiceError('الجهاز غير موجود.', 404);
+    const now = nowIso();
+    device.status = 'uninstalled';
+    device.uninstalledAt = now;
+    device.lastSeenAt = device.lastSeenAt || device.installedAt || now;
+    const related = pushSubscriptionsRepository.all().filter(item => item.clientId === device.clientId);
+    for (const subscription of related) {
+      subscription.deviceStatus = 'uninstalled';
+      subscription.deliveryStatus = 'uninstalled';
+      subscription.updatedAt = now;
+    }
+    await notificationDevicesRepository.save();
+    if (related.length) await pushSubscriptionsRepository.save();
+    return { id: device.id, status: device.status, uninstalledAt: device.uninstalledAt };
+  };
 
   const publicList = () => state.campaigns.slice().reverse().map(item => ({
     id: item.id,
@@ -127,11 +178,19 @@ export function createNotificationService({
           });
           if (result.ok) {
             stats.delivered += 1;
+            subscription.deliveryStatus = 'active';
+            subscription.lastDeliveryAt = nowIso();
+            subscription.lastDeliveryError = '';
+            subscription.updatedAt = nowIso();
           } else if (result.statusCode === 404 || result.statusCode === 410) {
-            stats.removed += 1;
-            pushSubscriptionsRepository.removeById(subscription.id);
+            stats.failed += 1;
+            subscription.deliveryStatus = 'unreachable';
+            subscription.lastDeliveryError = `Push provider returned ${result.statusCode}; device kept in registry until admin marks it uninstalled.`;
+            subscription.updatedAt = nowIso();
           } else {
             stats.failed += 1;
+            subscription.lastDeliveryError = `Push provider returned ${result.statusCode || 'unknown'}.`;
+            subscription.updatedAt = nowIso();
           }
         } catch {
           stats.failed += 1;
@@ -144,7 +203,7 @@ export function createNotificationService({
     campaign.status = stats.delivered > 0 && stats.failed === 0 ? 'sent' : stats.delivered > 0 ? 'partial' : 'failed';
     campaign.error = stats.failed > 0 ? 'تعذر تسليم الإشعار إلى بعض الأجهزة.' : '';
     campaign.completedAt = nowIso();
-    if (stats.removed > 0) await pushSubscriptionsRepository.save();
+    await pushSubscriptionsRepository.save();
     await persist();
     return campaign;
   }
@@ -252,11 +311,14 @@ export function createNotificationService({
       configured: push.configured,
       audience: 'installed-pwa',
       subscribers: installedSubscriptions().length,
+      installedDevices: installedDevices().length,
       campaigns: state.campaigns.length,
       lastPersistAt,
       lastPersistOk
     }),
     list: () => publicList(),
+    listDevices,
+    markDeviceUninstalled,
     persistenceStatus: () => ({ lastPersistAt, lastPersistOk }),
     flushPersistence: persist
   };

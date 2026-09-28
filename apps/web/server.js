@@ -52,7 +52,7 @@ const dist = path.join(__dirname, 'dist');
 configureHttpSecurity(app, { allowedCorsOrigins, isProductionRuntime });
 app.use(express.json({limit:'1mb',strict:true}));
 
-const orders=[]; const customers=[]; const reservations=[]; const pushSubscriptions=[];
+const orders=[]; const customers=[]; const reservations=[]; const pushSubscriptions=[]; const notificationDevices=[];
 const reservationRateLimit=createRateLimiter({
   windowMs:10*60*1000,
   limit:8,
@@ -134,10 +134,11 @@ const stateStore = createStateStore({
   customers,
   orders,
   reservations,
-  pushSubscriptions
+  pushSubscriptions,
+  notificationDevices
 });
 const { persist: persistState, flush: flushPersistState } = stateStore;
-const stateRepository = createStateRepository({ products, categories, orders, customers, reservations, pushSubscriptions, persist: persistState });
+const stateRepository = createStateRepository({ products, categories, orders, customers, reservations, pushSubscriptions, notificationDevices, persist: persistState });
 
 const smartMenu = createSmartMenuService({
   repository: stateRepository,
@@ -285,6 +286,7 @@ const notificationService = createNotificationService({
   writeJson,
   storageReady,
   pushSubscriptionsRepository: stateRepository.pushSubscriptions,
+  notificationDevicesRepository: stateRepository.notificationDevices,
   vapidPrivateKey: VAPID_PRIVATE_KEY,
   vapidPublicKey: VAPID_PUBLIC_KEY,
   vapidSubject: VAPID_SUBJECT
@@ -324,7 +326,7 @@ await memoryService.restore();
 await revenue.restoreRevenue();
 await promotionService.restore();
 await notificationService.restore();
-console.log(`ARABISK notification bootstrap — configured=${notificationService.getStatus().configured} installedSubscribers=${notificationService.getStatus().subscribers}`);
+console.log(`ARABISK notification bootstrap — configured=${notificationService.getStatus().configured} installedDevices=${notificationService.getStatus().installedDevices} installedSubscribers=${notificationService.getStatus().subscribers}`);
 console.log(`ARABISK Shams bootstrap — configured=${shamsService.status().configured} provider=${shamsService.status().provider} model=${shamsService.status().model}`);
 if(dbReady){
   persistState();
