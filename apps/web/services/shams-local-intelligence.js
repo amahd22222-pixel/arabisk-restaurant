@@ -351,6 +351,11 @@ export function pickSmartLocalRecommendations(products, memory = {}, message = '
       .map(item => String(item?.id || '').trim())
       .filter(Boolean)
   );
+  const avoidIds = new Set(
+    (Array.isArray(memory?.avoidProducts) ? memory.avoidProducts : [])
+      .map(item => String(item?.id || '').trim())
+      .filter(Boolean)
+  );
   const cartIds = new Set(
     (Array.isArray(cart) ? cart : [])
       .map(item => String(item?.id || item?.productId || '').trim())
@@ -386,6 +391,7 @@ export function pickSmartLocalRecommendations(products, memory = {}, message = '
     }
 
     if (recentIds.has(String(product.id))) score -= 1;
+    if (avoidIds.has(String(product.id))) score -= 25;
     if (cartIds.has(String(product.id))) score -= 8;
 
     return { product, score };
