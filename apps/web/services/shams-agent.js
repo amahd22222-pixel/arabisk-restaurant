@@ -1026,7 +1026,8 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       'استخدمي السياق السابق لفهم عبارات مثل: ده، دي، هيدا، هيدي، هالطبق، التاني، الأول، اللي فات، كمان واحد، واللي باخده دايمًا.',
       'استخدمي رحلة العميل عندما تكون مفيدة مباشرة: الحجز القادم، العودة، المفضلات، أو إعادة التفاعل. لا تعرضي للعميل تفاصيل داخلية مثل قيمة الإنفاق أو عدد الأجهزة.',
       'إذا كانت الرسالة حجزًا أو طلبًا ناقصًا، استخرجي كل الحقول الموجودة فقط في workflow ولا تخترعي أي حقل.',
-      'اللهجة المكتشفة مبدئيًا: ' + dialectLocale(context.message),
+      'اللهجة الصوتية المفضلة من التطبيق: ' + clean(context.dialect, 20),
+      'اللهجة المكتشفة من النص: ' + dialectLocale(context.message),
       'الوقت المرجعي للمطعم: ' + JSON.stringify(getUaeTimeContext()),
       'عند تفسير اليوم/غدًا/بعد غد أو موعد نسبي، استخدمي هذا الوقت المحلي لأبوظبي فقط، ولا تعتمدي على توقيت السيرفر.',
       'النص المطبع: ' + context.normalizedMessage,
@@ -1099,7 +1100,9 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       history: sanitizeConversationHistory(input.history),
       memory,
       journey: buildJourneyContext(customerContext, memory),
-      dialect: detectDialect(message),
+      dialect: ['egyptian', 'syrian', 'lebanese', 'gulf'].includes(clean(input.dialect, 20))
+        ? clean(input.dialect, 20)
+        : detectDialect(message),
       normalizedMessage: normalizeDialectText(message),
       live: buildLiveContext({
         page: input.page,
