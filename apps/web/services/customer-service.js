@@ -1,3 +1,5 @@
+import { normalizePhone } from '../utils/phone.js';
+
 const TOKEN_BYTES = 32;
 const MAX_SESSIONS_PER_CUSTOMER = 6;
 
@@ -9,15 +11,6 @@ function createProfileToken(crypto) {
   return crypto.randomBytes(TOKEN_BYTES).toString('base64url');
 }
 
-function normalizePhone(value) {
-  const raw = String(value ?? '').trim();
-  const digits = raw.replace(/\D/g, '');
-  if (/^05\d{8}$/.test(digits)) return '+971' + digits.slice(1);
-  if (/^9715\d{8}$/.test(digits)) return '+' + digits;
-  if (digits.length >= 7 && digits.length <= 15) return '+' + digits;
-  return '';
-}
-
 function sessionForCustomer(customer, tokenHash) {
   return Array.isArray(customer.profileSessions)
     ? customer.profileSessions.find(session => session?.tokenHash === tokenHash)
@@ -26,6 +19,19 @@ function sessionForCustomer(customer, tokenHash) {
 
 export function createCustomerService({ repository, cleanText, crypto }) {
   const { customers } = repository;
+
+  function lifecycleFor(customer) {
+    const hasOrders = Number(customer?.orderCount || 0) > 0;
+    const hasReservations = Number(customer?.reservationCount || 0) > 0;
+    if (!hasOrders && !hasReservations) return { key: 'new', label: 'جديد' };
+    const last = Date.parse(customer?.lastActivityAt || customer?.lastOrderAt || customer?.lastReservationAt || '');
+    if (!Number.isFinite(last)) return { key: 'active', label: 'نشط' };
+    const ageDays = Math.max(0, Math.floor((Date.now() - last) / 86400000));
+    if (ageDays <= 30) return { key: 'active', label: 'نشط' };
+    if (ageDays <= 90) return { key: 'dormant', label: 'خامل' };
+    return { key: 'lapsed', label: 'غير نشط' };
+  }
+
 
   function listCustomers() {
     return customers.all().map(customer => ({
@@ -36,6 +42,11 @@ export function createCustomerService({ repository, cleanText, crypto }) {
       lastOrderAt: customer.lastOrderAt || '',
       reservationCount: Number(customer.reservationCount || 0),
       lastReservationAt: customer.lastReservationAt || '',
+      totalOrderValue: Number(customer.totalOrderValue || 0),
+      firstSeenAt: customer.firstSeenAt || customer.appProfileCreatedAt || customer.createdAt || '',
+      lastActivityAt: customer.lastActivityAt || customer.lastOrderAt || customer.lastReservationAt || '',
+      lifecycleKey: lifecycleFor(customer).key,
+      lifecycleLabel: lifecycleFor(customer).label,
       phoneVerified: customer.phoneVerified === true,
       appMember: customer.appMember === true,
       privacyConsentAt: customer.privacyConsentAt || '',
@@ -101,6 +112,9 @@ export function createCustomerService({ repository, cleanText, crypto }) {
         lastOrderAt: '',
         reservationCount: 0,
         lastReservationAt: '',
+        totalOrderValue: 0,
+        firstSeenAt: now,
+        lastActivityAt: now,
         phoneVerified: false,
         appMember: true,
         privacyConsentAt: now,
@@ -126,6 +140,8 @@ export function createCustomerService({ repository, cleanText, crypto }) {
       customer.phoneVerified = customer.phoneVerified === true;
       customer.privacyConsentAt = customer.privacyConsentAt || now;
       customer.appProfileUpdatedAt = now;
+      customer.lastActivityAt = now;
+      customer.firstSeenAt = customer.firstSeenAt || customer.appProfileCreatedAt || now;
       customer.profileSessions = (customer.profileSessions || []).slice(-MAX_SESSIONS_PER_CUSTOMER);
     }
 
@@ -150,6 +166,8 @@ export function createCustomerService({ repository, cleanText, crypto }) {
     const tokenHash = hashToken(token, crypto);
     const session = sessionForCustomer(customer, tokenHash);
     if (session) session.lastSeenAt = new Date().toISOString();
+    customer.lastActivityAt = new Date().toISOString();
+    void customers.save().catch(() => {});
     return publicProfile(customer, token);
   }
 
