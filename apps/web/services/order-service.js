@@ -1,3 +1,5 @@
+import { normalizePhone } from '../utils/phone.js';
+
 const ORDER_STATUS_TRANSITIONS = {
   pending: new Set(['confirmed', 'cancelled']),
   confirmed: new Set(['preparing', 'cancelled']),
@@ -44,15 +46,18 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
 
       if (nextStatus === 'completed') {
         order.completedAt = order.completedAt || now;
-        if (order.orderType === 'pickup' && order.phone) {
-          const customer = customers.findByPhone(order.phone);
-          if (customer) {
-            changedCustomer = customer;
-            beforeCustomer = structuredClone(customer);
-            customer.name = cleanText(order.name, 80);
-            customer.orderCount = Number(customer.orderCount || 0) + 1;
-            customer.lastOrderAt = order.completedAt;
-          }
+        const customer = order.customerId
+          ? customers.findById(order.customerId)
+          : (order.phone ? customers.findByPhone(order.phone) : null);
+        if (customer) {
+          changedCustomer = customer;
+          beforeCustomer = structuredClone(customer);
+          if (order.orderType === 'pickup') customer.name = cleanText(order.name, 80) || customer.name;
+          customer.orderCount = Number(customer.orderCount || 0) + 1;
+          customer.totalOrderValue = Math.round((Number(customer.totalOrderValue || 0) + Number(order.total || 0)) * 100) / 100;
+          customer.lastOrderAt = order.completedAt;
+          customer.lastActivityAt = order.completedAt;
+          customer.firstSeenAt = customer.firstSeenAt || order.createdAt || order.completedAt;
         }
       }
     }
@@ -71,7 +76,7 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
     invalidateSmartSnapshot();
 
     if (order.status === 'completed' && beforeOrder.status !== 'completed') {
-      const completedCustomerId = changedCustomer?.id || '';
+      const completedCustomerId = changedCustomer?.id || order.customerId || '';
       revenue.recordEvent({
         eventName: 'order_completed',
         sessionId: cleanText(order.sessionId, 100),
@@ -89,7 +94,7 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
     const orderType = ['dine_in', 'pickup'].includes(body.orderType) ? body.orderType : 'dine_in';
     const tableNumber = orderType === 'dine_in' ? cleanText(body.tableNumber, 30) : '';
     const name = cleanText(body.name, 80);
-    const phone = cleanText(body.phone, 40);
+    const phone = normalizePhone(body.phone);
     const notes = cleanText(body.notes, 300);
     const customerId = cleanText(body.customerId, 80);
     const recoveryToken = cleanText(body.recoveryToken, 80);
@@ -163,20 +168,42 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
     let existingCustomer = null;
     let beforeCustomer = null;
 
-    if (orderType === 'pickup' && phone) {
-      existingCustomer = customerId ? customers.findById(customerId) : null;
-      if (existingCustomer && existingCustomer.phone && existingCustomer.phone !== phone) existingCustomer = null;
-      if (!existingCustomer) existingCustomer = customers.findByPhone(phone);
+    const requestedCustomer = customerId ? customers.findById(customerId) : null;
+    if (requestedCustomer && orderType === 'pickup' && requestedCustomer.phone && requestedCustomer.phone !== phone) {
+      throw new OrderServiceError('Customer phone does not match the selected customer profile.', 409);
+    }
+
+    if (requestedCustomer) {
+      existingCustomer = requestedCustomer;
+      orderCustomerId = existingCustomer.id;
+      order.customerId = orderCustomerId;
+      beforeCustomer = structuredClone(existingCustomer);
+      if (orderType === 'pickup' && name) existingCustomer.name = name;
+      existingCustomer.lastActivityAt = now;
+    } else if (orderType === 'pickup' && phone) {
+      existingCustomer = customers.findByPhone(phone);
       if (existingCustomer) {
         orderCustomerId = existingCustomer.id;
         order.customerId = orderCustomerId;
         beforeCustomer = structuredClone(existingCustomer);
-        existingCustomer.name = name;
+        if (name) existingCustomer.name = name;
+        existingCustomer.lastActivityAt = now;
       } else {
         orderCustomerId = crypto.randomUUID();
-        customers.add({ id: orderCustomerId, name, phone, orderCount: 0, lastOrderAt: '' });
+        customers.add({
+          id: orderCustomerId,
+          name,
+          phone,
+          orderCount: 0,
+          lastOrderAt: '',
+          reservationCount: 0,
+          lastReservationAt: '',
+          totalOrderValue: 0,
+          firstSeenAt: now,
+          lastActivityAt: now
+        });
+        order.customerId = orderCustomerId;
       }
-      order.customerId = orderCustomerId;
     }
 
     orders.add(order);
