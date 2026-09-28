@@ -11,7 +11,15 @@ function registerStandalonePwa() {
 
   navigator.serviceWorker.addEventListener('controllerchange', refreshOnce, { once: true });
 
+  const checkForUpdate = () => {
+    navigator.serviceWorker.getRegistration('/').then((registration) => {
+      if (registration) return registration.update();
+    }).catch(() => {});
+  };
+
   window.addEventListener('load', () => {
+    checkForUpdate();
+    window.setTimeout(checkForUpdate, 10000);
     navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
       .then((registration) => {
         registration.update().catch(() => {});
@@ -25,6 +33,12 @@ function registerStandalonePwa() {
         });
       })
       .catch((error) => console.error('ARABISK PWA registration error:', error));
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) checkForUpdate();
+  });
+  window.addEventListener('pageshow', checkForUpdate);
   });
 }
 
