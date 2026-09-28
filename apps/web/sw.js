@@ -1,21 +1,32 @@
-const CACHE_VERSION = 'arabisk-pwa-v26';
+const CACHE_VERSION = 'arabisk-pwa-v27';
 const APP_SHELL = [
   '/',
   '/index.html',
+  '/menu',
+  '/reservation',
+  '/cart',
+  '/events',
+  '/offers',
+  '/memories',
+  '/track-order',
   '/home-app.css',
   '/app-pages.css',
   '/app.js',
   '/app-header.js',
   '/home-shell.js',
+  '/events.js?v=20260918.1',
+  '/offers-page.js',
+  '/cart.js?v=20260920.8',
+  '/cart-page.js',
+  '/smart-menu.js?v=20260920.10',
+  '/product-page.js?v=20260920.9',
+  '/event-detail.js?v=20260919.2',
   '/pwa-ui.js',
   '/pwa-register.js',
   '/pwa-profile.js',
   '/pwa-notifications.js',
-  '/shams.js',
-  '/shams.css',
   '/mobile-nav.css',
   '/mobile-nav.js',
-  '/studio-runtime.js',
   '/manifest.json',
   '/offline.html',
   '/icons/icon.svg',
@@ -23,8 +34,21 @@ const APP_SHELL = [
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/maskable-512.png',
-  '/icons/apple-touch-icon.png'
+  '/icons/apple-touch-icon.png',
+  '/api/categories',
+  '/api/products',
+  '/api/experiences',
+  '/api/promotions/today',
+  '/api/promotions/install'
 ];
+
+const PUBLIC_GET_APIS = new Set([
+  '/api/categories',
+  '/api/products',
+  '/api/experiences',
+  '/api/promotions/today',
+  '/api/promotions/install'
+]);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -50,8 +74,7 @@ function isSameOrigin(request) {
 
 function shouldBypass(request) {
   const url = new URL(request.url);
-  return url.pathname.startsWith('/api/') ||
-    url.pathname.startsWith('/proxy/') ||
+  return url.pathname.startsWith('/proxy/') ||
     url.pathname.startsWith('/auth/');
 }
 
@@ -65,16 +88,42 @@ function shouldNetworkFirst(request) {
     pathname === '/sw.js';
 }
 
+function shouldCachePublicApi(request) {
+  const url = new URL(request.url);
+  return request.method === 'GET' && PUBLIC_GET_APIS.has(url.pathname);
+}
+
+async function cacheResponse(request, response) {
+  if (!response?.ok || response.type !== 'basic') return response;
+  try {
+    const copy = response.clone();
+    const cache = await caches.open(CACHE_VERSION);
+    await cache.put(request, copy);
+  } catch {}
+  return response;
+}
+
 async function networkFirst(request) {
   try {
     const response = await fetch(request, { cache: 'no-store' });
-    if (response.ok && response.type === 'basic') {
-      const copy = response.clone();
-      caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy)).catch(() => {});
-    }
-    return response;
+    return cacheResponse(request, response);
   } catch {
     return caches.match(request);
+  }
+}
+
+async function publicApiFirst(request) {
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    if (response.ok) await cacheResponse(request, response);
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    return new Response(JSON.stringify({ message: 'offline', offline: true }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
+    });
   }
 }
 
@@ -82,19 +131,19 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET' || !isSameOrigin(request) || shouldBypass(request)) return;
 
+  if (shouldCachePublicApi(request)) {
+    event.respondWith(publicApiFirst(request));
+    return;
+  }
+
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request, { cache: 'no-store' })
-        .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy)).catch(() => {});
-          }
-          return response;
-        })
+        .then((response) => cacheResponse(request, response))
         .catch(async () => {
           const cached = await caches.match(request);
-          return cached || caches.match('/index.html') || caches.match('/offline.html');
+          return cached || caches.match(new URL(request.url).pathname) ||
+            caches.match('/index.html') || caches.match('/offline.html');
         })
     );
     return;
@@ -108,13 +157,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
-      return fetch(request).then((response) => {
-        if (response.ok && response.type === 'basic') {
-          const copy = response.clone();
-          caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy)).catch(() => {});
-        }
-        return response;
-      });
+      return fetch(request).then((response) => cacheResponse(request, response));
     })
   );
 });
