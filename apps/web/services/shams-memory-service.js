@@ -8,6 +8,70 @@ const MAX_RECENT_PRODUCTS = 8;
 
 const clean = (value, max = 200) => String(value ?? '').trim().slice(0, max);
 
+const LEARNABLE_PREFERENCES = Object.freeze([
+  'spicy',
+  'vegetarian',
+  'taste',
+  'weight',
+  'category',
+  'protein'
+]);
+const STABLE_PREFERENCE_THRESHOLD = 2;
+
+function normalizePreferenceEvidence(value) {
+  const input = value && typeof value === 'object' ? value : {};
+  return Object.fromEntries(
+    LEARNABLE_PREFERENCES.map(field => {
+      const rows = Array.isArray(input[field]) ? input[field] : [];
+      const normalized = rows
+        .map(row => ({
+          value: clean(row?.value, 80),
+          count: Math.max(0, Math.min(20, Math.round(Number(row?.count || 0)))),
+          lastSeenAt: clean(row?.lastSeenAt, 40)
+        }))
+        .filter(row => row.value && row.count > 0)
+        .slice(0, 6);
+      return [field, normalized];
+    })
+  );
+}
+
+function learnPreferences(currentPreferences, evidence, detected) {
+  const nextEvidence = normalizePreferenceEvidence(evidence);
+  const now = new Date().toISOString();
+
+  for (const field of LEARNABLE_PREFERENCES) {
+    if (!(field in detected) || detected[field] === null || detected[field] === undefined || detected[field] === '') continue;
+    const value = String(detected[field]);
+    const rows = nextEvidence[field];
+    const existing = rows.find(row => row.value === value);
+    if (existing) existing.count = Math.min(20, existing.count + 1);
+    else rows.unshift({ value, count: 1, lastSeenAt: now });
+    for (const row of rows) {
+      if (row.value === value) row.lastSeenAt = now;
+    }
+    rows.sort((a, b) => b.count - a.count || String(b.lastSeenAt).localeCompare(String(a.lastSeenAt)));
+  }
+
+  const learned = { ...currentPreferences };
+  const confidence = {};
+  for (const field of LEARNABLE_PREFERENCES) {
+    const top = nextEvidence[field]?.[0];
+    if (!top) continue;
+    confidence[field] = Math.min(1, top.count / STABLE_PREFERENCE_THRESHOLD);
+    if (top.count >= STABLE_PREFERENCE_THRESHOLD) {
+      if (field === 'spicy' || field === 'vegetarian') learned[field] = top.value === 'true';
+      else learned[field] = top.value;
+    }
+  }
+
+  return {
+    preferences: normalizePreferences(learned),
+    preferenceEvidence: nextEvidence,
+    preferenceConfidence: confidence
+  };
+}
+
 function redactForMemory(value, max = 700) {
   return clean(value, max)
     .replace(/(?:05\d{8}|9715\d{8}|\+\d[\d\s-]{7,16})/g, '[رقم هاتف مخفي]')
@@ -50,6 +114,10 @@ function normalizeMemory(raw, identity) {
     sessionId: customerScoped ? '' : clean(identity.id, 120),
     name: clean(source.name, 80),
     preferences: normalizePreferences(source.preferences),
+    preferenceEvidence: normalizePreferenceEvidence(source.preferenceEvidence),
+    preferenceConfidence: source.preferenceConfidence && typeof source.preferenceConfidence === 'object'
+      ? Object.fromEntries(Object.entries(source.preferenceConfidence).slice(0, 12).map(([key, value]) => [clean(key, 40), Math.max(0, Math.min(1, Number(value) || 0))]))
+      : {},
     recentTurns: Array.isArray(source.recentTurns)
       ? source.recentTurns
           .slice(-MAX_TURNS)
@@ -147,6 +215,10 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
 
     const current = await read(normalizedIdentity);
     const preferences = normalizePreferences({ ...current.preferences, ...(patch.preferences || {}) });
+    const preferenceEvidence = normalizePreferenceEvidence(patch.preferenceEvidence ?? current.preferenceEvidence);
+    const preferenceConfidence = patch.preferenceConfidence && typeof patch.preferenceConfidence === 'object'
+      ? patch.preferenceConfidence
+      : current.preferenceConfidence;
     const recentProducts = Array.isArray(patch.recentProducts)
       ? patch.recentProducts.slice(-MAX_RECENT_PRODUCTS)
       : current.recentProducts;
@@ -162,6 +234,8 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       sessionId: normalizedIdentity.kind === 'session' ? normalizedIdentity.id : '',
       name: clean(patch.name ?? current.name, 80),
       preferences,
+      preferenceEvidence,
+      preferenceConfidence,
       recentProducts,
       recentTurns: Array.isArray(patch.recentTurns) ? patch.recentTurns.slice(-MAX_TURNS) : current.recentTurns,
       lastIntent: clean(patch.lastIntent ?? current.lastIntent, 60),
@@ -210,7 +284,15 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
 
   async function rememberTurn(identity, { user, assistant, intent, products, journey, name } = {}) {
     const current = await read(identity);
-    const preferences = { ...current.preferences, ...detectPreferences(user) };
+    const detectedPreferences = detectPreferences(user);
+    const learned = learnPreferences(current.preferences, current.preferenceEvidence, detectedPreferences);
+    const preferences = {
+      ...current.preferences,
+      ...detectedPreferences,
+      ...Object.fromEntries(
+        Object.entries(learned.preferences).filter(([field]) => detectedPreferences[field] === undefined)
+      )
+    };
     const recentTurns = [
       ...current.recentTurns,
       ...(user ? [{ role: 'user', content: redactForMemory(user, 700) }] : []),
@@ -220,6 +302,8 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     return save(identity, {
       name: name || current.name,
       preferences,
+      preferenceEvidence: learned.preferenceEvidence,
+      preferenceConfidence: learned.preferenceConfidence,
       recentTurns,
       recentProducts: Array.isArray(products) ? products.slice(-MAX_RECENT_PRODUCTS) : current.recentProducts,
       lastIntent: intent || current.lastIntent,
@@ -227,5 +311,5 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     });
   }
 
-  return { read, save, rememberTurn, mergeSessionIntoCustomer, detectPreferences };
+  return { read, save, rememberTurn, mergeSessionIntoCustomer, detectPreferences, learnPreferences };
 }
