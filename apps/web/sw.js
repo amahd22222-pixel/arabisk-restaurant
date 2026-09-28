@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v27';
+const CACHE_VERSION = 'arabisk-pwa-v28';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -14,12 +14,13 @@ const APP_SHELL = [
   '/app.js',
   '/app-header.js',
   '/home-shell.js',
-  '/events.js?v=20260918.1',
-  '/offers-page.js',
+  '/cart.js',
   '/cart.js?v=20260920.8',
   '/cart-page.js',
   '/smart-menu.js?v=20260920.10',
   '/product-page.js?v=20260920.9',
+  '/events.js?v=20260918.1',
+  '/offers-page.js',
   '/event-detail.js?v=20260919.2',
   '/pwa-ui.js',
   '/pwa-register.js',
@@ -27,6 +28,9 @@ const APP_SHELL = [
   '/pwa-notifications.js',
   '/mobile-nav.css',
   '/mobile-nav.js',
+  '/studio-runtime.js',
+  '/shams.js',
+  '/shams.css',
   '/manifest.json',
   '/offline.html',
   '/icons/icon.svg',
