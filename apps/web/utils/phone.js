@@ -14,7 +14,6 @@ export function normalizePhone(value) {
 
   if (/^00966(5\d{8})$/.test(digits)) return '+966' + digits.slice(5);
   if (/^966(5\d{8})$/.test(digits)) return '+' + digits;
-  if (/^05\d{8}$/.test(digits)) return '+966' + digits.slice(1);
 
   if (/^00963(9\d{8})$/.test(digits)) return '+963' + digits.slice(5);
   if (/^963(9\d{8})$/.test(digits)) return '+' + digits;
