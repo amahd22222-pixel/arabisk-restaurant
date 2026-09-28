@@ -302,6 +302,51 @@ test('Shams ranks customer favorites using frequency plus recency', () => {
   assert.equal(context?.favoriteProducts?.[0]?.name, 'طبق حديث');
 });
  
+test('Customer experience context stays safe and actionable for the app', () => {
+  const customer = {
+    id: 'C-APP',
+    name: 'أحمد',
+    phone: '+971500000000',
+    createdAt: new Date().toISOString(),
+    appMember: true
+  };
+  const service = createCustomerRelationshipService({
+    repository: {
+      customers: {
+        all: () => [customer],
+        findById: id => String(id) === 'C-APP' ? customer : null
+      },
+      orders: [{
+        id: 'O-APP',
+        customerId: 'C-APP',
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+        items: [{
+          productId: 'P-APP',
+          nameAr: 'طبق العميل',
+          quantity: 2,
+          categoryId: 'main',
+          categoryNameAr: 'رئيسية'
+        }]
+      }],
+      reservations: [],
+      products: [{
+        id: 'P-APP',
+        categoryId: 'main',
+        categoryNameAr: 'رئيسية'
+      }],
+      notificationDevices: []
+    }
+  });
+
+  const context = service.appExperienceContext('C-APP');
+  assert.equal(context?.name, 'أحمد');
+  assert.equal(context?.favoriteProduct?.id, 'P-APP');
+  assert.equal(context?.action?.type, 'favorite');
+  assert.match(context?.action?.href || '', /\/menu\/main\/P-APP/);
+  assert.equal('phone' in context, false);
+});
+
 test('Shams customer context exposes journey signals without phone or spend telemetry', () => {
   const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const pad = value => String(value).padStart(2, '0');
