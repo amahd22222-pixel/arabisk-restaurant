@@ -114,6 +114,94 @@ test('Shams keeps returning-customer recommendations familiar but not repetitive
   assert.match(result.reply, /اكتشاف جديد|من نفس القسم/);
 });
 
+test('Shams remembers the exact workflow step that needs the next input', async () => {
+  let saved = null;
+  const memoryService = {
+    async read() {
+      return {
+        version: 1,
+        scope: 'session',
+        customerId: '',
+        sessionId: 'session-workflow',
+        name: 'أحمد',
+        preferences: {
+          budgetAed: null,
+          spicy: null,
+          vegetarian: null,
+          taste: null,
+          weight: null,
+          category: '',
+          protein: null,
+          favoriteCategories: [],
+          favoriteProducts: []
+        },
+        recentTurns: [],
+        recentProducts: [],
+        lastIntent: '',
+        pendingAction: null,
+        journey: { stage: '', nextBestAction: '', intent: '', step: '', slots: {} },
+        updatedAt: '',
+        expiresAt: Date.now() + 86400000
+      };
+    },
+    async rememberTurn(identity, patch) {
+      saved = { identity, patch };
+      return true;
+    },
+    async save() { return true; }
+  };
+
+  const workflowService = {
+    confirmation: () => null,
+    async handleReservation() {
+      return {
+        status: 'needs_input',
+        missingField: 'الوقت',
+        reply: 'حاضر. أحتاج الوقت أولاً.',
+        pending: { date: '2026-09-30', guests: 2 }
+      };
+    }
+  };
+
+  const agent = createShamsAgent({
+    repository: {
+      categories: { all: () => [] },
+      products: { all: () => [] }
+    },
+    memoryService,
+    workflowService,
+    requestModel: async () => JSON.stringify({
+      intent: 'reservation',
+      reply: '',
+      toolCalls: [],
+      memory: { budgetAed: null, spicy: null, vegetarian: null },
+      workflow: {
+        date: '',
+        time: '',
+        guests: null,
+        name: '',
+        phone: '',
+        eventSlug: '',
+        orderType: '',
+        tableNumber: ''
+      }
+    })
+  });
+
+  const result = await agent.handle({
+    message: 'عايز احجز',
+    sessionId: 'session-workflow',
+    customer: null,
+    customerContext: null,
+    history: [],
+    page: '/',
+    cart: []
+  });
+
+  assert.equal(result.intent, 'reservation');
+  assert.equal(saved?.patch?.journey?.step, 'awaiting_الوقت');
+});
+
 test('Shams local agent prioritizes a known favorite when customer asks for their usual choice', async () => {
   let saved = null;
   const memoryService = {
