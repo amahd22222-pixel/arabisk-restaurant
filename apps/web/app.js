@@ -31,6 +31,16 @@ const translations = {
 };
 
 let language = localStorage.getItem('ARABISK_LANG') === 'en' ? 'en' : 'ar';
+let reservationRequestFingerprint = '';
+let reservationIdempotencyKey = '';
+
+const createIdempotencyKey = () => {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return 'reservation-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+  }
+};
 
 function applyLanguage() {
   const dict = translations[language];
@@ -136,19 +146,25 @@ async function submitReservation(event) {
   button.disabled = true;
 
   try {
+    const payload = {
+      name:$('#reservation-name')?.value || '',
+      phone:$('#reservation-phone')?.value || '',
+      date:date?.value || '',
+      time:$('#reservation-time')?.value || '',
+      guests:Number($('#reservation-guests')?.value || 0),
+      notes:$('#reservation-notes')?.value || '',
+      eventSlug:new URLSearchParams(location.search).get('event') || '',
+      customerId:profileCustomerId()
+    };
+    const fingerprint = JSON.stringify(payload);
+    if (fingerprint !== reservationRequestFingerprint || !reservationIdempotencyKey) {
+      reservationRequestFingerprint = fingerprint;
+      reservationIdempotencyKey = createIdempotencyKey();
+    }
     const response = await fetch('/api/reservations', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        name:$('#reservation-name')?.value || '',
-        phone:$('#reservation-phone')?.value || '',
-        date:date?.value || '',
-        time:$('#reservation-time')?.value || '',
-        guests:Number($('#reservation-guests')?.value || 0),
-        notes:$('#reservation-notes')?.value || '',
-        eventSlug:new URLSearchParams(location.search).get('event') || '',
-        customerId:profileCustomerId()
-      })
+      body:JSON.stringify({...payload,idempotencyKey:reservationIdempotencyKey})
     });
 
     if (!response.ok) {
@@ -158,6 +174,8 @@ async function submitReservation(event) {
 
     message.textContent = dict.reservationSuccess;
     form.reset();
+    reservationRequestFingerprint = '';
+    reservationIdempotencyKey = '';
     if (date) date.min = localToday();
   } catch (error) {
     console.error('ARABISK reservation error:', error);

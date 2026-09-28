@@ -41,6 +41,16 @@ let promoQuote=null;
 try{promoCode=String(new URLSearchParams(location.search).get('promo')||sessionStorage.getItem(PROMO_STORAGE_KEY)||localStorage.getItem('ARABISK_INSTALL_REWARD_CODE')||'').trim().toUpperCase().slice(0,80)}catch{}
 let recoveryToken=new URLSearchParams(location.search).get('recover')||'';
 let recoveryRestorePromise=null;
+let pendingOrderFingerprint='';
+let pendingOrderIdempotencyKey='';
+
+const createOrderIdempotencyKey = () => {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return 'order-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+  }
+};
 const total=()=>cart.reduce((sum,item)=>sum+(Number(item.price)||0)*(Number(item.qty)||0),0);
 const count=()=>cart.reduce((sum,item)=>sum+(Number(item.qty)||0),0);
 const money=value=>'AED '+Number(value||0).toFixed(0);
@@ -122,11 +132,30 @@ async function submitOrder(event){
   persistCheckout();submit.disabled=true;status.textContent='جاري إرسال الطلب…';
   try{
     const sessionId=window.ARABISK_ANALYTICS?.getSessionId?.()||'';window.ARABISK_ANALYTICS?.track?.('checkout_started',{cartValue:total(),cartItems:cart.map(item=>({productId:item.id,quantity:Number(item.qty)||1})),metadata:{orderType}});
-    const payload={orderType,tableNumber:orderType==='dine_in'?tableNumber:'',name:orderType==='pickup'?name:'',phone:orderType==='pickup'?phone:'',notes,sessionId,customerId:profileCustomerId(),recoveryToken,promoCode:promoCode||'',items:cart.map(item=>({productId:item.id,quantity:item.qty}))};
+    const payload={
+      orderType,
+      tableNumber:orderType==='dine_in'?tableNumber:'',
+      name:orderType==='pickup'?name:'',
+      phone:orderType==='pickup'?phone:'',
+      notes,
+      sessionId,
+      customerId:profileCustomerId(),
+      recoveryToken,
+      promoCode:promoCode||'',
+      items:cart.map(item=>({productId:item.id,quantity:item.qty}))
+    };
+    const fingerprint=JSON.stringify(payload);
+    if(fingerprint!==pendingOrderFingerprint||!pendingOrderIdempotencyKey){
+      pendingOrderFingerprint=fingerprint;
+      pendingOrderIdempotencyKey=createOrderIdempotencyKey();
+    }
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);let response;
-    try{response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});}finally{clearTimeout(timer);}
+    try{response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,idempotencyKey:pendingOrderIdempotencyKey}),signal:controller.signal});}finally{clearTimeout(timer);}
     const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.message||'تعذر إرسال الطلب.');
-    saveLastOrder(data,{orderType,tableNumber,name,phone});window.ARABISK_CART?.clear?.();cart=readCart();document.querySelector('#cart-form').reset();promoCode='';promoQuote=null;try{sessionStorage.removeItem(PROMO_STORAGE_KEY);localStorage.removeItem('ARABISK_INSTALL_REWARD_CODE')}catch{}syncCheckoutFields();render();status.textContent='';showSuccess(data);
+    saveLastOrder(data,{orderType,tableNumber,name,phone});
+    pendingOrderFingerprint='';
+    pendingOrderIdempotencyKey='';
+    window.ARABISK_CART?.clear?.();cart=readCart();document.querySelector('#cart-form').reset();promoCode='';promoQuote=null;try{sessionStorage.removeItem(PROMO_STORAGE_KEY);localStorage.removeItem('ARABISK_INSTALL_REWARD_CODE')}catch{}syncCheckoutFields();render();status.textContent='';showSuccess(data);
   }catch(e){status.textContent=e.name==='AbortError'?'انتهت مهلة الاتصال.':(e.message||'تعذر إرسال الطلب.');}finally{submit.disabled=false;}
 }
 document.querySelector('#cart-promo-apply')?.addEventListener('click',()=>void refreshPromoQuote(true));
