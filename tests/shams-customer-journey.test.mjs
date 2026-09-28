@@ -18,6 +18,17 @@ test('Shams local planner understands habitual-choice language as a recommendati
   assert.equal(plan?.toolCalls?.[0]?.name, 'recommend_menu');
 });
 
+test('Shams distinguishes an existing reservation lookup from a new booking request', () => {
+  const plan = buildSmartLocalPlan({
+    message: 'عايز اعرف حجزي الجاي',
+    memory: { recentProducts: [] },
+    products: []
+  });
+
+  assert.equal(plan?.intent, 'reservation_status');
+  assert.equal(plan?.confidence >= 0.9, true);
+});
+
 test('Shams customer context exposes journey signals without phone or spend telemetry', () => {
   const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const pad = value => String(value).padStart(2, '0');
