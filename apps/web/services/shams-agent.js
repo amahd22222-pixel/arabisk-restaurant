@@ -370,15 +370,17 @@ function pickSmartLocalRecommendations(products, memory, text, customerContext =
   };
   const favoriteProducts = new Set(
     Array.isArray(customerContext?.favoriteProducts)
-      ? customerContext.favoriteProducts.map(item => normalizeArabic(item?.name))
+      ? customerContext.favoriteProducts.map(item => normalizeArabic(item?.name)).filter(Boolean)
       : []
   );
   const favoriteCategories = new Set(
     Array.isArray(customerContext?.favoriteCategories)
-      ? customerContext.favoriteCategories.map(item => normalizeArabic(item?.name))
+      ? customerContext.favoriteCategories.map(item => normalizeArabic(item?.name)).filter(Boolean)
       : []
   );
-  const candidates = products
+  const journeyStage = customerContext?.journey?.stage || '';
+
+  const ranked = products
     .filter(item => item?.available !== false)
     .map(product => {
       const productName = normalizeArabic(product?.nameAr || product?.nameEn || '');
@@ -388,18 +390,48 @@ function pickSmartLocalRecommendations(products, memory, text, customerContext =
         (product.chefChoice ? 3 : 0) +
         (product.isNew ? 1.5 : 0) +
         (Number(product.rating || 0) / 5);
+
       if (favoriteProducts.has(productName)) score += 8;
       if (favoriteCategories.has(productCategory)) score += 4;
-      if (customerContext?.journey?.stage === 'returning_favorite' && favoriteProducts.has(productName)) score += 4;
-      if (customerContext?.journey?.stage === 'reengagement' && favoriteCategories.has(productCategory)) score += 2;
-      if (customerContext?.journey?.stage === 'new_customer' && !favoriteProducts.size && product.chefChoice) score += 1;
-      return { product, score };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
-    .map(row => row.product);
+      if (journeyStage === 'returning_favorite' && favoriteProducts.has(productName)) score += 4;
+      if (journeyStage === 'reengagement' && favoriteCategories.has(productCategory)) score += 2;
+      if (journeyStage === 'new_customer' && !favoriteProducts.size && product.chefChoice) score += 1;
 
-  return { candidates, preferences };
+      return {
+        product,
+        score,
+        productName,
+        productCategory,
+        isFavorite: favoriteProducts.has(productName),
+        matchesFavoriteCategory: favoriteCategories.has(productCategory)
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const selected = [];
+  const selectedIds = new Set();
+  const addUnique = row => {
+    if (!row?.product?.id || selectedIds.has(String(row.product.id))) return false;
+    selected.push(row.product);
+    selectedIds.add(String(row.product.id));
+    return true;
+  };
+
+  if (journeyStage === 'returning_favorite' || journeyStage === 'reengagement') {
+    addUnique(ranked.find(row => row.isFavorite));
+    addUnique(ranked.find(row => row.matchesFavoriteCategory && !row.isFavorite));
+    addUnique(ranked.find(row => !row.isFavorite && !row.matchesFavoriteCategory && (row.product.chefChoice || row.product.isNew)));
+  }
+
+  for (const row of ranked) {
+    if (selected.length >= 3) break;
+    addUnique(row);
+  }
+
+  return {
+    candidates: selected.slice(0, 3),
+    preferences
+  };
 }
 
 function resolveReferenceProduct(text, matches, latest) {
