@@ -60,17 +60,8 @@
   .pwa-bottom-nav a.shams-tab{
     align-self:end;
     justify-self:center;
-    width:52px;
-    height:52px;
-    min-height:52px;
-    margin:0 0 2px;
-    padding:0;
-    border-radius:50%;
-    border:1px solid rgba(230,201,145,.35);
-    background:radial-gradient(circle at 35% 28%,#4a3925 0,#221a12 58%,#13100d 100%);
     color:#f0d7a7;
-    box-shadow:0 8px 22px rgba(0,0,0,.28),0 0 0 3px rgba(197,154,91,.07);
-    transform:translateY(-8px);
+    transform:translateY(-2px);
   }
 
   .pwa-bottom-nav a.shams-tab .nav-icon{
@@ -79,16 +70,14 @@
     width:36px;
     height:36px;
     border-radius:50%;
+    border:1px solid rgba(230,201,145,.55);
     background:radial-gradient(circle at 35% 30%,#f4dfa9,#c59a5b 62%,#8e692f);
     color:#241a10;
     font-size:18px;
-    box-shadow:0 0 14px rgba(197,154,91,.24);
+    box-shadow:0 0 0 3px rgba(197,154,91,.08),0 5px 16px rgba(0,0,0,.26),0 0 16px rgba(197,154,91,.18);
   }
 
   .pwa-bottom-nav a.shams-tab .nav-label{
-    position:absolute;
-    top:55px;
-    width:72px;
     color:#f0d7a7;
     font-size:8px;
     font-weight:900;
@@ -111,6 +100,5 @@
 @media(max-width:420px){
   .pwa-bottom-nav{padding-left:2px;padding-right:2px}
   .pwa-bottom-nav a{min-height:50px}
-  .pwa-bottom-nav a.shams-tab{width:50px;height:50px;min-height:50px}
   .pwa-bottom-nav a.shams-tab .nav-icon{width:34px;height:34px;font-size:17px}
 }
