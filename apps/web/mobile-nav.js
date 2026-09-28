@@ -17,7 +17,7 @@ function mountPwaBottomNav(){
     const center=item.shams?' shams-tab':'';
     return `<a class="${center}" href="${item.href}" data-nav-index="${index}"${current?' aria-current="page"':''}`+
       (item.shams?' data-shams-trigger="true" aria-label="تحدث مع شمس"':'')+
-      `><span class="nav-icon" aria-hidden="true">${item.icon}</span><span class="nav-label">${item.label}</span></a>`;
+      `><span class="nav-icon" aria-hidden="true">${item.icon}</span>${item.shams ? "" : `<span class="nav-label">${item.label}</span>`}</a>`;
   }).join('');
   document.body.appendChild(nav);
 
