@@ -5,7 +5,8 @@ import {
   UAE_TIME_ZONE,
   addUaeDays,
   getUaeDateOnly,
-  parseUaeLocalDateTime
+  parseUaeLocalDateTime,
+  getUaeTimeContext
 } from '../apps/web/utils/uae-time.js';
 import { createReservationService } from '../apps/web/services/reservation-service.js';
 
@@ -15,6 +16,10 @@ test('UAE time utilities use Abu Dhabi/Gulf time consistently around UTC midnigh
   assert.equal(getUaeDateOnly(new Date('2026-09-28T19:59:59.000Z')), '2026-09-28');
   assert.equal(getUaeDateOnly(new Date('2026-09-28T20:00:00.000Z')), '2026-09-29');
   assert.equal(addUaeDays(new Date('2026-09-28T20:30:00.000Z'), 1), '2026-09-29');
+  const context = getUaeTimeContext(new Date('2026-09-28T20:00:00.000Z'));
+  assert.equal(context.date, '2026-09-29');
+  assert.equal(context.time, '00:00');
+  assert.equal(context.timeZone, 'Asia/Dubai');
   assert.equal(
     parseUaeLocalDateTime('2026-09-28', '00:30'),
     Date.parse('2026-09-27T20:30:00.000Z')
