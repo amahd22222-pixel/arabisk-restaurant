@@ -1,15 +1,11 @@
 function registerStandalonePwa() {
   if (!('serviceWorker' in navigator)) return;
 
-  const refreshOnce = () => {
-    try {
-      if (sessionStorage.getItem('ARABISK_PWA_REFRESHED_V1') === '1') return;
-      sessionStorage.setItem('ARABISK_PWA_REFRESHED_V1', '1');
-    } catch {}
+  const refreshAfterActivation = () => {
     window.location.reload();
   };
 
-  navigator.serviceWorker.addEventListener('controllerchange', refreshOnce, { once: true });
+  navigator.serviceWorker.addEventListener('controllerchange', refreshAfterActivation);
 
   const checkForUpdate = () => {
     navigator.serviceWorker.getRegistration('/').then((registration) => {
