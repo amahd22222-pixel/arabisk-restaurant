@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v24';
+const CACHE_VERSION = 'arabisk-pwa-v25';
 const APP_SHELL = [
   '/',
   '/index.html',
