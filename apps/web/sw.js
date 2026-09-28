@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v35';
+const CACHE_VERSION = 'arabisk-pwa-v36';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -49,7 +49,9 @@ const APP_SHELL = [
   '/api/products',
   '/api/experiences',
   '/api/promotions/today',
-  '/api/promotions/install'
+  '/api/promotions/install',
+  '/api/memories?limit=4',
+  '/api/memories?sort=latest&page=1&limit=8'
 ];
 
 const PUBLIC_GET_APIS = new Set([
@@ -57,7 +59,8 @@ const PUBLIC_GET_APIS = new Set([
   '/api/products',
   '/api/experiences',
   '/api/promotions/today',
-  '/api/promotions/install'
+  '/api/promotions/install',
+  '/api/memories'
 ]);
 
 self.addEventListener('install', (event) => {
