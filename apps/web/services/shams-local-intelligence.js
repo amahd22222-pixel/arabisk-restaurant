@@ -281,6 +281,12 @@ function isAddRequest(raw) {
   return /(ضيف|اضف|حط|زود|زيد|ضيفلي|اضفلي|حطلي|زودلي|زيدلي|دخل|سجل)/i.test(raw);
 }
 
+function isCurrentPageReference(raw) {
+  return /^(ضيفه|ضيفها|اضيفه|اضيفها|حطه|حطها|زوده|زودها|دخله|دخلها|سجله|سجلها|خليه|خليها|ده|دي|هيدا|هيدي)$/i.test(
+    normalizeDialect(raw)
+  );
+}
+
 function isRecommendationRequest(raw) {
   return /(رشح|رشحلي|رشح لي|اقترح|اقترحلي|انصحني|نصحني|شو بتنصحني|شو تقترح|شو بترشح|محتار|محتارة|اختار لي|اختارلي|اختيار|دلني|دُلني|عايز حاجة|عاوز حاجه|نفسي في|بدي شي|بدي اكل|شو اكل|شو آكل|ايه الاحسن|شو الاحسن|المفضل|المفضلة|المفضلي|اللي بحبه|اللي بحبو|اللي باخده دايم|اللي باخدو دايم|زي اللي فات|زي المرة اللي فاتت|نفس اللي بطلبه|نفس طلباتي|عادتي|what.*recommend)/i.test(raw);
 }
@@ -484,7 +490,7 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
   if (isAddRequest(raw)) {
     const referencePool = pageContext.products.length ? pageContext.products : ranked;
     const product = (
-      pageContext.product && isReference(raw)
+      pageContext.product && (isReference(raw) || isCurrentPageReference(raw))
         ? pageContext.product
         : resolveReference(raw, referencePool, memory, catalog)
     );
@@ -662,5 +668,6 @@ export const __test = Object.freeze({
   rankProducts,
   extractPreferences,
   isNegatedAction,
+  isCurrentPageReference,
   buildSmartLocalPlan
 });
