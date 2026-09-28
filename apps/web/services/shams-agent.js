@@ -455,7 +455,8 @@ function pickSmartLocalRecommendations(products, memory, text, customerContext =
         productName,
         productCategory,
         isFavorite: favoriteProducts.has(productName),
-        matchesFavoriteCategory: favoriteCategories.has(productCategory)
+        matchesFavoriteCategory: favoriteCategories.has(productCategory),
+        isAvoided: avoidProducts.has(String(product?.id || ''))
       };
     })
     .sort((a, b) => b.score - a.score);
@@ -463,7 +464,7 @@ function pickSmartLocalRecommendations(products, memory, text, customerContext =
   const selected = [];
   const selectedIds = new Set();
   const addUnique = row => {
-    if (!row?.product?.id || selectedIds.has(String(row.product.id))) return false;
+    if (!row?.product?.id || row.isAvoided || selectedIds.has(String(row.product.id))) return false;
     selected.push(row.product);
     selectedIds.add(String(row.product.id));
     return true;
