@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { addUaeDays } from '../utils/uae-time.js';
 
 const ACTION_TTL_MS = 10 * 60 * 1000;
 
@@ -16,16 +17,7 @@ const normalizePhone = (value) => {
 };
 
 function localDate(offsetDays = 0) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Dubai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).formatToParts(new Date());
-  const map = Object.fromEntries(parts.map(part => [part.type, part.value]));
-  const value = new Date(map.year + '-' + map.month + '-' + map.day + 'T00:00:00+04:00');
-  value.setDate(value.getDate() + offsetDays);
-  return value.toISOString().slice(0, 10);
+  return addUaeDays(new Date(), offsetDays);
 }
 
 function parseGuests(text) {
