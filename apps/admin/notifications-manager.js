@@ -61,6 +61,18 @@ function statusLabel(status) {
   }[status] || status || '—');
 }
 
+function renderAudienceOptions() {
+  const select = $('#notification-audience');
+  if (!select) return;
+  const audiences = Array.isArray(state.status?.audiences) ? state.status.audiences : [];
+  const current = select.value || 'all-installed';
+  select.innerHTML = audiences.map(item => '<option value="' + escapeHtml(item.key) + '">' + escapeHtml(item.label) + ' · ' + Number(item.devices || 0).toLocaleString('ar-AE') + ' جهاز</option>').join('');
+  select.value = audiences.some(item => item.key === current) ? current : 'all-installed';
+  const selected = audiences.find(item => item.key === select.value);
+  const hint = $('#notification-audience-hint');
+  if (hint) hint.textContent = selected ? selected.description + ' الأجهزة الظاهرة هنا تُحسب بعد حماية التكرار المؤقتة.' : '';
+}
+
 function renderStatus() {
   const s = state.status || {};
   const statusNode = $('#notifications-config-status');
@@ -75,6 +87,7 @@ function renderStatus() {
   $('#notifications-delivered') && ($('#notifications-delivered').textContent = delivered.toLocaleString('ar-AE'));
   const scheduled = state.campaigns.filter(item => item.status === 'scheduled').length;
   $('#notifications-scheduled') && ($('#notifications-scheduled').textContent = scheduled.toLocaleString('ar-AE'));
+  renderAudienceOptions();
   const sendButton = $('#notification-send-now');
   if (sendButton) {
     sendButton.disabled = !s.configured || Number(s.subscribers || 0) === 0;
@@ -127,7 +140,7 @@ function renderCampaigns() {
       : '';
     return '<tr>' +
       '<td><strong>' + escapeHtml(item.title) + '</strong><small>' + escapeHtml(item.body) + '</small></td>' +
-      '<td><span class="notification-audience">التطبيق المثبت فقط</span></td>' +
+      '<td><span class="notification-audience">' + escapeHtml(item.audienceLabel || 'كل مستخدمي التطبيق') + '</span></td>' +
       '<td><span class="status ' + (item.status === 'sent' ? 'on' : item.status === 'failed' ? 'off' : 'pending') + '">' + escapeHtml(statusLabel(item.status)) + '</span>' +
       (item.error ? '<small class="notification-error">' + escapeHtml(item.error) + '</small>' : '') +
       '</td>' +
@@ -173,7 +186,7 @@ function getFormData() {
   const url = $('#notification-url').value.trim() || '/';
   const urgency = $('#notification-urgency').value;
   if (!title || !body) throw new Error('اكتب عنوان الإشعار ونصه أولًا.');
-  return { title, body, url, urgency, topic: $('#notification-topic').value.trim() };
+  return { title, body, url, urgency, topic: $('#notification-topic').value.trim(), audience: $('#notification-audience')?.value || 'all-installed' };
 }
 
 async function sendNow() {
@@ -188,8 +201,9 @@ async function sendNow() {
       $('#notifications-feedback').className = 'error';
     } else {
       $('#notifications-feedback').textContent = result.stats?.delivered
-        ? 'تم إرسال الإشعار بنجاح إلى الأجهزة المشتركة.'
+        ? 'تم إرسال الإشعار بنجاح إلى الجمهور المحدد.'
         : 'تمت معالجة الحملة.';
+      if (Number(result.stats?.suppressed || 0) > 0) $('#notifications-feedback').textContent += ' تم تجاوز ' + Number(result.stats.suppressed).toLocaleString('ar-AE') + ' جهازًا مؤقتًا لمنع التكرار.';
       $('#notifications-feedback').className = result.status === 'failed' ? 'error' : 'success-message';
     }
     await load();
@@ -243,6 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#notifications-feedback').className = 'error';
   }));
   $('#notification-template')?.addEventListener('change', (event) => applyTemplate(event.target.value));
+  $('#notification-audience')?.addEventListener('change', renderAudienceOptions);
   $('#notifications-devices-body')?.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-uninstall-device]');
     if (!button) return;
