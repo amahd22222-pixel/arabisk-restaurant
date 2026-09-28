@@ -2,6 +2,8 @@ let deferredInstallPrompt = null;
 let installOffer = null;
 const INSTALL_DISMISS_KEY = 'ARABISK_PWA_INSTALL_DISMISSED';
 const REWARD_CODE_KEY = 'ARABISK_INSTALL_REWARD_CODE';
+const REWARD_META_KEY = 'ARABISK_INSTALL_REWARD_META_V1';
+const REWARD_NOTICE_SHOWN_KEY = 'ARABISK_INSTALL_REWARD_NOTICE_SHOWN_V1';
 const CLIENT_ID_KEY = 'ARABISK_PWA_CLIENT_ID';
 
 function isIosSafari() {
@@ -53,7 +55,7 @@ function ensurePwaUi() {
   const discount = Number(installOffer?.discountValue || 20);
   const title = String(installOffer?.title || 'خلّي ARABISK أقرب إليك').replace(/[<>&"]/g, '');
   const message = String(installOffer?.message || 'ثبّت تطبيق ARABISK واستمتع بتجربة أسرع للمنيو، الحجز والسلة — ومع التثبيت تحصل على خصم 20%.').replace(/[<>&]/g, '');
-  banner.innerHTML = '<div class="pwa-install-mark" aria-hidden="true"><span>20</span><small>%</small></div><div class="pwa-install-copy"><small class="pwa-install-kicker">ARABISK PASS</small><strong>' + title + '</strong><span>' + message + '</span></div><div class="pwa-install-actions"><button type="button" data-install>ثبّت ARABISK</button><button type="button" class="pwa-dismiss" data-dismiss aria-label="ليس الآن">ليس الآن</button></div>';
+  banner.innerHTML = '<div class="pwa-install-mark" aria-hidden="true"><span>' + discount + '</span><small>%</small></div><div class="pwa-install-copy"><small class="pwa-install-kicker">ARABISK PASS</small><strong>' + title + '</strong><span>' + message + '</span></div><div class="pwa-install-actions"><button type="button" data-install>ثبّت ARABISK</button><button type="button" class="pwa-dismiss" data-dismiss aria-label="ليس الآن">ليس الآن</button></div>';
   document.body.appendChild(banner);
 
   banner.querySelector('[data-install]')?.addEventListener('click', async () => {
@@ -93,9 +95,15 @@ function showInstallBanner() {
 async function claimInstallReward() {
   if (!installOffer || !isStandaloneMode()) return;
   let existing = '';
-  try { existing = localStorage.getItem(REWARD_CODE_KEY) || ''; } catch {}
+  let existingMeta = null;
+  let noticeShown = false;
+  try {
+    existing = localStorage.getItem(REWARD_CODE_KEY) || '';
+    existingMeta = JSON.parse(localStorage.getItem(REWARD_META_KEY) || 'null');
+    noticeShown = localStorage.getItem(REWARD_NOTICE_SHOWN_KEY) === '1';
+  } catch {}
   if (existing) {
-    showReward(existing, installOffer);
+    if (!noticeShown) showReward(existing, { ...installOffer, ...(existingMeta || {}) });
     return;
   }
   try {
@@ -106,7 +114,14 @@ async function claimInstallReward() {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || !data?.code) return;
-    try { localStorage.setItem(REWARD_CODE_KEY, data.code); } catch {}
+    try {
+      localStorage.setItem(REWARD_CODE_KEY, data.code);
+      localStorage.setItem(REWARD_META_KEY, JSON.stringify({
+        expiresAt: data.expiresAt || '',
+        discountValue: data.discountValue || installOffer.discountValue || 20
+      }));
+      sessionStorage.setItem('arabisk-active-promo-v1', data.code);
+    } catch {}
     showReward(data.code, { ...installOffer, ...data });
   } catch {}
 }
@@ -116,8 +131,15 @@ function showReward(code, offer) {
   if (document.querySelector('.pwa-reward')) return;
   const banner = document.createElement('aside');
   banner.className = 'pwa-reward';
-  banner.innerHTML = '<div class="pwa-reward-copy"><strong>تم تفعيل خصم تثبيت ARABISK 🎁</strong><span>استخدم كودك الشخصي في السلة للحصول على خصم ' + Number(offer?.discountValue || 20) + '%.</span><div class="pwa-reward-code">' + String(code).replace(/</g, '&lt;') + '</div></div><a href="/cart?promo=' + encodeURIComponent(code) + '">استخدم الخصم</a>';
+  const discount = Number(offer?.discountValue || 20);
+  const expiry = offer?.expiresAt ? new Date(offer.expiresAt) : null;
+  const expiryText = expiry && Number.isFinite(expiry.getTime())
+    ? expiry.toLocaleDateString('ar-AE', { day:'numeric', month:'long', year:'numeric' })
+    : 'حسب مدة العرض';
+  banner.innerHTML = '<button type="button" class="pwa-reward-close" aria-label="إغلاق">×</button><div class="pwa-reward-copy"><strong>🎁 خصم تثبيت ARABISK — ' + discount + '%</strong><span>كودك جاهز لأول طلب وسيتم تطبيقه تلقائيًا من السلة. صالح حتى ' + expiryText + '، ويُستخدم مرة واحدة فقط.</span><div class="pwa-reward-code">' + String(code).replace(/[<&]/g, '') + '</div></div><a href="/cart?promo=' + encodeURIComponent(code) + '">ابدأ طلبك</a>';
+  banner.querySelector('.pwa-reward-close')?.addEventListener('click', () => banner.remove());
   document.body.appendChild(banner);
+  try { localStorage.setItem(REWARD_NOTICE_SHOWN_KEY, '1'); } catch {}
 }
 
 async function checkForPwaUpdate() {
