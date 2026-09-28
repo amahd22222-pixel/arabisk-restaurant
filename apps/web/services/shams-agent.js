@@ -107,6 +107,16 @@ function significantTokens(value) {
     .filter(token => token.length >= 2 && !ARABIC_STOPWORDS.has(token));
 }
 
+function modelSafeMemory(memory = {}) {
+  return {
+    preferences: memory.preferences || {},
+    recentTurns: Array.isArray(memory.recentTurns) ? memory.recentTurns.slice(-10) : [],
+    recentProducts: Array.isArray(memory.recentProducts) ? memory.recentProducts.slice(-8) : [],
+    lastIntent: clean(memory.lastIntent, 60),
+    journey: memory.journey || {}
+  };
+}
+
 function jsonFromText(value) {
   const raw = clean(value, 5000);
   try {
@@ -911,7 +921,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       'العميل الحالي: ' + JSON.stringify(context.customer ? { id: context.customer.id, name: context.customer.name || '' } : null),
       'سياق العميل الآمن: ' + JSON.stringify(context.customerContext || null),
       'سياق رحلة شمس الموحّد: ' + JSON.stringify(context.journey || {}),
-      'ذاكرة شمس: ' + JSON.stringify(context.memory),
+      'ذاكرة شمس الآمنة: ' + JSON.stringify(modelSafeMemory(context.memory)),
       'آخر المحادثات: ' + JSON.stringify(context.history),
       'الصفحة الحالية: ' + clean(context.page, 100),
       'السلة الحالية: ' + JSON.stringify(Array.isArray(context.cart) ? context.cart.slice(0, 20) : []),
