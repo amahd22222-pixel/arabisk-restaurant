@@ -38,6 +38,7 @@ function constantTimeTextMatch(provided, expected) {
 
 export function createAdminAuth() {
   const authRate = new Map();
+  const sessions = new Map();
   const sessionSecret = String(process.env.ARABISK_ADMIN_SESSION_SECRET || adminPassword || '').trim();
 
   function base64UrlEncode(value) {
@@ -120,8 +121,11 @@ export function createAdminAuth() {
     const token = parseCookies(req.headers.cookie || '').arabisk_admin_session;
     if (!token) return null;
 
-    const session = decodeSession(token);
-    if (!session) return null;
+    let session = sessions.get(token);
+    if (!session) {
+      session = decodeSession(token);
+      if (!session) return null;
+    }
 
     const now = Date.now();
     if (
@@ -131,10 +135,17 @@ export function createAdminAuth() {
       !constantTimeTextMatch(session.username, adminUsername) ||
       !Number.isFinite(Number(session.expiresAt)) ||
       !Number.isFinite(Number(session.absoluteExpiresAt)) ||
-      Number(session.expiresAt) <= now ||
       Number(session.absoluteExpiresAt) <= now
-    ) return null;
+    ) {
+      sessions.delete(token);
+      return null;
+    }
 
+    session.expiresAt = Math.min(
+      Number(session.absoluteExpiresAt),
+      now + SESSION_TTL_MS
+    );
+    sessions.set(token, session);
     return { token, session };
   }
 
@@ -146,14 +157,29 @@ export function createAdminAuth() {
     }
 
     const now = Date.now();
-    const token = encodeSession({
+    const session = {
       version: 1,
       username: String(username),
       issuedAt: now,
       expiresAt: now + SESSION_TTL_MS,
       absoluteExpiresAt: now + SESSION_ABSOLUTE_TTL_MS,
       nonce: crypto.randomBytes(16).toString('hex')
-    });
+    };
+    const token = encodeSession(session);
+    sessions.set(token, session);
+    while (sessions.size > MAX_ADMIN_SESSIONS) {
+      let oldestToken = null;
+      let oldestIssuedAt = Infinity;
+      for (const [candidateToken, candidateSession] of sessions) {
+        const issuedAt = Number(candidateSession?.issuedAt);
+        if (issuedAt < oldestIssuedAt) {
+          oldestIssuedAt = issuedAt;
+          oldestToken = candidateToken;
+        }
+      }
+      if (!oldestToken) break;
+      sessions.delete(oldestToken);
+    }
     res.setHeader('Set-Cookie', sessionCookie(token, req));
   }
 
@@ -162,6 +188,8 @@ export function createAdminAuth() {
   }
 
   function clearSession(res, req) {
+    const token = parseCookies(req.headers.cookie || '').arabisk_admin_session;
+    if (token) sessions.delete(token);
     res.setHeader('Set-Cookie', sessionCookie('', req, 0));
   }
 
@@ -177,6 +205,9 @@ export function createAdminAuth() {
   const cleanupTimer = setInterval(() => {
     const now = Date.now();
     for (const [key, entry] of authRate) if (now - entry.startedAt >= AUTH_RATE_WINDOW_MS) authRate.delete(key);
+    for (const [token, session] of sessions) {
+      if (Number(session?.absoluteExpiresAt) <= now) sessions.delete(token);
+    }
   }, 15 * 60 * 1000);
   cleanupTimer.unref();
 
