@@ -179,6 +179,7 @@ export function createShamsService({
     voiceFirst: true,
     dialects: ['ar-AE', 'ar-EG', 'ar-SY', 'ar-LB'],
     listening: { continuous: true, pauseMs: 2200 },
+    installedApp: { surface: 'installed-pwa', updateManaged: true },
     stages: agent.stages
   });
 
@@ -188,7 +189,8 @@ export function createShamsService({
     profileToken = '',
     sessionId = '',
     page = '/',
-    cart = []
+    cart = [],
+    client = null
   } = {}) {
     const text = clean(message);
     if (!text) throw new ShamsServiceError('رسالة شمس فارغة.');
@@ -215,6 +217,10 @@ export function createShamsService({
         sessionId: clean(sessionId, 120),
         page: clean(page, 120),
         cart,
+        client: client && typeof client === 'object' ? {
+          surface: clean(client.surface, 30),
+          serviceWorkerControlled: Boolean(client.serviceWorkerControlled)
+        } : null,
         customer,
         customerContext
       });
