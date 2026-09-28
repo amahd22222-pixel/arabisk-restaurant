@@ -68,8 +68,10 @@ function renderIdentity(profile,stats={}){
   $('#stat-orders').textContent=String(stats.orderCount||0);
   $('#stat-reservations').textContent=String(stats.reservationCount||0);
   $('#stat-spend').textContent=money(stats.totalOrderValue||0);
-  $('#profile-name').value=profile?.name||'';
-  $('#profile-phone').value=profile?.phone||'';
+  const nameValue=$('#profile-name-value');
+  const phoneValue=$('#profile-phone-value');
+  if(nameValue) nameValue.textContent=profile?.name||'—';
+  if(phoneValue) phoneValue.textContent=profile?.phone||'—';
 }
 
 function renderOrders(orders=[]){
@@ -159,39 +161,6 @@ function showMessage(message,error=false){
   node.classList.toggle('error',Boolean(error));
 }
 
-async function saveProfile(event){
-  event.preventDefault();
-  const form=$('#profile-form');
-  const button=$('#profile-save');
-  if(!form||!button)return;
-
-  const name=String(form.elements.name.value||'').trim();
-  const phone=String(form.elements.phone.value||'').trim();
-  button.disabled=true;
-  button.textContent='جاري الحفظ…';
-  showMessage('');
-
-  try{
-    const token=getToken();
-    const response=await fetch('/api/customer-profile',{
-      method:'POST',
-      headers:{'Content-Type':'application/json',...(token?{'X-ARABISK-PROFILE-TOKEN':token}:{})},
-      body:JSON.stringify({name,phone,privacyConsent:true,deviceId:deviceId()})
-    });
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data?.message||'تعذر حفظ بياناتك الآن.');
-    saveLocal(data);
-    renderIdentity(data,{});
-    showMessage('تم حفظ بياناتك.');
-    await loadDashboard();
-  }catch(error){
-    showMessage(error.message||'تعذر حفظ بياناتك الآن.',true);
-  }finally{
-    button.disabled=false;
-    button.textContent='حفظ بياناتي';
-  }
-}
-
 function deviceId(){
   try{
     const key='ARABISK_DEVICE_ID_V1';
@@ -205,7 +174,10 @@ function deviceId(){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-  $('#profile-form')?.addEventListener('submit',saveProfile);
   void loadDashboard();
+  window.addEventListener('arabisk:profile-ready',event=>{
+    if(event.detail?.profile) loadDashboard();
+  });
+  window.addEventListener('arabisk:profile-updated',()=>void loadDashboard());
 });
 })();
