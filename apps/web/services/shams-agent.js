@@ -1421,6 +1421,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       journey: context.journey,
       recommendations: toolResults.find(item => item.name === 'recommend_menu')?.result?.recommendations || [],
       matches: toolResults.find(item => item.name === 'search_menu')?.result?.matches || [],
+      product: toolResults.find(item => item.name === 'product_info')?.result?.product || null,
       cartSummary: toolResults.find(item => item.name === 'cart_summary')?.result?.cartSummary || toolResults.find(item => item.name === 'cart_summary')?.result || null,
       added: toolResults.find(item => item.name === 'cart_add')?.result?.added,
       order: toolResults.find(item => item.name === 'get_order_status')?.result?.order

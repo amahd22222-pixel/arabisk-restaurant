@@ -369,7 +369,7 @@ function resolveStaticPage(raw) {
     .replace(/^(افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)\s+/i, '')
     .trim();
 
-  if (/^(الرئيسيه|الرئيسية|الصفحة الرئيسية|الصفحه الرئيسيه|home)$/i.test(query)) return '/';
+  if (/^(الرئيسيه|الرئيسية|الرئيس|الصفحة الرئيسية|الصفحه الرئيسيه|الصفحه الرئيس|home)$/i.test(query)) return '/';
   if (/^(منيو|المنيو|القائمه|القائمة|menu)$/i.test(query)) return '/menu';
   if (/^(حجز|الحجز|حجز طاوله|حجز طاولة|الطاولة|طاولة|reservation)$/i.test(query)) return '/reservation';
   if (/^(السله|السلة|العربه|العربة|cart)$/i.test(query)) return '/cart';

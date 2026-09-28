@@ -51,7 +51,10 @@ export function createReservationService({ repository, cleanText, nextReservatio
     if (!timeOk) {
       throw new ReservationServiceError('Reservation time must be in HH:MM format.');
     }
-    if (!Number.isFinite(reservationTimestamp) || reservationTimestamp < currentTime.getTime()) {
+    if (!Number.isFinite(reservationTimestamp)) {
+      throw new ReservationServiceError('Reservation time must be in the future for Abu Dhabi time.');
+    }
+    if (date === today && reservationTimestamp < currentTime.getTime()) {
       throw new ReservationServiceError('Reservation time must be in the future for Abu Dhabi time.');
     }
 

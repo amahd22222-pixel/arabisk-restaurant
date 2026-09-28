@@ -69,9 +69,16 @@ function learnPreferences(currentPreferences, evidence, detected) {
     const top = nextEvidence[field]?.[0];
     if (!top) continue;
     confidence[field] = Math.min(1, top.count / STABLE_PREFERENCE_THRESHOLD);
-    if (top.count >= STABLE_PREFERENCE_THRESHOLD) {
-      if (field === 'spicy' || field === 'vegetarian') learned[field] = top.value === 'true';
-      else learned[field] = top.value;
+    const normalizedTop = (field === 'spicy' || field === 'vegetarian')
+      ? top.value === 'true'
+      : top.value;
+    if (currentPreferences[field] === null || currentPreferences[field] === undefined || currentPreferences[field] === '') {
+      learned[field] = normalizedTop;
+    } else if (
+      top.count >= STABLE_PREFERENCE_THRESHOLD ||
+      String(currentPreferences[field]) === String(normalizedTop)
+    ) {
+      learned[field] = normalizedTop;
     }
   }
 
