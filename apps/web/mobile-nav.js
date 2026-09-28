@@ -12,30 +12,51 @@ function mountPwaBottomNav(){
   nav.className='pwa-bottom-nav';
   nav.setAttribute('aria-label','التنقل السريع');
   const path=window.location.pathname.replace(/\/$/,'')||'/';
+
   nav.innerHTML=NAV_ITEMS.map((item,index)=>{
     const current=!item.shams&&item.match(path);
     const center=item.shams?' shams-tab':'';
     return `<a class="${center}" href="${item.href}" data-nav-index="${index}"${current?' aria-current="page"':''}`+
-      (item.shams?' data-shams-trigger="true" aria-label="تحدث مع شمس"':'')+
-      `><span class="nav-icon" aria-hidden="true">${item.icon}</span>${item.shams ? "" : `<span class="nav-label">${item.label}</span>`}</a>`;
+      (item.shams?' data-shams-trigger="true" aria-label="تحدث مع شمس" aria-pressed="false"':'')+
+      `><span class="nav-icon" aria-hidden="true">${item.icon}</span><span class="nav-label">${item.label}</span></a>`;
   }).join('');
   document.body.appendChild(nav);
 
   const shamsTab=nav.querySelector('[data-shams-trigger]');
+  const syncShamsState=()=>{
+    if(!shamsTab)return;
+    try{
+      const status=window.ARABISK_SHAMS?.status?.();
+      const active=Boolean(status?.listening||status?.speaking||status?.busy||status?.conversationActive);
+      shamsTab.classList.toggle('is-active',active);
+      shamsTab.setAttribute('aria-pressed',String(active));
+    }catch{
+      shamsTab.classList.remove('is-active');
+      shamsTab.setAttribute('aria-pressed','false');
+    }
+  };
+
   shamsTab?.addEventListener('click',(event)=>{
     event.preventDefault();
     const shams=window.ARABISK_SHAMS;
-    if(shams?.status && shams?.close && shams?.open){
+    if(shams?.status&&shams?.close&&shams?.open){
       const status=shams.status();
-      if(status.listening || status.speaking || status.busy || status.conversationActive){
-        shams.close();
-      }else{
-        shams.open();
-      }
+      const active=Boolean(status?.listening||status?.speaking||status?.busy||status?.conversationActive);
+      if(active) shams.close();
+      else shams.open();
+      window.setTimeout(syncShamsState,120);
       return;
     }
-    window.setTimeout(()=>window.ARABISK_SHAMS?.open?.(),300);
+    window.setTimeout(()=>{
+      window.ARABISK_SHAMS?.open?.();
+      syncShamsState();
+    },300);
   });
+
+  syncShamsState();
+  window.setInterval(syncShamsState,750);
+  window.addEventListener('pageshow',syncShamsState,{passive:true});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncShamsState()},{passive:true});
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountPwaBottomNav,{once:true});
