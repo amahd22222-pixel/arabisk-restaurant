@@ -422,7 +422,13 @@ function scoreProductForPreferences(product, preferences) {
   return score;
 }
 
-function pickSmartLocalRecommendations(products, memory, text, customerContext = null, cart = []) {
+function catalogCategoryName(item, catalog = []) {
+  const id = String(item?.id || item?.productId || '').trim();
+  const product = catalog.find(row => String(row?.id || '') === id);
+  return product?.categoryNameAr || product?.categoryNameEn || item?.categoryNameAr || item?.categoryNameEn || '';
+}
+
+function pickSmartLocalRecommendations(products, memory, text, customerContext = null, cart = [], liveContext = null) {
   const extracted = extractLocalPreferences(text);
   const stored = memory?.preferences || {};
   const preferences = {
@@ -475,6 +481,19 @@ function pickSmartLocalRecommendations(products, memory, text, customerContext =
       if (journeyStage === 'new_customer' && !favoriteProducts.size && product.chefChoice) score += 1;
       if (avoidProducts.has(String(product?.id || ''))) score -= 25;
       if (chosenProducts.has(String(product?.id || ''))) score += 10;
+
+      const mealPeriod = liveContext?.mealPeriod || '';
+      const cartCategories = new Set(
+        (Array.isArray(cart) ? cart : [])
+          .map(item => catalogCategoryName(item, products))
+          .filter(Boolean)
+          .map(value => normalizeArabic(value))
+      );
+      const productCategoryNormalized = normalizeArabic(product?.categoryNameAr || product?.categoryNameEn || '');
+      if (mealPeriod === 'morning' && /(مشروب|قهوه|قهوة|شاي|لاتيه|عصير|drink)/i.test(productCategoryNormalized + ' ' + productName)) score += 2;
+      if ((mealPeriod === 'lunch' || mealPeriod === 'evening') && /(رئيسي|وجبه|وجبة|طبق|main|meal)/i.test(productCategoryNormalized)) score += 1;
+      if (cartCategories.size && cartCategories.has(productCategoryNormalized)) score += 0.5;
+      if (cartCategories.size && !cartCategories.has(productCategoryNormalized) && /(مشروب|قهوه|قهوة|شاي|لاتيه|عصير|drink|حلو|حلويات|dessert)/i.test(productCategoryNormalized + ' ' + productName)) score += 1.5;
 
       return {
         product,
