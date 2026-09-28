@@ -1,4 +1,5 @@
 import { normalizePhone } from '../utils/phone.js';
+import { parseUaeLocalDateTime } from '../utils/uae-time.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -12,14 +13,6 @@ function maxIso(...values) {
     .map(value => String(value || ''))
     .filter(Boolean)
     .sort((a, b) => Date.parse(b) - Date.parse(a))[0] || '';
-}
-
-function dubaiTimestamp(date, time = '00:00') {
-  const rawDate = String(date || '').trim();
-  const rawTime = String(time || '00:00').trim();
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(rawDate)) return NaN;
-  const safeTime = /^\\d{2}:\\d{2}$/.test(rawTime) ? rawTime : '00:00';
-  return Date.parse(rawDate + 'T' + safeTime + ':00+04:00');
 }
 
 function lifecycleFor(customer) {
@@ -54,8 +47,8 @@ export function createCustomerRelationshipService({ repository }) {
     const linkedReservations = reservations.filter(item => customerMatches(item, customer));
     const activeReservations = linkedReservations.filter(item => item?.status !== 'cancelled');
     const futureReservations = activeReservations
-      .filter(item => item?.status !== 'cancelled' && item?.date && dubaiTimestamp(item.date, item.time) >= Date.now())
-      .sort((a, b) => dubaiTimestamp(a.date, a.time) - dubaiTimestamp(b.date, b.time));
+      .filter(item => item?.status !== 'cancelled' && item?.date && parseUaeLocalDateTime(item.date, item.time) >= Date.now())
+      .sort((a, b) => parseUaeLocalDateTime(a.date, a.time) - parseUaeLocalDateTime(b.date, b.time));
 
     const spend = Math.round(completedOrders.reduce((sum, order) => sum + safeNumber(order.total), 0) * 100) / 100;
 
@@ -235,7 +228,7 @@ export function createCustomerRelationshipService({ repository }) {
       : null;
     const nextReservation = data.nextReservation || null;
     const reservationTimestamp = nextReservation?.date
-      ? dubaiTimestamp(nextReservation.date, nextReservation.time)
+      ? parseUaeLocalDateTime(nextReservation.date, nextReservation.time)
       : NaN;
     const hoursToReservation = Number.isFinite(reservationTimestamp)
       ? Math.round((reservationTimestamp - now) / (60 * 60 * 1000))
