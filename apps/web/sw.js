@@ -33,6 +33,7 @@ const APP_SHELL = [
   '/pwa-network.js',
   '/pwa-media.js',
   '/pwa-live-sync.js',
+  '/pwa-live-sync.js',
   '/pwa-sync.js',
   '/mobile-nav.css',
   '/mobile-nav.js',
