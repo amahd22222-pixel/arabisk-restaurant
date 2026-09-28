@@ -39,7 +39,8 @@ export function createShamsService({
   aiModel = DEFAULT_MODEL,
   aiEndpoint = DEFAULT_ENDPOINT,
   getOrderService,
-  getReservationService
+  getReservationService,
+  getCustomerRelationship
 }) {
   const apiKey = clean(aiApiKey, 300);
   const model = clean(aiModel || DEFAULT_MODEL, 80) || DEFAULT_MODEL;
@@ -194,9 +195,13 @@ export function createShamsService({
     if (text.length > MAX_MESSAGE) throw new ShamsServiceError('رسالة شمس طويلة جدًا.');
 
     let customer = null;
+    let customerContext = null;
     if (profileToken) {
       try {
         customer = findCustomerByProfileToken?.(profileToken) || null;
+        if (customer?.id && typeof getCustomerRelationship === 'function') {
+          try { customerContext = getCustomerRelationship(customer.id); } catch { customerContext = null; }
+        }
       } catch {
         customer = null;
       }
@@ -210,7 +215,8 @@ export function createShamsService({
         sessionId: clean(sessionId, 120),
         page: clean(page, 120),
         cart,
-        customer
+        customer,
+        customerContext
       });
     } catch (error) {
       if (error instanceof ShamsServiceError) throw error;
