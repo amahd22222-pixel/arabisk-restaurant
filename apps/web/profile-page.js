@@ -56,13 +56,13 @@ function saveLocal(profile){
 function renderIdentity(profile,stats={}){
   const name=String(profile?.name||'عميل ARABISK');
   $('#profile-avatar').textContent=initials(name);
-  $('#profile-name-heading').textContent=name;
+  $('#profile-customer-name').textContent=name;
   $('#profile-phone-heading').textContent=String(profile?.phone||'—');
   const phoneStatus=$('#profile-phone-status');
   if(phoneStatus)phoneStatus.textContent=profile?.phoneVerified===true?'الهاتف موثّق':'الهاتف غير موثّق';
   $('#profile-welcome').textContent=Number(stats.orderCount||0)||Number(stats.reservationCount||0)
     ? 'مِلْفك يجمع زياراتك وطلباتك وحجوزاتك في مكان واحد.'
-    : 'سجّل بياناتك مرة واحدة، وخلّي تجربتك داخل ARABISK أسهل.';
+    : 'مساحتك الشخصية لحفظ طلباتك وحجوزاتك وبياناتك داخل ARABISK.';
   const badge=$('#profile-member-badge');
   if(badge)badge.textContent=Number(stats.orderCount||0)>0?'عضوية عميل ARABISK':'عضوية جديدة';
   $('#stat-orders').textContent=String(stats.orderCount||0);
