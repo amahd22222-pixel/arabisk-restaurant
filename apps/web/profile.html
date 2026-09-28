@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/home-app.css">
 <link rel="stylesheet" href="/app-pages.css">
-<link rel="stylesheet" href="/profile-page.css?v=20260928.3">
+<link rel="stylesheet" href="/profile-page.css?v=20260928.4">
 </head>
 <body class="home-app">
 <header class="app-header is-page" aria-label="ARABISK">
@@ -78,19 +78,21 @@
     </section>
 
     <section class="profile-panel profile-data-panel">
-      <div class="profile-panel-head"><div><p class="profile-section-kicker">PERSONAL DETAILS</p><h2>بياناتي</h2><p class="profile-panel-subtitle">عدّل معلوماتك الأساسية في أي وقت.</p></div><span class="profile-secure-note"><i aria-hidden="true"></i> محفوظة بشكل آمن</span></div>
-      <form id="profile-form">
-        <div class="profile-form-grid">
-          <label><span>الاسم</span><input id="profile-name" name="name" required minlength="2" maxlength="80" autocomplete="name" placeholder="اكتب اسمك"></label>
-          <label><span>رقم الهاتف</span><input id="profile-phone" name="phone" required inputmode="tel" maxlength="20" autocomplete="tel" placeholder="05XXXXXXXX"></label>
+      <div class="profile-panel-head">
+        <div>
+          <p class="profile-section-kicker">PERSONAL DETAILS</p>
+          <h2>بياناتي</h2>
+          <p class="profile-panel-subtitle">هذه البيانات تم حفظها عند أول تشغيل للتطبيق.</p>
         </div>
-        <div class="profile-actions">
-          <button id="profile-save" class="profile-save" type="submit">حفظ بياناتي</button>
-          <a class="profile-secondary" href="/privacy">الخصوصية</a>
-        </div>
-        <p id="profile-status" class="profile-status" role="status" aria-live="polite"></p>
-      </form>
-      <p class="profile-note">ملف ARABISK هو هوية تجربة العميل على هذا الجهاز؛ ويُستخدم لربط الطلبات والحجوزات المرتبطة بحسابك. رقم الهاتف لا يُعتبر موثقًا عبر OTP إلا عندما يثبت ذلك من النظام.</p>
+        <span class="profile-secure-note"><i aria-hidden="true"></i> محفوظة بشكل آمن</span>
+      </div>
+      <div class="profile-data-grid">
+        <div class="profile-data-item"><span>الاسم</span><strong id="profile-name-value">—</strong></div>
+        <div class="profile-data-item"><span>رقم الهاتف</span><strong id="profile-phone-value" dir="ltr">—</strong></div>
+        <div class="profile-data-item wide"><span>حالة التسجيل</span><strong>تم التسجيل من أول تشغيل للتطبيق</strong></div>
+      </div>
+      <p id="profile-status" class="profile-status" role="status" aria-live="polite"></p>
+      <p class="profile-note">لا يوجد تسجيل منفصل من صفحة «حسابي». عند أول فتح للتطبيق المثبّت تظهر شاشة التسجيل مرة واحدة فقط، ثم تُحفظ بياناتك وتبقى مرتبطة بتجربتك على هذا الجهاز.</p>
     </section>
 
     <section class="profile-footer-cta">
@@ -106,6 +108,6 @@
 <script type="module" src="/cart.js?v=20260928.2"></script>
 <script type="module" src="/pwa-register.js"></script>
 <script type="module" src="/pwa-profile.js"></script>
-<script src="/profile-page.js?v=20260928.2" defer></script>
+<script src="/profile-page.js?v=20260928.3" defer></script>
 </body>
 </html>
