@@ -16,7 +16,8 @@
     transcriptBuffer: '',
     restartAttempts: 0,
     sessionId: '',
-    dialect: 'gulf'
+    dialect: 'gulf',
+    greetedThisVisit: false
   };
 
   const RECOGNITION_LANGUAGES = Object.freeze({
@@ -419,7 +420,7 @@
     } catch {}
   }
 
-  function startConversationFromUserGesture() {
+  async function startConversationFromUserGesture() {
     const { launcher } = ui();
     const recognition = state.recognition || setupRecognition();
     if (!recognition) return;
@@ -431,6 +432,11 @@
     unlockAudio();
 
     try {
+      if (!state.greetedThisVisit && state.voiceEnabled) {
+        state.greetedThisVisit = true;
+        await speak('أهلاً بيك في ARABISK. أنا شمس، معاك. قول لي تحب تعمل إيه وأنا أساعدك.');
+      }
+
       recognition.lang = RECOGNITION_LANGUAGES[state.dialect] || 'ar-AE';
       recognition.start();
       launcher?.classList.add('is-listening');
