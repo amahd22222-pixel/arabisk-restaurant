@@ -105,6 +105,11 @@ const pushSubscribeRateLimit=createRateLimiter({
   limit:20,
   message:'Too many push subscription requests. Please try again later.'
 });
+const pwaSyncRateLimit=createRateLimiter({
+  windowMs:10*60*1000,
+  limit:120,
+  message:'Too many PWA sync requests. Please try again later.'
+});
 const notificationSendRateLimit=createRateLimiter({
   windowMs:10*60*1000,
   limit:20,
@@ -125,7 +130,7 @@ const shamsRateLimit=createRateLimiter({
   limit:24,
   message:'Too many Shams requests. Please try again later.'
 });
-const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,promotionClaimRateLimit,promotionQuoteRateLimit,memoryUploadRateLimit,memoryMutationRateLimit,pushSubscribeRateLimit,notificationSendRateLimit,customerProfileRateLimit,customerAdminRateLimit,shamsRateLimit];
+const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,promotionClaimRateLimit,promotionQuoteRateLimit,memoryUploadRateLimit,memoryMutationRateLimit,pushSubscribeRateLimit,pwaSyncRateLimit,notificationSendRateLimit,customerProfileRateLimit,customerAdminRateLimit,shamsRateLimit];
 const rateLimitCleanupTimer=setInterval(() => {
   for (const limiter of rateLimiters) limiter.cleanup();
 }, 10*60*1000);
@@ -321,6 +326,23 @@ registerNotificationRoutes(app, {
   service: notificationService,
   requireAdminApiKey,
   sendRateLimit: notificationSendRateLimit
+});
+const stableSyncUrl = value => { try { return new URL(String(value || ''), 'http://internal').pathname; } catch { return String(value || ''); } };
+const stableSyncHash = value => crypto.createHash('sha1').update(JSON.stringify(value)).digest('hex').slice(0,16);
+const pwaSyncSnapshot = () => {
+  const experiences = experienceService.list({headers:{'x-arabisk-admin-key':process.env.ARABISK_ADMIN_API_KEY || ''}}).map(item => ({id:item.id,slug:item.slug,titleAr:item.titleAr,titleEn:item.titleEn,type:item.type,startsAt:item.startsAt,endsAt:item.endsAt,status:item.status,featured:Boolean(item.featured),bookingEnabled:item.bookingEnabled,coverImage:stableSyncUrl(item.coverImageUrl),video:stableSyncUrl(item.videoUrl),updatedAt:item.updatedAt || ''}));
+  const memories = memoryService.adminList().map(item => ({id:item.id,mediaType:item.mediaType,image:stableSyncUrl(item.imageUrl),video:stableSyncUrl(item.videoUrl),displayName:item.displayName || '',createdAt:item.createdAt || '',hidden:Boolean(item.hidden),pinned:Boolean(item.pinned),productId:item.productId || '',experienceSlug:item.experienceSlug || ''}));
+  const menu = {
+    categories: categories.map(item => ({id:item.id,slug:item.slug,nameAr:item.nameAr,nameEn:item.nameEn,active:item.active,image:stableSyncUrl(item.imageUrl)})),
+    products: products.map(item => ({id:item.id,categoryId:item.categoryId,nameAr:item.nameAr,nameEn:item.nameEn,price:item.price,available:item.available,image:stableSyncUrl(item.imageUrl),updatedAt:item.updatedAt || ''}))
+  };
+  const promotions = {today:promotionService.getAdminTodayOffer(),install:promotionService.getAdminInstallOffer()};
+  return {version:1,revisions:{menu:stableSyncHash(menu),experiences:stableSyncHash(experiences),memories:stableSyncHash(memories),promotions:stableSyncHash(promotions)}};
+};
+app.get('/api/pwa/sync',pwaSyncRateLimit,(_req,res)=>{
+  res.setHeader('Cache-Control','no-store, no-cache, must-revalidate');
+  res.setHeader('X-Content-Type-Options','nosniff');
+  return res.json(pwaSyncSnapshot());
 });
 
 const mediaService = createMediaService({
