@@ -19,9 +19,12 @@
     recognition: null,
     voiceEnabled: true,
     restartTimer: null,
+    resumeTimer: null,
     silenceTimer: null,
     transcriptBuffer: '',
     restartAttempts: 0,
+    resumePending: false,
+    autoResumeAttempt: false,
     sessionId: '',
     dialect: 'gulf',
     greetedThisVisit: false,
@@ -35,7 +38,9 @@
         savedAt: Date.now(),
         history: state.history.slice(-12),
         dialect: state.dialect,
-        greetedThisVisit: state.greetedThisVisit
+        greetedThisVisit: state.greetedThisVisit,
+        conversationActive: state.conversationActive,
+        surface: isInstalledPwa() ? 'installed-pwa' : 'browser'
       }));
     } catch {}
   }
@@ -56,6 +61,8 @@
       }
       if (RECOGNITION_LANGUAGES[saved.dialect]) state.dialect = saved.dialect;
       state.greetedThisVisit = Boolean(saved.greetedThisVisit);
+      state.conversationActive = Boolean(saved.conversationActive);
+      state.resumePending = state.conversationActive;
     } catch {}
   }
 
@@ -327,6 +334,17 @@
     );
   }
 
+  function scheduleVoiceResume(delay = 350) {
+    window.clearTimeout(state.resumeTimer);
+    if (!isInstalledPwa() || !state.conversationActive || state.busy || state.speaking || state.listening || !state.resumePending) return;
+
+    state.resumeTimer = window.setTimeout(() => {
+      state.resumeTimer = null;
+      if (!isInstalledPwa() || !state.conversationActive || state.busy || state.speaking || state.listening || !state.resumePending) return;
+      void startConversationFromUserGesture({ autoResume: true });
+    }, Math.max(150, Number(delay) || 350));
+  }
+
   function scheduleTranscriptFlush(delay = null) {
     clearSilenceTimer();
     if (!state.transcriptBuffer.trim()) return;
@@ -417,6 +435,7 @@
       await speak(error?.message || 'تعذر تشغيل شمس الآن. حاول مرة أخرى.');
     } finally {
       state.busy = false;
+      saveVoiceContinuity();
       if (!state.listening && !state.speaking) {
         setVisual('idle');
         scheduleListeningRestart(350);
@@ -440,7 +459,10 @@
 
     recognition.onstart = () => {
       state.listening = true;
+      state.resumePending = false;
+      state.autoResumeAttempt = false;
       state.restartAttempts = 0;
+      saveVoiceContinuity();
       showError('');
       setVisual('listening');
     };
@@ -487,10 +509,22 @@
     recognition.onerror = event => {
       state.listening = false;
       const code = String(event?.error || '');
+      const wasAutoResume = state.autoResumeAttempt;
+      state.autoResumeAttempt = false;
       if (code === 'not-allowed' || code === 'service-not-allowed') {
+        if (wasAutoResume) {
+          state.conversationActive = true;
+          state.resumePending = true;
+          showError('اسمح بالميكروفون من إعدادات المتصفح حتى تستأنف شمس تلقائيًا.');
+          setVisual('idle');
+          saveVoiceContinuity();
+          return;
+        }
         state.conversationActive = false;
+        state.resumePending = false;
         showError('اسمح بالميكروفون من إعدادات المتصفح حتى تسمعك شمس.');
         setVisual('error');
+        saveVoiceContinuity();
         return;
       }
       if (code !== 'aborted' && code !== 'no-speech') {
@@ -502,6 +536,10 @@
 
     recognition.onend = () => {
       state.listening = false;
+      if (state.resumePending && !state.busy && !state.speaking) {
+        setVisual('idle');
+        return;
+      }
       if (state.transcriptBuffer.trim() && !state.busy && !state.speaking) {
         scheduleTranscriptFlush(900);
         return;
@@ -528,28 +566,50 @@
     } catch {}
   }
 
-  async function startConversationFromUserGesture() {
+  async function startConversationFromUserGesture({ autoResume = false } = {}) {
     const { launcher } = ui();
     const recognition = state.recognition || setupRecognition();
     if (!recognition) return;
 
     state.conversationActive = true;
+    state.resumePending = false;
+    state.autoResumeAttempt = Boolean(autoResume);
     state.restartAttempts = 0;
     showError('');
-    stopSpeaking();
-    unlockAudio();
+    if (!autoResume) {
+      stopSpeaking();
+      unlockAudio();
+    }
 
     try {
-      if (!state.greetedThisVisit && state.voiceEnabled) {
+      if (!autoResume && !state.greetedThisVisit && state.voiceEnabled) {
         state.greetedThisVisit = true;
+        saveVoiceContinuity();
         await speak('أهلاً بيك في ARABISK. أنا شمس، معاك. قول لي تحب تعمل إيه وأنا أساعدك.');
       }
 
       recognition.lang = RECOGNITION_LANGUAGES[state.dialect] || 'ar-AE';
       recognition.start();
+      state.resumePending = false;
+      saveVoiceContinuity();
       launcher?.classList.add('is-listening');
     } catch (error) {
-      if (!/already started|recognition has already started/i.test(String(error?.message || ''))) {
+      const message = String(error?.message || '');
+      state.autoResumeAttempt = false;
+      if (autoResume) {
+        state.conversationActive = true;
+        state.resumePending = true;
+        saveVoiceContinuity();
+        setVisual('idle');
+        if (!/already started|recognition has already started/i.test(message)) {
+          showError('شمس ستحاول استئناف الاستماع بعد عودة التركيز للتطبيق.');
+        }
+        return;
+      }
+      if (!/already started|recognition has already started/i.test(message)) {
+        state.conversationActive = false;
+        state.resumePending = false;
+        saveVoiceContinuity();
         showError('تعذر تشغيل الميكروفون. اضغط شمس مرة أخرى.');
         setVisual('error');
       }
@@ -558,7 +618,10 @@
 
   function stopConversation() {
     state.conversationActive = false;
+    state.resumePending = false;
+    state.autoResumeAttempt = false;
     window.clearTimeout(state.restartTimer);
+    window.clearTimeout(state.resumeTimer);
     clearSilenceTimer();
     state.transcriptBuffer = '';
     state.lastFinalTranscript = '';
@@ -567,14 +630,23 @@
     state.listening = false;
     stopSpeaking();
     setVisual('idle');
+    saveVoiceContinuity();
   }
 
   function toggleVoice() {
-    if (state.listening || state.conversationActive) {
+    if (state.listening) {
       stopConversation();
       return;
     }
-    startConversationFromUserGesture();
+    if (state.conversationActive && state.resumePending) {
+      void startConversationFromUserGesture({ autoResume: false });
+      return;
+    }
+    if (state.conversationActive) {
+      stopConversation();
+      return;
+    }
+    void startConversationFromUserGesture({ autoResume: false });
   }
 
   function setup() {
@@ -597,6 +669,11 @@
     launcher.addEventListener('click', toggleVoice);
     window.addEventListener('pagehide', saveVoiceContinuity);
     window.addEventListener('beforeunload', saveVoiceContinuity);
+
+    if (state.conversationActive && isInstalledPwa()) {
+      setVisual('idle');
+      scheduleVoiceResume(450);
+    }
   }
 
   if ('speechSynthesis' in window) {
@@ -604,6 +681,20 @@
       window.speechSynthesis.addEventListener('voiceschanged', () => window.speechSynthesis.getVoices());
     } catch {}
   }
+
+  window.addEventListener('pageshow', () => {
+    if (state.conversationActive && isInstalledPwa()) {
+      state.resumePending = true;
+      scheduleVoiceResume(200);
+    }
+  });
+
+  window.addEventListener('visibilitychange', () => {
+    if (!document.hidden && state.conversationActive && isInstalledPwa() && !state.listening && !state.speaking && !state.busy) {
+      state.resumePending = true;
+      scheduleVoiceResume(250);
+    }
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setup, { once: true });
