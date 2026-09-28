@@ -2,13 +2,16 @@
 'use strict';
 
 const INTERVAL_MS = 10000;
+const CUSTOMER_TOKEN_KEY = 'ARABISK_PROFILE_TOKEN_V1';
 const MENU_CACHE_KEY = 'arabisk-menu-cache-v1';
 const TRACKED_PATHS = [
   /^\/$/,
   /^\/menu(?:\/[^/]+(?:\/[^/]+)?)?$/,
   /^\/events(?:\/[^/]+)?$/,
   /^\/offers$/,
-  /^\/memories$/
+  /^\/memories$/,
+  /^\/profile$/,
+  /^\/track-order$/
 ];
 
 let snapshot = null;
@@ -39,11 +42,15 @@ function trackedPage() {
   return TRACKED_PATHS.some((pattern) => pattern.test(location.pathname));
 }
 
-async function getJson(path) {
+function getProfileToken() {
+  try { return localStorage.getItem(CUSTOMER_TOKEN_KEY) || ''; } catch { return ''; }
+}
+
+async function getJson(path, options = {}) {
   const response = await fetch(path, {
     method: 'GET',
     cache: 'no-store',
-    headers: { Accept: 'application/json' }
+    headers: { Accept: 'application/json', ...(options.headers || {}) }
   });
   if (!response.ok) throw new Error('sync request failed: ' + path);
   return response.json();
@@ -104,14 +111,22 @@ async function syncNow() {
   if (running || !canSync()) return;
   running = true;
   try {
+    const token = getProfileToken();
     const data = await Promise.all([
       getJson('/api/categories'),
       getJson('/api/products'),
       getJson('/api/experiences'),
       getJson('/api/promotions/today'),
-      getJson('/api/memories?sort=latest&page=1&limit=8')
+      getJson('/api/memories?sort=latest&page=1&limit=8'),
+      token ? getJson('/api/customer-profile/summary', { headers: { 'X-ARABISK-PROFILE-TOKEN': token } }).catch(() => null) : Promise.resolve(null)
     ]);
     const next = buildSnapshot(data);
+    next.customer = data[5]?.profile ? {
+      profile: data[5].profile,
+      stats: data[5].stats || {},
+      orders: data[5].orders || [],
+      reservations: data[5].reservations || []
+    } : null;
     const changed = snapshot !== null && JSON.stringify(snapshot) !== JSON.stringify(next);
     const previous = snapshot;
     snapshot = next;
@@ -121,7 +136,7 @@ async function syncNow() {
     if (!changed) return;
 
     const changedKeys = [];
-    for (const key of ['categories', 'products', 'experiences', 'offer', 'memories']) {
+    for (const key of ['categories', 'products', 'experiences', 'offer', 'memories', 'customer']) {
       if (JSON.stringify(previous?.[key]) !== JSON.stringify(next[key])) changedKeys.push(key);
     }
 
