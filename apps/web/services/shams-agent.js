@@ -762,7 +762,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     }
 
     if (name === 'recommend_menu') {
-      const smart = pickSmartLocalRecommendations(catalog, context.memory, context.message, context.customerContext);
+      const smart = pickSmartLocalRecommendations(catalog, context.memory, context.message, context.customerContext, context.cart);
       return { recommendations: smart.candidates, preferences: smart.preferences };
     }
 
