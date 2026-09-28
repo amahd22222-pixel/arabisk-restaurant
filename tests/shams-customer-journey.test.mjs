@@ -72,6 +72,48 @@ test('Shams customer context exposes journey signals without phone or spend tele
   assert.equal('averageOrderValue' in context, false);
 });
 
+test('Shams keeps returning-customer recommendations familiar but not repetitive', async () => {
+  const agent = createShamsAgent({
+    repository: {
+      categories: { all: () => [] },
+      products: {
+        all: () => [
+          { id: 'P1', nameAr: 'المفضل', nameEn: 'Favorite', price: 60, available: true, chefChoice: false, isNew: false, rating: 4 },
+          { id: 'P2', nameAr: 'من نفس القسم', nameEn: 'Same Category', price: 60, available: true, categoryNameAr: 'أطباق رئيسية', chefChoice: false, isNew: false, rating: 4 },
+          { id: 'P3', nameAr: 'اكتشاف جديد', nameEn: 'New Discovery', price: 65, available: true, chefChoice: true, isNew: true, rating: 5 },
+          { id: 'P4', nameAr: 'اختيار إضافي', nameEn: 'Extra', price: 50, available: true, chefChoice: false, isNew: false, rating: 3 }
+        ]
+      }
+    },
+    memoryService: {
+      async read() {
+        return {
+          preferences: { budgetAed: null, spicy: null, vegetarian: null, taste: null, weight: null, category: '', protein: null },
+          recentProducts: [], recentTurns: [], journey: {}, lastIntent: '', name: ''
+        };
+      },
+      async rememberTurn() { return true; }
+    },
+    workflowService: { confirmation: () => null },
+    requestModel: null
+  });
+
+  const result = await agent.handle({
+    message: 'رشحلي',
+    sessionId: 's',
+    customer: { id: 'C2', name: 'أحمد' },
+    customerContext: {
+      journey: { stage: 'returning_favorite', nextBestAction: 'favorite_recommendation' },
+      favoriteProducts: [{ name: 'المفضل', quantity: 5 }],
+      favoriteCategories: [{ name: 'أطباق رئيسية', quantity: 4 }]
+    }
+  });
+
+  assert.equal(result.intent, 'recommend');
+  assert.match(result.reply, /المفضل/);
+  assert.match(result.reply, /اكتشاف جديد|من نفس القسم/);
+});
+
 test('Shams local agent prioritizes a known favorite when customer asks for their usual choice', async () => {
   let saved = null;
   const memoryService = {
