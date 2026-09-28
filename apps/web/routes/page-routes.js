@@ -75,6 +75,8 @@ export function registerPageRoutes(app, { rootDir, distDir }) {
         'shams.css',
         'mobile-nav.js',
         'mobile-nav.css',
+        'profile-page.css',
+        'profile-page.js',
         'manifest.json'
       ]);
       if (noCacheFiles.has(filename)) {
