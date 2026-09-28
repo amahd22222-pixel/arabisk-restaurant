@@ -1,4 +1,5 @@
 import { createCollectionRepository } from './collection-repository.js';
+import { normalizePhone } from '../utils/phone.js';
 
 const cleanIdempotencyKey = (value) => String(value ?? '').trim().slice(0, 100);
 
@@ -22,7 +23,10 @@ export function createStateRepository({ products, categories, orders, customers,
     },
     customers: {
       ...customerRepository,
-      findByPhone: (phone) => customerRepository.find(item => item.phone === phone)
+      findByPhone: (phone) => {
+        const normalized = normalizePhone(phone);
+        return customerRepository.find(item => normalizePhone(item?.phone) === normalized);
+      }
     },
     reservations: {
       ...reservationRepository,
