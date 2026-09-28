@@ -262,12 +262,26 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       ...customerMemory.preferences,
       ...sessionMemory.preferences
     });
+    const mergedEvidence = normalizePreferenceEvidence(customerMemory.preferenceEvidence);
+    const sessionEvidence = normalizePreferenceEvidence(sessionMemory.preferenceEvidence);
+    for (const field of LEARNABLE_PREFERENCES) {
+      for (const row of sessionEvidence[field]) {
+        const current = mergedEvidence[field].find(item => item.value === row.value);
+        if (current) current.count = Math.min(20, current.count + row.count);
+        else mergedEvidence[field].push({ ...row });
+      }
+      mergedEvidence[field].sort((a, b) => b.count - a.count || String(b.lastSeenAt).localeCompare(String(a.lastSeenAt)));
+      mergedEvidence[field] = mergedEvidence[field].slice(0, 6);
+    }
+    const stable = learnPreferences(mergedPreferences, mergedEvidence, {});
     const mergedJourney = customerMemory.journey?.stage
       ? customerMemory.journey
       : sessionMemory.journey;
 
     const saved = await save({ customerId: customer }, {
-      preferences: mergedPreferences,
+      preferences: stable.preferences,
+      preferenceEvidence: mergedEvidence,
+      preferenceConfidence: stable.preferenceConfidence,
       recentTurns: mergedTurns,
       recentProducts: mergedProducts,
       journey: mergedJourney,
