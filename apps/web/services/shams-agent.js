@@ -424,6 +424,11 @@ function pickSmartLocalRecommendations(products, memory, text, customerContext =
       ? memory.avoidProducts.map(item => String(item?.id || '').trim()).filter(Boolean)
       : []
   );
+  const chosenProducts = new Set(
+    Array.isArray(memory?.chosenProducts)
+      ? memory.chosenProducts.map(item => String(item?.id || '').trim()).filter(Boolean)
+      : []
+  );
   const cartIds = new Set(
     (Array.isArray(cart) ? cart : [])
       .map(item => String(item?.id || item?.productId || '').trim())
@@ -448,6 +453,7 @@ function pickSmartLocalRecommendations(products, memory, text, customerContext =
       if (journeyStage === 'reengagement' && favoriteCategories.has(productCategory)) score += 2;
       if (journeyStage === 'new_customer' && !favoriteProducts.size && product.chefChoice) score += 1;
       if (avoidProducts.has(String(product?.id || ''))) score -= 25;
+      if (chosenProducts.has(String(product?.id || ''))) score += 10;
 
       return {
         product,
@@ -456,7 +462,8 @@ function pickSmartLocalRecommendations(products, memory, text, customerContext =
         productCategory,
         isFavorite: favoriteProducts.has(productName),
         matchesFavoriteCategory: favoriteCategories.has(productCategory),
-        isAvoided: avoidProducts.has(String(product?.id || ''))
+        isAvoided: avoidProducts.has(String(product?.id || '')),
+        isChosen: chosenProducts.has(String(product?.id || ''))
       };
     })
     .sort((a, b) => b.score - a.score);
@@ -1290,6 +1297,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       intent,
       products: recentProducts.length ? recentProducts : memory.recentProducts,
       recommendedProducts: responseData.recommendations,
+      chosenProducts: responseData.added ? [responseData.added] : [],
       journey: memoryPatch.journey,
       name: memoryPatch.name
     });
