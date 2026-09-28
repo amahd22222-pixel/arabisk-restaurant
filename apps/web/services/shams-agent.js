@@ -182,7 +182,13 @@ function sanitizeToolCalls(calls) {
     }))
     .filter(call => ALLOWED_TOOLS.has(call.name))
     .filter(call => {
-      if (call.name === 'navigate') return ALLOWED_PATHS.has(clean(call.args.path, 120));
+      if (call.name === 'navigate') {
+        const path = clean(call.args.path, 180);
+        const hasStructuredTarget = Boolean(clean(call.args.categoryId, 80) || clean(call.args.productId, 80));
+        if (ALLOWED_PATHS.has(path) || hasStructuredTarget) return true;
+        if (!path.startsWith('/menu/')) return false;
+        return path.split('/').slice(2).every(isSafeMenuSlug) && path.split('/').length <= 4;
+      }
       if (call.name === 'get_order_status') return /^O\d{5}$/i.test(clean(call.args.orderId, 20));
       if (call.name === 'cart_add') return Boolean(clean(call.args.productId, 60));
       return true;
