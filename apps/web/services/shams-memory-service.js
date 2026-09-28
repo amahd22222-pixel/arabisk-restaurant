@@ -86,6 +86,8 @@ function normalizeMemory(raw, identity) {
         ? Object.fromEntries(Object.entries(source.journey.slots).slice(0, 12).map(([key, value]) => [clean(key, 40), clean(value, 120)]))
         : {}
     },
+    migratedToCustomerId: clean(source.migratedToCustomerId, 120),
+    migratedAt: clean(source.migratedAt, 40),
     updatedAt: clean(source.updatedAt, 40),
     expiresAt: Number(source.expiresAt || 0) || (now + (customerScoped ? CUSTOMER_TTL_MS : SESSION_TTL_MS))
   };
@@ -176,6 +178,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     const customer = clean(customerId, 120);
     if (!session || !customer) return false;
     const sessionMemory = await read({ sessionId: session });
+    if (sessionMemory.migratedToCustomerId === customer) return true;
     const customerMemory = await read({ customerId: customer });
     const mergedTurns = [...customerMemory.recentTurns, ...sessionMemory.recentTurns].slice(-MAX_TURNS);
     const mergedProducts = [...customerMemory.recentProducts, ...sessionMemory.recentProducts]
@@ -189,7 +192,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       ? customerMemory.journey
       : sessionMemory.journey;
 
-    return save({ customerId: customer }, {
+    const saved = await save({ customerId: customer }, {
       preferences: mergedPreferences,
       recentTurns: mergedTurns,
       recentProducts: mergedProducts,
@@ -197,6 +200,12 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       name: customerMemory.name || sessionMemory.name,
       pendingAction: customerMemory.pendingAction
     });
+    if (!saved) return false;
+    await save({ sessionId: session }, {
+      migratedToCustomerId: customer,
+      migratedAt: new Date().toISOString()
+    });
+    return true;
   }
 
   async function rememberTurn(identity, { user, assistant, intent, products, journey, name } = {}) {
