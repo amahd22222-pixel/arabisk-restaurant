@@ -78,6 +78,8 @@ function normalizeMemory(raw, identity) {
       expiresAt: Number(source.pendingAction.expiresAt || 0) || 0
     } : null,
     journey: {
+      stage: clean(source.journey?.stage, 50),
+      nextBestAction: clean(source.journey?.nextBestAction, 60),
       intent: clean(source.journey?.intent, 60),
       step: clean(source.journey?.step, 60),
       slots: source.journey?.slots && typeof source.journey.slots === 'object'
