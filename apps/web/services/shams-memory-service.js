@@ -288,6 +288,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       preferenceEvidence,
       preferenceConfidence,
       avoidProducts,
+      lastRecommendation,
       recentProducts,
       recentTurns: Array.isArray(patch.recentTurns) ? patch.recentTurns.slice(-MAX_TURNS) : current.recentTurns,
       lastIntent: clean(patch.lastIntent ?? current.lastIntent, 60),
