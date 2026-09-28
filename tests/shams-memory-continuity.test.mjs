@@ -53,6 +53,31 @@ test('Shams lets a repeated opposite preference eventually replace the earlier s
   assert.equal(third.preferenceConfidence.spicy, 1);
 });
 
+test('Shams remembers explicit rejection of the latest product for future recommendations', async () => {
+  const store = new Map();
+  const memory = createShamsMemoryService({
+    async readJsonWithStatus(key) {
+      return store.has(key) ? { ok: true, found: true, value: store.get(key) } : { ok: true, found: false };
+    },
+    async writeJson(key, value) {
+      store.set(key, value);
+      return true;
+    }
+  });
+
+  await memory.save({ customerId: 'C-REJECT' }, {
+    recentProducts: [{ id: 'P1', nameAr: 'طبق لا أريده', price: 70 }]
+  });
+  await memory.rememberTurn(
+    { customerId: 'C-REJECT' },
+    { user: 'مش ده، مش بحبه', assistant: 'تمام، أختار لك غيره.', intent: 'recommend' }
+  );
+
+  const saved = await memory.read({ customerId: 'C-REJECT' });
+  assert.equal(saved.avoidProducts?.[0]?.id, 'P1');
+  assert.equal(saved.avoidProducts?.[0]?.count, 1);
+});
+
 test('Shams merges anonymous conversational context into customer memory without carrying pending actions', async () => {
   const store = new Map();
   const memory = createShamsMemoryService({
