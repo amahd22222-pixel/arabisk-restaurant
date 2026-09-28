@@ -44,6 +44,47 @@ test('Shams distinguishes an existing reservation lookup from a new booking requ
   assert.equal(plan?.confidence >= 0.9, true);
 });
 
+test('Shams ranks customer favorites using frequency plus recency', () => {
+  const now = new Date();
+  const recent = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
+  const old = new Date(now.getTime() - 100 * 24 * 60 * 60 * 1000).toISOString();
+
+  const customer = { id: 'C-RECENCY', name: 'أحمد', phone: '+971500000000', createdAt: old };
+  const service = createCustomerRelationshipService({
+    repository: {
+      customers: {
+        all: () => [customer],
+        findById: id => String(id) === 'C-RECENCY' ? customer : null
+      },
+      orders: [
+        {
+          id: 'O1',
+          customerId: 'C-RECENCY',
+          status: 'completed',
+          completedAt: old,
+          items: [{ productId: 'P1', nameAr: 'طبق قديم', quantity: 4, categoryId: 'main', categoryNameAr: 'رئيسية' }]
+        },
+        {
+          id: 'O2',
+          customerId: 'C-RECENCY',
+          status: 'completed',
+          completedAt: recent,
+          items: [{ productId: 'P2', nameAr: 'طبق حديث', quantity: 3, categoryId: 'main', categoryNameAr: 'رئيسية' }]
+        }
+      ],
+      reservations: [],
+      products: [
+        { id: 'P1', categoryId: 'main', categoryNameAr: 'رئيسية' },
+        { id: 'P2', categoryId: 'main', categoryNameAr: 'رئيسية' }
+      ],
+      notificationDevices: []
+    }
+  });
+
+  const context = service.shamsContext('C-RECENCY');
+  assert.equal(context?.favoriteProducts?.[0]?.name, 'طبق حديث');
+});
+ 
 test('Shams customer context exposes journey signals without phone or spend telemetry', () => {
   const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
   const pad = value => String(value).padStart(2, '0');
