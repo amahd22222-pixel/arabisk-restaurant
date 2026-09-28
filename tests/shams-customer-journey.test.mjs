@@ -213,9 +213,6 @@ test('Shams agent prefers known favorites and avoids rejected or cart items', as
     cart: [{ id: 'P4', quantity: 1 }]
   });
 
-  const ids = result.intent === 'recommend'
-    ? result.reply
-    : '';
   assert.equal(result.intent, 'recommend');
   assert.match(result.reply, /المفضل/);
   assert.equal(/مرفوض/.test(result.reply), false);
