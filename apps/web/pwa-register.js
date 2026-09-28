@@ -1,8 +1,8 @@
 (() => {
   let hasControllerAtStartup = Boolean(navigator.serviceWorker.controller);
-
   let reloadPending = false;
   let reloadTimer = null;
+  let pageDirty = false;
 
   function shamsIsBusy() {
     try {
@@ -13,9 +13,25 @@
     }
   }
 
+  function pageHasUnsavedInput() {
+    return pageDirty;
+  }
+
+  function markPageDirty(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.closest('[data-pwa-ignore-dirty]')) return;
+    if (!target.matches('input:not([type="hidden"]):not([type="button"]):not([type="submit"]), textarea, select, [contenteditable="true"]')) return;
+    pageDirty = true;
+  }
+
+  function markPageClean() {
+    pageDirty = false;
+  }
+
   function reloadWhenSafe() {
     if (!reloadPending) return;
-    if (document.visibilityState === 'hidden' || !shamsIsBusy()) {
+    if (document.visibilityState === 'hidden' || (!shamsIsBusy() && !pageHasUnsavedInput())) {
       reloadPending = false;
       window.clearTimeout(reloadTimer);
       window.location.reload();
@@ -47,6 +63,10 @@
 
     attachControllerGuard();
 
+    document.addEventListener('input', markPageDirty, { capture: true });
+    document.addEventListener('change', markPageDirty, { capture: true });
+    document.addEventListener('submit', markPageClean, { capture: true });
+
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
         .then((registration) => {
@@ -69,11 +89,17 @@
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
         checkForUpdate();
+        reloadWhenSafe();
       }
     });
 
     window.addEventListener('pageshow', () => {
       checkForUpdate();
+      reloadWhenSafe();
+    });
+
+    window.addEventListener('pagehide', () => {
+      if (reloadPending) reloadWhenSafe();
     });
   }
 
