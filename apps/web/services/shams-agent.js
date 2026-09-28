@@ -751,6 +751,52 @@ function buildLiveContext({ page = '/', cart = [], customerContext = null, memor
 }
 
 
+function applyLiveContextToLocalPlan(plan, context) {
+  if (!plan) return plan;
+
+  const live = context?.live || {};
+  const message = normalizeDialectText(context?.message || '');
+  const area = live?.currentPage?.area || '';
+  const hasCart = Boolean(live?.cart?.hasItems);
+  const pending = live?.workflow?.type || '';
+  const vagueOpinion = /^(طيب|تمام|اه|آه|ايه رايك|اي رأيك|شو رأيك|شو رايك|مناسب|اختار|اختارلي|رشح|رشحلي|كمل|وريني|هات)$/i.test(message);
+
+  if (vagueOpinion && area === 'cart' && hasCart) {
+    return {
+      intent: 'cart_summary',
+      confidence: 0.96,
+      toolCalls: [{ name: 'cart_summary', args: {} }],
+      reply: 'أراجع لك السلة الحالية وأقول لك رأيي.'
+    };
+  }
+
+  if (vagueOpinion && area === 'product' && live.currentPage.product) {
+    return {
+      intent: 'product_info',
+      confidence: 0.94,
+      toolCalls: [{ name: 'product_info', args: { query: live.currentPage.product } }],
+      reply: 'أكيد، أراجع لك الطبق الظاهر أمامك.'
+    };
+  }
+
+  if (vagueOpinion && area === 'category' && live.currentPage.category) {
+    return {
+      intent: 'recommend',
+      confidence: 0.91,
+      toolCalls: [{ name: 'recommend_menu', args: { category: live.currentPage.category } }]
+    };
+  }
+
+  if (vagueOpinion && pending) {
+    return {
+      ...plan,
+      confidence: Math.min(0.99, Number(plan.confidence || 0.7) + 0.08)
+    };
+  }
+
+  return plan;
+}
+
 function buildLocalReply(intent, data) {
   if (intent === 'recommend') {
     const products = data.recommendations || [];
@@ -1344,7 +1390,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       customerContext: context.customerContext
     });
     const model = navigationOnlyRequested ? localPlan : (semanticPlan || localPlan);
-    const plan = model || localPlan;
+    const plan = applyLiveContextToLocalPlan(model || localPlan, context);
     const intent = normalizeIntent(plan.intent);
 
     stage = 'execute';
