@@ -46,7 +46,8 @@ const initials=name=>String(name||'ARABISK').trim().split(/\s+/).filter(Boolean)
 function renderIdentity(profile,stats={}) {
   const name=String(profile?.name||'عميل ARABISK');
   $('#profile-avatar').textContent=initials(name);
-  $('#profile-customer-name').textContent=name;
+  const nameHeading=$('#profile-name-heading');
+  if(nameHeading) nameHeading.textContent=name;
   $('#profile-phone').textContent=String(profile?.phone||'—');
   $('#profile-member-badge').textContent=Number(stats.orderCount||0)>0?'عضوية عميل ARABISK':'عضوية ARABISK جديدة';
   $('#profile-member-since').textContent=stats.memberSince?formatDate(stats.memberSince):'—';
