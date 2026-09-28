@@ -105,9 +105,73 @@ function productHaystack(product) {
     product?.descriptionEn,
     product?.categorySlug,
     product?.categoryId,
+    product?.categoryNameAr,
+    product?.categoryNameEn,
     ...(Array.isArray(product?.tags) ? product.tags : []),
     ...(Array.isArray(product?.aliases) ? product.aliases : [])
   ].join(' '));
+}
+
+function slug(value) {
+  return String(value ?? '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9\u0600-\u06ff]+/gi, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function categoryHaystack(category) {
+  return normalizeDialect([
+    category?.id,
+    category?.nameAr,
+    category?.nameEn,
+    category?.slug,
+    ...(Array.isArray(category?.aliases) ? category.aliases : [])
+  ].join(' '));
+}
+
+function rankCategories(categories, query, limit = 3) {
+  const normalizedQuery = normalizeDialect(query);
+  const tokens = significantTokens(query);
+  if (!normalizedQuery || !Array.isArray(categories)) return [];
+
+  return categories
+    .filter(category => category?.active !== false)
+    .map(category => {
+      const haystack = categoryHaystack(category);
+      const hayTokens = significantTokens(haystack);
+      let score = 0;
+      if (haystack === normalizedQuery) score += 40;
+      else if (haystack.includes(normalizedQuery)) score += 24;
+      for (const token of tokens) {
+        let best = 0;
+        for (const candidate of hayTokens) best = Math.max(best, tokenSimilarity(token, candidate));
+        if (best >= 0.99) score += 9;
+        else if (best >= 0.84) score += 6;
+        else if (best >= 0.68) score += 3;
+      }
+      return { category, score };
+    })
+    .filter(row => row.score >= 6)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(row => row.category);
+}
+
+function resolveCategory(raw, categories) {
+  const ranked = rankCategories(categories, raw, 3);
+  return ranked[0] || null;
+}
+
+function categoryProducts(catalog, category) {
+  if (!category?.id || !Array.isArray(catalog)) return [];
+  const key = String(category.id);
+  return catalog
+    .filter(product => String(product?.categoryId) === key && product?.available !== false)
+    .sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0));
 }
 
 export function rankProducts(products, query, limit = 6) {
@@ -262,7 +326,7 @@ function recommendationArgs(preferences) {
   return Object.fromEntries(Object.entries(preferences).filter(([, value]) => value !== undefined && value !== null && value !== ''));
 }
 
-export function buildSmartLocalPlan({ message, memory = {}, products = [], cart = [], page = '/' } = {}) {
+export function buildSmartLocalPlan({ message, memory = {}, products = [], categories = [], cart = [], page = '/' } = {}) {
   const text = clean(message);
   const raw = normalizeDialect(text);
   if (!raw) return null;
@@ -290,17 +354,35 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], cart 
     };
   }
 
+  const matchedCategory = resolveCategory(raw, categories);
+  const explicitAnyChoice = /(اي صنف|أي صنف|اي حاجة|أي حاجة|اختارلي|اختاريلي|اختار لي|اختاري لي|اي حاجه|أي حاجه)/i.test(raw);
+  const pageNavigationRequested = /(افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)/i.test(raw);
+
   if (isAddRequest(raw)) {
     const product = resolveReference(raw, ranked, memory, catalog);
-    if (product?.id) {
+    const categoryFallback = matchedCategory && (!product || (product.categoryId !== matchedCategory.id));
+    const categoryCandidates = categoryFallback ? categoryProducts(catalog, matchedCategory) : [];
+    const selectedCategoryProduct = explicitAnyChoice && categoryCandidates.length
+      ? categoryCandidates[0]
+      : (!product && categoryCandidates.length === 1 ? categoryCandidates[0] : null);
+    const selectedProduct = selectedCategoryProduct || product;
+    if (selectedProduct?.id) {
       return {
         intent: 'cart_add',
-        confidence: ranked.length ? 0.95 : 0.9,
+        confidence: ranked.length || categoryFallback ? 0.95 : 0.9,
         toolCalls: [{
           name: 'cart_add',
-          args: { productId: String(product.id), quantity: parseQuantity(text) }
+          args: { productId: String(selectedProduct.id), quantity: parseQuantity(text) }
         }],
-        reply: 'حاضر، أضيف لك ' + (product.nameAr || product.nameEn || 'الطبق') + '.'
+        reply: 'حاضر، أضيف لك ' + (selectedProduct.nameAr || selectedProduct.nameEn || 'الطبق') + '.'
+      };
+    }
+
+    if (matchedCategory && !explicitAnyChoice && categoryCandidates.length > 1 && !product) {
+      return {
+        intent: 'category_selection',
+        confidence: 0.9,
+        reply: 'تمام. في قسم ' + (matchedCategory.nameAr || matchedCategory.nameEn) + ' أكثر من صنف. قل لي اسم الصنف، أو قل "اختار لي أي صنف" وأنا أضيف أول اختيار متاح.'
       };
     }
     if (Object.keys(preferences).length) {
@@ -328,7 +410,35 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], cart 
     };
   }
 
-  if (/(منيو|القائمة|الأكل|الاكل|الأطباق|الاطباق|شو عنا|شو عندكم|شو موجود|وريني|ورجيني|جيبلي.*منيو|افتح.*منيو|شوف.*منيو)/i.test(raw)) {
+  if (matchedCategory && pageNavigationRequested && !/(منيو|القائمة)/i.test(raw)) {
+    return {
+      intent: 'navigate',
+      confidence: 0.94,
+      toolCalls: [{
+        name: 'navigate',
+        args: { categoryId: String(matchedCategory.id) }
+      }],
+      reply: 'أكيد، أفتح لك قسم ' + (matchedCategory.nameAr || matchedCategory.nameEn) + ' الآن.'
+    };
+  }
+
+  const matchedProduct = ranked[0] || resolveReference(raw, ranked, memory, catalog);
+  if (matchedProduct?.id && pageNavigationRequested && /(طبق|صنف|اكله|أكلة|منتج|product)/i.test(raw)) {
+    return {
+      intent: 'navigate',
+      confidence: 0.9,
+      toolCalls: [{
+        name: 'navigate',
+        args: {
+          categoryId: String(matchedProduct.categoryId || ''),
+          productId: String(matchedProduct.id)
+        }
+      }],
+      reply: 'أكيد، أفتح لك ' + (matchedProduct.nameAr || matchedProduct.nameEn) + ' الآن.'
+    };
+  }
+
+  if (/(منيو|القائمة|الأكل|الاكل|الأطباق|الاطباق|شو عنا|شو عندكم|شو موجود|جيبلي.*منيو|افتح.*منيو|شوف.*منيو)/i.test(raw)) {
     return {
       intent: 'menu',
       confidence: 0.96,
