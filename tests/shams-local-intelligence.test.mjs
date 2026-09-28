@@ -105,3 +105,19 @@ test('opens a specific product page when the spoken request names the dish', () 
   assert.equal(plan.toolCalls[0].args.productId, 'p3');
   assert.equal(plan.toolCalls[0].args.categoryId, 'desserts');
 });
+
+test('opens common site pages directly from natural spoken commands', () => {
+  for (const [message, expected] of [
+    ['افتح الرئيسية', '/'],
+    ['افتح الحجز', '/reservation'],
+    ['افتح السلة', '/cart'],
+    ['افتح متابعة الطلب', '/track-order'],
+    ['افتح الفعاليات', '/events'],
+    ['افتح الذكريات', '/memories'],
+    ['افتح سياسة الخصوصية', '/privacy']
+  ]) {
+    const plan = buildSmartLocalPlan({ message, memory: {}, products, categories });
+    assert.equal(plan.intent, 'navigate', message);
+    assert.equal(plan.toolCalls[0].args.path, expected, message);
+  }
+});
