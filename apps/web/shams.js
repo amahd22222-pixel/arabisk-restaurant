@@ -3,6 +3,8 @@
 
   const SESSION_KEY = 'ARABISK_SHAMS_SESSION_V1';
   const DIALECT_KEY = 'ARABISK_SHAMS_DIALECT_V1';
+  const VOICE_CONTINUITY_KEY = 'ARABISK_SHAMS_VOICE_CONTINUITY_V2';
+  const VOICE_CONTINUITY_TTL_MS = 30 * 60 * 1000;
   const SILENCE_FLUSH_MS = 2200;
   const DUPLICATE_TRANSCRIPT_WINDOW_MS = 2500;
 
@@ -550,6 +552,7 @@
 
     state.sessionId = getSessionId();
     state.dialect = detectInitialDialect();
+    restoreVoiceContinuity();
     state.voiceEnabled = 'speechSynthesis' in window;
     setupRecognition();
     if (!state.voiceEnabled) {
