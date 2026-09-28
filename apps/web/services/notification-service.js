@@ -9,6 +9,17 @@ const MAX_URL = 300;
 const MAX_TOPIC = 32;
 const SCHEDULE_HORIZON_MS = 90 * 24 * 60 * 60 * 1000;
 const SEND_CONCURRENCY = 8;
+const PUSH_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+
+const AUDIENCE_DEFINITIONS = {
+  'all-installed': { label: 'كل مستخدمي التطبيق', description: 'كل الأجهزة المثبتة والمشتركة في الإشعارات.' },
+  'new-7d': { label: 'عملاء جدد · 7 أيام', description: 'العملاء الذين ظهروا لأول مرة خلال آخر 7 أيام.' },
+  'active-30d': { label: 'عملاء نشطون · 30 يوم', description: 'عملاء لديهم نشاط خلال آخر 30 يومًا.' },
+  'dormant-31-90d': { label: 'عملاء خاملون · 31–90 يوم', description: 'عملاء لم ينشطوا منذ 31 إلى 90 يومًا.' },
+  'lapsed-90d': { label: 'عملاء غير نشطين · +90 يوم', description: 'عملاء لم ينشطوا منذ أكثر من 90 يومًا.' },
+  'repeat-2plus': { label: 'عملاء متكررون · طلبان+', description: 'عملاء لديهم طلبان مكتملان أو أكثر.' },
+  'app-members': { label: 'أعضاء التطبيق', description: 'العملاء المرتبطون بعضوية التطبيق.' }
+};
 
 class NotificationServiceError extends Error {
   constructor(message, status = 400) {
@@ -31,10 +42,11 @@ function normalizeCampaign(input = {}) {
   const url = clean(input.url || '/', MAX_URL) || '/';
   const topic = clean(input.topic || '', MAX_TOPIC);
   const urgency = ['very-low', 'low', 'normal', 'high'].includes(input.urgency) ? input.urgency : 'normal';
+  const audience = Object.prototype.hasOwnProperty.call(AUDIENCE_DEFINITIONS, input.audience) ? input.audience : 'all-installed';
   if (!title) throw new NotificationServiceError('عنوان الإشعار مطلوب.');
   if (!body) throw new NotificationServiceError('نص الإشعار مطلوب.');
   if (!/^\/(?!\/)|^https:\/\//i.test(url)) throw new NotificationServiceError('رابط الإشعار يجب أن يكون مسارًا داخليًا أو رابط HTTPS.');
-  return { title, body, url, topic, urgency };
+  return { title, body, url, topic, urgency, audience };
 }
 
 export function createNotificationService({
@@ -45,7 +57,10 @@ export function createNotificationService({
   notificationDevicesRepository,
   vapidPrivateKey,
   vapidPublicKey,
-  vapidSubject
+  vapidSubject,
+  customers = [],
+  orders = [],
+  reservations = []
 }) {
   const push = createWebPushService({
     privateKey: vapidPrivateKey,
@@ -74,6 +89,44 @@ export function createNotificationService({
 
   const installedDevices = () =>
     notificationDevicesRepository.all().filter(item => item?.status === 'installed');
+
+  const customerById = new Map(customers.map(customer => [String(customer?.id || ''), customer]));
+
+  const lifecycleFor = customer => {
+    const last = Date.parse(customer?.lastActivityAt || '');
+    if (!Number.isFinite(last)) return 'new';
+    const age = Math.max(0, Math.floor((Date.now() - last) / (24 * 60 * 60 * 1000)));
+    if (age <= 30) return 'active';
+    if (age <= 90) return 'dormant';
+    return 'lapsed';
+  };
+
+  const customerMatchesAudience = (customerId, audience) => {
+    if (audience === 'all-installed') return true;
+    const customer = customerById.get(String(customerId || ''));
+    if (!customer) return false;
+    if (audience === 'app-members') return customer.appMember === true;
+    if (audience === 'repeat-2plus') return Number(customer.orderCount || 0) >= 2;
+    if (audience === 'active-30d') return lifecycleFor(customer) === 'active';
+    if (audience === 'dormant-31-90d') return lifecycleFor(customer) === 'dormant';
+    if (audience === 'lapsed-90d') return lifecycleFor(customer) === 'lapsed';
+    if (audience === 'new-7d') {
+      const firstSeen = Date.parse(customer.firstSeenAt || '');
+      return Number.isFinite(firstSeen) && Date.now() - firstSeen <= 7 * 24 * 60 * 60 * 1000;
+    }
+    return false;
+  };
+
+  const audienceDeviceCounts = () => {
+    const subscriptions = installedSubscriptions();
+    return Object.keys(AUDIENCE_DEFINITIONS).map(key => ({
+      key,
+      label: AUDIENCE_DEFINITIONS[key].label,
+      description: AUDIENCE_DEFINITIONS[key].description,
+      customers: key === 'all-installed' ? customers.length : customers.filter(customer => customerMatchesAudience(customer?.id, key)).length,
+      devices: subscriptions.filter(subscription => customerMatchesAudience(subscription.customerId, key)).length
+    }));
+  };
 
   const installedSubscriptions = () => {
     const devices = new Map(notificationDevicesRepository.all().map(item => [item.clientId, item]));
@@ -131,6 +184,8 @@ export function createNotificationService({
     body: item.body,
     url: item.url,
     urgency: item.urgency,
+    audience: item.audience || 'all-installed',
+    audienceLabel: AUDIENCE_DEFINITIONS[item.audience || 'all-installed']?.label || AUDIENCE_DEFINITIONS['all-installed'].label,
     scheduledAt: item.scheduledAt || '',
     createdAt: item.createdAt,
     sentAt: item.sentAt || '',
@@ -147,8 +202,13 @@ export function createNotificationService({
     campaign.startedAt = nowIso();
     await persist();
 
-    const subscriptions = installedSubscriptions();
-    const stats = { targeted: subscriptions.length, delivered: 0, failed: 0, removed: 0 };
+    const eligible = installedSubscriptions().filter(subscription => customerMatchesAudience(subscription.customerId, campaign.audience));
+    const now = Date.now();
+    const subscriptions = eligible.filter(subscription => {
+      const lastPushAt = Date.parse(subscription.lastPushAt || '');
+      return !Number.isFinite(lastPushAt) || now - lastPushAt >= PUSH_COOLDOWN_MS;
+    });
+    const stats = { targeted: subscriptions.length, suppressed: Math.max(0, eligible.length - subscriptions.length), delivered: 0, failed: 0, removed: 0 };
 
     if (subscriptions.length === 0) {
       campaign.stats = stats;
@@ -180,6 +240,7 @@ export function createNotificationService({
             stats.delivered += 1;
             subscription.deliveryStatus = 'active';
             subscription.lastDeliveryAt = nowIso();
+            subscription.lastPushAt = subscription.lastDeliveryAt;
             subscription.lastDeliveryError = '';
             subscription.updatedAt = nowIso();
           } else if (result.statusCode === 404 || result.statusCode === 410) {
@@ -271,13 +332,12 @@ export function createNotificationService({
     const campaign = {
       id: crypto.randomUUID(),
       ...campaignInput,
-      audience: 'installed-pwa',
       status: scheduledAt ? 'scheduled' : 'queued',
       scheduledAt,
       createdAt: nowIso(),
       sentAt: '',
       error: '',
-      stats: { targeted: 0, delivered: 0, failed: 0, removed: 0 }
+      stats: { targeted: 0, suppressed: 0, delivered: 0, failed: 0, removed: 0 }
     };
     state.campaigns.push(campaign);
     state.campaigns = state.campaigns.slice(-MAX_CAMPAIGNS);
@@ -313,6 +373,7 @@ export function createNotificationService({
       subscribers: installedSubscriptions().length,
       installedDevices: installedDevices().length,
       campaigns: state.campaigns.length,
+      audiences: audienceDeviceCounts(),
       lastPersistAt,
       lastPersistOk
     }),
