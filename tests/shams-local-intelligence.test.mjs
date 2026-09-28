@@ -121,3 +121,31 @@ test('opens common site pages directly from natural spoken commands', () => {
     assert.equal(plan.toolCalls[0].args.path, expected, message);
   }
 });
+
+test('uses the open category page to resolve positional additions', () => {
+  const categoryProducts = [
+    { id: 'p1', nameAr: 'شوربة عدس', nameEn: 'Lentil Soup', price: 32, categoryId: 'soups', available: true, sortOrder: 1 },
+    { id: 'p2', nameAr: 'شوربة فطر', nameEn: 'Mushroom Soup', price: 22, categoryId: 'soups', available: true, sortOrder: 2 }
+  ];
+  const plan = buildSmartLocalPlan({
+    message: 'ضيفلي الأول',
+    memory: {},
+    products: [...categoryProducts, ...products],
+    categories: [{ id: 'soups', nameAr: 'الشوربات', nameEn: 'Soups', active: true }],
+    page: '/menu/soups'
+  });
+  assert.equal(plan.intent, 'cart_add');
+  assert.equal(plan.toolCalls[0].args.productId, 'p1');
+});
+
+test('uses the open product page to resolve "add this"', () => {
+  const plan = buildSmartLocalPlan({
+    message: 'ضيف ده',
+    memory: {},
+    products,
+    categories: [{ id: 'desserts', nameAr: 'الحلويات', nameEn: 'Desserts', active: true }],
+    page: '/menu/desserts/p3'
+  });
+  assert.equal(plan.intent, 'cart_add');
+  assert.equal(plan.toolCalls[0].args.productId, 'p3');
+});
