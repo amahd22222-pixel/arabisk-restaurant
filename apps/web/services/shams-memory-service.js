@@ -5,6 +5,7 @@ const CUSTOMER_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_TURNS = 16;
 const MAX_RECENT_PRODUCTS = 8;
+const MAX_AVOID_PRODUCTS = 8;
 
 const clean = (value, max = 200) => String(value ?? '').trim().slice(0, max);
 
@@ -72,6 +73,24 @@ function learnPreferences(currentPreferences, evidence, detected) {
   };
 }
 
+function normalizeAvoidProducts(value) {
+  const input = Array.isArray(value) ? value : [];
+  return input
+    .map(item => ({
+      id: clean(item?.id, 50),
+      nameAr: clean(item?.nameAr, 120),
+      count: Math.max(1, Math.min(20, Math.round(Number(item?.count || 1)))),
+      lastRejectedAt: clean(item?.lastRejectedAt, 40)
+    }))
+    .filter(item => item.id)
+    .slice(-MAX_AVOID_PRODUCTS);
+}
+
+function isExplicitProductRejection(value) {
+  const raw = String(value || '');
+  return /(?:مش|مو|لا|لأ|لاا).{0,16}(?:ده|دي|دا|هيدا|هيدي|هالطبق|الطبق ده|الطبق دي)|(?:مش عاجبني|مش عاجبني ده|مش بحبه|مش حابه|مو عاجبني|مو بحبه|مو حابب|مو حابه|مش عايز ده|مش عاوز ده|مش ده|مش دي|مو هيدا|مو هيدي)/i.test(raw);
+}
+
 function redactForMemory(value, max = 700) {
   return clean(value, max)
     .replace(/(?:05\d{8}|9715\d{8}|\+\d[\d\s-]{7,16})/g, '[رقم هاتف مخفي]')
@@ -115,6 +134,7 @@ function normalizeMemory(raw, identity) {
     name: clean(source.name, 80),
     preferences: normalizePreferences(source.preferences),
     preferenceEvidence: normalizePreferenceEvidence(source.preferenceEvidence),
+    avoidProducts: normalizeAvoidProducts(source.avoidProducts),
     preferenceConfidence: source.preferenceConfidence && typeof source.preferenceConfidence === 'object'
       ? Object.fromEntries(Object.entries(source.preferenceConfidence).slice(0, 12).map(([key, value]) => [clean(key, 40), Math.max(0, Math.min(1, Number(value) || 0))]))
       : {},
@@ -219,6 +239,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     const preferenceConfidence = patch.preferenceConfidence && typeof patch.preferenceConfidence === 'object'
       ? patch.preferenceConfidence
       : current.preferenceConfidence;
+    const avoidProducts = normalizeAvoidProducts(patch.avoidProducts ?? current.avoidProducts);
     const recentProducts = Array.isArray(patch.recentProducts)
       ? patch.recentProducts.slice(-MAX_RECENT_PRODUCTS)
       : current.recentProducts;
@@ -236,6 +257,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       preferences,
       preferenceEvidence,
       preferenceConfidence,
+      avoidProducts,
       recentProducts,
       recentTurns: Array.isArray(patch.recentTurns) ? patch.recentTurns.slice(-MAX_TURNS) : current.recentTurns,
       lastIntent: clean(patch.lastIntent ?? current.lastIntent, 60),
@@ -274,6 +296,10 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       mergedEvidence[field] = mergedEvidence[field].slice(0, 6);
     }
     const stable = learnPreferences(mergedPreferences, mergedEvidence, {});
+    const mergedAvoidProducts = normalizeAvoidProducts([
+      ...customerMemory.avoidProducts,
+      ...sessionMemory.avoidProducts
+    ]).sort((a, b) => b.count - a.count || String(b.lastRejectedAt).localeCompare(String(a.lastRejectedAt))).slice(0, MAX_AVOID_PRODUCTS);
     const mergedJourney = customerMemory.journey?.stage
       ? customerMemory.journey
       : sessionMemory.journey;
@@ -282,6 +308,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       preferences: stable.preferences,
       preferenceEvidence: mergedEvidence,
       preferenceConfidence: stable.preferenceConfidence,
+      avoidProducts: mergedAvoidProducts,
       recentTurns: mergedTurns,
       recentProducts: mergedProducts,
       journey: mergedJourney,
@@ -301,6 +328,25 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     const detectedPreferences = detectPreferences(user);
     const learned = learnPreferences(current.preferences, current.preferenceEvidence, detectedPreferences);
     const preferences = learned.preferences;
+    let avoidProducts = current.avoidProducts;
+    if (isExplicitProductRejection(user)) {
+      const latest = Array.isArray(current.recentProducts) ? current.recentProducts.at(-1) : null;
+      if (latest?.id) {
+        const existing = normalizeAvoidProducts(avoidProducts).find(item => item.id === String(latest.id));
+        if (existing) {
+          existing.count = Math.min(20, existing.count + 1);
+          existing.lastRejectedAt = new Date().toISOString();
+        } else {
+          avoidProducts = [...normalizeAvoidProducts(avoidProducts), {
+            id: String(latest.id),
+            nameAr: clean(latest.nameAr, 120),
+            count: 1,
+            lastRejectedAt: new Date().toISOString()
+          }];
+        }
+        avoidProducts = normalizeAvoidProducts(avoidProducts);
+      }
+    }
     const recentTurns = [
       ...current.recentTurns,
       ...(user ? [{ role: 'user', content: redactForMemory(user, 700) }] : []),
@@ -312,6 +358,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       preferences,
       preferenceEvidence: learned.preferenceEvidence,
       preferenceConfidence: learned.preferenceConfidence,
+      avoidProducts,
       recentTurns,
       recentProducts: Array.isArray(products) ? products.slice(-MAX_RECENT_PRODUCTS) : current.recentProducts,
       lastIntent: intent || current.lastIntent,
@@ -319,5 +366,5 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     });
   }
 
-  return { read, save, rememberTurn, mergeSessionIntoCustomer, detectPreferences, learnPreferences };
+  return { read, save, rememberTurn, mergeSessionIntoCustomer, detectPreferences, learnPreferences, isExplicitProductRejection };
 }
