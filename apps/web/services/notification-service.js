@@ -363,8 +363,48 @@ export function createNotificationService({
     return campaign;
   }
 
+  async function notifyCustomer(customerId, input = {}) {
+    const targetId = clean(customerId, 120);
+    if (!targetId || !push.configured) return { targeted: 0, delivered: 0, failed: 0 };
+
+    const title = clean(input.title || 'تحديث من ARABISK', MAX_TITLE);
+    const body = clean(input.body || '', MAX_BODY);
+    const url = clean(input.url || '/', MAX_URL) || '/';
+    const subscriptions = installedSubscriptions().filter(item => String(item.customerId || '') === targetId);
+    if (!subscriptions.length || !body) return { targeted: subscriptions.length, delivered: 0, failed: 0 };
+
+    let delivered = 0;
+    let failed = 0;
+    for (const subscription of subscriptions) {
+      try {
+        const result = await push.send(subscription, {
+          title, body, url,
+          tag: clean(input.tag || 'arabisk-customer-update', 60)
+        }, { ttl: 3600, urgency: 'high' });
+        if (result.ok) {
+          delivered += 1;
+          const stamp = nowIso();
+          subscription.deliveryStatus = 'active';
+          subscription.lastDeliveryAt = stamp;
+          subscription.lastPushAt = stamp;
+          subscription.lastDeliveryError = '';
+          subscription.updatedAt = stamp;
+        } else {
+          failed += 1;
+          subscription.lastDeliveryError = 'Transactional push delivery failed.';
+          subscription.updatedAt = nowIso();
+        }
+      } catch {
+        failed += 1;
+      }
+    }
+    if (subscriptions.length) await pushSubscriptionsRepository.save();
+    return { targeted: subscriptions.length, delivered, failed };
+  }
+
   return {
     restore,
+    notifyCustomer,
     createAndSend,
     cancel,
     getStatus: () => ({
