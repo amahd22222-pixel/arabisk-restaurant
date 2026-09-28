@@ -4,6 +4,7 @@
 const CHECKOUT_KEY='arabisk-checkout-v3';
 const LAST_ORDER_KEY='arabisk-last-order-v1';
 const PROMO_STORAGE_KEY='arabisk-active-promo-v1';
+const PENDING_ORDER_KEY='arabisk-pending-order-v1';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
 const readJson=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value??fallback}catch{return fallback}};
@@ -12,6 +13,10 @@ const readCart=()=>window.ARABISK_CART?.getItems?.()||[];
 const readProfile=()=>window.ARABISK_PROFILE?.getProfile?.()||null;
 const getPwaClientId=()=>{try{return String(localStorage.getItem('ARABISK_PWA_CLIENT_ID')||'').trim().slice(0,100)}catch{return ''}};
 const profileCustomerId=()=>String(readProfile()?.id||'').trim();
+const isStandaloneMode=()=>window.matchMedia?.('(display-mode: standalone)').matches||navigator.standalone===true;
+const readPendingOrder=()=>{try{const value=JSON.parse(sessionStorage.getItem(PENDING_ORDER_KEY)||'null');return value&&value.key&&value.fingerprint?value:null}catch{return null}};
+const savePendingOrder=value=>{try{sessionStorage.setItem(PENDING_ORDER_KEY,JSON.stringify(value))}catch{}};
+const clearPendingOrder=()=>{try{sessionStorage.removeItem(PENDING_ORDER_KEY)}catch{}};
 async function hydrateCartView(){
   const currentItems=readCart();
   const incomplete=currentItems.filter(item=>!item.hydrated&&(!item.nameAr||item.nameAr===item.id||Number(item.price)<=0));
@@ -43,7 +48,7 @@ try{promoCode=String(new URLSearchParams(location.search).get('promo')||sessionS
 let recoveryToken=new URLSearchParams(location.search).get('recover')||'';
 let recoveryRestorePromise=null;
 let pendingOrderFingerprint='';
-let pendingOrderIdempotencyKey='';
+let pendingOrderIdempotencyKey=readPendingOrder()?.key||'';
 
 const createOrderIdempotencyKey = () => {
   try {
@@ -96,14 +101,44 @@ function syncOrderTypeUI(){
 function emptyMarkup(){return '<div class="cart-empty"><div class="cart-empty-icon">🛒</div><h2>السلة فارغة</h2><p>لم تضف أي صنف بعد. تصفّح المنيو واختر أطباقك، ثم ارجع هنا لإكمال الطلب.</p><a class="cart-primary" href="/menu">استكشف المنيو</a></div>';}
 function render(){const items=document.querySelector('#cart-items');const mobileDock=document.querySelector('#mobile-checkout-dock');const mobileTotal=document.querySelector('#mobile-checkout-total');const countLabel=document.querySelector('#cart-count-label');const summaryCount=document.querySelector('#cart-summary-count');const summarySubtotal=document.querySelector('#cart-summary-subtotal');const summaryDiscount=document.querySelector('#cart-summary-discount');const summaryDiscountRow=document.querySelector('#cart-summary-discount-row');const summaryTotal=document.querySelector('#cart-summary-total');const formWrap=document.querySelector('#cart-form-wrap');const emptySummary=document.querySelector('#cart-empty-summary');const clearButton=document.querySelector('#cart-clear');const trackLast=document.querySelector('#cart-track-last');const last=readLastOrder();const itemCount=count();if(countLabel)countLabel.textContent=itemCount?itemCount+' '+(itemCount===1?'صنف':'أصناف'):'لا توجد أصناف';if(summaryCount)summaryCount.textContent=String(itemCount);if(summarySubtotal)summarySubtotal.textContent=money(total());if(summaryDiscountRow)summaryDiscountRow.hidden=!promoQuote||Number(promoQuote.discount||0)<=0;if(summaryDiscount)summaryDiscount.textContent=promoQuote?'- '+money(promoQuote.discount):'- AED 0';if(summaryTotal)summaryTotal.textContent=money(promoQuote?.total??total());if(formWrap)formWrap.hidden=!cart.length;if(mobileDock)mobileDock.hidden=!cart.length;if(mobileTotal)mobileTotal.textContent=money(promoQuote?.total??total());if(emptySummary)emptySummary.hidden=Boolean(cart.length);if(clearButton)clearButton.hidden=!cart.length;if(trackLast){trackLast.hidden=!last;trackLast.textContent=last?'متابعة '+last.id:'متابعة آخر طلب';}if(!items)return;if(!cart.length){items.innerHTML=emptyMarkup();return;}items.innerHTML=cart.map(item=>'<article class="cart-item"><img class="cart-item-image" src="'+esc(item.imageUrl||'')+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'"><div class="cart-item-copy"><h3 class="cart-item-name">'+esc(item.nameAr)+'</h3><p class="cart-item-price">'+money(item.price)+' للصنف</p><div class="cart-item-total">'+money(Number(item.price)*Number(item.qty))+'</div></div><div class="cart-item-actions"><div class="cart-qty"><button type="button" data-inc="'+esc(item.id)+'" aria-label="زيادة الكمية">+</button><span>'+Number(item.qty)+'</span><button type="button" data-dec="'+esc(item.id)+'" aria-label="إنقاص الكمية">−</button></div><button class="cart-remove" type="button" data-remove="'+esc(item.id)+'">حذف الصنف</button></div></article>').join('');}
 function setQty(id,next){if(!window.ARABISK_CART?.setQuantity?.(id,next))return;cart=readCart();render();if(promoCode&&cart.length)void refreshPromoQuote(false);}
-async function refreshPromoQuote(showErrors=true){
+async function ensureInstallRewardCode(){
+  if(!isStandaloneMode())return '';
+  const clientId=getPwaClientId();
+  if(!clientId)return '';
+  try{
+    const response=await fetch('/api/promotions/install/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clientId}),cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)return '';
+    if(data?.code){
+      promoCode=String(data.code).trim().toUpperCase();
+      try{
+        localStorage.setItem('ARABISK_INSTALL_REWARD_CODE',promoCode);
+        localStorage.setItem('ARABISK_INSTALL_REWARD_META_V1',JSON.stringify({expiresAt:data.expiresAt||'',discountValue:data.discountValue||0,status:data.status||'available'}));
+        sessionStorage.setItem(PROMO_STORAGE_KEY,promoCode);
+      }catch{}
+      return promoCode;
+    }
+    if(['redeemed','expired'].includes(data?.status)){
+      promoCode='';
+      promoQuote=null;
+      try{
+        localStorage.removeItem('ARABISK_INSTALL_REWARD_CODE');
+        localStorage.removeItem('ARABISK_INSTALL_REWARD_META_V1');
+        sessionStorage.removeItem(PROMO_STORAGE_KEY);
+      }catch{}
+    }
+  }catch{}
+  return '';
+}
+async function refreshPromoQuote(showErrors=true, retrying=false){
   const input=document.querySelector('#cart-promo-code');
   const status=document.querySelector('#cart-promo-status');
   promoCode=String(input?.value||promoCode||'').trim().toUpperCase().slice(0,80);
   if(input)input.value=promoCode;
+  if(!promoCode&&isStandaloneMode()) promoCode=await ensureInstallRewardCode();
   if(!promoCode||!cart.length){promoQuote=null;render();if(status)status.textContent='';return false;}
   try{
-    const response=await fetch('/api/promotions/install/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:promoCode,subtotal:total(),clientId:getPwaClientId()})});
+    const response=await fetch('/api/promotions/install/quote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:promoCode,subtotal:total(),clientId:getPwaClientId()}),cache:'no-store'});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(data.message||'كود الخصم غير صالح.');
     promoQuote=data;
@@ -112,6 +147,10 @@ async function refreshPromoQuote(showErrors=true){
     render();
     return true;
   }catch(error){
+    if(!retrying&&isStandaloneMode()){
+      const recovered=await ensureInstallRewardCode();
+      if(recovered) return refreshPromoQuote(showErrors,true);
+    }
     promoQuote=null;
     if(status&&showErrors)status.textContent=error.message||'تعذر تطبيق كود الخصم.';
     render();
@@ -122,6 +161,11 @@ function showSuccess(data){document.querySelector('#success-order-id').textConte
 function closeModal(id){document.querySelector(id)?.classList.remove('show');}
 async function submitOrder(event){
   event.preventDefault();if(!cart.length)return;
+  if(navigator.onLine===false){
+    const offlineStatus=document.querySelector('#cart-form-status');
+    if(offlineStatus)offlineStatus.textContent='لا يمكن إرسال الطلب بدون اتصال بالإنترنت. أعد المحاولة عند عودة الاتصال.';
+    return;
+  }
   const status=document.querySelector('#cart-form-status');const submit=document.querySelector('#cart-submit');
   const orderType=document.querySelector('#cart-order-type')?.value||'dine_in';
   const tableNumber=String(document.querySelector('#cart-table')?.value||'').trim();
@@ -147,9 +191,14 @@ async function submitOrder(event){
       items:cart.map(item=>({productId:item.id,quantity:item.qty}))
     };
     const fingerprint=JSON.stringify(payload);
-    if(fingerprint!==pendingOrderFingerprint||!pendingOrderIdempotencyKey){
+    const storedPending=readPendingOrder();
+    if(storedPending?.fingerprint===fingerprint){
+      pendingOrderFingerprint=fingerprint;
+      pendingOrderIdempotencyKey=storedPending.key;
+    }else{
       pendingOrderFingerprint=fingerprint;
       pendingOrderIdempotencyKey=createOrderIdempotencyKey();
+      savePendingOrder({key:pendingOrderIdempotencyKey,fingerprint});
     }
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);let response;
     try{response=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...payload,idempotencyKey:pendingOrderIdempotencyKey}),signal:controller.signal});}finally{clearTimeout(timer);}
@@ -157,6 +206,7 @@ async function submitOrder(event){
     saveLastOrder(data,{orderType,tableNumber,name,phone});
     pendingOrderFingerprint='';
     pendingOrderIdempotencyKey='';
+    clearPendingOrder();
     window.ARABISK_CART?.clear?.();cart=readCart();document.querySelector('#cart-form').reset();promoCode='';promoQuote=null;try{sessionStorage.removeItem(PROMO_STORAGE_KEY);localStorage.removeItem('ARABISK_INSTALL_REWARD_CODE')}catch{}syncCheckoutFields();render();status.textContent='';showSuccess(data);
   }catch(e){status.textContent=e.name==='AbortError'?'انتهت مهلة الاتصال.':(e.message||'تعذر إرسال الطلب.');}finally{submit.disabled=false;}
 }

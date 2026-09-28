@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v28';
+const CACHE_VERSION = 'arabisk-pwa-v29';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -57,11 +57,13 @@ const PUBLIC_GET_APIS = new Set([
 ]);
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_VERSION)
-      .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_VERSION);
+    await Promise.allSettled(APP_SHELL.map(async (url) => {
+      try { await cache.add(url); } catch (error) { console.warn('[ARABISK PWA] shell asset skipped:', url, error?.message || error); }
+    }));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', (event) => {
@@ -80,8 +82,7 @@ function isSameOrigin(request) {
 
 function shouldBypass(request) {
   const url = new URL(request.url);
-  return url.pathname.startsWith('/proxy/') ||
-    url.pathname.startsWith('/auth/');
+  return url.pathname.startsWith('/proxy/') || url.pathname.startsWith('/auth/');
 }
 
 function shouldNetworkFirst(request) {
@@ -109,9 +110,19 @@ async function cacheResponse(request, response) {
   return response;
 }
 
+async function fetchWithTimeout(request, timeoutMs = 3500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(request, { cache: 'no-store', signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function networkFirst(request) {
   try {
-    const response = await fetch(request, { cache: 'no-store' });
+    const response = await fetchWithTimeout(request);
     return cacheResponse(request, response);
   } catch {
     return caches.match(request);
@@ -120,7 +131,7 @@ async function networkFirst(request) {
 
 async function publicApiFirst(request) {
   try {
-    const response = await fetch(request, { cache: 'no-store' });
+    const response = await fetchWithTimeout(request, 4500);
     if (response.ok) await cacheResponse(request, response);
     return response;
   } catch {
@@ -130,6 +141,20 @@ async function publicApiFirst(request) {
       status: 503,
       headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
     });
+  }
+}
+
+async function navigationFallback(request) {
+  try {
+    const response = await fetchWithTimeout(request);
+    return await cacheResponse(request, response);
+  } catch {
+    const exact = await caches.match(request);
+    if (exact) return exact;
+    const pathname = new URL(request.url).pathname;
+    return (await caches.match(pathname)) ||
+      (await caches.match('/index.html')) ||
+      (await caches.match('/offline.html'));
   }
 }
 
@@ -143,15 +168,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request, { cache: 'no-store' })
-        .then((response) => cacheResponse(request, response))
-        .catch(async () => {
-          const cached = await caches.match(request);
-          return cached || caches.match(new URL(request.url).pathname) ||
-            caches.match('/index.html') || caches.match('/offline.html');
-        })
-    );
+    event.respondWith(navigationFallback(request));
     return;
   }
 
@@ -167,8 +184,6 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
-
-// ---- Push notifications ----
 
 self.addEventListener('push', (event) => {
   let data = {};

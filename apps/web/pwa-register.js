@@ -31,15 +31,30 @@
 
   function reloadWhenSafe() {
     if (!reloadPending) return;
-    if (document.visibilityState === 'hidden' || (!shamsIsBusy() && !pageHasUnsavedInput())) {
-      reloadPending = false;
+    if (document.visibilityState !== 'visible') {
       window.clearTimeout(reloadTimer);
-      window.location.reload();
+      reloadTimer = window.setTimeout(reloadWhenSafe, 1200);
       return;
     }
+    if (shamsIsBusy() || pageHasUnsavedInput()) {
+      window.clearTimeout(reloadTimer);
+      reloadTimer = window.setTimeout(reloadWhenSafe, 1200);
+      return;
+    }
+    reloadPending = false;
     window.clearTimeout(reloadTimer);
-    reloadTimer = window.setTimeout(reloadWhenSafe, 1500);
+    window.location.reload();
   }
+
+  function requestSafeReload() {
+    reloadPending = true;
+    reloadWhenSafe();
+  }
+
+  window.ARABISK_PWA = {
+    requestReload: requestSafeReload,
+    isUpdatePending: () => reloadPending
+  };
 
   function attachControllerGuard() {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -47,8 +62,7 @@
         hasControllerAtStartup = true;
         return;
       }
-      reloadPending = true;
-      reloadWhenSafe();
+      requestSafeReload();
     });
   }
 
@@ -96,10 +110,6 @@
     window.addEventListener('pageshow', () => {
       checkForUpdate();
       reloadWhenSafe();
-    });
-
-    window.addEventListener('pagehide', () => {
-      if (reloadPending) reloadWhenSafe();
     });
   }
 

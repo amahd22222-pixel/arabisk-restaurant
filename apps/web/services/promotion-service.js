@@ -91,11 +91,18 @@ export function createPromotionService({ readJsonWithStatus, writeJson, storageR
   };
 
   const prune = () => {
-    const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
-    installOffer.claims = installOffer.claims.filter(claim => {
-      const timestamp = Date.parse(claim.redeemedAt || claim.expiresAt || claim.claimedAt || '');
-      return !Number.isFinite(timestamp) || timestamp >= cutoff;
-    }).slice(-MAX_CLAIMS);
+    const latestByClient = new Map();
+    const withoutClient = [];
+    for (let index = installOffer.claims.length - 1; index >= 0; index -= 1) {
+      const claim = installOffer.claims[index];
+      const clientId = clean(claim?.clientId, 100);
+      if (!clientId) {
+        withoutClient.push(claim);
+        continue;
+      }
+      if (!latestByClient.has(clientId)) latestByClient.set(clientId, claim);
+    }
+    installOffer.claims = [...withoutClient.reverse(), ...[...latestByClient.values()].reverse()].slice(-MAX_CLAIMS);
   };
 
   async function restore() {
@@ -262,22 +269,28 @@ export function createPromotionService({ readJsonWithStatus, writeJson, storageR
     if (!installOffer.enabled) throw new PromotionError('Install promotion is currently disabled.', 409);
     prune();
     const normalizedClientId = clean(clientId, 100);
+    if (!normalizedClientId) throw new PromotionError('App installation identity is required.', 400);
 
-    if (normalizedClientId) {
-      const existing = [...installOffer.claims].reverse().find(claim =>
-        claim.clientId === normalizedClientId &&
-        ['available', 'reserved'].includes(claim.status) &&
-        Date.parse(claim.expiresAt || '') > Date.now()
-      );
-      if (existing) {
+    const existing = [...installOffer.claims].reverse().find(claim => claim.clientId === normalizedClientId);
+    if (existing) {
+      const expiresAt = Date.parse(existing.expiresAt || '');
+      if (['available', 'reserved'].includes(existing.status) && (!Number.isFinite(expiresAt) || expiresAt > Date.now())) {
         return {
           code: existing.code,
+          status: existing.status,
           expiresAt: existing.expiresAt,
           discountType: 'percent',
           discountValue: Number(installOffer.discountValue),
           maxDiscount: Number(installOffer.maxDiscount)
         };
       }
+      if (existing.status === 'redeemed') {
+        return { code: '', status: 'redeemed', redeemedAt: existing.redeemedAt || '', discountType: 'percent', discountValue: Number(installOffer.discountValue) };
+      }
+      if (existing.status === 'reserved') {
+        return { code: existing.code, status: 'reserved', expiresAt: existing.expiresAt || '', discountType: 'percent', discountValue: Number(installOffer.discountValue) };
+      }
+      return { code: '', status: 'expired', expiresAt: existing.expiresAt || '', discountType: 'percent', discountValue: Number(installOffer.discountValue) };
     }
 
     const claimedAt = new Date();

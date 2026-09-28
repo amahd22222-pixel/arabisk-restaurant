@@ -4,7 +4,7 @@ export function registerPromotionRoutes(app, { service, requireAdminApiKey, clai
 
   app.post('/api/promotions/install/claim', claimRateLimit, async (req, res, next) => {
     try {
-      return res.status(201).json(await service.claimInstallReward(req.body?.clientId));
+      return res.json(await service.claimInstallReward(req.body?.clientId));
     } catch (error) {
       next(error);
     }

@@ -8,6 +8,7 @@ const SESSION_KEY='arabisk-session-v1';
 const getSessionId=()=>{try{let id=localStorage.getItem(SESSION_KEY);if(!id){id=(crypto.randomUUID?.()||('s-'+Date.now()+'-'+Math.random().toString(36).slice(2)));localStorage.setItem(SESSION_KEY,id)}return id}catch{return 'session-'+Date.now()}};
 const track=(eventName,data={})=>{try{fetch('/api/events',{method:'POST',headers:{'Content-Type':'application/json'},keepalive:true,body:JSON.stringify({eventName,sessionId:getSessionId(),...data})}).catch(()=>{})}catch{}};
 const cartValue=items=>items.reduce((sum,item)=>sum+(Number(item.price)||0)*(Number(item.qty)||0),0);
+const CART_ICON='<svg class="app-cart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 5.5h2l1.7 9.1a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 1.9-1.4l1.6-6.3H7.1"></path><path d="M10 19.5h.01M17 19.5h.01"></path></svg>';
 const cleanupLegacyCart=()=>{for(const key of ['arabisk-cart-v1','arabisk-cart-v2','arabisk-cart-v3']){try{localStorage.removeItem(key)}catch{}try{sessionStorage.removeItem(key)}catch{}}for(const key of ['arabisk_cart_v1','arabisk_cart_v2','arabisk_cart_v3']){try{document.cookie=key+'=; Path=/; Max-Age=0; SameSite=Lax'}catch{}}};
 
 const normalizeItem=item=>{
@@ -94,8 +95,23 @@ function ensureStyles(){
   document.head.appendChild(style);
 }
 
+function syncHeaderCart(){
+  const link=document.querySelector('.app-cart-link');
+  if(!link)return;
+  let badge=link.querySelector('b');
+  if(!badge){
+    badge=document.createElement('b');
+    badge.id='app-cart-count';
+    badge.hidden=true;
+    link.appendChild(badge);
+  }
+  link.setAttribute('aria-label','فتح السلة');
+  link.innerHTML='';
+  link.appendChild(document.createRange().createContextualFragment(CART_ICON));
+  link.appendChild(badge);
+}
 function ensureFloatingCart(){
-  if(location.pathname==='/cart'||document.querySelector('#arabisk-cart-open'))return;
+  if(location.pathname==='/cart'||document.querySelector('.app-cart-link')||document.querySelector('#arabisk-cart-open'))return;
   ensureStyles();
   const a=document.createElement('a');
   a.id='arabisk-cart-open';
@@ -107,11 +123,11 @@ function ensureFloatingCart(){
 }
 
 function renderBadge(){
-  const badge=document.querySelector('#arabisk-cart-count');
-  if(!badge)return;
   const quantity=cart.reduce((sum,item)=>sum+(Number(item.qty)||0),0);
-  badge.textContent=String(quantity);
-  badge.hidden=quantity===0;
+  document.querySelectorAll('#arabisk-cart-count, #app-cart-count, .app-cart-link b').forEach(badge=>{
+    badge.textContent=String(quantity);
+    badge.hidden=quantity===0;
+  });
 }
 
 function showToast(item,qty){
@@ -193,7 +209,7 @@ function clear(){
 
 function open(){window.location.assign('/cart')}
 function render(){cart=readCart();renderBadge();return cart}
-function mount(){cleanupLegacyCart();ensureFloatingCart();render();if(location.pathname==='/menu'||location.pathname.startsWith('/menu/'))track('menu_view')}
+function mount(){cleanupLegacyCart();syncHeaderCart();ensureFloatingCart();render();if(location.pathname==='/menu'||location.pathname.startsWith('/menu/'))track('menu_view')}
 
 window.ARABISK_ANALYTICS={track,getSessionId};
 window.ARABISK_CART={

@@ -30,6 +30,26 @@ function getClientId() {
   }
 }
 
+function saveReward(data) {
+  try {
+    if (data?.code) localStorage.setItem(REWARD_CODE_KEY, data.code);
+    localStorage.setItem(REWARD_META_KEY, JSON.stringify({
+      expiresAt: data?.expiresAt || '',
+      discountValue: data?.discountValue || installOffer?.discountValue || 20,
+      status: data?.status || 'available'
+    }));
+    if (data?.code) sessionStorage.setItem('arabisk-active-promo-v1', data.code);
+  } catch {}
+}
+
+function clearReward() {
+  try {
+    localStorage.removeItem(REWARD_CODE_KEY);
+    localStorage.removeItem(REWARD_META_KEY);
+    sessionStorage.removeItem('arabisk-active-promo-v1');
+  } catch {}
+}
+
 async function fetchInstallOffer() {
   try {
     const response = await fetch('/api/promotions/install', { cache: 'no-store' });
@@ -45,7 +65,7 @@ async function fetchInstallOffer() {
 function ensurePwaUi() {
   if (document.getElementById('pwa-install')) return;
   const style = document.createElement('style');
-  style.textContent = '.pwa-install{position:fixed;right:16px;left:16px;bottom:20px;z-index:10000;display:grid;grid-template-columns:76px 1fr auto;align-items:center;gap:14px;padding:16px 17px;background:linear-gradient(145deg,#1b1712,#0f0d0a);color:#fff;border:1px solid rgba(210,177,109,.28);border-radius:24px;box-shadow:0 24px 70px rgba(0,0,0,.38),0 0 0 1px rgba(255,255,255,.03) inset;font:13px/1.5 Cairo,sans-serif;overflow:hidden}.pwa-install:before{content:"";position:absolute;inset:-40% auto auto -10%;width:180px;height:180px;border-radius:50%;background:rgba(210,177,109,.11);filter:blur(8px)}.pwa-install[hidden],.pwa-reward[hidden]{display:none}.pwa-install-mark{position:relative;display:grid;place-items:center;width:76px;height:76px;border:1px solid rgba(210,177,109,.38);border-radius:20px;background:rgba(210,177,109,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}.pwa-install-mark span{font:900 34px/1 "Playfair Display",serif;color:#fff}.pwa-install-mark small{margin-top:-18px;color:#d2b16d;font:800 12px/1 Cairo,sans-serif}.pwa-install-copy{position:relative;min-width:0}.pwa-install-kicker{display:block;margin-bottom:3px;color:#d2b16d;font:800 9px/1 Cairo,sans-serif;letter-spacing:1.6px}.pwa-install-copy strong{display:block;margin-bottom:4px;color:#fff;font:800 16px/1.35 Cairo,sans-serif}.pwa-install-copy span{display:block;color:rgba(255,255,255,.68);font-size:11px;line-height:1.8}.pwa-install-actions{position:relative;display:grid;gap:7px;min-width:126px}.pwa-install button{border:0;border-radius:999px;padding:10px 15px;background:#b89455;color:#fff;font:800 11px/1.2 Cairo,sans-serif;cursor:pointer;white-space:nowrap}.pwa-install .pwa-dismiss{padding:7px 10px;background:transparent;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.66);font-size:10px}.pwa-reward{position:fixed;right:16px;left:16px;bottom:20px;z-index:10001;display:flex;align-items:center;gap:12px;padding:15px 16px;background:#17130f;color:#fff;border:1px solid rgba(210,177,109,.35);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.32);font:13px/1.5 Cairo,sans-serif}.pwa-reward-copy{flex:1}.pwa-reward-copy strong{display:block;color:#d2b16d}.pwa-reward-code{display:inline-block;margin-top:5px;padding:5px 9px;border-radius:8px;background:#0f0e0c;letter-spacing:1px;font-weight:800}.pwa-reward a{border:0;border-radius:999px;padding:9px 13px;background:#b89455;color:#fff;font:inherit;cursor:pointer;text-decoration:none;white-space:nowrap}.pwa-update{position:fixed;right:16px;left:16px;bottom:20px;z-index:10002;display:flex;align-items:center;gap:12px;padding:12px 14px;background:#17130f;color:#fff;border:1px solid rgba(210,177,109,.35);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.28);font:13px/1.5 Cairo,sans-serif}.pwa-update button{margin-inline-start:auto;border:0;border-radius:999px;padding:9px 14px;background:#b89455;color:#fff;font:inherit;cursor:pointer}@media(max-width:800px){.pwa-install{right:10px;left:10px;bottom:calc(88px + env(safe-area-inset-bottom));grid-template-columns:58px 1fr;gap:12px;padding:13px;border-radius:22px}.pwa-install-mark{width:58px;height:58px;border-radius:17px}.pwa-install-mark span{font-size:26px}.pwa-install-mark small{margin-top:-13px;font-size:10px}.pwa-install-copy strong{font-size:14px}.pwa-install-copy span{font-size:10px}.pwa-install-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr auto;gap:8px;min-width:0}.pwa-install button{min-height:42px}.pwa-install .pwa-dismiss{padding-inline:13px}.pwa-reward,.pwa-update{bottom:calc(88px + env(safe-area-inset-bottom));right:12px;left:12px;flex-wrap:wrap}}@media(max-width:380px){.pwa-install{grid-template-columns:52px 1fr;padding:11px}.pwa-install-mark{width:52px;height:52px}.pwa-install-copy span{line-height:1.65}.pwa-install-actions{grid-template-columns:1fr}.pwa-install .pwa-dismiss{display:none}}'
+  style.textContent = '.pwa-install{position:fixed;right:16px;left:16px;bottom:20px;z-index:10000;display:grid;grid-template-columns:76px 1fr auto;align-items:center;gap:14px;padding:16px 17px;background:linear-gradient(145deg,#1b1712,#0f0d0a);color:#fff;border:1px solid rgba(210,177,109,.28);border-radius:24px;box-shadow:0 24px 70px rgba(0,0,0,.38),0 0 0 1px rgba(255,255,255,.03) inset;font:13px/1.5 Cairo,sans-serif;overflow:hidden}.pwa-install:before{content:"";position:absolute;inset:-40% auto auto -10%;width:180px;height:180px;border-radius:50%;background:rgba(210,177,109,.11);filter:blur(8px)}.pwa-install[hidden],.pwa-reward[hidden]{display:none}.pwa-install-mark{position:relative;display:grid;place-items:center;width:76px;height:76px;border:1px solid rgba(210,177,109,.38);border-radius:20px;background:rgba(210,177,109,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}.pwa-install-mark span{font:900 34px/1 "Playfair Display",serif;color:#fff}.pwa-install-mark small{margin-top:-18px;color:#d2b16d;font:800 12px/1 Cairo,sans-serif}.pwa-install-copy{position:relative;min-width:0}.pwa-install-kicker{display:block;margin-bottom:3px;color:#d2b16d;font:800 9px/1 Cairo,sans-serif;letter-spacing:1.6px}.pwa-install-copy strong{display:block;margin-bottom:4px;color:#fff;font:800 16px/1.35 Cairo,sans-serif}.pwa-install-copy span{display:block;color:rgba(255,255,255,.68);font-size:11px;line-height:1.8}.pwa-install-actions{position:relative;display:grid;gap:7px;min-width:126px}.pwa-install button{border:0;border-radius:999px;padding:10px 15px;background:#b89455;color:#fff;font:800 11px/1.2 Cairo,sans-serif;cursor:pointer;white-space:nowrap}.pwa-install .pwa-dismiss{padding:7px 10px;background:transparent;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.66);font-size:10px}.pwa-reward{position:fixed;right:16px;left:16px;bottom:20px;z-index:10001;display:flex;align-items:center;gap:12px;padding:15px 16px;background:#17130f;color:#fff;border:1px solid rgba(210,177,109,.35);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.32);font:13px/1.5 Cairo,sans-serif}.pwa-reward-copy{flex:1}.pwa-reward-copy strong{display:block;color:#d2b16d}.pwa-reward-code{display:inline-block;margin-top:5px;padding:5px 9px;border-radius:8px;background:#0f0e0c;letter-spacing:1px;font-weight:800}.pwa-reward a{border:0;border-radius:999px;padding:9px 13px;background:#b89455;color:#fff;font:inherit;cursor:pointer;text-decoration:none;white-space:nowrap}.pwa-update{position:fixed;right:16px;left:16px;bottom:20px;z-index:10002;display:flex;align-items:center;gap:12px;padding:12px 14px;background:#17130f;color:#fff;border:1px solid rgba(210,177,109,.35);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.28);font:13px/1.5 Cairo,sans-serif}.pwa-update button{margin-inline-start:auto;border:0;border-radius:999px;padding:9px 14px;background:#b89455;color:#fff;font:inherit;cursor:pointer}@media(max-width:800px){.pwa-install{right:10px;left:10px;bottom:calc(88px + env(safe-area-inset-bottom));grid-template-columns:58px 1fr;gap:12px;padding:13px;border-radius:22px}.pwa-install-mark{width:58px;height:58px;border-radius:17px}.pwa-install-mark span{font-size:26px}.pwa-install-mark small{margin-top:-13px;font-size:10px}.pwa-install-copy strong{font-size:14px}.pwa-install-copy span{font-size:10px}.pwa-install-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr auto;gap:8px;min-width:0}.pwa-install button{min-height:42px}.pwa-install .pwa-dismiss{padding-inline:13px}.pwa-reward,.pwa-update{bottom:calc(88px + env(safe-area-inset-bottom));right:12px;left:12px;flex-wrap:wrap}}@media(max-width:380px){.pwa-install{grid-template-columns:52px 1fr;padding:11px}.pwa-install-mark{width:52px;height:52px}.pwa-install-copy span{line-height:1.65}.pwa-install-actions{grid-template-columns:1fr}.pwa-install .pwa-dismiss{display:none}}';
   document.head.appendChild(style);
 
   const banner = document.createElement('aside');
@@ -94,18 +114,9 @@ function showInstallBanner() {
 
 async function claimInstallReward() {
   if (!installOffer || !isStandaloneMode()) return;
-  let existing = '';
-  let existingMeta = null;
   let noticeShown = false;
-  try {
-    existing = localStorage.getItem(REWARD_CODE_KEY) || '';
-    existingMeta = JSON.parse(localStorage.getItem(REWARD_META_KEY) || 'null');
-    noticeShown = localStorage.getItem(REWARD_NOTICE_SHOWN_KEY) === '1';
-  } catch {}
-  if (existing) {
-    if (!noticeShown) showReward(existing, { ...installOffer, ...(existingMeta || {}) });
-    return;
-  }
+  try { noticeShown = localStorage.getItem(REWARD_NOTICE_SHOWN_KEY) === '1'; } catch {}
+
   try {
     const response = await fetch('/api/promotions/install/claim', {
       method: 'POST',
@@ -113,16 +124,16 @@ async function claimInstallReward() {
       body: JSON.stringify({ clientId: getClientId() })
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data?.code) return;
-    try {
-      localStorage.setItem(REWARD_CODE_KEY, data.code);
-      localStorage.setItem(REWARD_META_KEY, JSON.stringify({
-        expiresAt: data.expiresAt || '',
-        discountValue: data.discountValue || installOffer.discountValue || 20
-      }));
-      sessionStorage.setItem('arabisk-active-promo-v1', data.code);
-    } catch {}
-    showReward(data.code, { ...installOffer, ...data });
+
+    if (!response.ok) return;
+
+    if (data?.code) {
+      saveReward(data);
+      if (!noticeShown) showReward(data.code, { ...installOffer, ...data });
+      return;
+    }
+
+    if (['redeemed', 'expired'].includes(data?.status)) clearReward();
   } catch {}
 }
 
@@ -167,7 +178,9 @@ window.addEventListener('arabisk:pwa-update', () => {
   const banner = document.createElement('aside');
   banner.className = 'pwa-update';
   banner.innerHTML = '<span>يتوفر تحديث جديد لـ ARABISK.</span><button type="button">تحديث الآن</button>';
-  banner.querySelector('button')?.addEventListener('click', () => window.location.reload());
+  banner.querySelector('button')?.addEventListener('click', () => {
+    window.ARABISK_PWA?.requestReload?.();
+  });
   document.body.appendChild(banner);
 });
 
@@ -187,5 +200,10 @@ window.addEventListener('load', async () => {
 });
 window.addEventListener('online', checkForPwaUpdate);
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') checkForPwaUpdate();
+  if (document.visibilityState === 'visible') {
+    checkForPwaUpdate();
+    void (async () => {
+      if (isStandaloneMode() && installOffer) await claimInstallReward();
+    })();
+  }
 });
