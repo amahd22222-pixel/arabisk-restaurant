@@ -1,51 +1,68 @@
-function registerStandalonePwa() {
-  if (!('serviceWorker' in navigator)) return;
+(() => {
+  const UPDATE_RELOAD_KEY = 'ARABISK_PWA_UPDATE_RELOADED_V2';
 
-  const refreshAfterActivation = () => {
-    const startedAt = Date.now();
-    const reloadWhenIdle = () => {
-      const shamsBusy = Boolean(
-        document.querySelector('#shams-launcher.is-listening, #shams-launcher.is-speaking, #shams-launcher.is-thinking')
-      );
-      if (!shamsBusy || Date.now() - startedAt > 15000) {
-        window.location.reload();
-        return;
-      }
-      window.setTimeout(reloadWhenIdle, 500);
-    };
-    reloadWhenIdle();
-  };
+  function shouldReloadForUpdate() {
+    try {
+      return sessionStorage.getItem(UPDATE_RELOAD_KEY) !== '1';
+    } catch {
+      return true;
+    }
+  }
 
-  navigator.serviceWorker.addEventListener('controllerchange', refreshAfterActivation);
+  function markReloaded() {
+    try { sessionStorage.setItem(UPDATE_RELOAD_KEY, '1'); } catch {}
+  }
 
-  const checkForUpdate = () => {
+  function attachControllerGuard() {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!shouldReloadForUpdate()) return;
+      markReloaded();
+      window.location.reload();
+    });
+  }
+
+  function checkForUpdate() {
     navigator.serviceWorker.getRegistration('/').then((registration) => {
       if (registration) return registration.update();
     }).catch(() => {});
-  };
+  }
 
-  window.addEventListener('load', () => {
-    checkForUpdate();
-    window.setTimeout(checkForUpdate, 10000);
-    navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
-      .then((registration) => {
-        registration.update().catch(() => {});
-        registration.addEventListener('updatefound', () => {
-          const worker = registration.installing;
-          worker?.addEventListener('statechange', () => {
-            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-              window.dispatchEvent(new CustomEvent('arabisk:pwa-update'));
-            }
+  function registerStandalonePwa() {
+    if (!('serviceWorker' in navigator)) return;
+
+    attachControllerGuard();
+
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
+        .then((registration) => {
+          registration.update().catch(() => {});
+
+          registration.addEventListener('updatefound', () => {
+            const worker = registration.installing;
+            worker?.addEventListener('statechange', () => {
+              if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                window.dispatchEvent(new CustomEvent('arabisk:pwa-update'));
+              }
+            });
           });
-        });
-      })
-      .catch((error) => console.error('ARABISK PWA registration error:', error));
-  });
 
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) checkForUpdate();
-  });
-  window.addEventListener('pageshow', checkForUpdate);
-}
+          window.setTimeout(checkForUpdate, 10000);
+        })
+        .catch((error) => console.error('ARABISK PWA registration error:', error));
+    });
 
-registerStandalonePwa();
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        try { sessionStorage.removeItem(UPDATE_RELOAD_KEY); } catch {}
+        checkForUpdate();
+      }
+    });
+
+    window.addEventListener('pageshow', () => {
+      try { sessionStorage.removeItem(UPDATE_RELOAD_KEY); } catch {}
+      checkForUpdate();
+    });
+  }
+
+  registerStandalonePwa();
+})();
