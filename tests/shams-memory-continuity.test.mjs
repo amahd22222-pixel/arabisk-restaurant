@@ -2,6 +2,57 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createShamsMemoryService } from '../apps/web/services/shams-memory-service.js';
 
+test('Shams promotes repeated non-sensitive preferences from temporary to stable', async () => {
+  const memory = createShamsMemoryService({
+    async readJsonWithStatus() { return { ok: true, found: false }; },
+    async writeJson() { return true; }
+  });
+
+  const first = memory.learnPreferences(
+    { spicy: null, vegetarian: null, taste: null, weight: null, category: '', protein: null },
+    {},
+    { spicy: true }
+  );
+  assert.equal(first.preferences.spicy, null);
+  assert.equal(first.preferenceConfidence.spicy, 0.5);
+
+  const second = memory.learnPreferences(
+    first.preferences,
+    first.preferenceEvidence,
+    { spicy: true }
+  );
+  assert.equal(second.preferences.spicy, true);
+  assert.equal(second.preferenceConfidence.spicy, 1);
+});
+
+test('Shams lets a repeated opposite preference eventually replace the earlier signal', async () => {
+  const memory = createShamsMemoryService({
+    async readJsonWithStatus() { return { ok: true, found: false }; },
+    async writeJson() { return true; }
+  });
+
+  const first = memory.learnPreferences(
+    { spicy: null, vegetarian: null, taste: null, weight: null, category: '', protein: null },
+    {},
+    { spicy: true }
+  );
+  const second = memory.learnPreferences(
+    first.preferences,
+    first.preferenceEvidence,
+    { spicy: false }
+  );
+  const third = memory.learnPreferences(
+    second.preferences,
+    second.preferenceEvidence,
+    { spicy: false }
+  );
+
+  assert.equal(second.preferences.spicy, true);
+  assert.equal(second.preferenceConfidence.spicy, 0.5);
+  assert.equal(third.preferences.spicy, false);
+  assert.equal(third.preferenceConfidence.spicy, 1);
+});
+
 test('Shams merges anonymous conversational context into customer memory without carrying pending actions', async () => {
   const store = new Map();
   const memory = createShamsMemoryService({
