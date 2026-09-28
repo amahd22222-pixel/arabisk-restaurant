@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v30';
+const CACHE_VERSION = 'arabisk-pwa-v31';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -225,13 +225,21 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || '/';
+  const absoluteTarget = new URL(targetUrl, self.location.origin);
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {
-        if (client.url.includes(targetUrl) && 'focus' in client) return client.focus();
+        try {
+          const currentUrl = new URL(client.url);
+          const exactMatch =
+            currentUrl.origin === absoluteTarget.origin &&
+            currentUrl.pathname === absoluteTarget.pathname &&
+            currentUrl.search === absoluteTarget.search;
+          if (exactMatch && 'focus' in client) return client.focus();
+        } catch {}
       }
-      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+      if (self.clients.openWindow) return self.clients.openWindow(absoluteTarget.href);
     })
   );
 });
