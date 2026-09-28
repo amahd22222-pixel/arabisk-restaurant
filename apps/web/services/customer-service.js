@@ -18,7 +18,7 @@ function sessionForCustomer(customer, tokenHash) {
 }
 
 export function createCustomerService({ repository, cleanText, crypto }) {
-  const { customers } = repository;
+  const { customers, orders, reservations } = repository;
 
   function lifecycleFor(customer) {
     const hasOrders = Number(customer?.orderCount || 0) > 0;
@@ -202,5 +202,5 @@ export function createCustomerService({ repository, cleanText, crypto }) {
     };
   }
 
-  return { listCustomers, updateCustomer, saveProfile, getProfile, findByProfileToken };
+  return { listCustomers, updateCustomer, saveProfile, getProfile, findByProfileToken, profileDashboard };
 }

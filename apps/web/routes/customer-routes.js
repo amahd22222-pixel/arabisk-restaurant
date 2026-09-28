@@ -4,6 +4,11 @@ export function registerCustomerRoutes(app, { service, requireAdminApiKey, profi
     return res.status(201).json(await service.saveProfile(req.body || {}, token));
   });
 
+  app.get('/api/customer-profile/summary', profileRateLimit, (req, res) => {
+    const token = String(req.headers['x-arabisk-profile-token'] || '').trim();
+    return res.json(service.profileDashboard(token));
+  });
+
   app.get('/api/customer-profile', profileRateLimit, (req, res) => {
     const token = String(req.headers['x-arabisk-profile-token'] || '').trim();
     return res.json(service.getProfile(token));

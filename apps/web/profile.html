@@ -4,66 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17130f">
-<meta name="description" content="ملفك الشخصي في ARABISK Restaurant & Cafe.">
-<title>ARABISK — ملفي الشخصي</title>
+<meta name="description" content="مساحة العميل الشخصية في ARABISK Restaurant & Cafe.">
+<title>ARABISK — حسابي</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/home-app.css">
 <link rel="stylesheet" href="/app-pages.css">
-<style>
-body{margin:0;background:var(--app-bg);color:var(--app-ink);font-family:Cairo,sans-serif}
-.profile-page{min-height:calc(100vh - 86px);padding:110px 16px 110px}
-.profile-wrap{width:min(900px,100%);margin:auto}
-.profile-hero{text-align:center;margin-bottom:30px}
-.profile-eyebrow{margin:0 0 12px;color:var(--app-gold);font-size:10px;font-weight:900;letter-spacing:4px}
-.profile-hero h1{margin:0;font:500 clamp(46px,7vw,72px)/1.05 "Playfair Display",serif}
-.profile-hero p{max-width:620px;margin:14px auto 0;color:var(--app-muted);font-size:12px;line-height:2}
-.profile-card{display:grid;gap:0;overflow:hidden;border:1px solid var(--app-line);border-radius:28px;background:var(--app-paper);box-shadow:var(--app-shadow)}
-.profile-head{display:flex;align-items:center;gap:16px;padding:24px;border-bottom:1px solid var(--app-line)}
-.profile-avatar{width:64px;height:64px;display:grid;place-items:center;flex:0 0 auto;border-radius:20px;background:linear-gradient(145deg,#1c1713,#5a4730);color:#fff;font:500 28px "Playfair Display",serif;box-shadow:0 12px 30px rgba(23,19,15,.15)}
-.profile-head-copy{min-width:0}
-.profile-head-copy strong{display:block;font-size:18px}
-.profile-head-copy span{display:block;margin-top:4px;color:var(--app-muted);font-size:10px}
-.profile-badge{margin-inline-start:auto;padding:7px 11px;border-radius:999px;background:#f3eadb;color:#755a35;font-size:9px;font-weight:900;white-space:nowrap}
-.profile-body{padding:24px}
-.profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.profile-field{display:grid;gap:7px}
-.profile-field.full{grid-column:1/-1}
-.profile-field label{font-size:10px;font-weight:900;color:#685f53}
-.profile-field input{width:100%;box-sizing:border-box;border:1px solid var(--app-line);border-radius:14px;background:#fff;padding:12px 13px;color:var(--app-ink);outline:0;font:inherit}
-.profile-field input:focus{border-color:var(--app-gold);box-shadow:0 0 0 3px rgba(197,154,91,.1)}
-.profile-readonly{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:46px;padding:0 13px;border:1px solid var(--app-line);border-radius:14px;background:#faf6ee;color:var(--app-muted);font-size:11px}
-.profile-readonly strong{color:var(--app-ink);font-size:12px}
-.profile-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:18px;padding-top:18px;border-top:1px solid var(--app-line)}
-.profile-save{min-height:48px;padding:0 20px;border:0;border-radius:999px;background:var(--app-dark);color:#fff;font:900 11px Cairo,sans-serif;cursor:pointer}
-.profile-save:disabled{opacity:.55;cursor:wait}
-.profile-secondary{min-height:46px;padding:0 17px;border:1px solid var(--app-line);border-radius:999px;background:#fff;color:var(--app-ink);text-decoration:none;font:800 11px/46px Cairo,sans-serif}
-.profile-status{min-height:22px;margin:12px 0 0;color:#47745b;font-size:11px;line-height:1.8}
-.profile-status.error{color:#9b4b3d}
-.profile-note{margin-top:18px;padding:14px 15px;border:1px solid rgba(197,154,91,.18);border-radius:16px;background:#fbf5e9;color:#746450;font-size:10px;line-height:1.9}
-.profile-skeleton{min-height:360px;display:grid;place-items:center;padding:30px;color:var(--app-muted)}
-.profile-skeleton span{display:inline-flex;align-items:center;gap:8px}
-.profile-skeleton i{width:9px;height:9px;border-radius:50%;background:var(--app-gold);animation:pulse 1s infinite}
-@keyframes pulse{50%{opacity:.35}}
-@media(max-width:620px){
- .profile-page{padding:92px 12px 112px}
- .profile-hero h1{font-size:48px}
- .profile-head{padding:19px;align-items:flex-start}
- .profile-avatar{width:56px;height:56px;border-radius:17px;font-size:24px}
- .profile-badge{font-size:8px}
- .profile-body{padding:18px}
- .profile-grid{grid-template-columns:1fr}
- .profile-field.full{grid-column:auto}
- .profile-actions>*{width:100%;text-align:center;box-sizing:border-box}
-}
-</style>
+<link rel="stylesheet" href="/profile-page.css">
 </head>
 <body class="home-app">
 <header class="app-header is-page" aria-label="ARABISK">
   <a class="brand" href="/" aria-label="ARABISK">ARABISK<span>RESTAURANT & CAFE</span></a>
   <nav class="header-nav" id="app-header-nav" aria-label="التنقل الرئيسي">
-    <a href="/">الرئيسية</a><a href="/menu">المنيو</a><a href="/offers">عروض اليوم</a><a href="/events">الفعاليات</a><a href="/reservation">حجز طاولة</a><a href="/cart">السلة</a><a href="/profile" aria-current="page">ملفي</a>
+    <a href="/">الرئيسية</a><a href="/menu">المنيو</a><a href="/offers">عروض اليوم</a><a href="/events">الفعاليات</a><a href="/reservation">حجز طاولة</a><a href="/cart">السلة</a><a href="/profile" aria-current="page">حسابي</a>
   </nav>
   <div class="app-header-actions">
     <a class="app-cart-link" href="/cart" aria-label="فتح السلة">السلة <b id="app-cart-count" hidden>0</b></a>
@@ -74,51 +28,66 @@ body{margin:0;background:var(--app-bg);color:var(--app-ink);font-family:Cairo,sa
 
 <main class="profile-page">
   <div class="profile-wrap">
-    <section class="profile-hero">
-      <p class="profile-eyebrow">YOUR ARABISK</p>
-      <h1>ملفي الشخصي</h1>
-      <p>بيانات واحدة تربط تجربتك داخل ARABISK بالحجوزات والطلبات والخصائص المرتبطة بحسابك على هذا الجهاز.</p>
+    <section class="profile-hero-card" aria-labelledby="profile-title">
+      <div class="profile-hero-top">
+        <div class="profile-avatar" id="profile-avatar" aria-hidden="true">A</div>
+        <div class="profile-hero-copy">
+          <p class="profile-eyebrow">YOUR ARABISK</p>
+          <h1 id="profile-title">حسابي</h1>
+          <p id="profile-welcome">مساحتك الخاصة داخل ARABISK.</p>
+        </div>
+        <span class="profile-member-badge" id="profile-member-badge">عضوية ARABISK</span>
+      </div>
+      <div class="profile-identity">
+        <strong id="profile-name-heading">عميل ARABISK</strong>
+        <span id="profile-phone-heading">—</span>
+        <span id="profile-phone-status" class="profile-phone-status">الهاتف غير موثّق</span>
+      </div>
     </section>
 
-    <section id="profile-card" class="profile-card" aria-live="polite">
-      <div class="profile-skeleton" id="profile-loading"><span><i></i> جارٍ تحميل ملفك…</span></div>
-      <div id="profile-content" hidden>
-        <div class="profile-head">
-          <div id="profile-avatar" class="profile-avatar" aria-hidden="true">A</div>
-          <div class="profile-head-copy">
-            <strong id="profile-name-heading">عميل ARABISK</strong>
-            <span id="profile-phone-heading">—</span>
-          </div>
-          <span class="profile-badge">عضوية ARABISK</span>
+    <section class="profile-stats" aria-label="ملخص الحساب">
+      <article class="profile-stat"><span>الطلبات</span><strong id="stat-orders">0</strong><small>طلبات مرتبطة بحسابك</small></article>
+      <article class="profile-stat"><span>الحجوزات</span><strong id="stat-reservations">0</strong><small>طلبات حجز مسجلة</small></article>
+      <article class="profile-stat"><span>إجمالي الإنفاق</span><strong id="stat-spend">AED 0</strong><small>من الطلبات المكتملة</small></article>
+    </section>
+
+    <section class="profile-quick" aria-label="اختصارات الحساب">
+      <a href="/menu"><span class="quick-icon">≡</span><strong>اطلب من المنيو</strong><small>ابدأ طلبًا جديدًا</small></a>
+      <a href="/reservation"><span class="quick-icon">◷</span><strong>احجز طاولة</strong><small>خطط لزيارتك القادمة</small></a>
+      <a href="/cart"><span class="quick-icon">🛒</span><strong>السلة</strong><small>راجع ما اخترته</small></a>
+      <a href="/track-order"><span class="quick-icon">↗</span><strong>متابعة طلب</strong><small>تحقق من حالة طلبك</small></a>
+    </section>
+
+    <section class="profile-activity-grid">
+      <article class="profile-panel">
+        <div class="profile-panel-head"><div><p class="profile-section-kicker">RECENT ORDERS</p><h2>آخر طلباتك</h2></div><a href="/track-order">متابعة الطلب ←</a></div>
+        <div id="profile-orders" class="profile-list" aria-live="polite"></div>
+      </article>
+      <article class="profile-panel">
+        <div class="profile-panel-head"><div><p class="profile-section-kicker">YOUR TABLES</p><h2>حجوزاتك</h2></div><a href="/reservation">حجز جديد ←</a></div>
+        <div id="profile-reservations" class="profile-list" aria-live="polite"></div>
+      </article>
+    </section>
+
+    <section class="profile-panel profile-data-panel">
+      <div class="profile-panel-head"><div><p class="profile-section-kicker">PERSONAL DETAILS</p><h2>بياناتي</h2></div><span class="profile-secure-note">محفوظة بشكل آمن</span></div>
+      <form id="profile-form">
+        <div class="profile-form-grid">
+          <label><span>الاسم</span><input id="profile-name" name="name" required minlength="2" maxlength="80" autocomplete="name" placeholder="اكتب اسمك"></label>
+          <label><span>رقم الهاتف</span><input id="profile-phone" name="phone" required inputmode="tel" maxlength="20" autocomplete="tel" placeholder="05XXXXXXXX"></label>
         </div>
-        <div class="profile-body">
-          <form id="profile-form">
-            <div class="profile-grid">
-              <div class="profile-field">
-                <label for="profile-name">الاسم</label>
-                <input id="profile-name" name="name" required minlength="2" maxlength="80" autocomplete="name" placeholder="اكتب اسمك">
-              </div>
-              <div class="profile-field">
-                <label for="profile-phone">رقم الهاتف</label>
-                <input id="profile-phone" name="phone" required inputmode="tel" maxlength="20" autocomplete="tel" placeholder="05XXXXXXXX">
-              </div>
-              <div class="profile-field full">
-                <label>حالة رقم الهاتف</label>
-                <div class="profile-readonly"><span>توثيق الهاتف</span><strong id="profile-phone-status">غير موثّق</strong></div>
-              </div>
-            </div>
-            <div class="profile-actions">
-              <button id="profile-save" class="profile-save" type="submit">حفظ بياناتي</button>
-              <a class="profile-secondary" href="/track-order">متابعة طلباتي</a>
-              <a class="profile-secondary" href="/reservation">احجز طاولة</a>
-            </div>
-            <p id="profile-status" class="profile-status" role="status" aria-live="polite"></p>
-          </form>
-          <div class="profile-note">
-            بيانات الملف تُستخدم لربط تجربتك داخل التطبيق بالحجوزات والطلبات. رقم الهاتف هنا <strong>ليس توثيقًا عبر OTP</strong>، ولا يتم عرضه على أنه رقم موثّق إلا إذا أصبح ذلك صحيحًا من النظام.
-          </div>
+        <div class="profile-actions">
+          <button id="profile-save" class="profile-save" type="submit">حفظ بياناتي</button>
+          <a class="profile-secondary" href="/privacy">الخصوصية</a>
         </div>
-      </div>
+        <p id="profile-status" class="profile-status" role="status" aria-live="polite"></p>
+      </form>
+      <p class="profile-note">ملف ARABISK هو هوية تجربة العميل على هذا الجهاز؛ ويُستخدم لربط الطلبات والحجوزات المرتبطة بحسابك. رقم الهاتف لا يُعتبر موثقًا عبر OTP إلا عندما يثبت ذلك من النظام.</p>
+    </section>
+
+    <section class="profile-footer-cta">
+      <div><p class="profile-section-kicker">NEXT ARABISK MOMENT</p><h2>جاهز لزيارتك القادمة؟</h2><p>اختَر طبقك، احجز طاولتك، أو تحدّث مع شمس من أي مكان داخل التطبيق.</p></div>
+      <a href="/menu">ابدأ الآن ←</a>
     </section>
   </div>
 </main>
@@ -129,6 +98,6 @@ body{margin:0;background:var(--app-bg);color:var(--app-ink);font-family:Cairo,sa
 <script type="module" src="/cart.js?v=20260928.2"></script>
 <script type="module" src="/pwa-register.js"></script>
 <script type="module" src="/pwa-profile.js"></script>
-<script src="/profile-page.js" defer></script>
+<script src="/profile-page.js?v=20260928.1" defer></script>
 </body>
 </html>
