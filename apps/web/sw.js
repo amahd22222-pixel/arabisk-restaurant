@@ -155,28 +155,48 @@ async function publicApiFirst(request) {
 }
 
 async function navigationFallback(request) {
-  try {
-    const response = await fetchWithTimeout(request);
-    return await cacheResponse(request, response);
-  } catch {
+  const pathname = new URL(request.url).pathname;
+
+  const fallbackToCache = async () => {
     const exact = await caches.match(request);
     if (exact) return exact;
-    const pathname = new URL(request.url).pathname;
-    if (pathname === '/menu' || /^\/menu\/[^/]+$/.test(pathname)) {
-      const template = await caches.match('/category-page.html');
-      if (template && pathname !== '/menu') return template;
+
+    if (pathname === '/menu') {
+      const menu = await caches.match('/menu');
+      if (menu) return menu;
     }
+
+    if (/^\/menu\/[^/]+$/.test(pathname)) {
+      const template = await caches.match('/category-page.html');
+      if (template) return template;
+    }
+
     if (/^\/menu\/[^/]+\/[^/]+$/.test(pathname)) {
       const template = await caches.match('/product-page.html');
       if (template) return template;
     }
-    if (pathname === '/events' || /^\/events\/[^/]+$/.test(pathname)) {
-      const template = await caches.match('/event-page.html');
-      if (template && pathname !== '/events') return template;
+
+    if (pathname === '/events') {
+      const events = await caches.match('/events');
+      if (events) return events;
     }
+
+    if (/^\/events\/[^/]+$/.test(pathname)) {
+      const template = await caches.match('/event-page.html');
+      if (template) return template;
+    }
+
     return (await caches.match(pathname)) ||
       (await caches.match('/index.html')) ||
       (await caches.match('/offline.html'));
+  };
+
+  try {
+    const response = await fetchWithTimeout(request);
+    if (response.ok) return cacheResponse(request, response);
+    return (await fallbackToCache()) || response;
+  } catch {
+    return fallbackToCache();
   }
 }
 
