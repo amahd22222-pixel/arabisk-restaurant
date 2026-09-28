@@ -20,13 +20,13 @@ function ensureStyle() {
   const style = document.createElement('style');
   style.id = 'arabisk-studio-runtime-style';
   style.textContent = `
-    .arabisk-studio-display{position:absolute;inset:0;overflow:hidden;background:#000;z-index:0;opacity:.74}
+    .arabisk-studio-display{position:absolute;inset:0;overflow:hidden;background:#000;z-index:35;opacity:.74;pointer-events:none}
     .arabisk-studio-display::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(9,7,5,.72),rgba(9,7,5,.28) 55%,rgba(9,7,5,.42));pointer-events:none}
-    .arabisk-studio-display video{display:block;width:100%;height:100%;object-fit:cover;background:#000;cursor:pointer}
-    .arabisk-studio-mute{position:absolute;right:18px;bottom:clamp(88px,10vh,118px);z-index:5;width:46px;height:46px;border:1px solid rgba(255,255,255,.55);border-radius:999px;background:rgba(0,0,0,.56);color:#fff;display:grid;place-items:center;font-size:20px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:background .2s ease,transform .2s ease}
+    .arabisk-studio-display video{display:block;width:100%;height:100%;object-fit:cover;background:#000;cursor:pointer;pointer-events:none}
+    .arabisk-studio-mute{position:absolute;right:18px;bottom:clamp(96px,12vh,132px);z-index:60;pointer-events:auto;width:46px;height:46px;border:1px solid rgba(255,255,255,.55);border-radius:999px;background:rgba(0,0,0,.56);color:#fff;display:grid;place-items:center;font-size:20px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:background .2s ease,transform .2s ease}
     .arabisk-studio-mute:hover{background:rgba(0,0,0,.8);transform:scale(1.04)}
     .arabisk-studio-mute:focus-visible{outline:2px solid #fff;outline-offset:2px}
-    @media(max-width:700px){.arabisk-studio-display{opacity:.66}.arabisk-studio-mute{right:12px;bottom:92px;width:42px;height:42px;font-size:18px}}
+    @media(max-width:700px){.arabisk-studio-display{opacity:.66}.arabisk-studio-mute{right:12px;bottom:108px;width:44px;height:44px;font-size:18px;z-index:60}}
   `;
   document.head.appendChild(style);
 }
@@ -78,6 +78,8 @@ function renderHome(items) {
   }
 
   slot.hidden = false;
+  slot.style.zIndex = '35';
+  slot.style.pointerEvents = 'none';
   slot.innerHTML = videoMarkup;
   const wrapper = slot.querySelector('.arabisk-studio-display');
   if (wrapper) bindMute(wrapper);
