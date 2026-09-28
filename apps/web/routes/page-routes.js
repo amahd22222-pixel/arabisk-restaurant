@@ -3,7 +3,11 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 
 const injectMobileNavigation = async (filePath, res) => {
-  const html = await fs.readFile(filePath, 'utf8');
+  let html = await fs.readFile(filePath, 'utf8');
+  html = html.replace(
+    /<meta name="viewport" content="([^"]*)">/i,
+    (_match, content) => `<meta name="viewport" content="${content.includes('viewport-fit=cover') ? content : content + ',viewport-fit=cover'}">`
+  );
   const assets = [
     !html.includes('name="theme-color"') ? '<meta name="theme-color" content="#17130f">' : '',
     !html.includes('name="mobile-web-app-capable"') ? '<meta name="mobile-web-app-capable" content="yes">' : '',
