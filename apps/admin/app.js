@@ -135,7 +135,7 @@ function syncSidebarState(){
     toggle.querySelector('span').textContent=collapsed?'›':'‹';
   }
 }
-function showSection(sectionId){if(sectionId==='customers')void loadCustomerSegments().catch(()=>{});document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('section-visible'));document.querySelectorAll('[data-section]').forEach(link=>link.classList.toggle('active',link.dataset.section===sectionId));const titleMap={dashboard:'إدارة ARABISK',products:'إدارة الأصناف',categories:'إدارة الأقسام',studio:'ARABISK Studio — العروض',experiences:'الفعاليات والتجارب',reservations:'حجوزات الطاولات',orders:'الطلبات',revenue:'فرص الإيراد',memories:'ذكريات',customers:'العملاء',notifications:'مركز الإشعارات',settings:'إعدادات الموقع'};$('#page-title').textContent=titleMap[sectionId]||'إدارة ARABISK';$('#dashboard-stats').style.display=sectionId==='dashboard'?'grid':'none';const section=document.getElementById(sectionId==='dashboard'?'products':sectionId);if(section)section.classList.add('section-visible');if(sectionId==='dashboard')document.getElementById('products').classList.add('section-visible');}
+function showSection(sectionId){if(sectionId==='customers')void loadCustomerSegments().catch(()=>{});document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('section-visible'));document.querySelectorAll('[data-section]').forEach(link=>link.classList.toggle('active',link.dataset.section===sectionId));const titleMap={dashboard:'إدارة ARABISK',products:'إدارة الأصناف',categories:'إدارة الأقسام',studio:'ARABISK Studio',offers:'عروض اليوم',experiences:'الفعاليات والتجارب',reservations:'حجوزات الطاولات',orders:'الطلبات',revenue:'فرص الإيراد',memories:'ذكريات',customers:'العملاء',notifications:'مركز الإشعارات',settings:'إعدادات الموقع'};$('#page-title').textContent=titleMap[sectionId]||'إدارة ARABISK';$('#dashboard-stats').style.display=sectionId==='dashboard'?'grid':'none';const section=document.getElementById(sectionId==='dashboard'?'products':sectionId);if(section)section.classList.add('section-visible');if(sectionId==='dashboard')document.getElementById('products').classList.add('section-visible');}
 async function load(){
   $('#connection').textContent='جارٍ الاتصال…';
   const resources=[
@@ -202,6 +202,10 @@ async function loadTodayOfferSettings(){
     if($('#today-offer-message'))$('#today-offer-message').value=data.message||'اختيار مميز من القائمة متاح اليوم.';
     if($('#today-offer-cta'))$('#today-offer-cta').value=data.ctaLabel||'اطلب الآن';
     if(status)status.textContent=data.enabled?'العرض ظاهر للزوار الآن':'العرض غير مفعل';
+    const previewTitle=$('#today-offer-preview-title'); if(previewTitle)previewTitle.textContent=data.title||'اختيار اليوم من ARABISK';
+    const previewMessage=$('#today-offer-preview-message'); if(previewMessage)previewMessage.textContent=data.message||'اختيار مميز من القائمة متاح اليوم.';
+    const previewStatus=$('#today-offer-preview-status'); if(previewStatus)previewStatus.textContent=data.enabled?'مفعل الآن':'غير مفعل';
+    const previewProduct=$('#today-offer-preview-product'); if(previewProduct){const product=(products||[]).find(item=>String(item.id)===String(data.productId||'')); previewProduct.textContent=product?(product.nameAr||product.nameEn||product.id):'بدون صنف محدد';}
   }catch(error){if(status)status.textContent='تعذر تحميل إعدادات عرض اليوم';}
 }
 
@@ -285,6 +289,7 @@ $('#today-offer-form')?.addEventListener('submit',async event=>{
   }catch(error){if(status)status.textContent=error.message||'تعذر حفظ عرض اليوم.';}
   finally{if(button)button.disabled=false;}
 });
+$('#today-offer-refresh')?.addEventListener('click',()=>void loadTodayOfferSettings());
 syncSidebarState();void loadPromotionSettings();void loadTodayOfferSettings();$('#sidebar-toggle')?.addEventListener('click',()=>{const collapsed=!document.body.classList.contains('sidebar-collapsed');localStorage.setItem('ARABISK_SIDEBAR_COLLAPSED',collapsed?'1':'0');syncSidebarState();});loadSettings();showSection(location.hash.replace('#','')||'dashboard');void load().catch(error=>{console.error('Dashboard initialization failed:',error);const connection=$('#connection');if(connection){connection.textContent='تعذر الاتصال';connection.className='disconnected';}const banner=$('#error');if(banner)banner.textContent=error?.message||'تعذر تحميل لوحة التحكم.';});
 
 async function openCustomer360(customerId){

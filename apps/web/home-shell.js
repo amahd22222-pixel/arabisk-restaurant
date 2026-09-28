@@ -140,10 +140,8 @@
       $('.today-offer-note', root).textContent =
         today.message || selectedProduct?.descriptionAr || 'عرض خاص متاح الآن في ARABISK.';
       const action = $('.today-offer-action', root);
-      action.textContent = (today.ctaLabel || 'اطلب الآن') + ' ←';
-      action.setAttribute('href', selectedProduct
-        ? `/menu/${encodeURIComponent(String(selectedProduct.categoryId || ''))}/${encodeURIComponent(String(selectedProduct.id || ''))}`
-        : '/menu');
+      action.textContent = today.ctaLabel || 'اطلب الآن';
+      action.setAttribute('href', '/offers');
       updateTimer(today.endsAt);
       if (today.endsAt) offerTimer = window.setInterval(() => updateTimer(today.endsAt), 30000);
       return;
