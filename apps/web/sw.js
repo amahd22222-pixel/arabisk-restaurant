@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v25';
+const CACHE_VERSION = 'arabisk-pwa-v26';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -55,6 +55,29 @@ function shouldBypass(request) {
     url.pathname.startsWith('/auth/');
 }
 
+function shouldNetworkFirst(request) {
+  const url = new URL(request.url);
+  const pathname = url.pathname;
+  return request.destination === 'script' ||
+    request.destination === 'style' ||
+    request.destination === 'manifest' ||
+    pathname.endsWith('.html') ||
+    pathname === '/sw.js';
+}
+
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    if (response.ok && response.type === 'basic') {
+      const copy = response.clone();
+      caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy)).catch(() => {});
+    }
+    return response;
+  } catch {
+    return caches.match(request);
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET' || !isSameOrigin(request) || shouldBypass(request)) return;
@@ -74,6 +97,11 @@ self.addEventListener('fetch', (event) => {
           return cached || caches.match('/index.html') || caches.match('/offline.html');
         })
     );
+    return;
+  }
+
+  if (shouldNetworkFirst(request)) {
+    event.respondWith(networkFirst(request));
     return;
   }
 
