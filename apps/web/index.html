@@ -36,7 +36,13 @@
     <a href="/memories">الذكريات</a>
   </nav>
   <div class="app-header-actions">
-    <a class="app-cart-link" href="/cart" aria-label="فتح السلة">السلة <b id="app-cart-count" hidden>0</b></a>
+    <a class="app-cart-link" href="/cart" aria-label="فتح السلة">
+      <svg class="app-cart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M3.5 5.5h2l1.7 9.1a2 2 0 0 0 2 1.6h7.2a2 2 0 0 0 1.9-1.4l1.6-6.3H7.1"></path>
+        <path d="M10 19.5h.01M17 19.5h.01"></path>
+      </svg>
+      <b id="app-cart-count" hidden>0</b>
+    </a>
     <button class="lang" id="lang-toggle" type="button" aria-label="تغيير اللغة">EN</button>
     <button class="app-menu-button" id="app-menu-button" type="button" aria-expanded="false" aria-controls="app-header-nav" aria-label="فتح القائمة">☰</button>
   </div>
