@@ -20,7 +20,13 @@ const saveJson = (key, value) => {
 };
 
 function isStandaloneMode() {
-  return window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+  const displayMode = [
+    '(display-mode: standalone)',
+    '(display-mode: minimal-ui)',
+    '(display-mode: fullscreen)'
+  ].some(query => window.matchMedia?.(query).matches);
+  const androidAppReferrer = String(document.referrer || '').startsWith('android-app://');
+  return displayMode || navigator.standalone === true || androidAppReferrer;
 }
 
 function getDeviceId() {
@@ -206,30 +212,48 @@ async function bootstrap() {
   if (!isStandaloneMode()) return;
 
   const cached = getProfile();
+  const token = getToken();
+
+  // The marker is only a convenience flag. A usable token/profile is the actual
+  // source of truth; stale markers must never suppress onboarding.
   if (isOnboardingComplete()) {
-    if (getToken()) {
-      try { await refresh(); } catch {}
+    if (token) {
+      try {
+        const profile = await refresh();
+        if (profile?.name && profile?.phone && profile?.profileToken) return;
+      } catch {}
     }
-    return;
+    try { localStorage.removeItem(ONBOARDING_KEY); } catch {}
   }
 
-  if (cached?.name && cached?.phone && cached?.profileToken) {
+  if (cached?.name && cached?.phone && cached?.profileToken && cached.profileToken === token) {
     markOnboardingComplete();
+    try { await refresh(); } catch {}
     return;
   }
 
   try {
     const profile = await refresh();
-    if (profile) return;
+    if (profile?.name && profile?.phone && profile?.profileToken) return;
   } catch {}
 
   const recovered = await recoverCachedProfile();
-  if (recovered) return;
+  if (recovered?.name && recovered?.phone && recovered?.profileToken) return;
 
   mountOnboarding(cached);
 }
 
 window.ARABISK_PROFILE = { getProfile, getToken, refresh };
-window.addEventListener('load', () => void bootstrap());
-window.addEventListener('appinstalled', () => window.setTimeout(() => void bootstrap(), 600));
+
+const runBootstrap = () => { void bootstrap(); };
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', runBootstrap, { once: true });
+} else {
+  runBootstrap();
+}
+window.addEventListener('pageshow', () => {
+  if (!isStandaloneMode() || document.getElementById('arabisk-profile-overlay')) return;
+  if (!getToken() || !isOnboardingComplete()) runBootstrap();
+});
+window.addEventListener('appinstalled', () => window.setTimeout(runBootstrap, 600));
 })();
