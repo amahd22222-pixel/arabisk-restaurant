@@ -171,6 +171,72 @@ export function createCustomerService({ repository, cleanText, crypto }) {
     return publicProfile(customer, token);
   }
 
+  function profileDashboard(token) {
+    const customer = findByProfileToken(token);
+    if (!customer) {
+      const error = new Error('جلسة العميل غير صالحة.');
+      error.status = 401;
+      throw error;
+    }
+
+    const customerId = customer.id;
+    const customerOrders = orders
+      .all()
+      .filter(order => order?.customerId === customerId)
+      .sort((a, b) => String(b?.createdAt || '').localeCompare(String(a?.createdAt || '')));
+
+    const customerReservations = reservations
+      .all()
+      .filter(reservation => reservation?.customerId === customerId)
+      .sort((a, b) => {
+        const aKey = String(a?.date || '') + 'T' + String(a?.time || '');
+        const bKey = String(b?.date || '') + 'T' + String(b?.time || '');
+        return bKey.localeCompare(aKey);
+      });
+
+    const publicOrder = order => ({
+      id: String(order?.id || ''),
+      status: String(order?.status || 'pending'),
+      orderType: order?.orderType === 'pickup' ? 'pickup' : 'dine_in',
+      tableNumber: String(order?.tableNumber || ''),
+      total: Number(order?.total || 0),
+      createdAt: String(order?.createdAt || ''),
+      updatedAt: String(order?.updatedAt || ''),
+      itemCount: Array.isArray(order?.items)
+        ? order.items.reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0)
+        : 0,
+      items: Array.isArray(order?.items)
+        ? order.items.slice(0, 4).map(item => ({
+            nameAr: cleanText(item?.nameAr, 160),
+            quantity: Number(item?.quantity) || 0
+          }))
+        : []
+    });
+
+    const publicReservation = reservation => ({
+      id: String(reservation?.id || ''),
+      status: String(reservation?.status || 'pending'),
+      date: String(reservation?.date || ''),
+      time: String(reservation?.time || ''),
+      guests: Number(reservation?.guests || 0),
+      notes: cleanText(reservation?.notes, 300),
+      eventSlug: cleanText(reservation?.eventSlug, 90)
+    });
+
+    return {
+      profile: publicProfile(customer, token),
+      stats: {
+        orderCount: Number(customer.orderCount || 0),
+        reservationCount: Number(customer.reservationCount || 0),
+        totalOrderValue: Number(customer.totalOrderValue || 0),
+        memberSince: customer.appProfileCreatedAt || customer.firstSeenAt || customer.createdAt || '',
+        lastActivityAt: customer.lastActivityAt || customer.lastOrderAt || customer.lastReservationAt || ''
+      },
+      orders: customerOrders.slice(0, 5).map(publicOrder),
+      reservations: customerReservations.slice(0, 5).map(publicReservation)
+    };
+  }
+
   async function updateCustomer(id, body) {
     const customer = customers.findById(id);
     if (!customer) {
