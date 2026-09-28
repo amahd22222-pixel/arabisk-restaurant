@@ -22,6 +22,22 @@ export function addUaeDays(date, offsetDays = 0) {
   return new Date(base).toISOString().slice(0, 10);
 }
 
+export function getUaeWeekdayIndex(date = new Date()) {
+  const dateOnly = getUaeDateOnly(date);
+  const noonUtc = new Date(dateOnly + 'T12:00:00.000Z');
+  return noonUtc.getUTCDay();
+}
+
+export function nextUaeWeekday(date, targetWeekday, weeksAhead = 0) {
+  const current = getUaeWeekdayIndex(date);
+  const target = Number(targetWeekday);
+  if (!Number.isInteger(target) || target < 0 || target > 6) return '';
+  let delta = (target - current + 7) % 7;
+  if (weeksAhead > 0) delta += Math.max(0, Math.floor(weeksAhead)) * 7;
+  if (delta === 0 && weeksAhead === 0) delta = 7;
+  return addUaeDays(date, delta);
+}
+
 export function parseUaeLocalDateTime(date, time = '00:00') {
   const rawDate = String(date || '').trim();
   const rawTime = String(time || '00:00').trim();
