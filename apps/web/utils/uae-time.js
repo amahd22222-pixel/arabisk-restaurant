@@ -40,6 +40,7 @@ export function getUaeTimeContext(date = new Date()) {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
+    hourCycle: 'h23',
     timeZoneName: 'short'
   }).formatToParts(date);
   const map = Object.fromEntries(formatted.map(part => [part.type, part.value]));
