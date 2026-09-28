@@ -53,6 +53,33 @@ test('Shams lets a repeated opposite preference eventually replace the earlier s
   assert.equal(third.preferenceConfidence.spicy, 1);
 });
 
+test('Shams records a product added to cart as a positive choice signal', async () => {
+  const store = new Map();
+  const memory = createShamsMemoryService({
+    async readJsonWithStatus(key) {
+      return store.has(key) ? { ok: true, found: true, value: store.get(key) } : { ok: true, found: false };
+    },
+    async writeJson(key, value) {
+      store.set(key, value);
+      return true;
+    }
+  });
+
+  await memory.rememberTurn(
+    { customerId: 'C-CHOSEN' },
+    {
+      user: 'ضيف الطبق ده',
+      assistant: 'تمت الإضافة.',
+      intent: 'cart_add',
+      chosenProducts: [{ id: 'P7', nameAr: 'طبق اختاره العميل' }]
+    }
+  );
+
+  const saved = await memory.read({ customerId: 'C-CHOSEN' });
+  assert.equal(saved.chosenProducts?.[0]?.id, 'P7');
+  assert.equal(saved.chosenProducts?.[0]?.count, 1);
+});
+
 test('Shams maps a rejection to the ordered recommendation list instead of the latest recent product', async () => {
   const store = new Map();
   const memory = createShamsMemoryService({
