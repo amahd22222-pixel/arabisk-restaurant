@@ -1,3 +1,5 @@
+# ARABISK admin service deployment contract
+
 [build]
 builder = "RAILPACK"
 buildCommand = "cd apps/admin && npm run build"
