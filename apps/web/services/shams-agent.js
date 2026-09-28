@@ -988,7 +988,8 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       products: products(),
       categories: categories(),
       cart: context.cart,
-      page: context.page
+      page: context.page,
+      customerContext: context.customerContext
     }) || detectLocalPlan({
       message,
       memory,
