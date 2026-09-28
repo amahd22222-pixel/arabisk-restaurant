@@ -1,22 +1,14 @@
 (() => {
   const UPDATE_RELOAD_KEY = 'ARABISK_PWA_UPDATE_RELOADED_V2';
 
-  function shouldReloadForUpdate() {
-    try {
-      return sessionStorage.getItem(UPDATE_RELOAD_KEY) !== '1';
-    } catch {
-      return true;
-    }
-  }
-
-  function markReloaded() {
-    try { sessionStorage.setItem(UPDATE_RELOAD_KEY, '1'); } catch {}
-  }
+  let hasControllerAtStartup = Boolean(navigator.serviceWorker.controller);
 
   function attachControllerGuard() {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!shouldReloadForUpdate()) return;
-      markReloaded();
+      if (!hasControllerAtStartup) {
+        hasControllerAtStartup = true;
+        return;
+      }
       window.location.reload();
     });
   }
@@ -53,13 +45,11 @@
 
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
-        try { sessionStorage.removeItem(UPDATE_RELOAD_KEY); } catch {}
         checkForUpdate();
       }
     });
 
     window.addEventListener('pageshow', () => {
-      try { sessionStorage.removeItem(UPDATE_RELOAD_KEY); } catch {}
       checkForUpdate();
     });
   }
