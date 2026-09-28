@@ -326,6 +326,89 @@ function recommendationArgs(preferences) {
   return Object.fromEntries(Object.entries(preferences).filter(([, value]) => value !== undefined && value !== null && value !== ''));
 }
 
+export function pickSmartLocalRecommendations(products, memory = {}, message = '', customerContext = null) {
+  const catalog = Array.isArray(products) ? products.filter(item => item?.available !== false) : [];
+  const explicit = extractPreferences(message);
+  const stored = memory?.preferences && typeof memory.preferences === 'object' ? memory.preferences : {};
+  const preferences = { ...stored, ...explicit };
+  const favoriteIds = new Set(
+    (Array.isArray(customerContext?.favoriteProducts) ? customerContext.favoriteProducts : [])
+      .map(item => String(item?.id || item?.productId || '').trim())
+      .filter(Boolean)
+  );
+  const favoriteNames = new Set(
+    (Array.isArray(customerContext?.favoriteProducts) ? customerContext.favoriteProducts : [])
+      .map(item => normalizeDialect(item?.name || item?.nameAr || ''))
+      .filter(Boolean)
+  );
+  const favoriteCategories = new Set(
+    (Array.isArray(customerContext?.favoriteCategories) ? customerContext.favoriteCategories : [])
+      .map(item => normalizeDialect(item?.name || item?.nameAr || item?.categoryId || ''))
+      .filter(Boolean)
+  );
+  const recentIds = new Set(
+    (Array.isArray(memory?.recentProducts) ? memory.recentProducts : [])
+      .map(item => String(item?.id || '').trim())
+      .filter(Boolean)
+  );
+  const cartIds = new Set(
+    (Array.isArray(memory?.cart) ? memory.cart : [])
+      .map(item => String(item?.id || item?.productId || '').trim())
+      .filter(Boolean)
+  );
+
+  const scored = catalog.map(product => {
+    const haystack = productHaystack(product);
+    let score = product?.chefChoice ? 2 : 0;
+    if (product?.isNew) score += 1;
+
+    const productName = normalizeDialect(product?.nameAr || product?.nameEn || '');
+    const categoryName = normalizeDialect(product?.categoryNameAr || product?.categoryNameEn || product?.categoryId || '');
+
+    if (favoriteIds.has(String(product.id))) score += 12;
+    if (favoriteNames.has(productName)) score += 10;
+    if ([...favoriteCategories].some(value => value && (categoryName === value || categoryName.includes(value) || value.includes(categoryName)))) score += 5;
+
+    if (preferences.category === 'drink' && /(drink|مشروب|عصير|قهوه|قهوة|شاي|لاتيه|كوفي)/i.test(haystack)) score += 7;
+    if (preferences.protein && new RegExp(preferences.protein === 'chicken' ? '(chicken|دجاج|فراخ)' : preferences.protein === 'beef' ? '(beef|لحم|لحمه|ستيك)' : '(seafood|fish|سمك|بحري|جمبري|روبيان)', 'i').test(haystack)) score += 6;
+    if (preferences.taste === 'sweet' && /(sweet|dessert|حلو|حلويات|تحليه|شوكولاته|كيك|ايس كريم)/i.test(haystack)) score += 6;
+    if (preferences.taste === 'savory' && /(savory|مالح|حادق|وجبه|طبق|main)/i.test(haystack)) score += 4;
+    if (preferences.weight === 'light' && /(light|خفيف|سلطه|سلطة)/i.test(haystack)) score += 4;
+    if (preferences.weight === 'hearty' && /(hearty|مشبع|دسم|تقيل|ثقيل|وجبه كامله)/i.test(haystack)) score += 4;
+    if (typeof preferences.spicy === 'boolean') {
+      const level = Number(product?.spiceLevel || 0);
+      if ((preferences.spicy && level >= 2) || (!preferences.spicy && level <= 1)) score += 5;
+    }
+    if (typeof preferences.vegetarian === 'boolean') {
+      const dietary = Array.isArray(product?.dietary) ? normalizeDialect(product.dietary.join(' ')) : '';
+      const vegetarian = /vegetarian|vegan|نباتي|نباتيه/.test(dietary) || /vegetarian|vegan|نباتي|نباتيه/i.test(haystack);
+      if (vegetarian === preferences.vegetarian) score += 6;
+    }
+
+    if (recentIds.has(String(product.id))) score -= 1;
+    if (cartIds.has(String(product.id))) score -= 8;
+
+    return { product, score };
+  }).sort((a, b) => b.score - a.score || Number(b.product?.chefChoice) - Number(a.product?.chefChoice) || Number(a.product?.sortOrder || 0) - Number(b.product?.sortOrder || 0));
+
+  const result = [];
+  const usedCategories = new Set();
+  for (const row of scored) {
+    const key = normalizeDialect(row.product?.categoryNameAr || row.product?.categoryNameEn || row.product?.categoryId || '');
+    const isFavorite = favoriteIds.has(String(row.product.id)) || favoriteNames.has(normalizeDialect(row.product?.nameAr || row.product?.nameEn || ''));
+    if (result.length >= 3) break;
+    if (result.length > 0 && key && usedCategories.has(key) && !isFavorite) continue;
+    result.push({ ...row.product, recommendationScore: row.score });
+    if (key) usedCategories.add(key);
+  }
+
+  return {
+    candidates: result.map(({ recommendationScore, ...product }) => product),
+    preferences: recommendationArgs(preferences)
+  };
+}
+
+
 function resolvePageMenuContext(page, categories, catalog) {
   const raw = String(page ?? '').split('?')[0].replace(/\/$/, '');
   const parts = raw.split('/').filter(Boolean);
