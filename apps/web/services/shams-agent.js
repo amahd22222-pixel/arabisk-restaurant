@@ -1,3 +1,4 @@
+import { getUaeTimeContext } from '../utils/uae-time.js';
 import { buildSmartLocalPlan, isNegatedAction } from './shams-local-intelligence.js';
 
 const MAX_TOOL_CALLS = 4;
@@ -875,6 +876,8 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       'استخدمي رحلة العميل عندما تكون مفيدة مباشرة: الحجز القادم، العودة، المفضلات، أو إعادة التفاعل. لا تعرضي للعميل تفاصيل داخلية مثل قيمة الإنفاق أو عدد الأجهزة.',
       'إذا كانت الرسالة حجزًا أو طلبًا ناقصًا، استخرجي كل الحقول الموجودة فقط في workflow ولا تخترعي أي حقل.',
       'اللهجة المكتشفة مبدئيًا: ' + dialectLocale(context.message),
+      'الوقت المرجعي للمطعم: ' + JSON.stringify(getUaeTimeContext()),
+      'عند تفسير اليوم/غدًا/بعد غد أو موعد نسبي، استخدمي هذا الوقت المحلي لأبوظبي فقط، ولا تعتمدي على توقيت السيرفر.',
       'النص المطبع: ' + context.normalizedMessage,
       'العميل الحالي: ' + JSON.stringify(context.customer ? { id: context.customer.id, name: context.customer.name || '' } : null),
       'سياق العميل الآمن: ' + JSON.stringify(context.customerContext || null),
