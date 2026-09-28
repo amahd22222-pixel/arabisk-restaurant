@@ -116,6 +116,24 @@ test('Shams sanitizes browser-supplied conversation history before model plannin
   ]);
 });
 
+test('Shams adds the visible product when the customer says "ضيفه"', () => {
+  const plan = buildSmartLocalPlan({
+    message: 'ضيفه',
+    page: '/menu/main/signature-dish',
+    memory: { recentProducts: [] },
+    categories: [{ id: 'main', nameAr: 'رئيسية', nameEn: 'Mains' }],
+    products: [
+      { id: 'P1', nameAr: 'طبق ظاهر', nameEn: 'Visible Dish', categoryId: 'main', price: 70, available: true },
+      { id: 'P2', nameAr: 'طبق آخر', nameEn: 'Other Dish', categoryId: 'main', price: 65, available: true }
+    ],
+    cart: []
+  });
+
+  assert.equal(plan?.intent, 'cart_add');
+  assert.equal(plan?.toolCalls?.[0]?.name, 'cart_add');
+  assert.equal(plan?.toolCalls?.[0]?.args?.productId, 'P1');
+});
+
 test('Shams local planner understands habitual-choice language as a recommendation', () => {
   const plan = buildSmartLocalPlan({
     message: 'هاتلي اللي باخده دايمًا',
