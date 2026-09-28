@@ -59,11 +59,15 @@ const readCart=()=>{
   try{const value=readStored(sessionStorage,CART_KEY);if(value)candidates.push(value)}catch{}
   try{const value=readCookie();if(value)candidates.push(value)}catch{}
   if(!candidates.length)return [];
+  // Prefer equally fresh storage snapshots over the metadata-light cookie fallback.
   candidates.sort((a,b)=>b.updatedAt-a.updatedAt);
-  return candidates[0].items;
-};const writeCookie=items=>{
+  const newestTimestamp=candidates[0].updatedAt;
+  const equallyFresh=candidates.filter(candidate=>candidate.updatedAt===newestTimestamp);
+  const rich=equallyFresh.find(candidate=>candidate.items.some(item=>item.hydrated&&item.nameAr&&item.nameAr!==item.id));
+  return (rich||equallyFresh[0]).items;
+};const writeCookie=(items,updatedAt)=>{
   try{
-    const compact={version:1,updatedAt:Date.now(),items:items.map(item=>({id:String(item.id),qty:Number(item.qty)||1}))};
+    const compact={version:1,updatedAt:Number(updatedAt)||Date.now(),items:items.map(item=>({id:String(item.id),qty:Number(item.qty)||1}))};
     const encoded=encodeURIComponent(JSON.stringify(compact));
     if(encoded.length>3800)return false;
     document.cookie=COOKIE_KEY+'='+encoded+'; Path=/; Max-Age=2592000; SameSite=Lax';
@@ -73,11 +77,12 @@ const readCart=()=>{
 
 const saveCart=items=>{
   const normalized=normalizeItems(items);
-  const payload=JSON.stringify({version:4,updatedAt:Date.now(),items:normalized});
+  const updatedAt=Date.now();
+  const payload=JSON.stringify({version:4,updatedAt,items:normalized});
   let persisted=false;
   try{localStorage.setItem(CART_KEY,payload);persisted=true}catch{}
   try{sessionStorage.setItem(CART_KEY,payload);persisted=true}catch{}
-  const cookiePersisted=writeCookie(normalized);
+  const cookiePersisted=writeCookie(normalized,updatedAt);
   persisted=persisted||cookiePersisted;
   window.dispatchEvent(new CustomEvent(CART_EVENT,{detail:{items:normalized,persisted}}));
   return normalized;
