@@ -90,7 +90,7 @@ export function createNotificationService({
   const installedDevices = () =>
     notificationDevicesRepository.all().filter(item => item?.status === 'installed');
 
-  const customerById = new Map(customers.map(customer => [String(customer?.id || ''), customer]));
+  const findCustomerById = (customerId) => customers.find(customer => String(customer?.id || '') === String(customerId || '')) || null;
 
   const lifecycleFor = customer => {
     const last = Date.parse(customer?.lastActivityAt || '');
@@ -103,7 +103,7 @@ export function createNotificationService({
 
   const customerMatchesAudience = (customerId, audience) => {
     if (audience === 'all-installed') return true;
-    const customer = customerById.get(String(customerId || ''));
+    const customer = findCustomerById(customerId);
     if (!customer) return false;
     if (audience === 'app-members') return customer.appMember === true;
     if (audience === 'repeat-2plus') return Number(customer.orderCount || 0) >= 2;
