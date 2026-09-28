@@ -266,7 +266,8 @@ const shamsService = createShamsService({
   aiModel: SHAMS_AI_MODEL,
   aiEndpoint: SHAMS_AI_ENDPOINT,
   getOrderService: () => orderService,
-  getReservationService: () => reservationService
+  getReservationService: () => reservationService,
+  getCustomerRelationship: customerRelationshipService.shamsContext
 });
 registerShamsRoutes(app, { service: shamsService, profileRateLimit: shamsRateLimit });
 
