@@ -4,23 +4,15 @@ import fs from 'node:fs/promises';
 
 const injectMobileNavigation = async (filePath, res) => {
   const html = await fs.readFile(filePath, 'utf8');
-  const baseAssets = `<meta name="theme-color" content="#17130f">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ARABISK">
-<link rel="manifest" href="/manifest.json">
-<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
-<link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png">
-<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<script type="module" src="/pwa-ui.js"></script>
-<script type="module" src="/pwa-register.js"></script>
-<script type="module" src="/pwa-profile.js"></script>
-<script type="module" src="/pwa-notifications.js"></script>
-`;
-  const appAssets = [
-    !html.includes('href="/manifest.json"') ? '<link rel="manifest" href="/manifest.json">' : '',
+  const assets = [
+    !html.includes('name="theme-color"') ? '<meta name="theme-color" content="#17130f">' : '',
+    !html.includes('name="mobile-web-app-capable"') ? '<meta name="mobile-web-app-capable" content="yes">' : '',
+    !html.includes('name="apple-mobile-web-app-capable"') ? '<meta name="apple-mobile-web-app-capable" content="yes">' : '',
+    !html.includes('name="apple-mobile-web-app-status-bar-style"') ? '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">' : '',
+    !html.includes('name="apple-mobile-web-app-title"') ? '<meta name="apple-mobile-web-app-title" content="ARABISK">' : '',
+    !html.includes('rel="manifest"') ? '<link rel="manifest" href="/manifest.json">' : '',
     !html.includes('href="/icons/icon.svg"') ? '<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">' : '',
+    !html.includes('href="/icons/icon-192.png"') ? '<link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png">' : '',
     !html.includes('href="/icons/apple-touch-icon.png"') ? '<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">' : '',
     !html.includes('href="/mobile-nav.css"') ? '<link rel="stylesheet" href="/mobile-nav.css">' : '',
     !html.includes('src="/mobile-nav.js"') ? '<script type="module" src="/mobile-nav.js"></script>' : '',
@@ -31,7 +23,6 @@ const injectMobileNavigation = async (filePath, res) => {
     !html.includes('src="/pwa-profile.js"') ? '<script type="module" src="/pwa-profile.js"></script>' : '',
     !html.includes('src="/pwa-notifications.js"') ? '<script type="module" src="/pwa-notifications.js"></script>' : ''
   ].filter(Boolean).join('\n');
-  const assets = [baseAssets, appAssets].filter(Boolean).join('\n');
 
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('Pragma', 'no-cache');
