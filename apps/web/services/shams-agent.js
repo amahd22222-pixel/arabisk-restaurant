@@ -318,23 +318,37 @@ function scoreProductForPreferences(product, preferences) {
   return score;
 }
 
-function pickSmartLocalRecommendations(products, memory, text) {
+function pickSmartLocalRecommendations(products, memory, text, customerContext = null) {
   const extracted = extractLocalPreferences(text);
   const stored = memory?.preferences || {};
   const preferences = {
     ...stored,
     ...extracted
   };
+  const favoriteProducts = new Set(
+    Array.isArray(customerContext?.favoriteProducts)
+      ? customerContext.favoriteProducts.map(item => normalizeArabic(item?.name))
+      : []
+  );
+  const favoriteCategories = new Set(
+    Array.isArray(customerContext?.favoriteCategories)
+      ? customerContext.favoriteCategories.map(item => normalizeArabic(item?.name))
+      : []
+  );
   const candidates = products
     .filter(item => item?.available !== false)
-    .map(product => ({
-      product,
-      score:
+    .map(product => {
+      const productName = normalizeArabic(product?.nameAr || product?.nameEn || '');
+      const productCategory = normalizeArabic(product?.categoryNameAr || product?.categoryNameEn || '');
+      let score =
         scoreProductForPreferences(product, preferences) +
         (product.chefChoice ? 3 : 0) +
         (product.isNew ? 1.5 : 0) +
-        (Number(product.rating || 0) / 5)
-    }))
+        (Number(product.rating || 0) / 5);
+      if (favoriteProducts.has(productName)) score += 8;
+      if (favoriteCategories.has(productCategory)) score += 4;
+      return { product, score };
+    })
     .sort((a, b) => b.score - a.score)
     .slice(0, 3)
     .map(row => row.product);
@@ -622,7 +636,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     }
 
     if (name === 'recommend_menu') {
-      const smart = pickSmartLocalRecommendations(catalog, context.memory, context.message);
+      const smart = pickSmartLocalRecommendations(catalog, context.memory, context.message, context.customerContext);
       return { recommendations: smart.candidates, preferences: smart.preferences };
     }
 
