@@ -922,8 +922,15 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
 
     const customer = input.customer || null;
     const customerContext = input.customerContext && typeof input.customerContext === 'object' ? input.customerContext : null;
-    const identity = buildIdentity({ customer, sessionId: input.sessionId });
+    const normalizedSessionId = clean(input.sessionId, 120);
+    const identity = buildIdentity({ customer, sessionId: normalizedSessionId });
     let stage = 'understand';
+
+    if (customer?.id && normalizedSessionId && typeof memoryService.mergeSessionIntoCustomer === 'function') {
+      try {
+        await memoryService.mergeSessionIntoCustomer(normalizedSessionId, String(customer.id));
+      } catch {}
+    }
 
     const memory = await memoryService.read(identity);
     stage = 'recall';
