@@ -282,7 +282,7 @@ function isAddRequest(raw) {
 }
 
 function isRecommendationRequest(raw) {
-  return /(رشح|رشحلي|رشح لي|اقترح|اقترحلي|انصحني|نصحني|شو بتنصحني|شو تقترح|شو بترشح|محتار|محتارة|اختار لي|اختارلي|اختيار|دلني|دُلني|عايز حاجة|عاوز حاجه|نفسي في|بدي شي|بدي اكل|شو اكل|شو آكل|ايه الاحسن|شو الاحسن|what.*recommend)/i.test(raw);
+  return /(رشح|رشحلي|رشح لي|اقترح|اقترحلي|انصحني|نصحني|شو بتنصحني|شو تقترح|شو بترشح|محتار|محتارة|اختار لي|اختارلي|اختيار|دلني|دُلني|عايز حاجة|عاوز حاجه|نفسي في|بدي شي|بدي اكل|شو اكل|شو آكل|ايه الاحسن|شو الاحسن|المفضل|المفضلة|المفضلي|اللي بحبه|اللي بحبو|اللي باخده دايم|اللي باخدو دايم|زي اللي فات|زي المرة اللي فاتت|نفس اللي بطلبه|نفس طلباتي|عادتي|what.*recommend)/i.test(raw);
 }
 
 export function isNegatedAction(text, action) {
@@ -369,7 +369,7 @@ function resolveStaticPage(raw) {
   return '';
 }
 
-export function buildSmartLocalPlan({ message, memory = {}, products = [], categories = [], cart = [], page = '/' } = {}) {
+export function buildSmartLocalPlan({ message, memory = {}, products = [], categories = [], cart = [], page = '/', customerContext = null } = {}) {
   const text = clean(message);
   const raw = normalizeDialect(text);
   if (!raw) return null;
