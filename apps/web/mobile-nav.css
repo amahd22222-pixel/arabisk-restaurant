@@ -56,7 +56,7 @@
     background:#c59a5b;
   }
 
-  /* Shams is highlighted without changing the natural bar height. */
+  /* Shams stays centered and compact while reflecting its real voice state. */
   .pwa-bottom-nav a.shams-tab{
     align-self:end;
     justify-self:center;
@@ -83,6 +83,23 @@
     font-weight:900;
   }
 
+  .pwa-bottom-nav a.shams-tab.is-active .nav-icon,
+  .pwa-bottom-nav a.shams-tab[aria-pressed="true"] .nav-icon{
+    border-color:rgba(255,244,215,.9);
+    box-shadow:0 0 0 3px rgba(197,154,91,.12),0 5px 18px rgba(0,0,0,.3),0 0 22px rgba(197,154,91,.3);
+  }
+
+  .pwa-bottom-nav a.shams-tab.is-active::before,
+  .pwa-bottom-nav a.shams-tab[aria-pressed="true"]::before{
+    content:"";
+    position:absolute;
+    top:1px;
+    width:18px;
+    height:2px;
+    border-radius:999px;
+    background:#e6c991;
+  }
+
   .pwa-bottom-nav .nav-icon{
     font-family:"Segoe UI Symbol",Arial,sans-serif;
     font-size:18px;
@@ -101,4 +118,8 @@
   .pwa-bottom-nav{padding-left:2px;padding-right:2px}
   .pwa-bottom-nav a{min-height:50px}
   .pwa-bottom-nav a.shams-tab .nav-icon{width:34px;height:34px;font-size:17px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
