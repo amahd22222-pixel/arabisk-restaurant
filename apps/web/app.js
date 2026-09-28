@@ -101,12 +101,14 @@ function showPage() {
   const home = $('#home');
   const about = $('#about');
   const homeActions = $('#home-actions');
+  const customerExperience = $('#customer-experience');
   const homeSections = document.querySelectorAll('.app-content > .app-section');
   if (!reservation || !home || !about) return;
 
   const isReservation = location.pathname.replace(/\/$/,'') === '/reservation';
   home.hidden = isReservation;
   if (homeActions) homeActions.hidden = isReservation;
+  if (customerExperience) customerExperience.hidden = isReservation || customerExperience.dataset.hasData !== '1';
   homeSections.forEach(section => { section.hidden = isReservation; });
   about.hidden = isReservation;
   reservation.hidden = !isReservation;
