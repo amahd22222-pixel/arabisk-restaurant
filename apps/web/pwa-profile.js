@@ -4,6 +4,7 @@
 const PROFILE_TOKEN_KEY = 'ARABISK_PROFILE_TOKEN_V1';
 const PROFILE_DATA_KEY = 'ARABISK_PROFILE_DATA_V1';
 const DEVICE_ID_KEY = 'ARABISK_DEVICE_ID_V1';
+const ONBOARDING_KEY = 'ARABISK_PROFILE_ONBOARDED_V1';
 
 const getJson = (key, fallback = null) => {
   try {
@@ -43,8 +44,17 @@ function getProfile() {
   return getJson(PROFILE_DATA_KEY, null);
 }
 
+function isOnboardingComplete() {
+  try { return localStorage.getItem(ONBOARDING_KEY) === '1'; } catch { return false; }
+}
+
+function markOnboardingComplete() {
+  try { localStorage.setItem(ONBOARDING_KEY, '1'); } catch {}
+}
+
 function setProfile(profile) {
   saveJson(PROFILE_DATA_KEY, profile);
+  if (profile?.name && profile?.phone && profile?.profileToken) markOnboardingComplete();
   try { localStorage.setItem(PROFILE_TOKEN_KEY, String(profile?.profileToken || '')); } catch {}
   window.ARABISK_PROFILE = { getProfile, getToken, refresh, setProfile };
   window.dispatchEvent(new CustomEvent('arabisk:profile-updated', { detail: { profile } }));
@@ -150,6 +160,8 @@ function mountOnboarding(initialProfile = null) {
   document.body.appendChild(overlay);
 
   const form = overlay.querySelector('#arabisk-profile-form');
+  const firstField = form.elements.name;
+  window.setTimeout(() => firstField?.focus(), 60);
   if (initialProfile) {
     form.elements.name.value = initialProfile.name || '';
     form.elements.phone.value = initialProfile.phone || '';
@@ -193,7 +205,19 @@ function mountOnboarding(initialProfile = null) {
 
 async function bootstrap() {
   if (!isStandaloneMode()) return;
-  if (location.pathname.replace(/\/$/, '') === '/profile') return;
+
+  const cached = getProfile();
+  if (isOnboardingComplete()) {
+    if (getToken()) {
+      try { await refresh(); } catch {}
+    }
+    return;
+  }
+
+  if (cached?.name && cached?.phone && cached?.profileToken) {
+    markOnboardingComplete();
+    return;
+  }
 
   try {
     const profile = await refresh();
@@ -203,7 +227,7 @@ async function bootstrap() {
   const recovered = await recoverCachedProfile();
   if (recovered) return;
 
-  mountOnboarding(getProfile());
+  mountOnboarding(cached);
 }
 
 window.ARABISK_PROFILE = { getProfile, getToken, refresh };
