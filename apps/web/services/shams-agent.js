@@ -511,7 +511,81 @@ function buildLocalReply(intent, data) {
 }
 
 export function createShamsAgent({ repository, memoryService, workflowService, requestModel = null }) {
-  const products = () => repository.products.all().filter(item => item?.available !== false);
+  const categories = () => (repository.categories?.all?.() || [])
+    .filter(item => item?.active !== false)
+    .map(item => ({
+      ...item,
+      nameAr: clean(item.nameAr, 120),
+      nameEn: clean(item.nameEn, 120)
+    }));
+
+  const products = () => repository.products.all()
+    .filter(item => item?.available !== false)
+    .map(item => {
+      const category = categories().find(row => String(row.id) === String(item.categoryId));
+      return {
+        ...item,
+        categoryNameAr: category?.nameAr || '',
+        categoryNameEn: category?.nameEn || ''
+      };
+    });
+
+  function resolveNavigation(args = {}, catalog = products()) {
+    const currentPath = clean(args.path, 180);
+    const categoryId = clean(args.categoryId, 80);
+    const productId = clean(args.productId, 80);
+    const categoryList = categories();
+
+    if (categoryId || productId) {
+      const product = productId ? catalog.find(item => String(item.id) === productId) : null;
+      const category = categoryList.find(item =>
+        String(item.id) === String(categoryId || product?.categoryId || '') ||
+        slug(item.id) === slug(categoryId || product?.categoryId || '')
+      );
+      if (!category) return null;
+      if (productId) {
+        if (!product || String(product.categoryId) !== String(category.id)) return null;
+        return '/menu/' + slug(category.id) + '/' + slug(product.nameEn || product.nameAr || product.id);
+      }
+      return '/menu/' + slug(category.id);
+    }
+
+    if (ALLOWED_PATHS.has(currentPath)) return currentPath;
+    if (!currentPath.startsWith('/menu/')) return null;
+
+    const parts = currentPath.split('/').filter(Boolean);
+    if (parts.length === 2) {
+      const categoryKey = parts[1];
+      const category = categoryList.find(item =>
+        slug(item.id) === slug(categoryKey) ||
+        slug(item.nameAr) === slug(categoryKey) ||
+        slug(item.nameEn) === slug(categoryKey)
+      );
+      return category ? '/menu/' + slug(category.id) : null;
+    }
+
+    if (parts.length === 3) {
+      const categoryKey = parts[1];
+      const productKey = parts[2];
+      const category = categoryList.find(item =>
+        slug(item.id) === slug(categoryKey) ||
+        slug(item.nameAr) === slug(categoryKey) ||
+        slug(item.nameEn) === slug(categoryKey)
+      );
+      if (!category) return null;
+      const product = catalog.find(item =>
+        String(item.categoryId) === String(category.id) &&
+        (String(item.id).toLowerCase() === productKey.toLowerCase() ||
+          slug(item.nameAr) === slug(productKey) ||
+          slug(item.nameEn) === slug(productKey))
+      );
+      return product
+        ? '/menu/' + slug(category.id) + '/' + slug(product.nameEn || product.nameAr || product.id)
+        : null;
+    }
+
+    return null;
+  }
 
   function buildIdentity({ customer, sessionId }) {
     return customer?.id
