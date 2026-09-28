@@ -154,7 +154,6 @@ function mountOnboarding(initialProfile = null) {
         <button class="arabisk-profile-submit" type="submit">ابدأ استخدام ARABISK</button>
         <div id="arabisk-profile-note" class="arabisk-profile-note" role="alert" aria-live="polite"></div>
       </form>
-      <p class="arabisk-profile-disclaimer">رقم الهاتف يُحفظ كبيانات تعريف للعميل ولا يتم اعتباره رقمًا موثقًا عبر OTP.</p>
     </section>
   `;
   document.body.appendChild(overlay);
