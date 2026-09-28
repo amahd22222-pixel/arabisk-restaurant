@@ -202,6 +202,112 @@ test('Shams remembers the exact workflow step that needs the next input', async 
   assert.equal(saved?.patch?.journey?.step, 'awaiting_الوقت');
 });
 
+test('Shams can answer a side question without losing an active reservation workflow', async () => {
+  const memoryValue = {
+    preferences: {},
+    recentTurns: [],
+    recentProducts: [],
+    lastIntent: 'reservation',
+    pendingAction: {
+      type: 'reservation',
+      data: { name: 'أحمد', date: '2026-09-30', guests: 2 },
+      idempotencyKey: 'reservation-1',
+      expiresAt: Date.now() + 600000
+    },
+    journey: { stage: 'returning_customer', nextBestAction: 'reservation_support', intent: 'reservation', step: 'awaiting_الوقت', slots: {} },
+    name: 'أحمد'
+  };
+
+  let workflowCalls = 0;
+  const memoryService = {
+    async read() { return memoryValue; },
+    async rememberTurn() { return true; },
+    async save() { return true; }
+  };
+
+  const agent = createShamsAgent({
+    repository: {
+      categories: { all: () => [{ id: 'main', nameAr: 'أطباق رئيسية', nameEn: 'Mains' }] },
+      products: { all: () => [{ id: 'P1', nameAr: 'طبق مميز', nameEn: 'Signature', price: 75, available: true, categoryId: 'main' }] }
+    },
+    memoryService,
+    workflowService: {
+      confirmation: () => null,
+      async handleReservation() { workflowCalls += 1; throw new Error('side question reached workflow'); }
+    },
+    requestModel: null
+  });
+
+  const result = await agent.handle({
+    message: 'بكام طبق مميز؟',
+    sessionId: 's-side-question',
+    customer: { id: 'C1', name: 'أحمد' },
+    customerContext: null,
+    history: [],
+    page: '/',
+    cart: []
+  });
+
+  assert.equal(workflowCalls, 0);
+  assert.equal(result.intent, 'product_search');
+  assert.match(result.reply, /طبق مميز/);
+  assert.match(result.reply, /نكمل العملية المحفوظة/);
+});
+
+test('Shams keeps workflow continuation when the customer explicitly changes a reservation field', async () => {
+  let workflowCalls = 0;
+  const memory = {
+    preferences: {},
+    recentTurns: [],
+    recentProducts: [],
+    lastIntent: 'reservation',
+    pendingAction: {
+      type: 'reservation',
+      data: { name: 'أحمد', date: '2026-09-30', time: '20:00', guests: 2 },
+      idempotencyKey: 'reservation-2',
+      expiresAt: Date.now() + 600000
+    },
+    journey: { stage: 'returning_customer', nextBestAction: 'reservation_support', intent: 'reservation', step: 'awaiting_الوقت', slots: {} },
+    name: 'أحمد'
+  };
+
+  const agent = createShamsAgent({
+    repository: { categories: { all: () => [] }, products: { all: () => [] } },
+    memoryService: {
+      async read() { return memory; },
+      async rememberTurn() { return true; },
+      async save() { return true; }
+    },
+    workflowService: {
+      confirmation: () => null,
+      async handleReservation(args) {
+        workflowCalls += 1;
+        assert.equal(args.message, 'غير الوقت للساعة 9');
+        return {
+          status: 'awaiting_confirmation',
+          reply: 'الحجز الساعة 09:00. أؤكد الحجز؟',
+          pending: { ...memory.pendingAction.data, time: '09:00' }
+        };
+      }
+    },
+    requestModel: null
+  });
+
+  const result = await agent.handle({
+    message: 'غير الوقت للساعة 9',
+    sessionId: 's-change-reservation',
+    customer: null,
+    customerContext: null,
+    history: [],
+    page: '/',
+    cart: []
+  });
+
+  assert.equal(workflowCalls, 1);
+  assert.equal(result.intent, 'reservation');
+  assert.match(result.reply, /09:00/);
+});
+
 test('Shams local agent prioritizes a known favorite when customer asks for their usual choice', async () => {
   let saved = null;
   const memoryService = {
