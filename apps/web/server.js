@@ -248,7 +248,8 @@ const customerRelationshipService = createCustomerRelationshipService({
 registerCustomerRelationshipRoutes(app, {
   service: customerRelationshipService,
   requireAdminApiKey,
-  rateLimit: customerAdminRateLimit
+  rateLimit: customerAdminRateLimit,
+  findCustomerByProfileToken: customerService.findByProfileToken
 });
 
 registerCustomerRoutes(app, {
