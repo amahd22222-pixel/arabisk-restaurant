@@ -190,6 +190,7 @@ export function createShamsService({
     sessionId = '',
     page = '/',
     cart = [],
+    dialect = '',
     client = null
   } = {}) {
     const text = clean(message);
@@ -217,6 +218,7 @@ export function createShamsService({
         sessionId: clean(sessionId, 120),
         page: clean(page, 120),
         cart,
+        dialect: clean(dialect, 20),
         client: client && typeof client === 'object' ? {
           surface: clean(client.surface, 30),
           serviceWorkerControlled: Boolean(client.serviceWorkerControlled)
