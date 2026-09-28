@@ -40,46 +40,26 @@ const reservationDate=value=>{
     : new Intl.DateTimeFormat('ar-AE',{dateStyle:'medium',timeZone:'Asia/Dubai'}).format(date);
 };
 
-function initials(name){
-  const parts=String(name||'ARABISK').trim().split(/\s+/).filter(Boolean).slice(0,2);
-  return parts.map(part=>part.charAt(0)).join('').toUpperCase()||'A';
-}
+const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
+const initials=name=>String(name||'ARABISK').trim().split(/\s+/).filter(Boolean).slice(0,2).map(part=>part.charAt(0)).join('').toUpperCase()||'A';
 
-function saveLocal(profile){
-  try{
-    localStorage.setItem(PROFILE_DATA_KEY,JSON.stringify(profile));
-    if(profile?.profileToken)localStorage.setItem(PROFILE_TOKEN_KEY,String(profile.profileToken));
-  }catch{}
-  window.dispatchEvent(new CustomEvent('arabisk:profile-updated',{detail:{profile}}));
-}
-
-function renderIdentity(profile,stats={}){
+function renderIdentity(profile,stats={}) {
   const name=String(profile?.name||'عميل ARABISK');
-  const avatar=initials(name);
-  const heroAvatar=$('#profile-hero-avatar');
-  const customerAvatar=$('#profile-avatar');
-  if(heroAvatar)heroAvatar.textContent=avatar;
-  if(customerAvatar)customerAvatar.textContent=avatar;
+  $('#profile-avatar').textContent=initials(name);
   $('#profile-customer-name').textContent=name;
-  $('#profile-phone-heading').textContent=String(profile?.phone||'—');
-  $('#profile-welcome').textContent=Number(stats.orderCount||0)||Number(stats.reservationCount||0)
-    ? 'مِلْفك يجمع زياراتك وطلباتك وحجوزاتك في مكان واحد.'
-    : 'مساحتك الشخصية لحفظ طلباتك وحجوزاتك وبياناتك داخل ARABISK.';
-  const badge=$('#profile-member-badge');
-  const heroBadge=$('#profile-hero-member-badge');
-  const badgeText=Number(stats.orderCount||0)>0?'عضوية عميل ARABISK':'عضوية جديدة';
-  if(badge)badge.textContent=badgeText;
-  if(heroBadge)heroBadge.textContent=badgeText;
+  $('#profile-phone').textContent=String(profile?.phone||'—');
+  $('#profile-member-badge').textContent=Number(stats.orderCount||0)>0?'عضوية عميل ARABISK':'عضوية ARABISK جديدة';
+  $('#profile-member-since').textContent=stats.memberSince?formatDate(stats.memberSince):'—';
   $('#stat-orders').textContent=String(stats.orderCount||0);
   $('#stat-reservations').textContent=String(stats.reservationCount||0);
   $('#stat-spend').textContent=money(stats.totalOrderValue||0);
 }
 
-function renderOrders(orders=[]){
+function renderOrders(orders=[]) {
   const root=$('#profile-orders');
   if(!root)return;
   if(!orders.length){
-    root.innerHTML='<div class="profile-list-empty">لسه مفيش طلبات مرتبطة بحسابك.<br><a href="/menu">ابدأ أول طلب</a></div>';
+    root.innerHTML='<div class="profile-list-empty">لا توجد طلبات سابقة حتى الآن.<br><a href="/menu">ابدأ أول طلب</a></div>';
     return;
   }
   root.innerHTML=orders.map(order=>{
@@ -92,11 +72,9 @@ function renderOrders(orders=[]){
   }).join('');
 }
 
-function reservationStatus(status){
-  return ({pending:'قيد التأكيد',confirmed:'مؤكدة',cancelled:'ملغاة'}[status]||status||'غير معروفة');
-}
+const reservationStatus=status=>({pending:'قيد التأكيد',confirmed:'مؤكدة',cancelled:'ملغاة'}[status]||status||'غير معروفة');
 
-function renderReservations(reservations=[]){
+function renderReservations(reservations=[]) {
   const root=$('#profile-reservations');
   if(!root)return;
   if(!reservations.length){
@@ -112,34 +90,43 @@ function renderReservations(reservations=[]){
   ).join('');
 }
 
-function esc(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));}
+function showMessage(message='',error=false) {
+  const node=$('#profile-status');
+  if(!node)return;
+  node.textContent=message;
+  node.classList.toggle('error',Boolean(error));
+}
 
-async function loadDashboard(){
+async function loadDashboard() {
   const token=getToken();
   const cached=getProfile();
-  if(!token){
+
+  if(!token) {
     renderIdentity(cached||{},{});
     renderOrders([]);
     renderReservations([]);
-    showMessage(cached?'بياناتك محفوظة على هذا الجهاز.':'أنشئ ملفك أولًا لربط الطلبات والحجوزات بحسابك.');
+    showMessage('');
     return;
   }
 
-  try{
+  try {
     const response=await fetch('/api/customer-profile/summary',{
       headers:{'X-ARABISK-PROFILE-TOKEN':token},
       cache:'no-store'
     });
     const data=await response.json().catch(()=>({}));
-    if(response.status===401){
+
+    if(response.status===401) {
       renderIdentity(cached||{},{});
       renderOrders([]);
       renderReservations([]);
-      showMessage('انتهت جلسة الملف. احفظ بياناتك مرة أخرى لاستعادتها.',true);
+      showMessage('تعذر تحديث الحساب الآن. نعرض آخر بيانات محفوظة على الجهاز.',true);
       return;
     }
-    if(!response.ok)throw new Error(data?.message||'تعذر تحميل حسابك الآن.');
-    if(data?.profile){
+
+    if(!response.ok)throw new Error(data?.message||'تعذر تحميل الحساب الآن.');
+
+    if(data?.profile) {
       const profile={...data.profile,profileToken:token};
       try{localStorage.setItem(PROFILE_DATA_KEY,JSON.stringify(profile))}catch{}
       renderIdentity(profile,data.stats||{});
@@ -147,37 +134,19 @@ async function loadDashboard(){
       renderReservations(data.reservations||[]);
       showMessage('');
     }
-  }catch(error){
+  } catch(error) {
     renderIdentity(cached||{},{});
     renderOrders([]);
     renderReservations([]);
-    showMessage(cached?'الاتصال غير متاح حاليًا. نعرض بياناتك المحفوظة على الجهاز.':(error.message||'تعذر تحميل حسابك الآن.'),!cached);
+    if(cached)showMessage('الاتصال غير متاح حاليًا. نعرض آخر بيانات محفوظة على الجهاز.',false);
+    else showMessage('',false);
   }
-}
-
-function showMessage(message,error=false){
-  const node=$('#profile-status');
-  if(!node)return;
-  node.textContent=message||'';
-  node.classList.toggle('error',Boolean(error));
-}
-
-function deviceId(){
-  try{
-    const key='ARABISK_DEVICE_ID_V1';
-    let value=localStorage.getItem(key);
-    if(!value){
-      value=crypto.randomUUID?.()||('device-'+Date.now()+'-'+Math.random().toString(36).slice(2));
-      localStorage.setItem(key,value);
-    }
-    return value;
-  }catch{return 'device-'+Date.now();}
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
   void loadDashboard();
   window.addEventListener('arabisk:profile-ready',event=>{
-    if(event.detail?.profile) loadDashboard();
+    if(event.detail?.profile)void loadDashboard();
   });
   window.addEventListener('arabisk:profile-updated',()=>void loadDashboard());
 });
