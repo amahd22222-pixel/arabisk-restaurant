@@ -945,6 +945,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       message,
       memory,
       products: products(),
+      categories: categories(),
       cart: context.cart,
       page: context.page
     }) || detectLocalPlan({ message, memory, products: products() });
