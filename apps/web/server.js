@@ -329,6 +329,7 @@ registerNotificationRoutes(app, {
 });
 const stableSyncUrl = value => { try { return new URL(String(value || ''), 'http://internal').pathname; } catch { return String(value || ''); } };
 const stableSyncHash = value => crypto.createHash('sha1').update(JSON.stringify(value)).digest('hex').slice(0,16);
+// Shared PWA synchronization boundary: the installed app observes admin-managed content changes here.
 const pwaSyncSnapshot = () => {
   const experiences = experienceService.list({headers:{'x-arabisk-admin-key':process.env.ARABISK_ADMIN_API_KEY || ''}}).map(item => ({id:item.id,slug:item.slug,titleAr:item.titleAr,titleEn:item.titleEn,type:item.type,startsAt:item.startsAt,endsAt:item.endsAt,status:item.status,featured:Boolean(item.featured),bookingEnabled:item.bookingEnabled,coverImage:stableSyncUrl(item.coverImageUrl),video:stableSyncUrl(item.videoUrl),updatedAt:item.updatedAt || ''}));
   const memories = memoryService.adminList().map(item => ({id:item.id,mediaType:item.mediaType,image:stableSyncUrl(item.imageUrl),video:stableSyncUrl(item.videoUrl),displayName:item.displayName || '',createdAt:item.createdAt || '',hidden:Boolean(item.hidden),pinned:Boolean(item.pinned),productId:item.productId || '',experienceSlug:item.experienceSlug || ''}));
