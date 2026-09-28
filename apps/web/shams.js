@@ -25,6 +25,36 @@
     lastFinalTranscriptAt: 0
   };
 
+  function saveVoiceContinuity() {
+    try {
+      sessionStorage.setItem(VOICE_CONTINUITY_KEY, JSON.stringify({
+        savedAt: Date.now(),
+        history: state.history.slice(-12),
+        dialect: state.dialect,
+        greetedThisVisit: state.greetedThisVisit
+      }));
+    } catch {}
+  }
+
+  function restoreVoiceContinuity() {
+    try {
+      const raw = sessionStorage.getItem(VOICE_CONTINUITY_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved || Date.now() - Number(saved.savedAt || 0) > VOICE_CONTINUITY_TTL_MS) {
+        sessionStorage.removeItem(VOICE_CONTINUITY_KEY);
+        return;
+      }
+      if (Array.isArray(saved.history)) {
+        state.history = saved.history
+          .filter(item => item && (item.role === 'user' || item.role === 'assistant') && typeof item.content === 'string')
+          .slice(-12);
+      }
+      if (RECOGNITION_LANGUAGES[saved.dialect]) state.dialect = saved.dialect;
+      state.greetedThisVisit = Boolean(saved.greetedThisVisit);
+    } catch {}
+  }
+
   const RECOGNITION_LANGUAGES = Object.freeze({
     gulf: 'ar-AE',
     egyptian: 'ar-EG',
@@ -342,6 +372,7 @@
       state.history.push({ role: 'user', content: text });
       state.history.push({ role: 'assistant', content: reply });
       state.history = state.history.slice(-12);
+      saveVoiceContinuity();
 
       await speak(reply);
       await performActions(data.actions);
@@ -527,6 +558,8 @@
     }
 
     launcher.addEventListener('click', toggleVoice);
+    window.addEventListener('pagehide', saveVoiceContinuity);
+    window.addEventListener('beforeunload', saveVoiceContinuity);
   }
 
   if ('speechSynthesis' in window) {
