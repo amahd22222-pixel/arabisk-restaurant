@@ -223,7 +223,7 @@ function findMatches(products, query) {
   return products.map(product => {
     const haystack = [
       product.nameAr, product.nameEn, product.descriptionAr, product.descriptionEn,
-      product.categorySlug, product.categoryId,
+      product.categorySlug, product.categoryId, product.categoryNameAr, product.categoryNameEn,
       ...(Array.isArray(product.tags) ? product.tags : []),
       ...(Array.isArray(product.aliases) ? product.aliases : [])
     ].join(' ');
@@ -734,6 +734,8 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       price: Number(item.price || 0),
       categoryId: clean(item.categoryId, 80),
       categorySlug: clean(item.categorySlug, 80),
+      categoryNameAr: clean(item.categoryNameAr, 100),
+      categoryNameEn: clean(item.categoryNameEn, 100),
       tags: Array.isArray(item.tags) ? item.tags.slice(0, 8) : [],
       dietary: Array.isArray(item.dietary) ? item.dietary.slice(0, 6) : [],
       spiceLevel: Number(item.spiceLevel || 0),
