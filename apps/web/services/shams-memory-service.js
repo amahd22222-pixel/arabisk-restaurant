@@ -367,7 +367,18 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       mergedEvidence[field].sort((a, b) => b.count - a.count || String(b.lastSeenAt).localeCompare(String(a.lastSeenAt)));
       mergedEvidence[field] = mergedEvidence[field].slice(0, 6);
     }
-    const stable = learnPreferences(mergedPreferences, mergedEvidence, {});
+    const mergePreferenceSeed = { ...mergedPreferences };
+    for (const field of LEARNABLE_PREFERENCES) {
+      if (mergePreferenceSeed[field] !== null && mergePreferenceSeed[field] !== undefined && mergePreferenceSeed[field] !== '') continue;
+      const candidate = mergedEvidence[field]?.slice().sort((a, b) =>
+        b.count - a.count || String(b.lastSeenAt).localeCompare(String(a.lastSeenAt))
+      )[0];
+      if (!candidate) continue;
+      mergePreferenceSeed[field] = field === 'spicy' || field === 'vegetarian'
+        ? candidate.value === 'true'
+        : candidate.value;
+    }
+    const stable = learnPreferences(mergePreferenceSeed, mergedEvidence, {});
     const mergedAvoidProducts = normalizeAvoidProducts([
       ...customerMemory.avoidProducts,
       ...sessionMemory.avoidProducts
