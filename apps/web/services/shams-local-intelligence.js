@@ -355,6 +355,14 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
   }
 
   const matchedCategory = resolveCategory(raw, categories);
+  const navigationQuery = raw
+    .replace(/^(افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)\s+/i, '')
+    .trim();
+  const matchedCategoryExact = matchedCategory && (
+    normalizeDialect(matchedCategory.nameAr) === navigationQuery ||
+    normalizeDialect(matchedCategory.nameEn) === navigationQuery ||
+    normalizeDialect(matchedCategory.id) === navigationQuery
+  );
   const explicitAnyChoice = /(اي صنف|أي صنف|اي حاجة|أي حاجة|اختارلي|اختاريلي|اختار لي|اختاري لي|اي حاجه|أي حاجه|حاجه|حاجة|شي|شيء)/i.test(raw);
   const pageNavigationRequested = /(افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)/i.test(raw);
 
@@ -399,7 +407,7 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
     };
   }
 
-  if (matchedCategory && pageNavigationRequested && !/(منيو|القائمة)/i.test(raw)) {
+  if (matchedCategoryExact && pageNavigationRequested && !/(منيو|القائمة)/i.test(raw)) {
     return {
       intent: 'navigate',
       confidence: 0.94,
@@ -412,7 +420,7 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
   }
 
   const matchedProduct = ranked[0] || resolveReference(raw, ranked, memory, catalog);
-  if (matchedProduct?.id && pageNavigationRequested && /(طبق|صنف|اكله|أكلة|منتج|product)/i.test(raw)) {
+  if (matchedProduct?.id && pageNavigationRequested && !/(منيو|القائمة|السلة|العربة|الحجز|فعالي|ذكريات)/i.test(raw)) {
     return {
       intent: 'navigate',
       confidence: 0.9,
