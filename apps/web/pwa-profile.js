@@ -46,7 +46,7 @@ function getProfile() {
 function setProfile(profile) {
   saveJson(PROFILE_DATA_KEY, profile);
   try { localStorage.setItem(PROFILE_TOKEN_KEY, String(profile?.profileToken || '')); } catch {}
-  window.ARABISK_PROFILE = { getProfile, getToken, refresh };
+  window.ARABISK_PROFILE = { getProfile, getToken, refresh, setProfile };
   window.dispatchEvent(new CustomEvent('arabisk:profile-updated', { detail: { profile } }));
 }
 
@@ -193,6 +193,7 @@ function mountOnboarding(initialProfile = null) {
 
 async function bootstrap() {
   if (!isStandaloneMode()) return;
+  if (location.pathname.replace(/\/$/, '') === '/profile') return;
 
   try {
     const profile = await refresh();
