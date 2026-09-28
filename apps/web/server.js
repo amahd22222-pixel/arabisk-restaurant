@@ -341,18 +341,25 @@ const pwaSyncSnapshot = ({ profileToken = '' } = {}) => {
   profileToken = cleanText(profileToken, 300);
   const linkedCustomer = profileToken ? customerService.findByProfileToken(profileToken) : null;
   const customerRevision = linkedCustomer ? stableSyncHash({
-    id: linkedCustomer.id,
-    name: linkedCustomer.name || '',
-    phone: linkedCustomer.phone || '',
-    orderCount: linkedCustomer.orderCount || 0,
-    reservationCount: linkedCustomer.reservationCount || 0,
-    totalOrderValue: linkedCustomer.totalOrderValue || 0,
-    lastOrderAt: linkedCustomer.lastOrderAt || '',
-    lastReservationAt: linkedCustomer.lastReservationAt || '',
-    lastActivityAt: linkedCustomer.lastActivityAt || ''
-  } + JSON.stringify({
-    orders: stateRepository.orders.all().filter(item => String(item.customerId || '') === String(linkedCustomer.id)).slice(-10).map(item => ({id:item.id,status:item.status,updatedAt:item.updatedAt || item.createdAt || ''})),
-    reservations: stateRepository.reservations.all().filter(item => String(item.customerId || '') === String(linkedCustomer.id)).slice(-10).map(item => ({id:item.id,status:item.status,updatedAt:item.updatedAt || item.createdAt || ''}))
+    customer: {
+      id: linkedCustomer.id,
+      name: linkedCustomer.name || '',
+      phone: linkedCustomer.phone || '',
+      orderCount: linkedCustomer.orderCount || 0,
+      reservationCount: linkedCustomer.reservationCount || 0,
+      totalOrderValue: linkedCustomer.totalOrderValue || 0,
+      lastOrderAt: linkedCustomer.lastOrderAt || '',
+      lastReservationAt: linkedCustomer.lastReservationAt || '',
+      lastActivityAt: linkedCustomer.lastActivityAt || ''
+    },
+    orders: stateRepository.orders.all()
+      .filter(item => String(item.customerId || '') === String(linkedCustomer.id))
+      .slice(-10)
+      .map(item => ({ id: item.id, status: item.status, updatedAt: item.updatedAt || item.createdAt || '' })),
+    reservations: stateRepository.reservations.all()
+      .filter(item => String(item.customerId || '') === String(linkedCustomer.id))
+      .slice(-10)
+      .map(item => ({ id: item.id, status: item.status, updatedAt: item.updatedAt || item.createdAt || '' }))
   }) : '';
   return {version:1,revisions:{menu:stableSyncHash(menu),experiences:stableSyncHash(experiences),memories:stableSyncHash(memories),promotions:stableSyncHash(promotions),customer:customerRevision}};
 };
