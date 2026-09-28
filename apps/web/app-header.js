@@ -16,21 +16,49 @@
   }
 
   function setupHeaderMenu() {
-    const button = $('#app-menu-button');
-    const nav = $('#app-header-nav');
-    if (!button || !nav) return;
+  const button = $('#app-menu-button');
+  const nav = $('#app-header-nav');
+  if (!button || !nav || button.dataset.menuBound === 'true') return;
 
-    button.addEventListener('click', () => {
-      const open = nav.classList.toggle('is-open');
-      button.setAttribute('aria-expanded', String(open));
-      button.textContent = open ? '×' : '☰';
-    });
-    nav.addEventListener('click', () => {
-      nav.classList.remove('is-open');
-      button.setAttribute('aria-expanded', 'false');
-      button.textContent = '☰';
-    });
-  }
+  const isMobile = () => window.matchMedia('(max-width:800px)').matches;
+  const setOpen = open => {
+    const value = Boolean(open);
+    nav.classList.toggle('is-open', value);
+    button.setAttribute('aria-expanded', String(value));
+    button.setAttribute('aria-label', value ? 'إغلاق القائمة' : 'فتح القائمة');
+    button.textContent = value ? '×' : '☰';
+    document.body.classList.toggle('app-nav-open', value && isMobile());
+  };
+
+  button.dataset.menuBound = 'true';
+  setOpen(false);
+
+  button.addEventListener('click', event => {
+    event.preventDefault();
+    setOpen(!nav.classList.contains('is-open'));
+  });
+
+  nav.addEventListener('click', event => {
+    if (event.target.closest('a')) setOpen(false);
+  });
+
+  document.addEventListener('click', event => {
+    if (!nav.classList.contains('is-open')) return;
+    if (button.contains(event.target) || nav.contains(event.target)) return;
+    setOpen(false);
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && nav.classList.contains('is-open')) setOpen(false);
+  });
+
+  window.addEventListener('resize', () => {
+    if (!isMobile() && nav.classList.contains('is-open')) setOpen(false);
+    else if (nav.classList.contains('is-open')) document.body.classList.add('app-nav-open');
+  }, { passive: true });
+
+  window.addEventListener('pageshow', () => setOpen(false), { passive: true });
+}
 
   function setupLanguageToggle() {
     const toggle = $('#lang-toggle');
