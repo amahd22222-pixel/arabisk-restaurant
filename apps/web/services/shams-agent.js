@@ -748,7 +748,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       'افهم المعنى والسياق وليس التطابق الحرفي. تعامل مع أخطاء تحويل الصوت إلى نص والألفاظ العامية والاختصارات.',
       'أخرجي JSON فقط بالشكل المحدد في استجابة النظام. عندما تستدعين أداة، اكتبي argsJson كسلسلة JSON صحيحة مثل "{\"productId\":\"P001\"}" ولا تخترعي أي معرّف من خارج الكتالوج.',
       'الأدوات المسموحة: search_menu, recommend_menu, product_info, cart_summary, cart_add, navigate, get_order_status.',
-      'المسارات المسموحة: /menu, /reservation, /cart, /track-order, /events, /memories.',
+      'التنقل مسموح إلى الصفحات العامة داخل ARABISK، وإلى /menu/<category> و/menu/<category>/<product> فقط من الكتالوج. استخدمي categoryId أو productId مع navigate بدل اختراع مسار.',
       'لا تدّعي نجاح إضافة أو تنفيذ أي شيء قبل نتيجة الأداة. التنفيذ النهائي للحجز أو الطلب يحتاج تأكيد العميل.',
       'لا تطلبي كلمات مرور أو OTP أو بيانات بطاقات، ولا تخترعي بيانات غير موجودة.',
       'استخدمي workflow لكل حقول الحجز والطلب الموجودة فعليًا، ولا تعيدي طلب حقل موجود بالفعل في الذاكرة أو الحساب.',
@@ -776,7 +776,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
           args: parseToolArgs(call?.argsJson)
         }))
       );
-      const toolDependent = new Set(['menu', 'recommend', 'cart', 'cart_summary', 'cart_add', 'order_status', 'product_info', 'product_search']);
+      const toolDependent = new Set(['menu', 'navigate', 'recommend', 'cart', 'cart_summary', 'cart_add', 'order_status', 'product_info', 'product_search']);
       if (toolDependent.has(intent) && !toolCalls.length) return null;
       return {
         intent,
