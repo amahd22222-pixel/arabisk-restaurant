@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v31';
+const CACHE_VERSION = 'arabisk-pwa-v32';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -126,7 +126,9 @@ async function fetchWithTimeout(request, timeoutMs = 3500) {
 async function networkFirst(request) {
   try {
     const response = await fetchWithTimeout(request);
-    return cacheResponse(request, response);
+    if (response.ok) return cacheResponse(request, response);
+    const cached = await caches.match(request);
+    return cached || response;
   } catch {
     return caches.match(request);
   }
@@ -135,7 +137,12 @@ async function networkFirst(request) {
 async function publicApiFirst(request) {
   try {
     const response = await fetchWithTimeout(request, 4500);
-    if (response.ok) await cacheResponse(request, response);
+    if (response.ok) {
+      await cacheResponse(request, response);
+      return response;
+    }
+    const cached = await caches.match(request);
+    if (cached) return cached;
     return response;
   } catch {
     const cached = await caches.match(request);
