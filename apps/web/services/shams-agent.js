@@ -392,7 +392,7 @@ function pickRecommendations(products, preferences, query) {
     .map(row => row.product);
 }
 
-function detectLocalPlan({ message, memory, products }) {
+function detectLocalPlan({ message, memory, products, customerContext = null }) {
   const text = clean(message);
   const normalized = normalizeDialectText(text);
   const matches = findMatches(products, text);
@@ -409,7 +409,7 @@ function detectLocalPlan({ message, memory, products }) {
   }
 
   const recommendationSignal =
-    /(رشح|رشحلي|رشح لي|اقترح|اقترحلي|انصحني|نصحني|شو بتنصحني|شو تقترح|شو بترشح|محتار|محتارة|اختار|اختيار|دلني|دُلني|عايز حاجة|عاوز حاجه|نفسي في|بدي شي|بدي اكل|شو اكل|شو آكل|ايه الاحسن|شو الاحسن|what.*recommend)/i.test(normalized) ||
+    /(رشح|رشحلي|رشح لي|اقترح|اقترحلي|انصحني|نصحني|شو بتنصحني|شو تقترح|شو بترشح|محتار|محتارة|اختار|اختيار|دلني|دُلني|عايز حاجة|عاوز حاجه|نفسي في|بدي شي|بدي اكل|شو اكل|شو آكل|ايه الاحسن|شو الاحسن|what.*recommend|المفضل|المفضلة|المفضلي|اللي بحبه|اللي بحبو|اللي باخده دايم|اللي باخدو دايم|زي اللي فات|زي المرة اللي فاتت|نفس اللي بطلبه|نفس طلباتي|عادتي)/i.test(normalized) ||
     Object.keys(prefs).length > 0;
 
   if (recommendationSignal && !/(ضيف|اضف|حط|زود|زيد|ضيفلي|اضفلي|حطلي|زودلي|زيدلي)/i.test(normalized)) {
@@ -785,7 +785,8 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       'لا تدّعي نجاح إضافة أو تنفيذ أي شيء قبل نتيجة الأداة. التنفيذ النهائي للحجز أو الطلب يحتاج تأكيد العميل.',
       'لا تطلبي كلمات مرور أو OTP أو بيانات بطاقات، ولا تخترعي بيانات غير موجودة.',
       'استخدمي workflow لكل حقول الحجز والطلب الموجودة فعليًا، ولا تعيدي طلب حقل موجود بالفعل في الذاكرة أو الحساب.',
-      'استخدمي السياق السابق لفهم عبارات مثل: ده، دي، هيدا، هيدي، هالطبق، التاني، الأول، اللي فات، كمان واحد.',
+      'استخدمي السياق السابق لفهم عبارات مثل: ده، دي، هيدا، هيدي، هالطبق، التاني، الأول، اللي فات، كمان واحد، واللي باخده دايمًا.',
+      'استخدمي رحلة العميل عندما تكون مفيدة مباشرة: الحجز القادم، العودة، المفضلات، أو إعادة التفاعل. لا تعرضي للعميل تفاصيل داخلية مثل قيمة الإنفاق أو عدد الأجهزة.',
       'إذا كانت الرسالة حجزًا أو طلبًا ناقصًا، استخرجي كل الحقول الموجودة فقط في workflow ولا تخترعي أي حقل.',
       'اللهجة المكتشفة مبدئيًا: ' + dialectLocale(context.message),
       'النص المطبع: ' + context.normalizedMessage,
@@ -988,7 +989,12 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       categories: categories(),
       cart: context.cart,
       page: context.page
-    }) || detectLocalPlan({ message, memory, products: products() });
+    }) || detectLocalPlan({
+      message,
+      memory,
+      products: products(),
+      customerContext: context.customerContext
+    });
     const model = navigationOnlyRequested ? localPlan : (semanticPlan || localPlan);
     const plan = model || localPlan;
     const intent = normalizeIntent(plan.intent);
