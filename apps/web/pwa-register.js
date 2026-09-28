@@ -21,7 +21,7 @@
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
     if (target.closest('[data-pwa-ignore-dirty]')) return;
-    if (!target.matches('input:not([type="hidden"]):not([type="button"]):not([type="submit"]), textarea, select, [contenteditable="true"]')) return;
+    if (!target.matches('input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="search"]), textarea, [contenteditable="true"]')) return;
     pageDirty = true;
   }
 
