@@ -99,6 +99,7 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
     const customerId = cleanText(body.customerId, 80);
     const recoveryToken = cleanText(body.recoveryToken, 80);
     const idempotencyKey = cleanText(body.idempotencyKey, 100);
+    const clientId = cleanText(body.clientId, 100);
     const promoCode = cleanText(body.promoCode, 80).toUpperCase();
     const rawItems = Array.isArray(body.items) ? body.items : [];
 
@@ -212,7 +213,7 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
     try {
       if (promoCode) {
         if (!promotions) throw new OrderServiceError('Promotion is unavailable right now.', 503);
-        promotionReservation = await promotions.reserveInstallReward(promoCode, total, order.id);
+        promotionReservation = await promotions.reserveInstallReward(promoCode, total, order.id, clientId);
         order.discount = promotionReservation.discount;
         order.promoCode = promotionReservation.code;
         order.total = promotionReservation.total;
