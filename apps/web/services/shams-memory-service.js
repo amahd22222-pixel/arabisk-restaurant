@@ -6,6 +6,7 @@ const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_TURNS = 16;
 const MAX_RECENT_PRODUCTS = 8;
 const MAX_AVOID_PRODUCTS = 8;
+const MAX_LAST_RECOMMENDATIONS = 3;
 
 const clean = (value, max = 200) => String(value ?? '').trim().slice(0, max);
 
@@ -86,6 +87,33 @@ function normalizeAvoidProducts(value) {
     .slice(-MAX_AVOID_PRODUCTS);
 }
 
+function normalizeLastRecommendations(value) {
+  const input = Array.isArray(value) ? value : [];
+  return input
+    .map(item => ({
+      id: clean(item?.id, 50),
+      nameAr: clean(item?.nameAr, 120),
+      price: Number(item?.price || 0)
+    }))
+    .filter(item => item.id)
+    .slice(0, MAX_LAST_RECOMMENDATIONS);
+}
+
+function rejectionTarget(user, recommendations) {
+  if (!isExplicitProductRejection(user)) return null;
+  const rows = normalizeLastRecommendations(recommendations);
+  if (!rows.length) return null;
+  const raw = String(user || '');
+  const index =
+    /(?:التالت|الثالث|تالت واحد|رقم 3)/i.test(raw) ? 2 :
+    /(?:التاني|الثاني|تاني واحد|رقم 2)/i.test(raw) ? 1 : 0;
+  const mentioned = rows.find(item => {
+    const name = String(item.nameAr || '').trim();
+    return name.length >= 2 && raw.includes(name);
+  });
+  return mentioned || rows[index] || rows[0];
+}
+
 function isExplicitProductRejection(value) {
   const raw = String(value || '');
   return /(?:مش|مو|لا|لأ|لاا).{0,16}(?:ده|دي|دا|هيدا|هيدي|هالطبق|الطبق ده|الطبق دي)|(?:مش عاجبني|مش عاجبني ده|مش بحبه|مش حابه|مو عاجبني|مو بحبه|مو حابب|مو حابه|مش عايز ده|مش عاوز ده|مش ده|مش دي|مو هيدا|مو هيدي)/i.test(raw);
@@ -135,6 +163,7 @@ function normalizeMemory(raw, identity) {
     preferences: normalizePreferences(source.preferences),
     preferenceEvidence: normalizePreferenceEvidence(source.preferenceEvidence),
     avoidProducts: normalizeAvoidProducts(source.avoidProducts),
+    lastRecommendation: normalizeLastRecommendations(source.lastRecommendation),
     preferenceConfidence: source.preferenceConfidence && typeof source.preferenceConfidence === 'object'
       ? Object.fromEntries(Object.entries(source.preferenceConfidence).slice(0, 12).map(([key, value]) => [clean(key, 40), Math.max(0, Math.min(1, Number(value) || 0))]))
       : {},
@@ -240,6 +269,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       ? patch.preferenceConfidence
       : current.preferenceConfidence;
     const avoidProducts = normalizeAvoidProducts(patch.avoidProducts ?? current.avoidProducts);
+    const lastRecommendation = normalizeLastRecommendations(patch.lastRecommendation ?? current.lastRecommendation);
     const recentProducts = Array.isArray(patch.recentProducts)
       ? patch.recentProducts.slice(-MAX_RECENT_PRODUCTS)
       : current.recentProducts;
@@ -300,6 +330,10 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       ...customerMemory.avoidProducts,
       ...sessionMemory.avoidProducts
     ].sort((a, b) => b.count - a.count || String(b.lastRejectedAt).localeCompare(String(a.lastRejectedAt)))).slice(0, MAX_AVOID_PRODUCTS);
+    const mergedLastRecommendation =
+      sessionMemory.updatedAt > customerMemory.updatedAt
+        ? sessionMemory.lastRecommendation
+        : customerMemory.lastRecommendation;
     const mergedJourney = customerMemory.journey?.stage
       ? customerMemory.journey
       : sessionMemory.journey;
@@ -309,6 +343,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       preferenceEvidence: mergedEvidence,
       preferenceConfidence: stable.preferenceConfidence,
       avoidProducts: mergedAvoidProducts,
+      lastRecommendation: mergedLastRecommendation,
       recentTurns: mergedTurns,
       recentProducts: mergedProducts,
       journey: mergedJourney,
@@ -323,29 +358,29 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     return true;
   }
 
-  async function rememberTurn(identity, { user, assistant, intent, products, journey, name } = {}) {
+  async function rememberTurn(identity, { user, assistant, intent, products, journey, name, recommendedProducts } = {}) {
     const current = await read(identity);
     const detectedPreferences = detectPreferences(user);
     const learned = learnPreferences(current.preferences, current.preferenceEvidence, detectedPreferences);
     const preferences = learned.preferences;
+    const recommendationRows = normalizeLastRecommendations(recommendedProducts ?? current.lastRecommendation);
     let avoidProducts = current.avoidProducts;
-    if (isExplicitProductRejection(user)) {
-      const latest = Array.isArray(current.recentProducts) ? current.recentProducts.at(-1) : null;
-      if (latest?.id) {
-        const existing = normalizeAvoidProducts(avoidProducts).find(item => item.id === String(latest.id));
-        if (existing) {
-          existing.count = Math.min(20, existing.count + 1);
-          existing.lastRejectedAt = new Date().toISOString();
-        } else {
-          avoidProducts = [...normalizeAvoidProducts(avoidProducts), {
-            id: String(latest.id),
-            nameAr: clean(latest.nameAr, 120),
-            count: 1,
-            lastRejectedAt: new Date().toISOString()
-          }];
-        }
-        avoidProducts = normalizeAvoidProducts(avoidProducts);
+    const rejectedProduct = rejectionTarget(user, recommendationRows) ||
+      (isExplicitProductRejection(user) && Array.isArray(current.recentProducts) ? current.recentProducts.at(-1) : null);
+    if (rejectedProduct?.id) {
+      const existing = normalizeAvoidProducts(avoidProducts).find(item => item.id === String(rejectedProduct.id));
+      if (existing) {
+        existing.count = Math.min(20, existing.count + 1);
+        existing.lastRejectedAt = new Date().toISOString();
+      } else {
+        avoidProducts = [...normalizeAvoidProducts(avoidProducts), {
+          id: String(rejectedProduct.id),
+          nameAr: clean(rejectedProduct.nameAr, 120),
+          count: 1,
+          lastRejectedAt: new Date().toISOString()
+        }];
       }
+      avoidProducts = normalizeAvoidProducts(avoidProducts);
     }
     const recentTurns = [
       ...current.recentTurns,
@@ -359,6 +394,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       preferenceEvidence: learned.preferenceEvidence,
       preferenceConfidence: learned.preferenceConfidence,
       avoidProducts,
+      lastRecommendation: recommendationRows,
       recentTurns,
       recentProducts: Array.isArray(products) ? products.slice(-MAX_RECENT_PRODUCTS) : current.recentProducts,
       lastIntent: intent || current.lastIntent,
@@ -366,5 +402,5 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     });
   }
 
-  return { read, save, rememberTurn, mergeSessionIntoCustomer, detectPreferences, learnPreferences, isExplicitProductRejection };
+  return { read, save, rememberTurn, mergeSessionIntoCustomer, detectPreferences, learnPreferences, isExplicitProductRejection, rejectionTarget };
 }
