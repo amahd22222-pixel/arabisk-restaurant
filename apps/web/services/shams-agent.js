@@ -874,8 +874,12 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     }
 
     if (name === 'recommend_menu') {
-      const smart = pickSmartLocalRecommendations(catalog, context.memory, context.message, context.customerContext, context.cart);
-      return { recommendations: smart.candidates, preferences: smart.preferences };
+      const categoryId = clean(args?.categoryId, 80);
+      const scopedCatalog = categoryId
+        ? catalog.filter(item => String(item?.categoryId || '') === categoryId)
+        : catalog;
+      const smart = pickSmartLocalRecommendations(scopedCatalog, context.memory, context.message, context.customerContext, context.cart);
+      return { recommendations: smart.candidates, preferences: smart.preferences, categoryId };
     }
 
     if (name === 'product_info') {
@@ -1290,7 +1294,8 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       categories: categories(),
       cart: context.cart,
       page: context.page,
-      customerContext: context.customerContext
+      customerContext: context.customerContext,
+      live: context.live
     }) || detectLocalPlan({
       message,
       memory,
