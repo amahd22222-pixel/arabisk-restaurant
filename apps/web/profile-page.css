@@ -1,4 +1,5 @@
 /* ARABISK — customer profile / premium member lounge */
+/* Registration is handled once by the installed-app onboarding; this page displays the saved identity. */
 .profile-page{
   min-height:calc(100vh - 84px);
   padding:104px 14px 116px;
@@ -145,3 +146,11 @@
   .profile-footer-cta{align-items:flex-start;flex-direction:column;padding:19px;border-radius:22px}.profile-footer-cta h2{font-size:27px}.profile-footer-cta>a{width:100%}
 }
 @media(prefers-reduced-motion:reduce){.profile-quick a{transition:none}}
+
+.profile-data-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}
+.profile-data-item{min-width:0;padding:14px 15px;border:1px solid rgba(43,32,20,.08);border-radius:16px;background:linear-gradient(180deg,#fffdfa,#fcf8f1)}
+.profile-data-item.wide{grid-column:1/-1;background:linear-gradient(135deg,#f8f0e2,#fffdf9)}
+.profile-data-item span{display:block;margin-bottom:6px;color:#82786c;font-size:8px;font-weight:900}
+.profile-data-item strong{display:block;overflow:hidden;color:#2c261f;font-size:11px;line-height:1.7;text-overflow:ellipsis}
+.profile-status:empty{display:none}
+@media(max-width:560px){.profile-data-grid{grid-template-columns:1fr}.profile-data-item.wide{grid-column:auto}}
