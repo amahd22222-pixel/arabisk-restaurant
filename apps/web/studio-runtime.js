@@ -20,7 +20,7 @@ function ensureStyle() {
   const style = document.createElement('style');
   style.id = 'arabisk-studio-runtime-style';
   style.textContent = `
-    .arabisk-studio-display{position:absolute;inset:0;overflow:hidden;background:#000;z-index:35;opacity:.74;pointer-events:none}
+    .arabisk-studio-display{position:absolute;inset:0;overflow:hidden;background:#000;z-index:0;opacity:.74;pointer-events:none}
     .arabisk-studio-display::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(9,7,5,.72),rgba(9,7,5,.28) 55%,rgba(9,7,5,.42));pointer-events:none}
     .arabisk-studio-display video{display:block;width:100%;height:100%;object-fit:cover;background:#000;cursor:pointer;pointer-events:none}
     .arabisk-studio-mute{position:absolute;right:18px;bottom:clamp(96px,12vh,132px);z-index:60;pointer-events:auto;width:46px;height:46px;border:1px solid rgba(255,255,255,.55);border-radius:999px;background:rgba(0,0,0,.56);color:#fff;display:grid;place-items:center;font-size:20px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:background .2s ease,transform .2s ease}
@@ -31,9 +31,8 @@ function ensureStyle() {
   document.head.appendChild(style);
 }
 
-function bindMute(wrapper) {
+function bindMute(wrapper, button) {
   const video = wrapper.querySelector('video');
-  const button = wrapper.querySelector('.arabisk-studio-mute');
   if (!video || !button) return;
 
   const sync = () => {
@@ -62,7 +61,7 @@ function renderVideo(item) {
   if (!desktop) return '';
 
   ensureStyle();
-  return `<div class="arabisk-studio-display"><video autoplay muted loop playsinline preload="metadata" aria-label="ARABISK Studio — العرض المرئي الرئيسي"><source media="(max-width:700px)" src="${esc(mobile)}"><source src="${esc(desktop)}"></video><button class="arabisk-studio-mute" type="button" aria-label="تشغيل الصوت" title="تشغيل الصوت">🔇</button></div>`;
+  return `<div class="arabisk-studio-display"><video autoplay muted loop playsinline preload="metadata" aria-label="ARABISK Studio — العرض المرئي الرئيسي"><source media="(max-width:700px)" src="${esc(mobile)}"><source src="${esc(desktop)}"></video></div>`;
 }
 
 function renderHome(items) {
@@ -78,11 +77,24 @@ function renderHome(items) {
   }
 
   slot.hidden = false;
-  slot.style.zIndex = '35';
   slot.style.pointerEvents = 'none';
   slot.innerHTML = videoMarkup;
+
   const wrapper = slot.querySelector('.arabisk-studio-display');
-  if (wrapper) bindMute(wrapper);
+  if (!wrapper) return;
+
+  let button = home.querySelector('.arabisk-studio-mute');
+  if (!button) {
+    button = document.createElement('button');
+    button.className = 'arabisk-studio-mute';
+    button.type = 'button';
+    button.setAttribute('aria-label', 'تشغيل الصوت');
+    button.title = 'تشغيل الصوت';
+    button.textContent = '🔇';
+    home.appendChild(button);
+  }
+
+  bindMute(wrapper, button);
 }
 document.addEventListener('DOMContentLoaded', async () => {
   if (location.pathname.replace(/\/$/,'') !== '') return;
