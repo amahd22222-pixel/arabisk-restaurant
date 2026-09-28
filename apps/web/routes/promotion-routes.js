@@ -12,7 +12,7 @@ export function registerPromotionRoutes(app, { service, requireAdminApiKey, clai
 
   app.post('/api/promotions/install/quote', quoteRateLimit, (req, res, next) => {
     try {
-      return res.json(service.quoteInstallReward(req.body?.code, req.body?.subtotal));
+      return res.json(service.quoteInstallReward(req.body?.code, req.body?.subtotal, req.body?.clientId));
     } catch (error) {
       next(error);
     }
