@@ -295,8 +295,6 @@ export function createCustomerRelationshipService({ repository }) {
       lifecycle: data.lifecycle,
       orderCount: data.completedOrders.length,
       reservationCount: data.activeReservations?.length || data.linkedReservations.filter(item => item?.status !== 'cancelled').length,
-      totalOrderValue: data.totalOrderValue,
-      averageOrderValue: data.completedOrders.length ? Math.round((data.totalOrderValue / data.completedOrders.length) * 100) / 100 : 0,
       favoriteProducts: data.favoriteProducts.slice(0, 3).map(item => ({ name: item.name, quantity: item.quantity })),
       favoriteCategories: data.favoriteCategories.slice(0, 3).map(item => ({ name: item.name, quantity: item.quantity })),
       nextReservation: data.nextReservation ? {
