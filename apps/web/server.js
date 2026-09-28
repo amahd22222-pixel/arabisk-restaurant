@@ -28,6 +28,8 @@ import { createOrderService } from './services/order-service.js';
 import { registerOrderRoutes } from './routes/order-routes.js';
 import { createCustomerService } from './services/customer-service.js';
 import { registerCustomerRoutes } from './routes/customer-routes.js';
+import { createCustomerRelationshipService } from './services/customer-relationship-service.js';
+import { registerCustomerRelationshipRoutes } from './routes/customer-relationship-routes.js';
 import { registerProductRoutes } from './routes/product-routes.js';
 import { createSmartMenuService } from './services/smart-menu-service.js';
 import { createReservationService } from './services/reservation-service.js';
@@ -113,12 +115,17 @@ const customerProfileRateLimit=createRateLimiter({
   limit:12,
   message:'Too many profile requests. Please try again later.'
 });
+const customerAdminRateLimit=createRateLimiter({
+  windowMs:10*60*1000,
+  limit:120,
+  message:'Too many customer management requests. Please try again later.'
+});
 const shamsRateLimit=createRateLimiter({
   windowMs:10*60*1000,
   limit:24,
   message:'Too many Shams requests. Please try again later.'
 });
-const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,promotionClaimRateLimit,promotionQuoteRateLimit,memoryUploadRateLimit,memoryMutationRateLimit,pushSubscribeRateLimit,notificationSendRateLimit,customerProfileRateLimit,shamsRateLimit];
+const rateLimiters=[reservationRateLimit,orderRateLimit,orderStatusRateLimit,analyticsRateLimit,recoveryRateLimit,promotionClaimRateLimit,promotionQuoteRateLimit,memoryUploadRateLimit,memoryMutationRateLimit,pushSubscribeRateLimit,notificationSendRateLimit,customerProfileRateLimit,customerAdminRateLimit,shamsRateLimit];
 const rateLimitCleanupTimer=setInterval(() => {
   for (const limiter of rateLimiters) limiter.cleanup();
 }, 10*60*1000);
@@ -232,6 +239,16 @@ const customerService = createCustomerService({
   repository: stateRepository,
   cleanText,
   crypto
+});
+
+const customerRelationshipService = createCustomerRelationshipService({
+  repository: stateRepository
+});
+
+registerCustomerRelationshipRoutes(app, {
+  service: customerRelationshipService,
+  requireAdminApiKey,
+  rateLimit: customerAdminRateLimit
 });
 
 registerCustomerRoutes(app, {
