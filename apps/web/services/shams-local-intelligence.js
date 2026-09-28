@@ -486,11 +486,15 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
   );
   const explicitAnyChoice = /(اي صنف|أي صنف|اي حاجة|أي حاجة|اختارلي|اختاريلي|اختار لي|اختاري لي|اي حاجه|أي حاجه|حاجه|حاجة|شي|شيء)/i.test(raw);
   const pageNavigationRequested = /(افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)/i.test(raw);
+  const currentProductAddRequest = Boolean(
+    pageContext.product &&
+    /^(ضيفه|ضيفها|اضيفه|اضيفها|حطه|حطها|زوده|زودها|دخله|دخلها|سجله|سجلها|خليه|خليها|كمان واحد|واحد كمان|واحد زي ده|واحد زي دي)$/i.test(raw)
+  );
 
-  if (isAddRequest(raw)) {
+  if (isAddRequest(raw) || currentProductAddRequest) {
     const referencePool = pageContext.products.length ? pageContext.products : ranked;
     const product = (
-      pageContext.product && (isReference(raw) || isCurrentPageReference(raw))
+      pageContext.product && (isReference(raw) || isCurrentPageReference(raw) || currentProductAddRequest)
         ? pageContext.product
         : resolveReference(raw, referencePool, memory, catalog)
     );
@@ -503,7 +507,7 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
     if (selectedProduct?.id) {
       return {
         intent: 'cart_add',
-        confidence: ranked.length || categoryFallback ? 0.95 : 0.9,
+        confidence: currentProductAddRequest ? 0.98 : (ranked.length || categoryFallback ? 0.95 : 0.9),
         toolCalls: [{
           name: 'cart_add',
           args: { productId: String(selectedProduct.id), quantity: parseQuantity(text) }
