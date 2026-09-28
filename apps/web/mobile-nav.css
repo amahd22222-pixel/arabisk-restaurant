@@ -7,6 +7,10 @@
   .pwa-bottom-nav a:active{transform:scale(.95)}
   .pwa-bottom-nav a[aria-current="page"]{background:rgba(197,154,91,.15);color:#fff}
   .pwa-bottom-nav a[aria-current="page"]::before{content:"";position:absolute;top:4px;width:17px;height:2px;border-radius:9px;background:#c59a5b}
+  .pwa-bottom-nav a.shams-tab{margin-top:-17px;min-height:68px;border:1px solid rgba(230,201,145,.38);border-radius:50%;background:radial-gradient(circle at 38% 30%,#3a2d20,#17120e 68%,#0c0a09);color:#f0d7a7;box-shadow:0 12px 30px rgba(0,0,0,.32),0 0 0 5px rgba(197,154,91,.08)}
+  .pwa-bottom-nav a.shams-tab .nav-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f4dfa9,#c59a5b 62%,#8e692f);color:#241a10;font-size:20px;box-shadow:0 0 18px rgba(197,154,91,.28)}
+  .pwa-bottom-nav a.shams-tab .nav-label{display:block;color:#f0d7a7;font-size:8px;font-weight:900}
+  .pwa-bottom-nav a.shams-tab:active{transform:scale(.94)}
   .pwa-bottom-nav .nav-icon{font-family:"Segoe UI Symbol",Arial,sans-serif;font-size:19px;line-height:1}
   .pwa-bottom-nav .nav-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 }
