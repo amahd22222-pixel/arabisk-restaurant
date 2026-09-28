@@ -178,7 +178,7 @@ export function createShamsService({
     memory: true,
     voiceFirst: true,
     dialects: ['ar-AE', 'ar-EG', 'ar-SY', 'ar-LB'],
-    listening: { continuous: true, pauseMs: 1700 },
+    listening: { continuous: true, pauseMs: 2200 },
     stages: agent.stages
   });
 
