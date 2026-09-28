@@ -214,6 +214,7 @@
         const product = action.product;
         const quantity = Number(action.quantity || 1);
         if (product?.id && window.ARABISK_CART?.add) {
+          await (window.ARABISK_CART.ready?.() || Promise.resolve());
           window.ARABISK_CART.add(product, quantity);
         }
         continue;
