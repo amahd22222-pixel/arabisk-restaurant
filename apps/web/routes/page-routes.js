@@ -39,6 +39,22 @@ const injectMobileNavigation = async (filePath, res) => {
 export function registerPageRoutes(app, { rootDir, distDir }) {
   const page = (file) => path.join(rootDir, file);
 
+  app.get('/profile-page.css', async (_req, res, next) => { try {
+    const css = await fs.readFile(page('profile-page.css'), 'utf8');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.type('css').send(css);
+  } catch (error) { next(error); } });
+
+  app.get('/profile-page.js', async (_req, res, next) => { try {
+    const script = await fs.readFile(page('profile-page.js'), 'utf8');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.type('application/javascript').send(script);
+  } catch (error) { next(error); } });
+
   app.get('/privacy', async (_req, res, next) => { try {
     await injectMobileNavigation(page('privacy.html'), res);
   } catch (error) { next(error); } });
