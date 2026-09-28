@@ -108,6 +108,21 @@ function jsonFromText(value) {
   }
 }
 
+function isSafeMenuSlug(value) {
+  return /^[a-z0-9\u0600-\u06ff-]{1,160}$/i.test(String(value ?? ''));
+}
+
+function slug(value) {
+  return String(value ?? '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9\u0600-\u06ff]+/gi, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 function parseToolArgs(value) {
   if (value && typeof value === 'object') return value;
   const raw = clean(value, 1200);
