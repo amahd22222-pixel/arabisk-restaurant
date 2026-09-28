@@ -1,13 +1,38 @@
 (() => {
   let hasControllerAtStartup = Boolean(navigator.serviceWorker.controller);
 
+  let reloadPending = false;
+  let reloadTimer = null;
+
+  function shamsIsBusy() {
+    try {
+      const status = window.ARABISK_SHAMS?.status?.();
+      return Boolean(status?.listening || status?.speaking || status?.busy || status?.conversationActive);
+    } catch {
+      return false;
+    }
+  }
+
+  function reloadWhenSafe() {
+    if (!reloadPending) return;
+    if (document.visibilityState === 'hidden' || !shamsIsBusy()) {
+      reloadPending = false;
+      window.clearTimeout(reloadTimer);
+      window.location.reload();
+      return;
+    }
+    window.clearTimeout(reloadTimer);
+    reloadTimer = window.setTimeout(reloadWhenSafe, 1500);
+  }
+
   function attachControllerGuard() {
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!hasControllerAtStartup) {
         hasControllerAtStartup = true;
         return;
       }
-      window.location.reload();
+      reloadPending = true;
+      reloadWhenSafe();
     });
   }
 
