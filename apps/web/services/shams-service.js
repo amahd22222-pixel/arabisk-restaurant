@@ -66,7 +66,7 @@ export function createShamsService({
         intent: {
           type: 'string',
           enum: [
-            'greeting', 'menu', 'recommend', 'cart', 'cart_summary', 'reservation',
+            'greeting', 'menu', 'navigate', 'category_selection', 'recommend', 'cart', 'cart_summary', 'reservation',
             'order', 'order_status', 'events', 'memories', 'product_search',
             'product_info', 'cart_add', 'unknown'
           ]
