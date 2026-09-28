@@ -6,6 +6,52 @@ import { createShamsAgent } from '../apps/web/services/shams-agent.js';
 import { buildSmartLocalPlan } from '../apps/web/services/shams-local-intelligence.js';
 import { __test as shamsAgentTest } from '../apps/web/services/shams-agent.js';
 
+test('Shams uses the current product page for product details in local mode', () => {
+  const plan = buildSmartLocalPlan({
+    message: 'قولي تفاصيله',
+    page: '/menu/main/signature-dish',
+    products: [{
+      id: 'P9',
+      nameAr: 'طبق حالي',
+      nameEn: 'Current Dish',
+      categoryId: 'main',
+      available: true
+    }],
+    categories: [{
+      id: 'main',
+      nameAr: 'رئيسية',
+      nameEn: 'Mains',
+      active: true
+    }]
+  });
+
+  assert.equal(plan?.intent, 'product_info');
+  assert.equal(plan?.toolCalls?.[0]?.args?.productId, 'P9');
+});
+
+test('Shams scopes local recommendations to the active menu category', () => {
+  const plan = buildSmartLocalPlan({
+    message: 'رشحلي',
+    page: '/menu/drinks',
+    products: [{
+      id: 'P1',
+      nameAr: 'قهوة',
+      nameEn: 'Coffee',
+      categoryId: 'drinks',
+      available: true
+    }],
+    categories: [{
+      id: 'drinks',
+      nameAr: 'مشروبات',
+      nameEn: 'Drinks',
+      active: true
+    }]
+  });
+
+  assert.equal(plan?.intent, 'recommend');
+  assert.equal(plan?.toolCalls?.[0]?.args?.categoryId, 'drinks');
+});
+
 test('Shams builds a safe live context for the installed app session', () => {
   const live = shamsAgentTest.buildLiveContext({
     page: '/menu/main/signature-dish',
