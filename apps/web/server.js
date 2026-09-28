@@ -218,6 +218,8 @@ registerProductRoutes(app, {
 });
 
 
+const notifyCustomer = (...args) => notificationService?.notifyCustomer?.(...args);
+
 const orderService = createOrderService({
   repository: stateRepository,
   cleanText,
@@ -225,7 +227,8 @@ const orderService = createOrderService({
   invalidateSmartSnapshot,
   revenue,
   crypto,
-  promotions: promotionService
+  promotions: promotionService,
+  notifyCustomer
 });
 
 registerOrderRoutes(app, {
@@ -278,7 +281,8 @@ const reservationService = createReservationService({
   nextReservationId: createNextPrefixedId(stateRepository.reservations, 'R', 4),
   findBookableExperience: experienceService.findBookable,
   revenue,
-  crypto
+  crypto,
+  notifyCustomer
 });
 
 registerReservationRoutes(app, {
