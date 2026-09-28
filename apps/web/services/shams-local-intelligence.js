@@ -322,8 +322,12 @@ function resolveReference(raw, ranked, memory, catalog) {
   return ranked[0] || null;
 }
 
-function recommendationArgs(preferences) {
-  return Object.fromEntries(Object.entries(preferences).filter(([, value]) => value !== undefined && value !== null && value !== ''));
+function recommendationArgs(preferences, categoryId = '') {
+  const args = Object.fromEntries(
+    Object.entries(preferences).filter(([, value]) => value !== undefined && value !== null && value !== '')
+  );
+  if (categoryId) args.categoryId = String(categoryId);
+  return args;
 }
 
 
@@ -370,7 +374,7 @@ function resolveStaticPage(raw) {
   return '';
 }
 
-export function buildSmartLocalPlan({ message, memory = {}, products = [], categories = [], cart = [], page = '/', customerContext = null } = {}) {
+export function buildSmartLocalPlan({ message, memory = {}, products = [], categories = [], cart = [], page = '/', customerContext = null, live = null } = {}) {
   const text = clean(message);
   const raw = normalizeDialect(text);
   if (!raw) return null;
@@ -380,6 +384,56 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
   const preferences = extractPreferences(text);
   const latest = latestCatalogProduct(memory, catalog);
   const pageContext = resolvePageMenuContext(page, categories, catalog);
+
+  const livePage = live?.currentPage || {};
+  const liveCart = live?.cart || {
+    hasItems: Array.isArray(cart) && cart.length > 0,
+    itemCount: Array.isArray(cart) ? cart.reduce((sum, item) => sum + (Number(item?.quantity || item?.qty) || 1), 0) : 0,
+    items: Array.isArray(cart) ? cart.slice(0, 8) : []
+  };
+
+  if (
+    livePage.area === 'cart' &&
+    liveCart.hasItems &&
+    /(?:ايه رايك|إيه رايك|ايه رأيك|إيه رأيك|شو رايك|شو رأيك|رأيك|قيم|قيّم|كويس|حلوين|مناسبين)/i.test(raw)
+  ) {
+    return {
+      intent: 'cart_summary',
+      confidence: 0.94,
+      toolCalls: [{ name: 'cart_summary', args: {} }]
+    };
+  }
+
+  if (
+    pageContext.product &&
+    /(?:تفاصيل|مكونات|مكوناته|مكوناتها|احكيلي عنه|قولي عنه|شو هو|ايه هو|ايه ده|شو هيدا|شو هيدي)/i.test(raw) &&
+    !isAddRequest(raw)
+  ) {
+    return {
+      intent: 'product_info',
+      confidence: 0.94,
+      toolCalls: [{
+        name: 'product_info',
+        args: { productId: String(pageContext.product.id) }
+      }],
+      reply: 'أكيد، أقول لك تفاصيل ' + (pageContext.product.nameAr || pageContext.product.nameEn) + '.'
+    };
+  }
+
+  if (
+    pageContext.category &&
+    isRecommendationRequest(raw) &&
+    !Object.keys(preferences).length
+  ) {
+    return {
+      intent: 'recommend',
+      confidence: 0.93,
+      toolCalls: [{
+        name: 'recommend_menu',
+        args: recommendationArgs(preferences, pageContext.category.id)
+      }]
+    };
+  }
 
   if (/^(السلام عليكم|السلام|اهلا|اهلين|يا هلا|هلا|مرحبا|مرحبتين|هاي|hello|hi|ازيك|ازيكم)/i.test(raw)) {
     const journeyStage = customerContext?.journey?.stage || '';
