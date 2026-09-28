@@ -2,6 +2,7 @@
   'use strict';
 
   const SESSION_KEY = 'ARABISK_SHAMS_SESSION_V1';
+  const DIALECT_KEY = 'ARABISK_SHAMS_DIALECT_V1';
   const SILENCE_FLUSH_MS = 2200;
   const DUPLICATE_TRANSCRIPT_WINDOW_MS = 2500;
 
@@ -30,6 +31,24 @@
     syrian: 'ar-SY',
     lebanese: 'ar-LB'
   });
+
+  function detectInitialDialect() {
+    try {
+      const stored = localStorage.getItem(DIALECT_KEY);
+      if (stored && RECOGNITION_LANGUAGES[stored]) return stored;
+    } catch {}
+
+    const locale = String(navigator.language || '').toLowerCase();
+    if (locale.startsWith('ar-eg')) return 'egyptian';
+    if (locale.startsWith('ar-sy')) return 'syrian';
+    if (locale.startsWith('ar-lb')) return 'lebanese';
+    return 'gulf';
+  }
+
+  function rememberDialect(dialect) {
+    if (!RECOGNITION_LANGUAGES[dialect]) return;
+    try { localStorage.setItem(DIALECT_KEY, dialect); } catch {}
+  }
 
   function detectDialectFromText(value) {
     const raw = String(value || '')
@@ -305,6 +324,7 @@
           history: state.history.slice(-10),
           sessionId: state.sessionId,
           page: window.location.pathname || '/',
+          dialect: state.dialect,
           cart: readCart(),
           client: {
             surface: window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true
@@ -376,6 +396,7 @@
         const detected = detectDialectFromText(observed);
         if (detected !== state.dialect) {
           state.dialect = detected;
+          rememberDialect(detected);
           if (state.recognition) state.recognition.lang = RECOGNITION_LANGUAGES[detected] || 'ar-AE';
         }
       }
@@ -497,6 +518,7 @@
     if (!launcher) return;
 
     state.sessionId = getSessionId();
+    state.dialect = detectInitialDialect();
     state.voiceEnabled = 'speechSynthesis' in window;
     setupRecognition();
     if (!state.voiceEnabled) {
