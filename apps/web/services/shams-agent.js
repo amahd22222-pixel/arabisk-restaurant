@@ -467,6 +467,8 @@ function buildLocalReply(intent, data) {
   }
 
   if (intent === 'menu') return data.menuOpened ? 'أكيد، أفتح لك المنيو الآن.' : 'تعذر فتح المنيو الآن.';
+  if (intent === 'navigate') return data.navigationOpened ? 'أكيد، أفتح لك الصفحة المطلوبة الآن.' : 'لم أستطع فتح الصفحة المطلوبة.';
+  if (intent === 'category_selection') return 'حدد لي الصنف المطلوب من القسم.';
   if (intent === 'cart') return data.cartOpened ? 'حاضر، أفتح لك السلة.' : 'تعذر فتح السلة الآن.';
   if (intent === 'events') return data.eventsOpened ? 'أفتح لك التجارب والفعاليات القادمة.' : 'تعذر فتح الفعاليات الآن.';
   if (intent === 'memories') return data.memoriesOpened ? 'أفتح لك ذكريات ARABISK.' : 'تعذر فتح الذكريات الآن.';
