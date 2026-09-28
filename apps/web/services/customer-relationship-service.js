@@ -132,8 +132,6 @@ export function createCustomerRelationshipService({ repository }) {
       lastActivityAt: data.lastActivityAt,
       orderCount: data.completedOrders.length,
       reservationCount: data.linkedReservations.filter(item => item?.status !== 'cancelled').length,
-      totalOrderValue: data.totalOrderValue,
-      averageOrderValue: data.completedOrders.length ? Math.round((data.totalOrderValue / data.completedOrders.length) * 100) / 100 : 0,
       lifecycleKey: data.lifecycle.key,
       lifecycleLabel: data.lifecycle.label,
       favoriteProduct: data.favoriteProducts[0]?.name || '',
@@ -220,6 +218,70 @@ export function createCustomerRelationshipService({ repository }) {
     };
   }
 
+  function shamsJourneyFor(data) {
+    const now = Date.now();
+    const lastActivityAt = data.lastActivityAt || '';
+    const lastActivity = Date.parse(lastActivityAt);
+    const daysSinceActivity = Number.isFinite(lastActivity)
+      ? Math.max(0, Math.floor((now - lastActivity) / DAY_MS))
+      : null;
+    const nextReservation = data.nextReservation || null;
+    const reservationTimestamp = nextReservation?.date
+      ? new Date(nextReservation.date + 'T' + String(nextReservation.time || '00:00')).getTime()
+      : NaN;
+    const hoursToReservation = Number.isFinite(reservationTimestamp)
+      ? Math.round((reservationTimestamp - now) / (60 * 60 * 1000))
+      : null;
+
+    if (nextReservation) {
+      return {
+        stage: 'upcoming_reservation',
+        nextBestAction: 'reservation_support',
+        reason: hoursToReservation !== null && hoursToReservation <= 48
+          ? 'لدى العميل حجز قريب ويمكن لشمس مساعدته في التحضير أو اختيار الأطباق.'
+          : 'لدى العميل حجز قادم ويمكن لشمس متابعة احتياجه الحالي.',
+        daysSinceActivity,
+        hoursToReservation
+      };
+    }
+
+    if (!data.completedOrders.length && !data.linkedReservations.length) {
+      return {
+        stage: 'new_customer',
+        nextBestAction: 'orientation',
+        reason: 'العميل جديد ولا يوجد له تاريخ طلبات أو حجوزات مكتمل.',
+        daysSinceActivity
+      };
+    }
+
+    if (data.lifecycle.key === 'lapsed' || data.lifecycle.key === 'dormant') {
+      return {
+        stage: 'reengagement',
+        nextBestAction: 'personalized_recommendation',
+        reason: 'هناك تاريخ سابق للعميل لكن نشاطه الحالي منخفض.',
+        daysSinceActivity
+      };
+    }
+
+    if (data.completedOrders.length >= 3 && data.favoriteProducts.length) {
+      return {
+        stage: 'returning_favorite',
+        nextBestAction: 'favorite_recommendation',
+        reason: 'لدى العميل طلبات مكتملة متكررة ويمكن الاستفادة من أطباقه المفضلة عند التوصية.',
+        daysSinceActivity
+      };
+    }
+
+    return {
+      stage: 'returning_customer',
+      nextBestAction: data.favoriteCategories.length
+        ? 'category_recommendation'
+        : 'orientation',
+      reason: 'لدى العميل تاريخ سابق ويمكن متابعة رحلته من آخر تفضيل معروف.',
+      daysSinceActivity
+    };
+  }
+
   function shamsContext(id) {
     const customer = customers.findById(id);
     if (!customer) return null;
@@ -242,6 +304,7 @@ export function createCustomerRelationshipService({ repository }) {
         guests: Number(data.nextReservation.guests || data.nextReservation.partySize || 0) || 0,
         status: String(data.nextReservation.status || '')
       } : null,
+      journey: shamsJourneyFor(data),
       lastActivityAt: data.lastActivityAt || ''
     };
   }
