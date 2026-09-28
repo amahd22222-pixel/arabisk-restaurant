@@ -39,7 +39,6 @@ function registerStandalonePwa() {
     if (!document.hidden) checkForUpdate();
   });
   window.addEventListener('pageshow', checkForUpdate);
-  });
 }
 
 registerStandalonePwa();
