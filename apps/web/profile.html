@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/home-app.css">
 <link rel="stylesheet" href="/app-pages.css">
-<link rel="stylesheet" href="/profile-page.css">
+<link rel="stylesheet" href="/profile-page.css?v=20260928.2">
 </head>
 <body class="home-app">
 <header class="app-header is-page" aria-label="ARABISK">
@@ -29,8 +29,13 @@
 <main class="profile-page">
   <div class="profile-wrap">
     <section class="profile-hero-card" aria-labelledby="profile-title">
+      <div class="profile-hero-glow glow-one" aria-hidden="true"></div>
+      <div class="profile-hero-glow glow-two" aria-hidden="true"></div>
       <div class="profile-hero-top">
-        <div class="profile-avatar" id="profile-avatar" aria-hidden="true">A</div>
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar" id="profile-avatar" aria-hidden="true">A</div>
+          <span class="profile-avatar-dot" aria-hidden="true"></span>
+        </div>
         <div class="profile-hero-copy">
           <p class="profile-eyebrow">YOUR ARABISK</p>
           <h1 id="profile-title">حسابي</h1>
@@ -39,23 +44,26 @@
         <span class="profile-member-badge" id="profile-member-badge">عضوية ARABISK</span>
       </div>
       <div class="profile-identity">
-        <strong id="profile-name-heading">عميل ARABISK</strong>
-        <span id="profile-phone-heading">—</span>
+        <div class="profile-identity-main"><strong id="profile-name-heading">عميل ARABISK</strong><span id="profile-phone-heading">—</span></div>
         <span id="profile-phone-status" class="profile-phone-status">الهاتف غير موثّق</span>
+      </div>
+      <div class="profile-hero-footer">
+        <span><i aria-hidden="true"></i> تجربة عميل محفوظة على هذا الجهاز</span>
+        <a href="/privacy">الخصوصية ↗</a>
       </div>
     </section>
 
     <section class="profile-stats" aria-label="ملخص الحساب">
-      <article class="profile-stat"><span>الطلبات</span><strong id="stat-orders">0</strong><small>طلبات مرتبطة بحسابك</small></article>
-      <article class="profile-stat"><span>الحجوزات</span><strong id="stat-reservations">0</strong><small>طلبات حجز مسجلة</small></article>
-      <article class="profile-stat"><span>إجمالي الإنفاق</span><strong id="stat-spend">AED 0</strong><small>من الطلبات المكتملة</small></article>
+      <article class="profile-stat accent"><span><b>01</b> الطلبات</span><strong id="stat-orders">0</strong><small>طلبات مرتبطة بحسابك</small></article>
+      <article class="profile-stat"><span><b>02</b> الحجوزات</span><strong id="stat-reservations">0</strong><small>زيارات رتبتها مع ARABISK</small></article>
+      <article class="profile-stat"><span><b>03</b> الإنفاق</span><strong id="stat-spend">AED 0</strong><small>من الطلبات المكتملة</small></article>
     </section>
 
     <section class="profile-quick" aria-label="اختصارات الحساب">
-      <a href="/menu"><span class="quick-icon">≡</span><strong>اطلب من المنيو</strong><small>ابدأ طلبًا جديدًا</small></a>
-      <a href="/reservation"><span class="quick-icon">◷</span><strong>احجز طاولة</strong><small>خطط لزيارتك القادمة</small></a>
-      <a href="/cart"><span class="quick-icon">🛒</span><strong>السلة</strong><small>راجع ما اخترته</small></a>
-      <a href="/track-order"><span class="quick-icon">↗</span><strong>متابعة طلب</strong><small>تحقق من حالة طلبك</small></a>
+      <a href="/menu"><span class="quick-icon">≡</span><span><strong>اطلب من المنيو</strong><small>ابدأ طلبًا جديدًا</small></span><em>←</em></a>
+      <a href="/reservation"><span class="quick-icon">◷</span><span><strong>احجز طاولة</strong><small>خطط لزيارتك القادمة</small></span><em>←</em></a>
+      <a href="/cart"><span class="quick-icon">▱</span><span><strong>السلة</strong><small>راجع ما اخترته</small></span><em>←</em></a>
+      <a href="/track-order"><span class="quick-icon">↗</span><span><strong>متابعة طلب</strong><small>تحقق من حالة طلبك</small></span><em>←</em></a>
     </section>
 
     <section class="profile-activity-grid">
@@ -70,7 +78,7 @@
     </section>
 
     <section class="profile-panel profile-data-panel">
-      <div class="profile-panel-head"><div><p class="profile-section-kicker">PERSONAL DETAILS</p><h2>بياناتي</h2></div><span class="profile-secure-note">محفوظة بشكل آمن</span></div>
+      <div class="profile-panel-head"><div><p class="profile-section-kicker">PERSONAL DETAILS</p><h2>بياناتي</h2><p class="profile-panel-subtitle">عدّل معلوماتك الأساسية في أي وقت.</p></div><span class="profile-secure-note"><i aria-hidden="true"></i> محفوظة بشكل آمن</span></div>
       <form id="profile-form">
         <div class="profile-form-grid">
           <label><span>الاسم</span><input id="profile-name" name="name" required minlength="2" maxlength="80" autocomplete="name" placeholder="اكتب اسمك"></label>
