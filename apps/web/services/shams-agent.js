@@ -1,7 +1,7 @@
 import { buildSmartLocalPlan, isNegatedAction } from './shams-local-intelligence.js';
 
 const MAX_TOOL_CALLS = 4;
-const ALLOWED_PATHS = new Set(['/menu', '/reservation', '/cart', '/track-order', '/events', '/memories']);
+const ALLOWED_PATHS = new Set(['/', '/menu', '/reservation', '/cart', '/track-order', '/events', '/memories']);
 const ALLOWED_TOOLS = new Set([
   'search_menu',
   'recommend_menu',
