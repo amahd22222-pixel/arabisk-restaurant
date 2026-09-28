@@ -406,6 +406,14 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
     };
   }
 
+  if (/(حجزي|حجزى|موعدي|موعدى|الحجز بتاعي|الحجز تبعي|حجزي الجاي|عندي حجز|حجز عندي|بيانات الحجز)/i.test(raw)) {
+    return {
+      intent: 'reservation_status',
+      confidence: 0.98,
+      reply: 'هراجع لك حجزك الحالي.'
+    };
+  }
+
   const matchedCategory = resolveCategory(raw, categories);
   const navigationQuery = raw
     .replace(/^(افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)\s+/i, '')
