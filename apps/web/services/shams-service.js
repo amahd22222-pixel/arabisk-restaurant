@@ -68,7 +68,7 @@ export function createShamsService({
           type: 'string',
           enum: [
             'greeting', 'menu', 'navigate', 'category_selection', 'recommend', 'cart', 'cart_summary', 'reservation',
-            'order', 'order_status', 'events', 'memories', 'product_search',
+            'reservation_status', 'order', 'order_status', 'events', 'memories', 'product_search',
             'product_info', 'cart_add', 'unknown'
           ]
         },
