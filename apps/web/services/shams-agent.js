@@ -1,5 +1,5 @@
 import { getUaeTimeContext } from '../utils/uae-time.js';
-import { buildSmartLocalPlan, isNegatedAction, pickSmartLocalRecommendations } from './shams-local-intelligence.js';
+import { buildSmartLocalPlan, isNegatedAction } from './shams-local-intelligence.js';
 
 const MAX_TOOL_CALLS = 4;
 const ALLOWED_PATHS = new Set(['/', '/menu', '/reservation', '/cart', '/track-order', '/events', '/memories', '/privacy']);
@@ -401,7 +401,7 @@ function scoreProductForPreferences(product, preferences) {
   return score;
 }
 
-function pickSmartLocalRecommendations(products, memory, text, customerContext = null) {
+function pickSmartLocalRecommendations(products, memory, text, customerContext = null, cart = []) {
   const extracted = extractLocalPreferences(text);
   const stored = memory?.preferences || {};
   const preferences = {
@@ -419,9 +419,20 @@ function pickSmartLocalRecommendations(products, memory, text, customerContext =
       : []
   );
   const journeyStage = customerContext?.journey?.stage || '';
+  const avoidProducts = new Set(
+    Array.isArray(memory?.avoidProducts)
+      ? memory.avoidProducts.map(item => String(item?.id || '').trim()).filter(Boolean)
+      : []
+  );
+  const cartIds = new Set(
+    (Array.isArray(cart) ? cart : [])
+      .map(item => String(item?.id || item?.productId || '').trim())
+      .filter(Boolean)
+  );
 
   const ranked = products
     .filter(item => item?.available !== false)
+    .filter(item => !cartIds.has(String(item?.id || '')))
     .map(product => {
       const productName = normalizeArabic(product?.nameAr || product?.nameEn || '');
       const productCategory = normalizeArabic(product?.categoryNameAr || product?.categoryNameEn || '');
@@ -436,6 +447,7 @@ function pickSmartLocalRecommendations(products, memory, text, customerContext =
       if (journeyStage === 'returning_favorite' && favoriteProducts.has(productName)) score += 4;
       if (journeyStage === 'reengagement' && favoriteCategories.has(productCategory)) score += 2;
       if (journeyStage === 'new_customer' && !favoriteProducts.size && product.chefChoice) score += 1;
+      if (avoidProducts.has(String(product?.id || ''))) score -= 25;
 
       return {
         product,
