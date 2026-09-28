@@ -9,6 +9,8 @@ function getJson(key){try{return JSON.parse(localStorage.getItem(key)||'null')}c
 function getProfile(){return getJson(PROFILE_DATA_KEY)}
 function getToken(){try{return localStorage.getItem(PROFILE_TOKEN_KEY)||''}catch{return ''}}
 function saveProfile(profile){
+  const shared=window.ARABISK_PROFILE?.setProfile;
+  if(typeof shared==='function'){shared(profile);return;}
   try{
     localStorage.setItem(PROFILE_DATA_KEY,JSON.stringify(profile));
     if(profile?.profileToken)localStorage.setItem(PROFILE_TOKEN_KEY,String(profile.profileToken));
