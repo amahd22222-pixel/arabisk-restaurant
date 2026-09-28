@@ -359,7 +359,7 @@ function resolvePageMenuContext(page, categories, catalog) {
     String(item.id).toLowerCase() === productKey.toLowerCase() ||
     normalizeDialect(item.nameAr) === normalizeDialect(productKey) ||
     normalizeDialect(item.nameEn) === normalizeDialect(productKey)
-  ) || null;
+  ) || (categoryItems.length === 1 ? categoryItems[0] : null);
 
   return { category, product, products: categoryItems };
 }
@@ -390,6 +390,16 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
   const preferences = extractPreferences(text);
   const latest = latestCatalogProduct(memory, catalog);
   const pageContext = resolvePageMenuContext(page, categories, catalog);
+  const directNavigationRequested = /^(افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)\s+/i.test(raw);
+  const earlyStaticPage = directNavigationRequested ? resolveStaticPage(raw) : '';
+  if (earlyStaticPage) {
+    return {
+      intent: 'navigate',
+      confidence: 0.97,
+      toolCalls: [{ name: 'navigate', args: { path: earlyStaticPage } }],
+      reply: 'أكيد، أفتح لك الصفحة المطلوبة الآن.'
+    };
+  }
 
   const livePage = live?.currentPage || {};
   const liveCart = live?.cart || {
@@ -397,18 +407,6 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
     itemCount: Array.isArray(cart) ? cart.reduce((sum, item) => sum + (Number(item?.quantity || item?.qty) || 1), 0) : 0,
     items: Array.isArray(cart) ? cart.slice(0, 8) : []
   };
-
-  if (
-    livePage.area === 'cart' &&
-    liveCart.hasItems &&
-    /(?:ايه رايك|إيه رايك|ايه رأيك|إيه رأيك|شو رايك|شو رأيك|رأيك|قيم|قيّم|كويس|حلوين|مناسبين)/i.test(raw)
-  ) {
-    return {
-      intent: 'cart_summary',
-      confidence: 0.94,
-      toolCalls: [{ name: 'cart_summary', args: {} }]
-    };
-  }
 
   if (
     pageContext.product &&

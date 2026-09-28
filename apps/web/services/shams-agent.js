@@ -682,7 +682,11 @@ function buildLiveContext({ page = '/', cart = [], customerContext = null, memor
           slug(item?.nameAr) === slug(parts[2]) ||
           slug(item?.nameEn) === slug(parts[2])
         )
-      )
+      ) || (category
+        ? catalog.filter(item => String(item?.categoryId || '') === String(category.categoryId || category.id || '')).length === 1
+          ? catalog.find(item => String(item?.categoryId || '') === String(category.categoryId || category.id || ''))
+          : null
+        : null)
     : null;
 
   const area = product ? 'product'
@@ -760,15 +764,6 @@ function applyLiveContextToLocalPlan(plan, context) {
   const hasCart = Boolean(live?.cart?.hasItems);
   const pending = live?.workflow?.type || '';
   const vagueOpinion = /^(طيب|تمام|اه|آه|ايه رايك|اي رأيك|شو رأيك|شو رايك|مناسب|اختار|اختارلي|رشح|رشحلي|كمل|وريني|هات)$/i.test(message);
-
-  if (vagueOpinion && area === 'cart' && hasCart) {
-    return {
-      intent: 'cart_summary',
-      confidence: 0.96,
-      toolCalls: [{ name: 'cart_summary', args: {} }],
-      reply: 'أراجع لك السلة الحالية وأقول لك رأيي.'
-    };
-  }
 
   if (vagueOpinion && area === 'product' && live.currentPage.product) {
     return {

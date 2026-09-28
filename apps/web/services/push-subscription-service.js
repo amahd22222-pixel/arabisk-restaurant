@@ -147,10 +147,14 @@ export function createPushSubscriptionService({ repository, cleanText, crypto, f
     const existing = pushSubscriptions.find(item => item.endpoint === endpoint);
     if (!existing) return { subscribed: false };
 
-    existing.deliveryStatus = 'unsubscribed';
-    existing.updatedAt = new Date().toISOString();
-    await pushSubscriptions.save();
-    return { subscribed: false, preserved: true };
+    const removed = pushSubscriptions.removeById(existing.id);
+    try {
+      await pushSubscriptions.save();
+    } catch (error) {
+      if (removed) pushSubscriptions.add(removed);
+      throw error;
+    }
+    return { subscribed: false };
   }
 
   function listSubscriptions() {

@@ -41,8 +41,8 @@ export function nextUaeWeekday(date, targetWeekday, weeksAhead = 0) {
 export function parseUaeLocalDateTime(date, time = '00:00') {
   const rawDate = String(date || '').trim();
   const rawTime = String(time || '00:00').trim();
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(rawDate)) return NaN;
-  if (!/^\\d{2}:\\d{2}$/.test(rawTime)) return NaN;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) return NaN;
+  if (!/^\d{2}:\d{2}$/.test(rawTime)) return NaN;
   return Date.parse(rawDate + 'T' + rawTime + ':00' + UAE_OFFSET);
 }
 
@@ -60,10 +60,11 @@ export function getUaeTimeContext(date = new Date()) {
     timeZoneName: 'short'
   }).formatToParts(date);
   const map = Object.fromEntries(formatted.map(part => [part.type, part.value]));
+  const hour = map.hour === '24' ? '00' : map.hour;
   return {
     timeZone: UAE_TIME_ZONE,
     date: map.year + '-' + map.month + '-' + map.day,
-    time: map.hour + ':' + map.minute,
+    time: hour + ':' + map.minute,
     weekday: map.weekday,
     utcOffset: UAE_OFFSET
   };

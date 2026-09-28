@@ -121,11 +121,8 @@ export function createAdminAuth() {
     const token = parseCookies(req.headers.cookie || '').arabisk_admin_session;
     if (!token) return null;
 
-    let session = sessions.get(token);
-    if (!session) {
-      session = decodeSession(token);
-      if (!session) return null;
-    }
+    const session = sessions.get(token);
+    if (!session) return null;
 
     const now = Date.now();
     if (

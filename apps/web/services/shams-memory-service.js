@@ -53,7 +53,14 @@ function learnPreferences(currentPreferences, evidence, detected) {
     for (const row of rows) {
       if (row.value === value) row.lastSeenAt = now;
     }
-    rows.sort((a, b) => b.count - a.count || String(b.lastSeenAt).localeCompare(String(a.lastSeenAt)));
+    rows.sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      const currentValue = currentPreferences[field];
+      const aIsCurrent = currentValue !== null && currentValue !== undefined && currentValue !== '' && String(a.value) === String(currentValue);
+      const bIsCurrent = currentValue !== null && currentValue !== undefined && currentValue !== '' && String(b.value) === String(currentValue);
+      if (aIsCurrent !== bIsCurrent) return aIsCurrent ? -1 : 1;
+      return String(b.lastSeenAt).localeCompare(String(a.lastSeenAt));
+    });
   }
 
   const learned = { ...currentPreferences };

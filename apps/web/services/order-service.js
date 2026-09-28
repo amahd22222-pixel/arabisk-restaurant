@@ -251,7 +251,7 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
 
   function getPublicStatus(body) {
     const orderId = cleanText(body.orderId, 20).toUpperCase();
-    const phone = cleanText(body.phone, 40);
+    const phone = normalizePhone(body.phone);
     const tableNumber = cleanText(body.tableNumber, 30);
     if (!/^O\d{5}$/.test(orderId)) throw new OrderServiceError('Valid order id is required.');
     const order = orders.findById(orderId);
