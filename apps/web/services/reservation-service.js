@@ -1,6 +1,6 @@
 import { normalizePhone } from '../utils/phone.js';
 import { isValidDateOnly } from '../utils/input.js';
-import { getUaeDateOnly } from '../utils/uae-time.js';
+import { getUaeDateOnly, parseUaeLocalDateTime } from '../utils/uae-time.js';
 
 const RESERVATION_STATUSES = new Set(['pending', 'confirmed', 'cancelled']);
 
@@ -29,9 +29,13 @@ export function createReservationService({ repository, cleanText, nextReservatio
     const eventSlug = cleanText(body.eventSlug, 90).toLowerCase();
     const requestedCustomerId = cleanText(body.customerId, 80);
     const idempotencyKey = cleanText(body.idempotencyKey, 100);
+    const currentTime = now();
     const dateOk = isValidDateOnly(date);
     const timeOk = /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
-    const today = getUaeDateOnly(now());
+    const today = getUaeDateOnly(currentTime);
+    const reservationTimestamp = dateOk && timeOk
+      ? parseUaeLocalDateTime(date, time)
+      : NaN;
 
     if (idempotencyKey) {
       const existing = reservations.findByIdempotencyKey(idempotencyKey);
@@ -46,6 +50,9 @@ export function createReservationService({ repository, cleanText, nextReservatio
     }
     if (!timeOk) {
       throw new ReservationServiceError('Reservation time must be in HH:MM format.');
+    }
+    if (!Number.isFinite(reservationTimestamp) || reservationTimestamp < currentTime.getTime()) {
+      throw new ReservationServiceError('Reservation time must be in the future for Abu Dhabi time.');
     }
 
     if (eventSlug) {
