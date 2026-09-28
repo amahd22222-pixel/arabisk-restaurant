@@ -300,13 +300,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     const current = await read(identity);
     const detectedPreferences = detectPreferences(user);
     const learned = learnPreferences(current.preferences, current.preferenceEvidence, detectedPreferences);
-    const preferences = {
-      ...current.preferences,
-      ...detectedPreferences,
-      ...Object.fromEntries(
-        Object.entries(learned.preferences).filter(([field]) => detectedPreferences[field] === undefined)
-      )
-    };
+    const preferences = learned.preferences;
     const recentTurns = [
       ...current.recentTurns,
       ...(user ? [{ role: 'user', content: redactForMemory(user, 700) }] : []),
