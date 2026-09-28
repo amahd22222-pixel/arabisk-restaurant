@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v40';
+const CACHE_VERSION = 'arabisk-pwa-v41';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -19,7 +19,7 @@ const APP_SHELL = [
   '/app-header.js',
   '/home-shell.js',
   '/cart.js',
-  '/cart.js?v=20260928.1',
+  '/cart.js?v=20260928.2',
   '/cart-page.js',
   '/profile-page.js',
   '/smart-menu.js?v=20260920.10',
