@@ -123,6 +123,7 @@ export function createPushSubscriptionService({ repository, cleanText, crypto, f
       deviceStatus: 'installed',
       deliveryStatus: 'active',
       lastDeliveryAt: '',
+      lastPushAt: '',
       lastDeliveryError: '',
       createdAt: now,
       updatedAt: now
