@@ -2,6 +2,8 @@
   'use strict';
 
   const SESSION_KEY = 'ARABISK_SHAMS_SESSION_V1';
+  const SILENCE_FLUSH_MS = 2200;
+  const DUPLICATE_TRANSCRIPT_WINDOW_MS = 2500;
 
   const state = {
     listening: false,
@@ -17,7 +19,9 @@
     restartAttempts: 0,
     sessionId: '',
     dialect: 'gulf',
-    greetedThisVisit: false
+    greetedThisVisit: false,
+    lastFinalTranscript: '',
+    lastFinalTranscriptAt: 0
   };
 
   const RECOGNITION_LANGUAGES = Object.freeze({
@@ -247,7 +251,7 @@
     await sendMessage(phrase);
   }
 
-  function scheduleTranscriptFlush(delay = 1600) {
+  function scheduleTranscriptFlush(delay = SILENCE_FLUSH_MS) {
     clearSilenceTimer();
     if (!state.transcriptBuffer.trim()) return;
     state.silenceTimer = window.setTimeout(() => {
@@ -371,8 +375,18 @@
       }
 
       if (finalText) {
-        state.transcriptBuffer = (state.transcriptBuffer + ' ' + finalText).trim();
-        scheduleTranscriptFlush(1700);
+        const now = Date.now();
+        const normalizedFinal = finalText.toLocaleLowerCase('ar').replace(/\s+/g, ' ').trim();
+        const duplicate =
+          normalizedFinal &&
+          normalizedFinal === state.lastFinalTranscript &&
+          now - state.lastFinalTranscriptAt <= DUPLICATE_TRANSCRIPT_WINDOW_MS;
+        if (!duplicate) {
+          state.lastFinalTranscript = normalizedFinal;
+          state.lastFinalTranscriptAt = now;
+          state.transcriptBuffer = (state.transcriptBuffer + ' ' + finalText).trim();
+          scheduleTranscriptFlush(SILENCE_FLUSH_MS);
+        }
       }
     };
 
@@ -395,7 +409,7 @@
     recognition.onend = () => {
       state.listening = false;
       if (state.transcriptBuffer.trim() && !state.busy && !state.speaking) {
-        scheduleTranscriptFlush(700);
+        scheduleTranscriptFlush(900);
         return;
       }
       if (state.conversationActive && !state.busy && !state.speaking) {
@@ -453,6 +467,8 @@
     window.clearTimeout(state.restartTimer);
     clearSilenceTimer();
     state.transcriptBuffer = '';
+    state.lastFinalTranscript = '';
+    state.lastFinalTranscriptAt = 0;
     try { state.recognition?.abort(); } catch {}
     state.listening = false;
     stopSpeaking();
