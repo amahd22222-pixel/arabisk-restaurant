@@ -92,3 +92,16 @@ test('opens the requested category instead of turning it into a recommendation',
   assert.equal(plan.toolCalls[0].name, 'navigate');
   assert.equal(plan.toolCalls[0].args.categoryId, 'desserts');
 });
+
+test('opens a specific product page when the spoken request names the dish', () => {
+  const plan = buildSmartLocalPlan({
+    message: 'افتح تشيز كيك',
+    memory: {},
+    products,
+    categories
+  });
+  assert.equal(plan.intent, 'navigate');
+  assert.equal(plan.toolCalls[0].name, 'navigate');
+  assert.equal(plan.toolCalls[0].args.productId, 'p3');
+  assert.equal(plan.toolCalls[0].args.categoryId, 'desserts');
+});
