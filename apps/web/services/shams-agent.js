@@ -1034,6 +1034,8 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       'سياق العميل الآمن: ' + JSON.stringify(context.customerContext || null),
       'سياق رحلة شمس الموحّد: ' + JSON.stringify(context.journey || {}),
       'السياق الحي الحالي: ' + JSON.stringify(context.live || {}),
+      'سطح التشغيل الحالي: ' + JSON.stringify(context.client || {}),
+      'عندما يكون surface=installed-pwa اعتبري التطبيق المثبّت هو واجهة العميل الفعلية، وحافظي على اختصار الرد والصوت الطبيعي والتنقل داخل التطبيق بدون إعادة توجيه غير ضرورية.',
       'ذاكرة شمس الآمنة: ' + JSON.stringify(modelSafeMemory(context.memory)),
       'آخر المحادثات: ' + JSON.stringify(context.history),
       'الصفحة الحالية: ' + clean(context.page, 100),
@@ -1105,7 +1107,11 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
         customerContext,
         memory,
         catalog: products()
-      })
+      }),
+      client: input.client && typeof input.client === 'object' ? {
+        surface: clean(input.client.surface, 30) || 'browser',
+        serviceWorkerControlled: Boolean(input.client.serviceWorkerControlled)
+      } : { surface: 'browser', serviceWorkerControlled: false }
     };
 
     const rememberWorkflow = async (reply, intent, journey, extraProducts = []) => {
@@ -1408,6 +1414,8 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       intent,
       reply,
       actions: verifiedActions,
+      runtime: context.client,
+
       memory: {
         scope: identity.customerId ? 'customer' : 'session',
         remembered: true,
