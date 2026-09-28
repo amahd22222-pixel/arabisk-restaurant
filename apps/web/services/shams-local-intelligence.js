@@ -326,7 +326,7 @@ function recommendationArgs(preferences) {
   return Object.fromEntries(Object.entries(preferences).filter(([, value]) => value !== undefined && value !== null && value !== ''));
 }
 
-export function pickSmartLocalRecommendations(products, memory = {}, message = '', customerContext = null) {
+export function pickSmartLocalRecommendations(products, memory = {}, message = '', customerContext = null, cart = []) {
   const catalog = Array.isArray(products) ? products.filter(item => item?.available !== false) : [];
   const explicit = extractPreferences(message);
   const stored = memory?.preferences && typeof memory.preferences === 'object' ? memory.preferences : {};
@@ -352,7 +352,7 @@ export function pickSmartLocalRecommendations(products, memory = {}, message = '
       .filter(Boolean)
   );
   const cartIds = new Set(
-    (Array.isArray(memory?.cart) ? memory.cart : [])
+    (Array.isArray(cart) ? cart : [])
       .map(item => String(item?.id || item?.productId || '').trim())
       .filter(Boolean)
   );
