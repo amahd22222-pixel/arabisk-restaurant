@@ -31,9 +31,14 @@
   };
 
   const fetchSnapshot = async () => {
+    let profileToken = '';
+    try { profileToken = localStorage.getItem('ARABISK_PROFILE_TOKEN_V1') || ''; } catch {}
     const response = await fetch('/api/pwa/sync', {
       cache: 'no-store',
-      headers: { Accept: 'application/json' }
+      headers: {
+        Accept: 'application/json',
+        ...(profileToken ? { 'X-ARABISK-PROFILE-TOKEN': profileToken } : {})
+      }
     });
     if (!response.ok) throw new Error('PWA sync failed');
     return response.json();
