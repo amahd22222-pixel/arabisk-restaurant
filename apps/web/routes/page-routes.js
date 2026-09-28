@@ -29,6 +29,7 @@ const injectMobileNavigation = async (filePath, res) => {
     !html.includes('src="/pwa-network.js"') ? '<script type="module" src="/pwa-network.js"></script>' : '',
     !html.includes('src="/pwa-media.js"') ? '<script type="module" src="/pwa-media.js"></script>' : '',
     !html.includes('src="/pwa-live-sync.js"') ? '<script type="module" src="/pwa-live-sync.js"></script>' : '',
+    !html.includes('src="/pwa-live-sync.js"') ? '<script type="module" src="/pwa-live-sync.js"></script>' : '',
     !html.includes('src="/pwa-sync.js"') ? '<script type="module" src="/pwa-sync.js"></script>' : ''
   ].filter(Boolean).join('\n');
 
