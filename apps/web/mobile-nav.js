@@ -2,7 +2,7 @@ const NAV_ITEMS=[
   {href:'/',label:'الرئيسية',icon:'⌂',match:p=>p==='/'},
   {href:'/menu',label:'المنيو',icon:'≡',match:p=>p==='/menu'||p.startsWith('/menu/')},
   {href:'/reservation',label:'الحجز',icon:'◷',match:p=>p==='/reservation'},
-  {href:'/cart',label:'السلة',icon:'🛒',match:p=>p==='/cart'}
+  {href:'/profile',label:'ملفي',icon:'◎',match:p=>p==='/profile'}
 ];
 
 function mountPwaBottomNav(){
@@ -18,8 +18,5 @@ function mountPwaBottomNav(){
   document.body.appendChild(nav);
 }
 
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',mountPwaBottomNav,{once:true});
-}else{
-  mountPwaBottomNav();
-}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountPwaBottomNav,{once:true});
+else mountPwaBottomNav();
