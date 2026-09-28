@@ -21,7 +21,8 @@ const injectMobileNavigation = async (filePath, res) => {
     !html.includes('src="/pwa-ui.js"') ? '<script type="module" src="/pwa-ui.js"></script>' : '',
     !html.includes('src="/pwa-register.js"') ? '<script type="module" src="/pwa-register.js"></script>' : '',
     !html.includes('src="/pwa-profile.js"') ? '<script type="module" src="/pwa-profile.js"></script>' : '',
-    !html.includes('src="/pwa-notifications.js"') ? '<script type="module" src="/pwa-notifications.js"></script>' : ''
+    !html.includes('src="/pwa-notifications.js"') ? '<script type="module" src="/pwa-notifications.js"></script>' : '',
+    !html.includes('src="/pwa-network.js"') ? '<script type="module" src="/pwa-network.js"></script>' : ''
   ].filter(Boolean).join('\n');
 
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -63,6 +64,7 @@ export function registerPageRoutes(app, { rootDir, distDir }) {
         'pwa-ui.js',
         'pwa-profile.js',
         'pwa-notifications.js',
+        'pwa-network.js',
         'shams.js',
         'shams.css',
         'mobile-nav.js',
