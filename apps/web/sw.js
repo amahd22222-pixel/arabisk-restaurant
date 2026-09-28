@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v44';
+const CACHE_VERSION = 'arabisk-pwa-v45';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -10,8 +10,8 @@ const APP_SHELL = [
   '/memories',
   '/track-order',
   '/profile',
-  '/profile-page.css?v=20260928.3',
-  '/profile-page.js?v=20260928.2',
+  '/profile-page.css?v=20260928.5',
+  '/profile-page.js?v=20260928.4',
   '/category-page.html',
   '/product-page.html',
   '/event-page.html',
