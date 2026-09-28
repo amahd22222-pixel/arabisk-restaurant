@@ -182,6 +182,49 @@ function safeWorkflowSlots(value) {
   );
 }
 
+function buildJourneyContext(customerContext, memory) {
+  const durable = customerContext?.journey && typeof customerContext.journey === 'object'
+    ? customerContext.journey
+    : {};
+  const conversational = memory?.journey && typeof memory.journey === 'object'
+    ? memory.journey
+    : {};
+
+  return {
+    stage: clean(durable.stage || '', 50),
+    nextBestAction: clean(durable.nextBestAction || '', 60),
+    reason: clean(durable.reason || '', 240),
+    lastIntent: clean(memory?.lastIntent || conversational.intent || '', 60),
+    currentStep: clean(conversational.step || '', 60),
+    hasUpcomingReservation: Boolean(customerContext?.nextReservation),
+    favoriteProductNames: Array.isArray(customerContext?.favoriteProducts)
+      ? customerContext.favoriteProducts.slice(0, 3).map(item => clean(item?.name, 120)).filter(Boolean)
+      : [],
+    favoriteCategoryNames: Array.isArray(customerContext?.favoriteCategories)
+      ? customerContext.favoriteCategories.slice(0, 3).map(item => clean(item?.name, 120)).filter(Boolean)
+      : []
+  };
+}
+
+function journeyAwareUnknownReply(customer, journey) {
+  const name = customer?.name ? ' يا ' + clean(customer.name, 80) : '';
+  if (journey?.stage === 'upcoming_reservation') {
+    return 'أنا معاك' + name + '. عندك حجز قادم، وتقدر تسألني عنه أو عن الأكل المناسب للزيارة.';
+  }
+  if (journey?.stage === 'returning_favorite' && journey.favoriteProductNames?.length) {
+    return 'أنا معاك' + name + '. أقدر أرجح لك من أطباقك المفضلة أو أساعدك تختار حاجة جديدة.';
+  }
+  if (journey?.stage === 'reengagement') {
+    return 'نورت تاني' + name + '. أقدر أساعدك تختار من اللي بتحبه أو نجرب حاجة مختلفة.';
+  }
+  if (journey?.stage === 'new_customer') {
+    return 'أهلاً بيك' + name + '. أقدر أعرّفك بالمنيو أو أساعدك تختار أو تحجز.';
+  }
+  return customer?.name
+    ? 'أنا معك يا ' + clean(customer.name, 80) + '. قل لي اللي في بالك، حتى لو بالعامية المصرية أو الشامية، وأنا أفهمك ونمشي خطوة خطوة.'
+    : 'أنا معك. قل لي اللي في بالك، حتى لو بالعامية المصرية أو الشامية، وأنا أفهمك ونمشي خطوة خطوة.';
+}
+
 function sanitizeToolCalls(calls) {
   if (!Array.isArray(calls)) return [];
   return calls
@@ -792,6 +835,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       'النص المطبع: ' + context.normalizedMessage,
       'العميل الحالي: ' + JSON.stringify(context.customer ? { id: context.customer.id, name: context.customer.name || '' } : null),
       'سياق العميل الآمن: ' + JSON.stringify(context.customerContext || null),
+      'سياق رحلة شمس الموحّد: ' + JSON.stringify(context.journey || {}),
       'ذاكرة شمس: ' + JSON.stringify(context.memory),
       'آخر المحادثات: ' + JSON.stringify(context.history),
       'الصفحة الحالية: ' + clean(context.page, 100),
@@ -847,6 +891,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       cart: Array.isArray(input.cart) ? input.cart.slice(0, 20) : [],
       history: Array.isArray(input.history) ? input.history.slice(-10) : [],
       memory,
+      journey: buildJourneyContext(customerContext, memory),
       dialect: detectDialect(message),
       normalizedMessage: normalizeDialectText(message)
     };
@@ -1047,7 +1092,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       reply = 'أحتاج رقم الطلب المرتبط بحسابك لعرض حالته صوتيًا.';
     }
 
-    if (!reply) reply = 'أنا معك. قل لي ماذا تريد أن نفعل داخل ARABISK.';
+    if (!reply) reply = journeyAwareUnknownReply(customer, context.journey);
 
     stage = 'respond';
     stage = 'learn';
@@ -1081,7 +1126,9 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
           budgetAed: plan.memory.budgetAed ?? '',
           spicy: typeof plan.memory.spicy === 'boolean' ? plan.memory.spicy : '',
           vegetarian: typeof plan.memory.vegetarian === 'boolean' ? plan.memory.vegetarian : ''
-        } : {}
+        } : {},
+        stage: context.journey.stage || '',
+        nextBestAction: context.journey.nextBestAction || ''
       }
     };
     if (plan.memory?.budgetAed !== undefined || plan.memory?.spicy !== undefined || plan.memory?.vegetarian !== undefined) {
