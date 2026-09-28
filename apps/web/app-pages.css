@@ -144,3 +144,20 @@
 .offers-empty h2{margin:0 0 8px;font:500 32px "Playfair Display",serif;color:var(--app-ink)}.offers-empty p{margin:0 auto 21px;max-width:460px;line-height:1.9}
 @media(max-width:900px){.offers-hero{align-items:flex-start;flex-direction:column;padding-top:104px}.offers-card{grid-template-columns:1fr}.offers-media{min-height:270px;max-height:390px}.offers-copy{padding:28px 22px 34px}}
 @media(max-width:560px){.offers-hero{padding:92px 16px 38px}.offers-hero h1{font-size:50px}.offers-content{padding:35px 14px 95px}.offers-card{border-radius:22px}.offers-media{min-height:225px}.offers-copy h2{font-size:43px}.offers-actions>a{width:100%}}
+
+
+/* Mobile app shell: reserve room for the fixed inner-page header.
+   This keeps the first actionable content clear of the top chrome on phones. */
+@media(max-width:800px){
+  .app-header.is-page ~ main.wrap{
+    padding-top:94px;
+  }
+
+  .app-header.is-page ~ main:not(.wrap) .category-page-head{
+    padding-top:74px;
+  }
+
+  .app-header.is-page ~ main.wrap .topline{
+    margin-top:0;
+  }
+}
