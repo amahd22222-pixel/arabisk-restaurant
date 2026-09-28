@@ -580,6 +580,13 @@
   window.ARABISK_SHAMS = {
     open: () => startConversationFromUserGesture(),
     close: stopConversation,
-    send: sendMessage
+    send: sendMessage,
+    status: () => ({
+      listening: state.listening,
+      speaking: state.speaking,
+      busy: state.busy,
+      conversationActive: state.conversationActive,
+      dialect: state.dialect
+    })
   };
 })();
