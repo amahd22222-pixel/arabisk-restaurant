@@ -82,4 +82,56 @@ test('reservation date validation follows Abu Dhabi calendar date, not server UT
     }),
     /not in the past/
   );
+
+  await assert.rejects(
+    service.createReservation({
+      name: 'أحمد',
+      phone: '0500000000',
+      date: '2026-09-28',
+      time: '23:59',
+      guests: 2
+    }),
+    /future for Abu Dhabi time/
+  );
+
+  const lateNightService = createReservationService({
+    repository: {
+      reservations: {
+        all: () => reservations,
+        findByIdempotencyKey: () => null,
+        findDuplicate: () => null,
+        add: reservation => reservations.push(reservation),
+        save: async () => true,
+        removeById: id => {
+          const index = reservations.findIndex(item => item.id === id);
+          if (index >= 0) reservations.splice(index, 1);
+        }
+      },
+      customers: {
+        findById: () => null,
+        findByPhone: () => null,
+        add: customer => customers.push(customer),
+        removeById: id => {
+          const index = customers.findIndex(item => item.id === id);
+          if (index >= 0) customers.splice(index, 1);
+        }
+      }
+    },
+    cleanText: value => String(value ?? '').trim(),
+    nextReservationId: () => 'R-UAE-2',
+    findBookableExperience: () => null,
+    revenue: { recordEvent: () => true },
+    crypto: { randomUUID: () => 'C-UAE-2' },
+    now: () => new Date('2026-09-28T20:00:00.000Z')
+  });
+
+  const futureReservation = await lateNightService.createReservation({
+    name: 'أحمد',
+    phone: '0500000000',
+    date: '2026-09-29',
+    time: '00:30',
+    guests: 2
+  });
+  assert.equal(futureReservation.date, '2026-09-29');
+  assert.equal(futureReservation.time, '00:30');
 });
