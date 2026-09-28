@@ -6,7 +6,9 @@ import {
   addUaeDays,
   getUaeDateOnly,
   parseUaeLocalDateTime,
-  getUaeTimeContext
+  getUaeTimeContext,
+  nextUaeWeekday,
+  getUaeWeekdayIndex
 } from '../apps/web/utils/uae-time.js';
 import { createReservationService } from '../apps/web/services/reservation-service.js';
 
@@ -20,6 +22,10 @@ test('UAE time utilities use Abu Dhabi/Gulf time consistently around UTC midnigh
   assert.equal(context.date, '2026-09-29');
   assert.equal(context.time, '00:00');
   assert.equal(context.timeZone, 'Asia/Dubai');
+  const monday = new Date('2026-09-28T08:00:00.000Z');
+  assert.equal(getUaeWeekdayIndex(monday), 1);
+  assert.equal(nextUaeWeekday(monday, 5), '2026-10-02');
+  assert.equal(nextUaeWeekday(monday, 5, 1), '2026-10-09');
   assert.equal(
     parseUaeLocalDateTime('2026-09-28', '00:30'),
     Date.parse('2026-09-27T20:30:00.000Z')
