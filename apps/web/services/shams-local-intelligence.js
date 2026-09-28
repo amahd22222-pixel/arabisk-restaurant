@@ -355,7 +355,7 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
   }
 
   const matchedCategory = resolveCategory(raw, categories);
-  const explicitAnyChoice = /(اي صنف|أي صنف|اي حاجة|أي حاجة|اختارلي|اختاريلي|اختار لي|اختاري لي|اي حاجه|أي حاجه)/i.test(raw);
+  const explicitAnyChoice = /(اي صنف|أي صنف|اي حاجة|أي حاجة|اختارلي|اختاريلي|اختار لي|اختاري لي|اي حاجه|أي حاجه|حاجه|حاجة|شي|شيء)/i.test(raw);
   const pageNavigationRequested = /(افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)/i.test(raw);
 
   if (isAddRequest(raw)) {
@@ -399,17 +399,6 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
     };
   }
 
-  if (isRecommendationRequest(raw) || Object.keys(preferences).length) {
-    return {
-      intent: 'recommend',
-      confidence: 0.9,
-      toolCalls: [{
-        name: 'recommend_menu',
-        args: recommendationArgs(preferences)
-      }]
-    };
-  }
-
   if (matchedCategory && pageNavigationRequested && !/(منيو|القائمة)/i.test(raw)) {
     return {
       intent: 'navigate',
@@ -435,6 +424,17 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
         }
       }],
       reply: 'أكيد، أفتح لك ' + (matchedProduct.nameAr || matchedProduct.nameEn) + ' الآن.'
+    };
+  }
+
+  if (isRecommendationRequest(raw) || Object.keys(preferences).length) {
+    return {
+      intent: 'recommend',
+      confidence: 0.9,
+      toolCalls: [{
+        name: 'recommend_menu',
+        args: recommendationArgs(preferences)
+      }]
     };
   }
 
