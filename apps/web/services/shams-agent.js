@@ -1,5 +1,5 @@
 import { getUaeTimeContext } from '../utils/uae-time.js';
-import { buildSmartLocalPlan, isNegatedAction } from './shams-local-intelligence.js';
+import { buildSmartLocalPlan, isNegatedAction, pickSmartLocalRecommendations } from './shams-local-intelligence.js';
 
 const MAX_TOOL_CALLS = 4;
 const ALLOWED_PATHS = new Set(['/', '/menu', '/reservation', '/cart', '/track-order', '/events', '/memories', '/privacy']);
