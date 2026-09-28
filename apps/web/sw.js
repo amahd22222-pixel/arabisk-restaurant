@@ -225,7 +225,14 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || '/';
-  const absoluteTarget = new URL(targetUrl, self.location.origin);
+  let absoluteTarget;
+  try {
+    absoluteTarget = new URL(targetUrl, self.location.origin);
+    if (absoluteTarget.origin !== self.location.origin) absoluteTarget = new URL('/', self.location.origin);
+    if (!/^https?:$/.test(absoluteTarget.protocol)) absoluteTarget = new URL('/', self.location.origin);
+  } catch {
+    absoluteTarget = new URL('/', self.location.origin);
+  }
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
