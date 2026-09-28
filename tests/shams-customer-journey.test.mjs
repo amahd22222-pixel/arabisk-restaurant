@@ -134,6 +134,59 @@ test('Shams adds the visible product when the customer says "ضيفه"', () => {
   assert.equal(plan?.toolCalls?.[0]?.args?.productId, 'P1');
 });
 
+test('Shams understands opinion requests as recommendation signals', () => {
+  const plan = buildSmartLocalPlan({
+    message: 'إيه رأيك؟',
+    page: '/cart',
+    cart: [{ id: 'P1', quantity: 1 }],
+    memory: { recentProducts: [] },
+    products: [
+      { id: 'P1', nameAr: 'طبق أساسي', nameEn: 'Main Dish', price: 80, available: true },
+      { id: 'P2', nameAr: 'حلو مميز', nameEn: 'Dessert', price: 35, available: true }
+    ]
+  });
+
+  assert.equal(plan?.intent, 'recommend');
+  assert.equal(plan?.toolCalls?.[0]?.name, 'recommend_menu');
+});
+
+test('Shams live recommendation scoring adds complementary signals without returning cart items', async () => {
+  const agent = createShamsAgent({
+    repository: {
+      categories: { all: () => [] },
+      products: {
+        all: () => [
+          { id: 'P1', nameAr: 'طبق أساسي', nameEn: 'Main Dish', price: 80, available: true, categoryNameAr: 'رئيسية' },
+          { id: 'P2', nameAr: 'حلو مميز', nameEn: 'Dessert', price: 35, available: true, categoryNameAr: 'حلويات', isNew: true },
+          { id: 'P3', nameAr: 'قهوة عربية', nameEn: 'Arabic Coffee', price: 20, available: true, categoryNameAr: 'مشروبات' }
+        ]
+      }
+    },
+    memoryService: {
+      async read() {
+        return { preferences: {}, recentProducts: [], avoidProducts: [], chosenProducts: [], recentTurns: [], journey: {}, lastIntent: '', name: '' };
+      },
+      async rememberTurn() { return true; }
+    },
+    workflowService: { confirmation: () => null },
+    requestModel: null
+  });
+
+  const result = await agent.handle({
+    message: 'إيه رأيك؟',
+    sessionId: 'live-context',
+    customer: null,
+    customerContext: null,
+    history: [],
+    page: '/cart',
+    cart: [{ id: 'P1', quantity: 1 }]
+  });
+
+  assert.equal(result.intent, 'recommend');
+  assert.equal(/طبق أساسي/.test(result.reply), false);
+  assert.match(result.reply, /حلو مميز|قهوة عربية/);
+});
+
 test('Shams local planner understands habitual-choice language as a recommendation', () => {
   const plan = buildSmartLocalPlan({
     message: 'هاتلي اللي باخده دايمًا',
