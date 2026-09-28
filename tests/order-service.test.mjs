@@ -131,3 +131,24 @@ test('completed order update rolls back order and customer when persistence fail
   assert.equal(customers[0].orderCount, 0);
   assert.equal(events.filter(event => event.eventName === 'order_completed').length, 0);
 });
+
+test('repeated checkout with the same idempotency key returns the original order', async () => {
+  const { service, orders, customers, events } = createFixture();
+
+  const payload = {
+    orderType: 'pickup',
+    name: 'Ahmed',
+    phone: '0500000000',
+    idempotencyKey: 'checkout-key-001',
+    items: [{ productId: 'P001', quantity: 2 }]
+  };
+
+  const first = await service.createOrder(payload);
+  const second = await service.createOrder(payload);
+
+  assert.equal(second.id, first.id);
+  assert.equal(second.total, first.total);
+  assert.equal(orders.length, 1);
+  assert.equal(customers.length, 1);
+  assert.equal(events.filter(event => event.eventName === 'order_created').length, 1);
+});
