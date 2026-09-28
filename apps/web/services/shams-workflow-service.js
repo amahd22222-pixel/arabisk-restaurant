@@ -223,6 +223,7 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
       await savePending(identity, 'reservation', merged, idempotencyKey);
       return {
         status: 'needs_input',
+        missingField: missing[0],
         reply: 'حاضر. أحتاج ' + missing[0] + ' أولاً.',
         pending: merged
       };
@@ -284,7 +285,7 @@ export function createShamsWorkflowService({ memoryService, getOrderService, get
 
     if (missing.length) {
       await savePending(identity, 'order', merged, idempotencyKey);
-      return { status: 'needs_input', reply: missing[0], pending: merged };
+      return { status: 'needs_input', missingField: missing[0], reply: missing[0], pending: merged };
     }
 
     await savePending(identity, 'order', merged, idempotencyKey);
