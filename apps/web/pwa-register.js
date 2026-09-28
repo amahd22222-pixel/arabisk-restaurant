@@ -12,7 +12,7 @@ function registerStandalonePwa() {
   navigator.serviceWorker.addEventListener('controllerchange', refreshOnce, { once: true });
 
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
       .then((registration) => {
         registration.update().catch(() => {});
         registration.addEventListener('updatefound', () => {
