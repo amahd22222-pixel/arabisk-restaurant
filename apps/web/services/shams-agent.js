@@ -259,8 +259,8 @@ function sanitizeToolCalls(calls) {
 
 function normalizeIntent(value) {
   const allowed = new Set([
-    'greeting', 'menu', 'navigate', 'category_selection', 'recommend', 'cart', 'cart_summary', 'reservation', 'order',
-    'order_status', 'events', 'memories', 'product_search', 'product_info',
+    'greeting', 'menu', 'navigate', 'category_selection', 'recommend', 'cart', 'cart_summary', 'reservation',
+    'reservation_status', 'order', 'order_status', 'events', 'memories', 'product_search', 'product_info',
     'cart_add', 'unknown'
   ]);
   return allowed.has(value) ? value : 'unknown';
@@ -973,14 +973,45 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     const semanticIntent = normalizeIntent(semanticPlan?.intent);
     const normalizedMessage = normalizeDialectText(message);
     const navigationOnlyRequested = /(?:افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)\s+(?:الرئيسيه|الرئيسية|الصفحه الرئيسيه|الصفحة الرئيسية|المنيو|المنيو|القائمه|القائمة|الحجز|حجز|حجز طاوله|حجز طاولة|الطاولة|طاولة|السله|السلة|العربه|العربة|متابعه الطلب|متابعة الطلب|حاله الطلب|حالة الطلب|طلبي|تتبع الطلب|الفعاليات|فعاليات|التجارب|تجارب|الذكريات|ذكريات|الخصوصيه|الخصوصية|سياسه الخصوصيه|سياسة الخصوصية|home|menu|reservation|cart|track order|events|memories|privacy)\b/i.test(normalizedMessage);
-    const reservationRequested = !navigationOnlyRequested && !isNegatedAction(message, 'reservation') && (
+    const reservationStatusRequested = !navigationOnlyRequested && (
+      semanticIntent === 'reservation_status' ||
+      /(حجزي|حجزى|موعدي|موعدى|الحجز بتاعي|الحجز تبعي|حجزي الجاي|عندي حجز|حجز عندي|بيانات الحجز)/i.test(normalizedMessage)
+    );
+    const reservationRequested = !navigationOnlyRequested && !reservationStatusRequested && !isNegatedAction(message, 'reservation') && (
       semanticIntent === 'reservation' ||
-      /(احجز|حجز|حجزي|طاولة|حاجز|موعد|بدي حجز|بدّي احجز|عايز احجز|عايز حجز)/i.test(normalizedMessage)
+      /(احجز|حجز|طاولة|حاجز|موعد|بدي حجز|بدّي احجز|عايز احجز|عايز حجز)/i.test(normalizedMessage)
     );
     const orderRequested = !navigationOnlyRequested && !isNegatedAction(message, 'order') && (
       semanticIntent === 'order' ||
       /(اطلب|طلبلي|اطلبلي|بدّي طلب|بدي طلب|عايز طلب|عاوز طلب|اعمل طلب|سوّي طلب|سوي طلب|اوردر|checkout)/i.test(normalizedMessage)
     );
+
+    if (reservationStatusRequested) {
+      const upcoming = context.customerContext?.nextReservation || null;
+      const reservationReply = upcoming
+        ? 'حجزك القادم يوم ' + String(upcoming.date || '') + ' الساعة ' + String(upcoming.time || '') +
+          ' لعدد ' + Number(upcoming.guests || 0) + ' أشخاص، وحالته ' + String(upcoming.status || 'قيد المعالجة') + '.'
+        : customer
+          ? 'ما عنديش حجز قادم ظاهر على حسابك حاليًا.'
+          : 'سجّل دخولك أولًا علشان أقدر أجيب حجزك الحالي.';
+      await rememberWorkflow(reservationReply, 'reservation_status', {
+        intent: 'reservation_status',
+        step: 'context_lookup',
+        slots: {}
+      });
+      return {
+        stage: 'learn',
+        stages: STAGES,
+        intent: 'reservation_status',
+        reply: reservationReply,
+        actions: [],
+        memory: {
+          scope: identity.customerId ? 'customer' : 'session',
+          remembered: true,
+          preferences: memory.preferences
+        }
+      };
+    }
 
     if (workflowService && (reservationRequested || pendingType === 'reservation')) {
       const result = await workflowService.handleReservation({
