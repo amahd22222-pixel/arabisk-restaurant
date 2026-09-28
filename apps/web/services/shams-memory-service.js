@@ -299,7 +299,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     const mergedAvoidProducts = normalizeAvoidProducts([
       ...customerMemory.avoidProducts,
       ...sessionMemory.avoidProducts
-    ]).sort((a, b) => b.count - a.count || String(b.lastRejectedAt).localeCompare(String(a.lastRejectedAt))).slice(0, MAX_AVOID_PRODUCTS);
+    ].sort((a, b) => b.count - a.count || String(b.lastRejectedAt).localeCompare(String(a.lastRejectedAt)))).slice(0, MAX_AVOID_PRODUCTS);
     const mergedJourney = customerMemory.journey?.stage
       ? customerMemory.journey
       : sessionMemory.journey;
