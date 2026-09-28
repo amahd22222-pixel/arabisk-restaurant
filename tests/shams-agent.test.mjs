@@ -31,6 +31,12 @@ function createMemoryService() {
 
 function createAgent(requestModel) {
   const repository = {
+    categories: {
+      all: () => [
+        { id: 'soups', nameAr: 'الشوربات', nameEn: 'Soups', active: true },
+        { id: 'mains', nameAr: 'الأطباق الرئيسية', nameEn: 'Main Course', active: true }
+      ]
+    },
     products: {
       all: () => [
         {
@@ -112,4 +118,48 @@ test('structured model plan can request a safe cart action using argsJson', asyn
   assert.equal(result.actions[0]?.type, 'cart.add');
   assert.equal(result.actions[0]?.product?.id, 'p1');
   assert.equal(result.actions[0]?.quantity, 2);
+});
+
+
+test('structured model navigation resolves a category through the live catalog', async () => {
+  const agent = createAgent(async () => JSON.stringify({
+    intent: 'navigate',
+    reply: '',
+    toolCalls: [{ name: 'navigate', argsJson: JSON.stringify({ categoryId: 'soups' }) }],
+    memory: { budgetAed: null, spicy: null, vegetarian: null },
+    workflow: { date: '', time: '', guests: null, name: '', phone: '', eventSlug: '', orderType: '', tableNumber: '' }
+  }));
+
+  const result = await agent.handle({
+    message: 'افتح الشوربات',
+    sessionId: 'test-category-navigation',
+    history: [],
+    cart: [],
+    page: '/'
+  });
+
+  assert.equal(result.intent, 'navigate');
+  assert.equal(result.actions[0]?.type, 'navigate');
+  assert.equal(result.actions[0]?.url, '/menu/soups');
+});
+
+test('structured model navigation rejects a category/product combination that does not match', async () => {
+  const agent = createAgent(async () => JSON.stringify({
+    intent: 'navigate',
+    reply: '',
+    toolCalls: [{ name: 'navigate', argsJson: JSON.stringify({ categoryId: 'mains', productId: 'p1' }) }],
+    memory: { budgetAed: null, spicy: null, vegetarian: null },
+    workflow: { date: '', time: '', guests: null, name: '', phone: '', eventSlug: '', orderType: '', tableNumber: '' }
+  }));
+
+  const result = await agent.handle({
+    message: 'افتح الصنف',
+    sessionId: 'test-invalid-navigation',
+    history: [],
+    cart: [],
+    page: '/'
+  });
+
+  assert.deepEqual(result.actions, []);
+  assert.match(result.reply, /لم أجد|الصفحة/);
 });
