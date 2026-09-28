@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v29';
+const CACHE_VERSION = 'arabisk-pwa-v30';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -10,6 +10,9 @@ const APP_SHELL = [
   '/memories',
   '/track-order',
   '/profile',
+  '/category-page.html',
+  '/product-page.html',
+  '/event-page.html',
   '/home-app.css',
   '/app-pages.css',
   '/app.js',
@@ -152,6 +155,18 @@ async function navigationFallback(request) {
     const exact = await caches.match(request);
     if (exact) return exact;
     const pathname = new URL(request.url).pathname;
+    if (pathname === '/menu' || /^\/menu\/[^/]+$/.test(pathname)) {
+      const template = await caches.match('/category-page.html');
+      if (template && pathname !== '/menu') return template;
+    }
+    if (/^\/menu\/[^/]+\/[^/]+$/.test(pathname)) {
+      const template = await caches.match('/product-page.html');
+      if (template) return template;
+    }
+    if (pathname === '/events' || /^\/events\/[^/]+$/.test(pathname)) {
+      const template = await caches.match('/event-page.html');
+      if (template && pathname !== '/events') return template;
+    }
     return (await caches.match(pathname)) ||
       (await caches.match('/index.html')) ||
       (await caches.match('/offline.html'));
