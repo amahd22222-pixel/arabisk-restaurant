@@ -5,7 +5,9 @@
   const DIALECT_KEY = 'ARABISK_SHAMS_DIALECT_V1';
   const VOICE_CONTINUITY_KEY = 'ARABISK_SHAMS_VOICE_CONTINUITY_V2';
   const VOICE_CONTINUITY_TTL_MS = 30 * 60 * 1000;
-  const SILENCE_FLUSH_MS = 2200;
+  const SILENCE_FLUSH_MS = 2800;
+  const INSTALLED_PWA_SILENCE_FLUSH_MS = 3600;
+  const MAX_SILENCE_FLUSH_MS = 4500;
   const DUPLICATE_TRANSCRIPT_WINDOW_MS = 2500;
 
   const state = {
@@ -89,14 +91,30 @@
       .replace(/[\u064B-\u065F\u0670]/g, '')
       .replace(/ـ/g, '');
 
-    const lebanese = /(هيدا|هيدي|هال|شو|وين|كتير|فيك|فينا|عنجد|كرمال)/.test(raw);
-    const syrian = /(هلق|هلأ|لسا|شلون|شو|وين|كتير|بدي|مو|هيك|مشان)/.test(raw);
-    const egyptian = /(عايز|عاوز|نفسي|ايه|إيه|فين|دلوقتي|دلوقت|كده|ليه|مش|احنا|اوي|ازاي)/.test(raw);
+    if (!raw) return '';
 
-    if (lebanese && !egyptian) return 'lebanese';
-    if (syrian && !egyptian) return 'syrian';
-    if (egyptian) return 'egyptian';
-    return 'gulf';
+    const scores = {
+      lebanese: 0,
+      syrian: 0,
+      egyptian: 0
+    };
+
+    if (/(هيدا|هيدي|هال|عنجد|كرمال)/.test(raw)) scores.lebanese += 3;
+    if (/(هلق|هلأ|شلون|مشان|هيك)/.test(raw)) scores.syrian += 3;
+    if (/(عايز|عاوز|دلوقتي|دلوقت|كده|ليه|احنا|ازاي)/.test(raw)) scores.egyptian += 3;
+
+    if (/(شو|وين|كتير|فيك|فينا|بدي|مو|لسا)/.test(raw)) {
+      scores.lebanese += 1;
+      scores.syrian += 1;
+    }
+    if (/(نفسي|ايه|فين|مش|اوي)/.test(raw)) scores.egyptian += 1;
+
+    const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    const [winner, winnerScore] = ranked[0];
+    const [, runnerUpScore] = ranked[1];
+    if (winnerScore < 2 || winnerScore - runnerUpScore < 1) return '';
+
+    return winner;
   }
 
   const rootId = 'arabisk-shams-root';
@@ -302,12 +320,28 @@
     await sendMessage(phrase);
   }
 
-  function scheduleTranscriptFlush(delay = SILENCE_FLUSH_MS) {
+  function isInstalledPwa() {
+    return Boolean(
+      window.matchMedia?.('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true
+    );
+  }
+
+  function scheduleTranscriptFlush(delay = null) {
     clearSilenceTimer();
     if (!state.transcriptBuffer.trim()) return;
+
+    const fallbackDelay = isInstalledPwa()
+      ? INSTALLED_PWA_SILENCE_FLUSH_MS
+      : SILENCE_FLUSH_MS;
+    const requestedDelay = Number(delay);
+    const timeout = Number.isFinite(requestedDelay) && requestedDelay > 0
+      ? requestedDelay
+      : fallbackDelay;
+
     state.silenceTimer = window.setTimeout(() => {
       void flushTranscript();
-    }, Math.max(900, Math.min(3000, Number(delay) || 1600)));
+    }, Math.max(1200, Math.min(MAX_SILENCE_FLUSH_MS, timeout)));
   }
 
   function scheduleListeningRestart(delay = 300) {
@@ -427,7 +461,7 @@
       const observed = (finalText || interimText).trim();
       if (observed) {
         const detected = detectDialectFromText(observed);
-        if (detected !== state.dialect) {
+        if (detected && detected !== state.dialect) {
           state.dialect = detected;
           rememberDialect(detected);
           if (state.recognition) state.recognition.lang = RECOGNITION_LANGUAGES[detected] || 'ar-AE';
