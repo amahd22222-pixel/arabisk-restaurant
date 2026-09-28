@@ -17,7 +17,7 @@ class OrderServiceError extends Error {
   }
 }
 
-export function createOrderService({ repository, cleanText, nextOrderId, invalidateSmartSnapshot, revenue, crypto, promotions }) {
+export function createOrderService({ repository, cleanText, nextOrderId, invalidateSmartSnapshot, revenue, crypto, promotions, notifyCustomer }) {
   const { orders, products, customers } = repository;
 
   function getOrThrow(id) {
@@ -85,6 +85,22 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
         orderValue: order.total,
         metadata: { orderType: order.orderType }
       });
+    }
+
+    if (beforeOrder.status !== order.status && order.customerId && typeof notifyCustomer === 'function') {
+      void notifyCustomer(order.customerId, {
+        title: 'تحديث طلبك في ARABISK',
+        body: 'حالة طلب ' + order.id + ' أصبحت: ' + ({
+          pending: 'قيد المراجعة',
+          confirmed: 'مؤكد',
+          preparing: 'قيد التحضير',
+          ready: 'جاهز',
+          completed: 'مكتمل',
+          cancelled: 'ملغي'
+        }[order.status] || order.status),
+        url: '/track-order',
+        tag: 'arabisk-order-' + order.id
+      }).catch(() => {});
     }
 
     return order;
@@ -247,6 +263,16 @@ export function createOrderService({ repository, cleanText, nextOrderId, invalid
       metadata: { orderType }
     });
     if (recoveryToken) revenue.recordRecoveryOrder(recoveryToken, order.id);
+
+    if (order.customerId && typeof notifyCustomer === 'function') {
+      void notifyCustomer(order.customerId, {
+        title: 'تم استلام طلبك في ARABISK',
+        body: 'تم تسجيل الطلب ' + order.id + ' بنجاح. يمكنك متابعة حالته من التطبيق.',
+        url: '/track-order',
+        tag: 'arabisk-order-' + order.id
+      }).catch(() => {});
+    }
+
     return order;
   }
 
