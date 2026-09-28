@@ -354,12 +354,21 @@ export function createPromotionService({ readJsonWithStatus, writeJson, storageR
   async function commitReservation(reservation) {
     const claim = installOffer.claims.find(item => item.id === reservation?.claimId);
     if (!claim || claim.status !== 'reserved') return false;
+
     claim.status = 'redeemed';
     claim.redeemedAt = new Date().toISOString();
     delete claim.reservedAt;
     delete claim.reservedOrderId;
-    await persistSnapshot();
-    return true;
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (await persistSnapshot()) return true;
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)));
+    }
+
+    // Keep the in-memory state redeemed. If persistence is still unavailable,
+    // the safer durable fallback is the already-reserved state rather than
+    // making the code available for another order after a restart.
+    return false;
   }
 
   return {
