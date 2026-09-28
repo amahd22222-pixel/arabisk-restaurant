@@ -330,7 +330,7 @@ registerNotificationRoutes(app, {
 const stableSyncUrl = value => { try { return new URL(String(value || ''), 'http://internal').pathname; } catch { return String(value || ''); } };
 const stableSyncHash = value => crypto.createHash('sha1').update(JSON.stringify(value)).digest('hex').slice(0,16);
 // Shared PWA synchronization boundary: the installed app observes admin-managed content changes here.
-const pwaSyncSnapshot = () => {
+const pwaSyncSnapshot = ({ profileToken = '' } = {}) => {
   const experiences = experienceService.list({headers:{'x-arabisk-admin-key':process.env.ARABISK_ADMIN_API_KEY || ''}}).map(item => ({id:item.id,slug:item.slug,titleAr:item.titleAr,titleEn:item.titleEn,type:item.type,startsAt:item.startsAt,endsAt:item.endsAt,status:item.status,featured:Boolean(item.featured),bookingEnabled:item.bookingEnabled,coverImage:stableSyncUrl(item.coverImageUrl),video:stableSyncUrl(item.videoUrl),updatedAt:item.updatedAt || ''}));
   const memories = memoryService.adminList().map(item => ({id:item.id,mediaType:item.mediaType,image:stableSyncUrl(item.imageUrl),video:stableSyncUrl(item.videoUrl),displayName:item.displayName || '',createdAt:item.createdAt || '',hidden:Boolean(item.hidden),pinned:Boolean(item.pinned),productId:item.productId || '',experienceSlug:item.experienceSlug || ''}));
   const menu = {
@@ -338,12 +338,28 @@ const pwaSyncSnapshot = () => {
     products: products.map(item => ({id:item.id,categoryId:item.categoryId,nameAr:item.nameAr,nameEn:item.nameEn,price:item.price,available:item.available,image:stableSyncUrl(item.imageUrl),updatedAt:item.updatedAt || ''}))
   };
   const promotions = {today:promotionService.getAdminTodayOffer(),install:promotionService.getAdminInstallOffer()};
-  return {version:1,revisions:{menu:stableSyncHash(menu),experiences:stableSyncHash(experiences),memories:stableSyncHash(memories),promotions:stableSyncHash(promotions)}};
+  profileToken = cleanText(profileToken, 300);
+  const linkedCustomer = profileToken ? customerService.findByProfileToken(profileToken) : null;
+  const customerRevision = linkedCustomer ? stableSyncHash({
+    id: linkedCustomer.id,
+    name: linkedCustomer.name || '',
+    phone: linkedCustomer.phone || '',
+    orderCount: linkedCustomer.orderCount || 0,
+    reservationCount: linkedCustomer.reservationCount || 0,
+    totalOrderValue: linkedCustomer.totalOrderValue || 0,
+    lastOrderAt: linkedCustomer.lastOrderAt || '',
+    lastReservationAt: linkedCustomer.lastReservationAt || '',
+    lastActivityAt: linkedCustomer.lastActivityAt || ''
+  } + JSON.stringify({
+    orders: stateRepository.orders.all().filter(item => String(item.customerId || '') === String(linkedCustomer.id)).slice(-10).map(item => ({id:item.id,status:item.status,updatedAt:item.updatedAt || item.createdAt || ''})),
+    reservations: stateRepository.reservations.all().filter(item => String(item.customerId || '') === String(linkedCustomer.id)).slice(-10).map(item => ({id:item.id,status:item.status,updatedAt:item.updatedAt || item.createdAt || ''}))
+  }) : '';
+  return {version:1,revisions:{menu:stableSyncHash(menu),experiences:stableSyncHash(experiences),memories:stableSyncHash(memories),promotions:stableSyncHash(promotions),customer:customerRevision}};
 };
-app.get('/api/pwa/sync',pwaSyncRateLimit,(_req,res)=>{
+app.get('/api/pwa/sync',pwaSyncRateLimit,(req,res)=>{
   res.setHeader('Cache-Control','no-store, no-cache, must-revalidate');
   res.setHeader('X-Content-Type-Options','nosniff');
-  return res.json(pwaSyncSnapshot());
+  return res.json(pwaSyncSnapshot({profileToken:req.get('X-ARABISK-PROFILE-TOKEN') || ''}));
 });
 
 const mediaService = createMediaService({
