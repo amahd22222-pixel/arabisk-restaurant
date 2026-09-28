@@ -964,7 +964,14 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       const scopedCatalog = categoryId
         ? catalog.filter(item => String(item?.categoryId || '') === categoryId)
         : catalog;
-      const smart = pickSmartLocalRecommendations(scopedCatalog, context.memory, context.message, context.customerContext, context.cart);
+      const smart = pickSmartLocalRecommendations(
+        scopedCatalog,
+        context.memory,
+        context.message,
+        context.customerContext,
+        context.cart,
+        context.live
+      );
       return { recommendations: smart.candidates, preferences: smart.preferences, categoryId };
     }
 
