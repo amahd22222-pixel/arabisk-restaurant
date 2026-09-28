@@ -112,6 +112,27 @@ function modelSafeMemory(memory = {}) {
     preferences: memory.preferences || {},
     recentTurns: Array.isArray(memory.recentTurns) ? memory.recentTurns.slice(-10) : [],
     recentProducts: Array.isArray(memory.recentProducts) ? memory.recentProducts.slice(-8) : [],
+    chosenProducts: Array.isArray(memory.chosenProducts)
+      ? memory.chosenProducts.slice(-8).map(item => ({
+          id: clean(item?.id, 60),
+          nameAr: clean(item?.nameAr, 120),
+          count: Math.min(100, Math.max(1, Number(item?.count) || 1)),
+          lastChosenAt: clean(item?.lastChosenAt, 40)
+        }))
+      : [],
+    avoidProducts: Array.isArray(memory.avoidProducts)
+      ? memory.avoidProducts.slice(-8).map(item => ({
+          id: clean(item?.id, 60),
+          nameAr: clean(item?.nameAr, 120),
+          count: Math.min(100, Math.max(1, Number(item?.count) || 1))
+        }))
+      : [],
+    lastRecommendation: Array.isArray(memory.lastRecommendation)
+      ? memory.lastRecommendation.slice(0, 3).map(item => ({
+          id: clean(item?.id, 60),
+          nameAr: clean(item?.nameAr, 120)
+        }))
+      : [],
     lastIntent: clean(memory.lastIntent, 60),
     journey: memory.journey || {}
   };
@@ -1029,6 +1050,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       'استخدمي workflow لكل حقول الحجز والطلب الموجودة فعليًا، ولا تعيدي طلب حقل موجود بالفعل في الذاكرة أو الحساب.',
       'استخدمي السياق السابق لفهم عبارات مثل: ده، دي، هيدا، هيدي، هالطبق، التاني، الأول، اللي فات، كمان واحد، واللي باخده دايمًا.',
       'استخدمي رحلة العميل عندما تكون مفيدة مباشرة: الحجز القادم، العودة، المفضلات، أو إعادة التفاعل. لا تعرضي للعميل تفاصيل داخلية مثل قيمة الإنفاق أو عدد الأجهزة.',
+      'الاختيارات المؤكدة (chosenProducts) هي إشارات إيجابية من إضافات فعلية للسلة، ويمكن تفضيلها باعتدال. المنتجات المرفوضة (avoidProducts) لا تقترحيها مرة أخرى. آخر ترشيحات محفوظة تساعدك على فهم: مش ده، مش التاني، مش التالت.',
       'إذا كانت الرسالة حجزًا أو طلبًا ناقصًا، استخرجي كل الحقول الموجودة فقط في workflow ولا تخترعي أي حقل.',
       'اللهجة الصوتية المفضلة من التطبيق: ' + clean(context.dialect, 20),
       'اللهجة المكتشفة من النص: ' + dialectLocale(context.message),
