@@ -365,7 +365,7 @@ function resolveStaticPage(raw) {
   if (/^(متابعه الطلب|متابعة الطلب|حاله الطلب|حالة الطلب|طلبي|تتبع الطلب|track order)$/i.test(query)) return '/track-order';
   if (/^(الفعاليات|فعاليات|التجارب|تجارب|events)$/i.test(query)) return '/events';
   if (/^(الذكريات|ذكريات|memories)$/i.test(query)) return '/memories';
-  if (/^(الخصوصيه|الخصوصية|سياسة الخصوصية|privacy)$/i.test(query)) return '/privacy';
+  if (/^(الخصوصيه|الخصوصية|سياسه الخصوصيه|سياسة الخصوصية|privacy)$/i.test(query)) return '/privacy';
   return '';
 }
 
