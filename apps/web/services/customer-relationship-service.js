@@ -220,5 +220,31 @@ export function createCustomerRelationshipService({ repository }) {
     };
   }
 
-  return { summary, customerRelationship };
+  function shamsContext(id) {
+    const customer = customers.findById(id);
+    if (!customer) return null;
+    const data = collectCustomerData(customer);
+    return {
+      customerId: String(customer.id),
+      name: customer.name || '',
+      appMember: customer.appMember === true,
+      phoneVerified: customer.phoneVerified === true,
+      lifecycle: data.lifecycle,
+      orderCount: data.completedOrders.length,
+      reservationCount: data.activeReservations?.length || data.linkedReservations.filter(item => item?.status !== 'cancelled').length,
+      totalOrderValue: data.totalOrderValue,
+      averageOrderValue: data.completedOrders.length ? Math.round((data.totalOrderValue / data.completedOrders.length) * 100) / 100 : 0,
+      favoriteProducts: data.favoriteProducts.slice(0, 3).map(item => ({ name: item.name, quantity: item.quantity })),
+      favoriteCategories: data.favoriteCategories.slice(0, 3).map(item => ({ name: item.name, quantity: item.quantity })),
+      nextReservation: data.nextReservation ? {
+        date: String(data.nextReservation.date || ''),
+        time: String(data.nextReservation.time || ''),
+        guests: Number(data.nextReservation.guests || data.nextReservation.partySize || 0) || 0,
+        status: String(data.nextReservation.status || '')
+      } : null,
+      lastActivityAt: data.lastActivityAt || ''
+    };
+  }
+
+  return { summary, customerRelationship, shamsContext };
 }
