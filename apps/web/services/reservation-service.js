@@ -1,3 +1,4 @@
+import { normalizePhone } from '../utils/phone.js';
 import { isValidDateOnly } from '../utils/input.js';
 
 const RESERVATION_STATUSES = new Set(['pending', 'confirmed', 'cancelled']);
@@ -19,7 +20,7 @@ export function createReservationService({ repository, cleanText, nextReservatio
 
   async function createReservation(body) {
     const name = cleanText(body.name, 80);
-    const phone = cleanText(body.phone, 40);
+    const phone = normalizePhone(body.phone);
     const date = cleanText(body.date, 20);
     const time = cleanText(body.time, 10);
     const guests = Number(body.guests);
@@ -75,14 +76,23 @@ export function createReservationService({ repository, cleanText, nextReservatio
 
     if (reservationCustomer) {
       reservationCustomer.name = name;
+      reservationCustomer.phone = phone || reservationCustomer.phone;
       reservationCustomer.reservationCount = Number(reservationCustomer.reservationCount || 0) + 1;
       reservationCustomer.lastReservationAt = createdAt;
+      reservationCustomer.lastActivityAt = createdAt;
+      reservationCustomer.firstSeenAt = reservationCustomer.firstSeenAt || createdAt;
     } else {
       customers.add({
         id: reservationCustomerId,
-        name, phone, orderCount: 0, lastOrderAt: '',
+        name,
+        phone,
+        orderCount: 0,
+        lastOrderAt: '',
         reservationCount: 1,
-        lastReservationAt: createdAt
+        lastReservationAt: createdAt,
+        totalOrderValue: 0,
+        firstSeenAt: createdAt,
+        lastActivityAt: createdAt
       });
     }
 
