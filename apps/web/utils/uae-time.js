@@ -17,8 +17,14 @@ export function getUaeDateOnly(date = new Date()) {
 }
 
 export function addUaeDays(date, offsetDays = 0) {
-  const parts = partsFor(date);
-  const base = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day) + Number(offsetDays), 0, 0, 0);
+  const baseDate = new Date(date instanceof Date ? date.getTime() : date);
+  if (!Number.isFinite(baseDate.getTime())) return '';
+  const base = Date.UTC(
+    baseDate.getUTCFullYear(),
+    baseDate.getUTCMonth(),
+    baseDate.getUTCDate() + Number(offsetDays),
+    0, 0, 0
+  );
   return new Date(base).toISOString().slice(0, 10);
 }
 

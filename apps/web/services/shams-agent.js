@@ -735,6 +735,7 @@ function buildLiveContext({ page = '/', cart = [], customerContext = null, memor
       path: pathname,
       area,
       category: clean(category?.nameAr || category?.nameEn || '', 120),
+      productId: clean(product?.id || '', 80),
       product: clean(product?.nameAr || product?.nameEn || '', 120)
     },
     cart: {
@@ -769,7 +770,9 @@ function applyLiveContextToLocalPlan(plan, context) {
     return {
       intent: 'product_info',
       confidence: 0.94,
-      toolCalls: [{ name: 'product_info', args: { query: live.currentPage.product } }],
+      toolCalls: [{ name: 'product_info', args: live.currentPage.productId
+        ? { productId: live.currentPage.productId }
+        : { query: live.currentPage.product } }],
       reply: 'أكيد، أراجع لك الطبق الظاهر أمامك.'
     };
   }
@@ -1147,7 +1150,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       const toolCalls = sanitizeToolCalls(
         plan.toolCalls.map(call => ({
           name: call?.name,
-          args: parseToolArgs(call?.argsJson)
+          args: parseToolArgs(call?.argsJson ?? call?.args)
         }))
       );
       const toolDependent = new Set(['menu', 'navigate', 'recommend', 'cart', 'cart_summary', 'cart_add', 'order_status', 'product_info', 'product_search']);
@@ -1422,6 +1425,19 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       added: toolResults.find(item => item.name === 'cart_add')?.result?.added,
       order: toolResults.find(item => item.name === 'get_order_status')?.result?.order
     };
+    if (intent === 'product_info' && !responseData.product) {
+      const fallback = findMatches(products(), message)[0];
+      if (fallback) {
+        responseData.product = {
+          id: String(fallback.id),
+          nameAr: clean(fallback.nameAr, 160),
+          nameEn: clean(fallback.nameEn, 160),
+          descriptionAr: clean(fallback.descriptionAr, 320),
+          descriptionEn: clean(fallback.descriptionEn, 320),
+          price: Number(fallback.price || 0)
+        };
+      }
+    }
 
     responseData.navigationOpened = verifiedActions.some(action => action.type === 'navigate');
     responseData.menuOpened = verifiedActions.some(action => action.type === 'navigate' && action.url === '/menu');

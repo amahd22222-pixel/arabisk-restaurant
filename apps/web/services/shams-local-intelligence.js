@@ -390,8 +390,7 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
   const preferences = extractPreferences(text);
   const latest = latestCatalogProduct(memory, catalog);
   const pageContext = resolvePageMenuContext(page, categories, catalog);
-  const directNavigationRequested = /^(افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)\s+/i.test(raw);
-  const earlyStaticPage = directNavigationRequested ? resolveStaticPage(raw) : '';
+  const earlyStaticPage = resolveStaticPage(text);
   if (earlyStaticPage) {
     return {
       intent: 'navigate',
