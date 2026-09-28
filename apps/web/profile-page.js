@@ -55,7 +55,11 @@ function saveLocal(profile){
 
 function renderIdentity(profile,stats={}){
   const name=String(profile?.name||'عميل ARABISK');
-  $('#profile-avatar').textContent=initials(name);
+  const avatar=initials(name);
+  const heroAvatar=$('#profile-hero-avatar');
+  const customerAvatar=$('#profile-avatar');
+  if(heroAvatar)heroAvatar.textContent=avatar;
+  if(customerAvatar)customerAvatar.textContent=avatar;
   $('#profile-customer-name').textContent=name;
   $('#profile-phone-heading').textContent=String(profile?.phone||'—');
   $('#profile-welcome').textContent=Number(stats.orderCount||0)||Number(stats.reservationCount||0)
