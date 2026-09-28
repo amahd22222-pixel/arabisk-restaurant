@@ -249,9 +249,13 @@ export function createPromotionService({ readJsonWithStatus, writeJson, storageR
     };
   };
 
-  function quoteInstallReward(code, subtotal) {
+  function quoteInstallReward(code, subtotal, clientId) {
     prune();
-    return calculate(findClaim(code), subtotal);
+    const claim = findClaim(code);
+    if (!claim || clean(clientId, 100) !== claim.clientId) {
+      throw new PromotionError('Invalid or expired promotion code.', 400);
+    }
+    return calculate(claim, subtotal);
   }
 
   async function claimInstallReward(clientId) {
@@ -304,9 +308,12 @@ export function createPromotionService({ readJsonWithStatus, writeJson, storageR
     };
   }
 
-  async function reserveInstallReward(code, subtotal, orderId) {
+  async function reserveInstallReward(code, subtotal, orderId, clientId) {
     prune();
     const claim = findClaim(code);
+    if (!claim || clean(clientId, 100) !== claim.clientId) {
+      throw new PromotionError('Invalid or expired promotion code.', 400);
+    }
     const quote = calculate(claim, subtotal);
     claim.status = 'reserved';
     claim.reservedAt = new Date().toISOString();
