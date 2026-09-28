@@ -24,7 +24,7 @@
     }
   };
 
-  const productImage = product => product?.imageUrl || 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1000&q=82';
+  const productImage = product => String(product?.imageUrl || '').trim();
 
   function syncCartCount() {
     const target = $('#app-cart-count');
@@ -63,9 +63,7 @@
       const badge = product.chefChoice ? 'اختيار الشيف' : (product.isNew ? 'جديد' : 'مختار لـ ARABISK');
       return `
         <a class="product-teaser" href="/menu/${encodeURIComponent(String(product.categoryId || ''))}/${encodeURIComponent(String(product.nameEn || product.nameAr || product.id || ''))}" data-product-id="${esc(product.id)}">
-          <div class="product-teaser-media">
-            <img src="${esc(productImage(product))}" alt="${esc(product.nameAr || product.nameEn)}" loading="lazy" decoding="async">
-          </div>
+          <div class="product-teaser-media"${productImage(product) ? '' : ' aria-hidden="true"'}>${productImage(product) ? `<img src="${esc(productImage(product))}" alt="${esc(product.nameAr || product.nameEn)}" loading="lazy" decoding="async">` : ''}</div>
           <div class="product-teaser-copy">
             <span class="product-teaser-badge">${esc(badge)}</span>
             <h3>${esc(product.nameAr || product.nameEn)}</h3>
