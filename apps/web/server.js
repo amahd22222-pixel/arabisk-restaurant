@@ -304,6 +304,9 @@ const notificationService = createNotificationService({
   storageReady,
   pushSubscriptionsRepository: stateRepository.pushSubscriptions,
   notificationDevicesRepository: stateRepository.notificationDevices,
+  customers,
+  orders,
+  reservations,
   vapidPrivateKey: VAPID_PRIVATE_KEY,
   vapidPublicKey: VAPID_PUBLIC_KEY,
   vapidSubject: VAPID_SUBJECT
