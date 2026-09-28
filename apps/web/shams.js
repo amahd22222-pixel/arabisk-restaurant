@@ -305,7 +305,13 @@
           history: state.history.slice(-10),
           sessionId: state.sessionId,
           page: window.location.pathname || '/',
-          cart: readCart()
+          cart: readCart(),
+          client: {
+            surface: window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true
+              ? 'installed-pwa'
+              : 'browser',
+            serviceWorkerControlled: Boolean(window.navigator.serviceWorker?.controller)
+          }
         })
       });
 
