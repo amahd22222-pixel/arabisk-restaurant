@@ -2,8 +2,8 @@ const NAV_ITEMS=[
   {href:'/',label:'الرئيسية',icon:'⌂',match:p=>p==='/'},
   {href:'/menu',label:'المنيو',icon:'≡',match:p=>p==='/menu'||p.startsWith('/menu/')},
   {href:'/shams',label:'شمس',icon:'☀',match:p=>false,shams:true},
-  {href:'/reservation',label:'الحجز',icon:'◷',match:p=>p==='/reservation'},
-  {href:'/profile',label:'ملفي',icon:'◎',match:p=>p==='/profile'}
+  {href:'/memories',label:'الذكريات',icon:'♡',match:p=>p==='/memories'||p.startsWith('/memories/')},
+  {href:'/profile',label:'حسابي',icon:'◎',match:p=>p==='/profile'}
 ];
 
 function mountPwaBottomNav(){
