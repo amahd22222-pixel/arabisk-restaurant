@@ -1,3 +1,5 @@
+import { request } from './api-client.js';
+
 (() => {
 'use strict';
 
@@ -127,11 +129,7 @@ async function load(force = false) {
   if (loading) return loading;
   loading = (async () => {
     try {
-      const response = await fetch((typeof window.apiBase === 'function' ? window.apiBase() : '') + '/api/customers/relationship-summary', {
-        headers: typeof window.request === 'function' ? undefined : {}
-      });
-      if (!response.ok) throw new Error('تعذر تحميل مركز علاقة العملاء.');
-      summary = await response.json();
+      summary = await request('/api/customers/relationship-summary');
       loaded = true;
       render();
       enhanceCustomerTable();
