@@ -24,12 +24,17 @@ function mountPwaBottomNav(){
   const shamsTab=nav.querySelector('[data-shams-trigger]');
   shamsTab?.addEventListener('click',(event)=>{
     event.preventDefault();
-    const open=()=>window.ARABISK_SHAMS?.open?.();
-    if(window.ARABISK_SHAMS?.open){
-      open();
+    const shams=window.ARABISK_SHAMS;
+    if(shams?.status && shams?.close && shams?.open){
+      const status=shams.status();
+      if(status.listening || status.speaking || status.busy || status.conversationActive){
+        shams.close();
+      }else{
+        shams.open();
+      }
       return;
     }
-    window.setTimeout(open,300);
+    window.setTimeout(()=>window.ARABISK_SHAMS?.open?.(),300);
   });
 }
 
