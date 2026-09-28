@@ -1288,6 +1288,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       assistant: reply,
       intent,
       products: recentProducts.length ? recentProducts : memory.recentProducts,
+      recommendedProducts: responseData.recommendations,
       journey: memoryPatch.journey,
       name: memoryPatch.name
     });
