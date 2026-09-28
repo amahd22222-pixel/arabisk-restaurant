@@ -34,6 +34,7 @@ export function registerPageRoutes(app, { rootDir, distDir }) {
     await injectMobileNavigation(page('privacy.html'), res);
   } catch (error) { next(error); } });
   app.get('/cart', async (_req, res, next) => { try { await injectMobileNavigation(page('cart-page.html'), res); } catch (error) { next(error); } });
+  app.get('/profile', async (_req, res, next) => { try { await injectMobileNavigation(page('profile.html'), res); } catch (error) { next(error); } });
   app.get('/track-order', async (_req, res, next) => { try { await injectMobileNavigation(page('order-tracking.html'), res); } catch (error) { next(error); } });
   app.get('/events', async (_req, res, next) => { try { await injectMobileNavigation(page('events.html'), res); } catch (error) { next(error); } });
   app.get('/offers', async (_req, res, next) => { try { await injectMobileNavigation(page('offers.html'), res); } catch (error) { next(error); } });
