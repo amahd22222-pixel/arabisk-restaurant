@@ -19,10 +19,17 @@ const injectMobileNavigation = async (filePath, res) => {
 <script type="module" src="/pwa-notifications.js"></script>
 `;
   const appAssets = [
+    !html.includes('href="/manifest.json"') ? '<link rel="manifest" href="/manifest.json">' : '',
+    !html.includes('href="/icons/icon.svg"') ? '<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">' : '',
+    !html.includes('href="/icons/apple-touch-icon.png"') ? '<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">' : '',
     !html.includes('href="/mobile-nav.css"') ? '<link rel="stylesheet" href="/mobile-nav.css">' : '',
     !html.includes('src="/mobile-nav.js"') ? '<script type="module" src="/mobile-nav.js"></script>' : '',
     !html.includes('href="/shams.css"') ? '<link rel="stylesheet" href="/shams.css">' : '',
-    !html.includes('src="/shams.js"') ? '<script type="module" src="/shams.js"></script>' : ''
+    !html.includes('src="/shams.js"') ? '<script type="module" src="/shams.js"></script>' : '',
+    !html.includes('src="/pwa-ui.js"') ? '<script type="module" src="/pwa-ui.js"></script>' : '',
+    !html.includes('src="/pwa-register.js"') ? '<script type="module" src="/pwa-register.js"></script>' : '',
+    !html.includes('src="/pwa-profile.js"') ? '<script type="module" src="/pwa-profile.js"></script>' : '',
+    !html.includes('src="/pwa-notifications.js"') ? '<script type="module" src="/pwa-notifications.js"></script>' : ''
   ].filter(Boolean).join('\n');
   const assets = [baseAssets, appAssets].filter(Boolean).join('\n');
 
