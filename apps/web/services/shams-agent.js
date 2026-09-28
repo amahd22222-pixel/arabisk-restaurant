@@ -1065,7 +1065,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       });
       await rememberWorkflow(result.reply, 'reservation', {
         intent: 'reservation',
-        step: result.status,
+        step: result.missingField ? ('awaiting_' + result.missingField) : result.status,
         slots: safeWorkflowSlots(result.pending)
       });
       return {
@@ -1093,7 +1093,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       });
       await rememberWorkflow(result.reply, 'order', {
         intent: 'order',
-        step: result.status,
+        step: result.missingField ? ('awaiting_' + result.missingField) : result.status,
         slots: safeWorkflowSlots(result.pending)
       });
       return {
