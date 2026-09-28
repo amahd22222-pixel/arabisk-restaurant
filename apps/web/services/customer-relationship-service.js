@@ -44,36 +44,40 @@ export function createCustomerRelationshipService({ repository }) {
     const completedOrders = linkedOrders.filter(order => order?.status === 'completed');
 
     const linkedReservations = reservations.filter(item => customerMatches(item, customer));
-    const futureReservations = linkedReservations
+    const activeReservations = linkedReservations.filter(item => item?.status !== 'cancelled');
+    const futureReservations = activeReservations
       .filter(item => item?.status !== 'cancelled' && item?.date && new Date(item.date + 'T' + String(item.time || '00:00')).getTime() >= Date.now())
       .sort((a, b) => String(a.date + 'T' + a.time).localeCompare(String(b.date + 'T' + b.time)));
 
     const spend = Math.round(completedOrders.reduce((sum, order) => sum + safeNumber(order.total), 0) * 100) / 100;
 
     const productCounts = new Map();
+    const categoryCounts = new Map();
+    const productById = new Map(products.map(product => [String(product.id), product]));
     for (const order of completedOrders) {
       for (const item of Array.isArray(order.items) ? order.items : []) {
         const key = String(item?.productId || item?.nameAr || '').trim();
         if (!key) continue;
+        const quantity = Math.max(0, Math.round(safeNumber(item?.quantity)));
         const row = productCounts.get(key) || { productId: key, name: String(item?.nameAr || item?.nameEn || key), quantity: 0 };
-        row.quantity += Math.max(0, Math.round(safeNumber(item?.quantity)));
+        row.quantity += quantity;
         productCounts.set(key, row);
+
+        const product = productById.get(String(item?.productId || ''));
+        const categoryId = product?.categoryId || item?.categoryId || '';
+        const categoryName = product?.categoryNameAr || product?.categoryName || item?.categoryNameAr || item?.categoryName || categoryId;
+        if (categoryId && quantity > 0) {
+          const category = categoryCounts.get(String(categoryId)) || { categoryId: String(categoryId), name: String(categoryName || categoryId), quantity: 0 };
+          category.quantity += quantity;
+          if (!category.name || category.name === category.categoryId) category.name = String(categoryName || category.categoryId);
+          categoryCounts.set(String(categoryId), category);
+        }
       }
     }
 
     const favoriteProducts = [...productCounts.values()]
       .sort((a, b) => b.quantity - a.quantity || a.name.localeCompare(b.name, 'ar'))
       .slice(0, 5);
-
-    const categoryCounts = new Map();
-    for (const item of favoriteProducts) {
-      const product = products.find(row => String(row.id) === String(item.productId));
-      const categoryId = product?.categoryId || '';
-      if (!categoryId) continue;
-      const category = categoryCounts.get(categoryId) || { categoryId, name: categoryId, quantity: 0 };
-      category.quantity += item.quantity;
-      categoryCounts.set(categoryId, category);
-    }
 
     const totalOrderValue = spend;
     const firstSeenAt = customer.firstSeenAt || customer.appProfileCreatedAt || customer.createdAt || maxIso(
@@ -91,7 +95,7 @@ export function createCustomerRelationshipService({ repository }) {
     const lifecycle = lifecycleFor({
       ...customer,
       orderCount: completedOrders.length,
-      reservationCount: linkedReservations.length,
+      reservationCount: activeReservations.length,
       lastActivityAt
     });
 
@@ -127,7 +131,7 @@ export function createCustomerRelationshipService({ repository }) {
       firstSeenAt: data.firstSeenAt,
       lastActivityAt: data.lastActivityAt,
       orderCount: data.completedOrders.length,
-      reservationCount: data.linkedReservations.length,
+      reservationCount: data.linkedReservations.filter(item => item?.status !== 'cancelled').length,
       totalOrderValue: data.totalOrderValue,
       averageOrderValue: data.completedOrders.length ? Math.round((data.totalOrderValue / data.completedOrders.length) * 100) / 100 : 0,
       lifecycleKey: data.lifecycle.key,
@@ -206,7 +210,7 @@ export function createCustomerRelationshipService({ repository }) {
         totalOrderValue: data.totalOrderValue,
         averageOrderValue: data.completedOrders.length ? Math.round((data.totalOrderValue / data.completedOrders.length) * 100) / 100 : 0,
         orders: data.completedOrders.slice().sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || '')).slice(0, 20),
-        reservations: data.linkedReservations.slice().sort((a, b) => String(b.date + 'T' + b.time).localeCompare(String(a.date + 'T' + a.time))).slice(0, 20),
+        reservations: data.linkedReservations.filter(item => item?.status !== 'cancelled').slice().sort((a, b) => String(b.date + 'T' + b.time).localeCompare(String(a.date + 'T' + a.time))).slice(0, 20),
         upcomingReservation: data.nextReservation,
         favoriteProducts: data.favoriteProducts,
         favoriteCategories: data.favoriteCategories,
