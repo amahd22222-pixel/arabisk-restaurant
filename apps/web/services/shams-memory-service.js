@@ -7,6 +7,7 @@ const MAX_TURNS = 16;
 const MAX_RECENT_PRODUCTS = 8;
 const MAX_AVOID_PRODUCTS = 8;
 const MAX_LAST_RECOMMENDATIONS = 3;
+const MAX_CHOSEN_PRODUCTS = 8;
 
 const clean = (value, max = 200) => String(value ?? '').trim().slice(0, max);
 
@@ -87,6 +88,20 @@ function normalizeAvoidProducts(value) {
     .slice(-MAX_AVOID_PRODUCTS);
 }
 
+function normalizeChosenProducts(value) {
+  const input = Array.isArray(value) ? value : [];
+  return input
+    .map(item => ({
+      id: clean(item?.id, 50),
+      nameAr: clean(item?.nameAr, 120),
+      count: Math.max(1, Math.min(20, Math.round(Number(item?.count || 1)))),
+      lastChosenAt: clean(item?.lastChosenAt, 40)
+    }))
+    .filter(item => item.id)
+    .sort((a, b) => b.count - a.count || String(b.lastChosenAt).localeCompare(String(a.lastChosenAt)))
+    .slice(0, MAX_CHOSEN_PRODUCTS);
+}
+
 function normalizeLastRecommendations(value) {
   const input = Array.isArray(value) ? value : [];
   return input
@@ -164,6 +179,7 @@ function normalizeMemory(raw, identity) {
     preferenceEvidence: normalizePreferenceEvidence(source.preferenceEvidence),
     avoidProducts: normalizeAvoidProducts(source.avoidProducts),
     lastRecommendation: normalizeLastRecommendations(source.lastRecommendation),
+    chosenProducts: normalizeChosenProducts(source.chosenProducts),
     preferenceConfidence: source.preferenceConfidence && typeof source.preferenceConfidence === 'object'
       ? Object.fromEntries(Object.entries(source.preferenceConfidence).slice(0, 12).map(([key, value]) => [clean(key, 40), Math.max(0, Math.min(1, Number(value) || 0))]))
       : {},
@@ -270,6 +286,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       : current.preferenceConfidence;
     const avoidProducts = normalizeAvoidProducts(patch.avoidProducts ?? current.avoidProducts);
     const lastRecommendation = normalizeLastRecommendations(patch.lastRecommendation ?? current.lastRecommendation);
+    const chosenProducts = normalizeChosenProducts(patch.chosenProducts ?? current.chosenProducts);
     const recentProducts = Array.isArray(patch.recentProducts)
       ? patch.recentProducts.slice(-MAX_RECENT_PRODUCTS)
       : current.recentProducts;
@@ -289,6 +306,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       preferenceConfidence,
       avoidProducts,
       lastRecommendation,
+      chosenProducts,
       recentProducts,
       recentTurns: Array.isArray(patch.recentTurns) ? patch.recentTurns.slice(-MAX_TURNS) : current.recentTurns,
       lastIntent: clean(patch.lastIntent ?? current.lastIntent, 60),
@@ -331,6 +349,10 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       ...customerMemory.avoidProducts,
       ...sessionMemory.avoidProducts
     ].sort((a, b) => b.count - a.count || String(b.lastRejectedAt).localeCompare(String(a.lastRejectedAt)))).slice(0, MAX_AVOID_PRODUCTS);
+    const mergedChosenProducts = normalizeChosenProducts([
+      ...customerMemory.chosenProducts,
+      ...sessionMemory.chosenProducts
+    ]);
     const mergedLastRecommendation =
       sessionMemory.updatedAt > customerMemory.updatedAt
         ? sessionMemory.lastRecommendation
@@ -345,6 +367,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       preferenceConfidence: stable.preferenceConfidence,
       avoidProducts: mergedAvoidProducts,
       lastRecommendation: mergedLastRecommendation,
+      chosenProducts: mergedChosenProducts,
       recentTurns: mergedTurns,
       recentProducts: mergedProducts,
       journey: mergedJourney,
@@ -359,12 +382,30 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     return true;
   }
 
-  async function rememberTurn(identity, { user, assistant, intent, products, journey, name, recommendedProducts } = {}) {
+  async function rememberTurn(identity, { user, assistant, intent, products, journey, name, recommendedProducts, chosenProducts: chosenProductsInput } = {}) {
     const current = await read(identity);
     const detectedPreferences = detectPreferences(user);
     const learned = learnPreferences(current.preferences, current.preferenceEvidence, detectedPreferences);
     const preferences = learned.preferences;
     const recommendationRows = normalizeLastRecommendations(recommendedProducts ?? current.lastRecommendation);
+    let chosenProducts = normalizeChosenProducts(current.chosenProducts);
+    const chosenRows = Array.isArray(chosenProductsInput) ? chosenProductsInput : [];
+    for (const item of chosenRows) {
+      if (!item?.id) continue;
+      const existing = chosenProducts.find(row => row.id === String(item.id));
+      if (existing) {
+        existing.count = Math.min(20, existing.count + 1);
+        existing.lastChosenAt = new Date().toISOString();
+      } else {
+        chosenProducts.push({
+          id: String(item.id),
+          nameAr: clean(item.nameAr, 120),
+          count: 1,
+          lastChosenAt: new Date().toISOString()
+        });
+      }
+    }
+    chosenProducts = normalizeChosenProducts(chosenProducts);
     let avoidProducts = current.avoidProducts;
     const rejectedProduct = rejectionTarget(user, recommendationRows) ||
       (isExplicitProductRejection(user) && Array.isArray(current.recentProducts) ? current.recentProducts.at(-1) : null);
@@ -396,6 +437,7 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
       preferenceConfidence: learned.preferenceConfidence,
       avoidProducts,
       lastRecommendation: recommendationRows,
+      chosenProducts,
       recentTurns,
       recentProducts: Array.isArray(products) ? products.slice(-MAX_RECENT_PRODUCTS) : current.recentProducts,
       lastIntent: intent || current.lastIntent,
