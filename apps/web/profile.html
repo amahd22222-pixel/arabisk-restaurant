@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/home-app.css">
 <link rel="stylesheet" href="/app-pages.css">
-<link rel="stylesheet" href="/profile-page.css?v=20260928.4">
+<link rel="stylesheet" href="/profile-page.css?v=20260928.5">
 </head>
 <body class="home-app">
 <header class="app-header is-page" aria-label="ARABISK">
@@ -43,13 +43,29 @@
         </div>
         <span class="profile-member-badge" id="profile-member-badge">عضوية ARABISK</span>
       </div>
-      <div class="profile-identity">
-        <div class="profile-identity-main"><strong id="profile-name-heading">عميل ARABISK</strong><span id="profile-phone-heading">—</span></div>
-        <span id="profile-phone-status" class="profile-phone-status">الهاتف غير موثّق</span>
-      </div>
       <div class="profile-hero-footer">
         <span><i aria-hidden="true"></i> تجربة عميل محفوظة على هذا الجهاز</span>
         <a href="/privacy">الخصوصية ↗</a>
+      </div>
+    </section>
+
+    <section class="profile-customer-card" aria-labelledby="profile-customer-name">
+      <div class="profile-customer-avatar-wrap">
+        <div class="profile-customer-avatar" id="profile-avatar" aria-hidden="true">A</div>
+        <span class="profile-customer-dot" aria-hidden="true"></span>
+      </div>
+      <div class="profile-customer-main">
+        <p class="profile-section-kicker">CUSTOMER PROFILE</p>
+        <h2 id="profile-customer-name">عميل ARABISK</h2>
+        <p id="profile-welcome">مساحتك الشخصية داخل ARABISK.</p>
+        <div class="profile-customer-meta">
+          <span id="profile-phone-heading">—</span>
+          <span id="profile-phone-status" class="profile-phone-status">الهاتف غير موثّق</span>
+        </div>
+      </div>
+      <div class="profile-customer-side">
+        <span class="profile-member-badge" id="profile-member-badge">عضوية ARABISK</span>
+        <span class="profile-customer-caption">بياناتك محفوظة على هذا الجهاز</span>
       </div>
     </section>
 
@@ -82,17 +98,17 @@
         <div>
           <p class="profile-section-kicker">PERSONAL DETAILS</p>
           <h2>بياناتي</h2>
-          <p class="profile-panel-subtitle">هذه البيانات تم حفظها عند أول تشغيل للتطبيق.</p>
+          <p class="profile-panel-subtitle">معلوماتك الأساسية المستخدمة داخل تجربة ARABISK.</p>
         </div>
         <span class="profile-secure-note"><i aria-hidden="true"></i> محفوظة بشكل آمن</span>
       </div>
       <div class="profile-data-grid">
         <div class="profile-data-item"><span>الاسم</span><strong id="profile-name-value">—</strong></div>
         <div class="profile-data-item"><span>رقم الهاتف</span><strong id="profile-phone-value" dir="ltr">—</strong></div>
-        <div class="profile-data-item wide"><span>حالة التسجيل</span><strong>تم التسجيل من أول تشغيل للتطبيق</strong></div>
+        <div class="profile-data-item wide"><span>حالة الحساب</span><strong>الملف محفوظ ومتاح على هذا الجهاز</strong></div>
       </div>
       <p id="profile-status" class="profile-status" role="status" aria-live="polite"></p>
-      <p class="profile-note">لا يوجد تسجيل منفصل من صفحة «حسابي». عند أول فتح للتطبيق المثبّت تظهر شاشة التسجيل مرة واحدة فقط، ثم تُحفظ بياناتك وتبقى مرتبطة بتجربتك على هذا الجهاز.</p>
+      <p class="profile-note">صفحة «حسابي» للعرض وإدارة تجربة العميل فقط. التسجيل الأولي يتم تلقائيًا عند أول تشغيل للتطبيق المثبّت، وبعد حفظ البيانات لا يُطلب منك التسجيل مرة أخرى على هذا الجهاز.</p>
     </section>
 
     <section class="profile-footer-cta">
@@ -108,6 +124,6 @@
 <script type="module" src="/cart.js?v=20260928.2"></script>
 <script type="module" src="/pwa-register.js"></script>
 <script type="module" src="/pwa-profile.js"></script>
-<script src="/profile-page.js?v=20260928.3" defer></script>
+<script src="/profile-page.js?v=20260928.4" defer></script>
 </body>
 </html>
