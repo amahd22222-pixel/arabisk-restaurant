@@ -12,7 +12,7 @@ class ReservationServiceError extends Error {
   }
 }
 
-export function createReservationService({ repository, cleanText, nextReservationId, findBookableExperience, revenue, crypto, now = () => new Date() }) {
+export function createReservationService({ repository, cleanText, nextReservationId, findBookableExperience, revenue, crypto, notifyCustomer, now = () => new Date() }) {
   const { reservations, customers } = repository;
 
   function listReservations() {
@@ -127,6 +127,15 @@ export function createReservationService({ repository, cleanText, nextReservatio
       reservationId: reservation.id
     });
 
+    if (reservation.customerId && typeof notifyCustomer === 'function') {
+      void notifyCustomer(reservation.customerId, {
+        title: 'تم استلام حجزك في ARABISK',
+        body: 'تم تسجيل حجزك ' + reservation.id + ' بنجاح.',
+        url: '/profile',
+        tag: 'arabisk-reservation-' + reservation.id
+      }).catch(() => {});
+    }
+
     return reservation;
   }
 
@@ -150,6 +159,19 @@ export function createReservationService({ repository, cleanText, nextReservatio
       Object.assign(reservation, before);
       throw error;
     }
+    if (before.status !== reservation.status && reservation.customerId && typeof notifyCustomer === 'function') {
+      void notifyCustomer(reservation.customerId, {
+        title: 'تحديث حجزك في ARABISK',
+        body: 'حالة الحجز ' + reservation.id + ' أصبحت: ' + ({
+          pending: 'قيد التأكيد',
+          confirmed: 'مؤكدة',
+          cancelled: 'ملغاة'
+        }[reservation.status] || reservation.status),
+        url: '/profile',
+        tag: 'arabisk-reservation-' + reservation.id
+      }).catch(() => {});
+    }
+
     return reservation;
   }
 
