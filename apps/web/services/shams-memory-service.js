@@ -73,13 +73,15 @@ function learnPreferences(currentPreferences, evidence, detected) {
       ? top.value === 'true'
       : top.value;
     if (currentPreferences[field] === null || currentPreferences[field] === undefined || currentPreferences[field] === '') {
-      if (top.count >= STABLE_PREFERENCE_THRESHOLD) {
-        learned[field] = normalizedTop;
-      } else if (nextEvidence[field].length > 1) {
+      if (nextEvidence[field].length > 1 && top.count < STABLE_PREFERENCE_THRESHOLD) {
         const previous = nextEvidence[field][1];
         learned[field] = field === 'spicy' || field === 'vegetarian'
           ? previous.value === 'true'
           : previous.value;
+      } else if (top.count >= STABLE_PREFERENCE_THRESHOLD && nextEvidence[field].length === 1) {
+        learned[field] = normalizedTop;
+      } else if (top.count >= STABLE_PREFERENCE_THRESHOLD) {
+        learned[field] = normalizedTop;
       }
     } else if (
       top.count >= STABLE_PREFERENCE_THRESHOLD ||

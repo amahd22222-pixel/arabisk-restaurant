@@ -390,8 +390,8 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
   const preferences = extractPreferences(text);
   const latest = latestCatalogProduct(memory, catalog);
   const pageContext = resolvePageMenuContext(page, categories, catalog);
-  const normalizedStaticText = normalizeDialect(text);
-  if (/^(افتح|إفتح)\s+(الرئيسيه|الرئيسية|الصفحة الرئيسية|الصفحه الرئيسيه)$/i.test(normalizedStaticText)) {
+  const normalizedStaticText = normalizeArabic(text).replace(/\s+/g, ' ').trim();
+  if (/^(?:افتح|إفتح)\s+(?:الرئيسية|الرئيسيه|الصفحة الرئيسية|الصفحه الرئيسيه)$/i.test(normalizedStaticText)) {
     return {
       intent: 'navigate',
       confidence: 0.99,
