@@ -109,6 +109,19 @@ function jsonFromText(value) {
   }
 }
 
+function isPendingWorkflowUpdate(value) {
+  const raw = normalizeArabic(value);
+  return /(غير|غيّر|غيرلي|غيّرلي|عدل|عدّل|عدللي|عدّللي|بدل|بدّل|بدللي|بدّللي|خلي|خلّي|صحح|صححلي|صلح|صلحلي).*(الوقت|الساعة|التاريخ|اليوم|عدد|الاشخاص|الأشخاص|الاسم|الهاتف|الطاولة|نوع الطلب)/i.test(raw) ||
+    /(?:الوقت|الساعة|التاريخ|اليوم|عدد الاشخاص|عدد الأشخاص|الاسم|الهاتف|الطاولة|نوع الطلب).*(?:غير|غيّر|عدل|عدّل|بدل|بدّل|خلي|خلّي)/i.test(raw);
+}
+
+function isPendingSideQuestion(value) {
+  const raw = normalizeArabic(value);
+  if (!raw) return false;
+  if (isPendingWorkflowUpdate(raw)) return false;
+  return /(?:بكام|كم سعر|السعر|سعره|قد ايه|قديش سعر|مكونات|مكوناته|مكوناتها|ايه ده|ايه دي|ده ايه|دي ايه|شو هيدا|شو هيدي|شو هال|رشحلي|اقترحلي|وريني المنيو|شو عندكم|شو عنا|ايه الموجود|ما هي|ماهو|مناسب ايه|يناسبني|التقييم|طعمه|حلو ولا|حار ولا)/i.test(raw);
+}
+
 function isSafeInternalSlug(value) {
   return /^[a-z0-9\u0600-\u06ff-]{1,160}$/i.test(String(value ?? ''));
 }
@@ -1055,7 +1068,11 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       };
     }
 
-    if (workflowService && (reservationRequested || pendingType === 'reservation')) {
+    const pendingSideQuestion = Boolean(pendingType && isPendingSideQuestion(message));
+    const pendingReservationContinuation = pendingType === 'reservation' && (!pendingSideQuestion || reservationRequested || isPendingWorkflowUpdate(message));
+    const pendingOrderContinuation = pendingType === 'order' && (!pendingSideQuestion || orderRequested || isPendingWorkflowUpdate(message));
+
+    if (workflowService && (reservationRequested || pendingReservationContinuation)) {
       const result = await workflowService.handleReservation({
         identity,
         message,
@@ -1082,7 +1099,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       };
     }
 
-    if (workflowService && (orderRequested || pendingType === 'order')) {
+    if (workflowService && (orderRequested || pendingOrderContinuation)) {
       const result = await workflowService.handleOrder({
         identity,
         message,
@@ -1164,6 +1181,10 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     responseData.memoriesOpened = verifiedActions.some(action => action.type === 'navigate' && action.url === '/memories');
 
     let reply = failedTool?.result?.error || buildLocalReply(intent, responseData);
+
+    if (pendingSideQuestion && reply && !failedTool) {
+      reply += ' ونكمل العملية المحفوظة من آخر خطوة لما تكون جاهز.';
+    }
 
     if (!reply && !toolResults.length) {
       reply = clean(plan.reply, 800);
