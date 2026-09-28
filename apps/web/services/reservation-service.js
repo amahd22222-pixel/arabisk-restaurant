@@ -1,5 +1,6 @@
 import { normalizePhone } from '../utils/phone.js';
 import { isValidDateOnly } from '../utils/input.js';
+import { getUaeDateOnly } from '../utils/uae-time.js';
 
 const RESERVATION_STATUSES = new Set(['pending', 'confirmed', 'cancelled']);
 
@@ -11,7 +12,7 @@ class ReservationServiceError extends Error {
   }
 }
 
-export function createReservationService({ repository, cleanText, nextReservationId, findBookableExperience, revenue, crypto }) {
+export function createReservationService({ repository, cleanText, nextReservationId, findBookableExperience, revenue, crypto, now = () => new Date() }) {
   const { reservations, customers } = repository;
 
   function listReservations() {
@@ -30,7 +31,7 @@ export function createReservationService({ repository, cleanText, nextReservatio
     const idempotencyKey = cleanText(body.idempotencyKey, 100);
     const dateOk = isValidDateOnly(date);
     const timeOk = /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getUaeDateOnly(now());
 
     if (idempotencyKey) {
       const existing = reservations.findByIdempotencyKey(idempotencyKey);
