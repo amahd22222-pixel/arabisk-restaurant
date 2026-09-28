@@ -58,20 +58,17 @@ function renderIdentity(profile,stats={}){
   $('#profile-avatar').textContent=initials(name);
   $('#profile-customer-name').textContent=name;
   $('#profile-phone-heading').textContent=String(profile?.phone||'—');
-  const phoneStatus=$('#profile-phone-status');
-  if(phoneStatus)phoneStatus.textContent=profile?.phoneVerified===true?'الهاتف موثّق':'الهاتف غير موثّق';
   $('#profile-welcome').textContent=Number(stats.orderCount||0)||Number(stats.reservationCount||0)
     ? 'مِلْفك يجمع زياراتك وطلباتك وحجوزاتك في مكان واحد.'
     : 'مساحتك الشخصية لحفظ طلباتك وحجوزاتك وبياناتك داخل ARABISK.';
   const badge=$('#profile-member-badge');
-  if(badge)badge.textContent=Number(stats.orderCount||0)>0?'عضوية عميل ARABISK':'عضوية جديدة';
+  const heroBadge=$('#profile-hero-member-badge');
+  const badgeText=Number(stats.orderCount||0)>0?'عضوية عميل ARABISK':'عضوية جديدة';
+  if(badge)badge.textContent=badgeText;
+  if(heroBadge)heroBadge.textContent=badgeText;
   $('#stat-orders').textContent=String(stats.orderCount||0);
   $('#stat-reservations').textContent=String(stats.reservationCount||0);
   $('#stat-spend').textContent=money(stats.totalOrderValue||0);
-  const nameValue=$('#profile-name-value');
-  const phoneValue=$('#profile-phone-value');
-  if(nameValue) nameValue.textContent=profile?.name||'—';
-  if(phoneValue) phoneValue.textContent=profile?.phone||'—';
 }
 
 function renderOrders(orders=[]){
