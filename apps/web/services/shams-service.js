@@ -178,8 +178,13 @@ export function createShamsService({
     memory: true,
     voiceFirst: true,
     dialects: ['ar-AE', 'ar-EG', 'ar-SY', 'ar-LB'],
-    listening: { continuous: true, pauseMs: 2200 },
-    installedApp: { surface: 'installed-pwa', updateManaged: true },
+    listening: {
+      continuous: true,
+      pauseMs: 2800,
+      installedPwaPauseMs: 3600,
+      maxPauseMs: 4500
+    },
+    installedApp: { surface: 'installed-pwa', updateManaged: true, voiceContinuity: true },
     stages: agent.stages
   });
 
