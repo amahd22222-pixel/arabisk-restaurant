@@ -5,6 +5,24 @@
 
   const $ = selector => document.querySelector(selector);
 
+  function loadMobileAppNav() {
+    if (!document.querySelector('link[data-arabisk-mobile-nav]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = '/mobile-nav.css';
+      link.dataset.arabiskMobileNav = 'true';
+      document.head.appendChild(link);
+    }
+
+    if (!document.querySelector('script[data-arabisk-mobile-nav]')) {
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.src = '/mobile-nav.js';
+      script.dataset.arabiskMobileNav = 'true';
+      document.body.appendChild(script);
+    }
+  }
+
   function markActiveLink() {
     const path = location.pathname.replace(/\/$/, '') || '/';
     document.querySelectorAll('#app-header-nav a').forEach(link => {
@@ -57,6 +75,7 @@
     setupHeaderMenu();
     setupLanguageToggle();
     markActiveLink();
+    loadMobileAppNav();
   }
 
   document.readyState === 'loading'
