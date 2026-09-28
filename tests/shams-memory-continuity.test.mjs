@@ -48,4 +48,12 @@ test('Shams merges anonymous conversational context into customer memory without
   assert.equal(result.pendingAction?.type, 'reservation');
   assert.equal(result.pendingAction?.idempotencyKey, 'keep-me');
   assert.equal(result.journey.stage, 'orientation');
+
+  await memory.mergeSessionIntoCustomer('session-123', 'C-123');
+  const afterRetry = await memory.read({ customerId: 'C-123' });
+  assert.equal(afterRetry.recentTurns.length, result.recentTurns.length);
+
+  const sessionAfterMigration = await memory.read({ sessionId: 'session-123' });
+  assert.equal(sessionAfterMigration.migratedToCustomerId, 'C-123');
+  assert.ok(sessionAfterMigration.migratedAt);
 });
