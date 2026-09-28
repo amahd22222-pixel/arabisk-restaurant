@@ -11,7 +11,7 @@ const translations = {
     nameLabel:'الاسم', phoneLabel:'رقم الهاتف', dateLabel:'التاريخ', timeLabel:'الوقت', guestsLabel:'عدد الأشخاص',
     notesLabel:'ملاحظات', notesPlaceholder:'مثلاً: طاولة داخلية، مناسبة خاصة…', confirmBooking:'إرسال طلب الحجز',
     reservationSuccess:'تم استلام طلب الحجز بنجاح. سنتواصل معك لتأكيد الموعد.',
-    reservationError:'تعذر إرسال طلب الحجز حاليًا. حاول مرة أخرى.',
+    reservationError:'تعذر إرسال طلب الحجز حاليًا. حاول مرة أخرى.', reservationOffline:'الحجز يحتاج إلى اتصال بالإنترنت. أعد المحاولة عند عودة الاتصال.',
     experience:'THE ARABISK EXPERIENCE', aboutTitle:'أكثر من مجرد وجبة',
     aboutLead:'هوية عربية دافئة، تفاصيل فاخرة، وأطباق صُممت لتُشارك وتُستمتع بها.',
     copyright:'© 2026 ARABISK. All rights reserved.'
@@ -23,7 +23,7 @@ const translations = {
     nameLabel:'Name', phoneLabel:'Phone Number', dateLabel:'Date', timeLabel:'Time', guestsLabel:'Guests',
     notesLabel:'Notes', notesPlaceholder:'For example: indoor table, special occasion…', confirmBooking:'Send Reservation Request',
     reservationSuccess:'Your reservation request was received. We will contact you to confirm.',
-    reservationError:'Unable to submit the reservation right now. Please try again.',
+    reservationError:'Unable to submit the reservation right now. Please try again.', reservationOffline:'Reservations require an internet connection. Please try again when you are back online.',
     experience:'THE ARABISK EXPERIENCE', aboutTitle:'More Than Just a Meal',
     aboutLead:'A warm Arabic identity, refined details and dishes designed to be shared and enjoyed.',
     copyright:'© 2026 ARABISK. All rights reserved.'
@@ -125,6 +125,7 @@ function showPage() {
   document.body.classList.toggle('reservation-route', isReservation);
 
   applyLanguage();
+  syncReservationConnectivity();
   void applyReservationEventContext();
 
   if (isReservation) {
@@ -142,6 +143,10 @@ async function submitReservation(event) {
   const dict = translations[language];
 
   if (!message || !button) return;
+  if (navigator.onLine === false) {
+    message.textContent = dict.reservationOffline;
+    return;
+  }
   message.textContent = '';
   button.disabled = true;
 
@@ -191,7 +196,29 @@ $('#lang-toggle')?.addEventListener('click', () => {
   applyLanguage();
 });
 
+function syncReservationConnectivity() {
+  const form = $('#reservation-form');
+  const button = form?.querySelector('button[type="submit"]');
+  const message = $('#reservation-message');
+  if (!form || !button) return;
+
+  const offline = navigator.onLine === false;
+  button.disabled = offline;
+  button.setAttribute('aria-disabled', String(offline));
+  form.dataset.offline = offline ? 'true' : 'false';
+
+  if (offline && message && !message.textContent.trim()) {
+    message.textContent = translations[language].reservationOffline;
+  } else if (!offline && message?.textContent === translations[language].reservationOffline) {
+    message.textContent = '';
+  }
+}
+
 $('#reservation-form')?.addEventListener('submit', submitReservation);
+syncReservationConnectivity();
+window.addEventListener('online', syncReservationConnectivity);
+window.addEventListener('offline', syncReservationConnectivity);
+window.addEventListener('arabisk:network-state', syncReservationConnectivity);
 
 setupHeaderMenu();
 showPage();
