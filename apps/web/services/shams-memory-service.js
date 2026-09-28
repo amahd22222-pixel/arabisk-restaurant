@@ -171,6 +171,34 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     return writeJson(key, next);
   }
 
+  async function mergeSessionIntoCustomer(sessionId, customerId) {
+    const session = clean(sessionId, 120);
+    const customer = clean(customerId, 120);
+    if (!session || !customer) return false;
+    const sessionMemory = await read({ sessionId: session });
+    const customerMemory = await read({ customerId: customer });
+    const mergedTurns = [...customerMemory.recentTurns, ...sessionMemory.recentTurns].slice(-MAX_TURNS);
+    const mergedProducts = [...customerMemory.recentProducts, ...sessionMemory.recentProducts]
+      .filter(item => item?.id)
+      .slice(-MAX_RECENT_PRODUCTS);
+    const mergedPreferences = normalizePreferences({
+      ...customerMemory.preferences,
+      ...sessionMemory.preferences
+    });
+    const mergedJourney = customerMemory.journey?.stage
+      ? customerMemory.journey
+      : sessionMemory.journey;
+
+    return save({ customerId: customer }, {
+      preferences: mergedPreferences,
+      recentTurns: mergedTurns,
+      recentProducts: mergedProducts,
+      journey: mergedJourney,
+      name: customerMemory.name || sessionMemory.name,
+      pendingAction: customerMemory.pendingAction
+    });
+  }
+
   async function rememberTurn(identity, { user, assistant, intent, products, journey, name } = {}) {
     const current = await read(identity);
     const preferences = { ...current.preferences, ...detectPreferences(user) };
@@ -190,5 +218,5 @@ export function createShamsMemoryService({ readJsonWithStatus, writeJson }) {
     });
   }
 
-  return { read, save, rememberTurn, detectPreferences };
+  return { read, save, rememberTurn, mergeSessionIntoCustomer, detectPreferences };
 }
