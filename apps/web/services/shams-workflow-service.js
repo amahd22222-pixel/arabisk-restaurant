@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { addUaeDays } from '../utils/uae-time.js';
+import { addUaeDays, nextUaeWeekday } from '../utils/uae-time.js';
 
 const ACTION_TTL_MS = 10 * 60 * 1000;
 
@@ -96,6 +96,22 @@ function parseTime(text) {
   return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
 }
 
+function relativeWeekdayDate(raw) {
+  const weekdays = [
+    ['الاحد', 0], ['الأحد', 0], ['حد', 0],
+    ['الاثنين', 1], ['الاتنين', 1], ['الإثنين', 1], ['اتنين', 1],
+    ['الثلاثاء', 2], ['التلاتاء', 2], ['التلات', 2], ['الثلاث', 2],
+    ['الاربعاء', 3], ['الأربعاء', 3], ['الاربعا', 3], ['الأربعا', 3],
+    ['الخميس', 4], ['الخميسه', 4], ['الخميسة', 4],
+    ['الجمعه', 5], ['الجمعة', 5], ['الجمع', 5],
+    ['السبت', 6], ['سبت', 6]
+  ];
+  const match = weekdays.find(([label]) => raw.includes(label));
+  if (!match) return '';
+  const weeksAhead = /(بعدs+اسبوع|بعدs+أسبوع|الأسبوعs+الليs+بعد|الاسبوعs+الليs+بعد)/i.test(raw) ? 1 : 0;
+  return nextUaeWeekday(new Date(), match[1], weeksAhead);
+}
+
 function parseReservationSlots(text, memory) {
   const raw = clean(toWesternDigits(text), 1200);
   const slots = {
@@ -114,6 +130,11 @@ function parseReservationSlots(text, memory) {
   if (/اليوم|هلق|هلا|دلوقتي|دلوقت/i.test(raw)) slots.date = localDate(0);
   else if (/بعد بكرة|بعد غد|بعد غدًا/i.test(raw)) slots.date = localDate(2);
   else if (/بكرة|بكره|غدا|غدًا/i.test(raw)) slots.date = localDate(1);
+  else {
+    const weekdayDate = relativeWeekdayDate(raw);
+    if (weekdayDate) slots.date = weekdayDate;
+    if (/(بعد\s+اسبوع|بعد\s+أسبوع)/i.test(raw)) slots.date = localDate(7);
+  }
 
   const dateMatch = raw.match(/\b(20\d{2})[-/](\d{1,2})[-/](\d{1,2})\b/);
   if (dateMatch) {
