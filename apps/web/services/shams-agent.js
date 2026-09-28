@@ -619,6 +619,98 @@ function pendingActionIsUsable(pending) {
   return Boolean(pending?.type && Number(pending.expiresAt || 0) > Date.now());
 }
 
+function buildLiveContext({ page = '/', cart = [], customerContext = null, memory = {}, catalog = [] } = {}) {
+  const rawPage = clean(page, 160) || '/';
+  let decodedPath = rawPage;
+  try { decodedPath = decodeURIComponent(rawPage); } catch {}
+  const pathname = decodedPath.split('?')[0] || '/';
+  const parts = pathname.split('/').filter(Boolean);
+
+  const category = parts.length >= 2 && parts[0] === 'menu'
+    ? catalog.find(item =>
+        slug(item?.categoryId) === slug(parts[1]) ||
+        slug(item?.categoryNameAr) === slug(parts[1]) ||
+        slug(item?.categoryNameEn) === slug(parts[1])
+      )
+    : null;
+
+  const product = parts.length >= 3 && parts[0] === 'menu'
+    ? catalog.find(item =>
+        String(item?.categoryId || '') === String(category?.categoryId || category?.id || '') &&
+        (
+          slug(item?.id) === slug(parts[2]) ||
+          slug(item?.nameAr) === slug(parts[2]) ||
+          slug(item?.nameEn) === slug(parts[2])
+        )
+      )
+    : null;
+
+  const area = product ? 'product'
+    : parts[0] === 'menu' ? (category ? 'category' : 'menu')
+    : parts[0] === 'cart' ? 'cart'
+    : parts[0] === 'reservation' ? 'reservation'
+    : parts[0] === 'track-order' ? 'order_tracking'
+    : parts[0] === 'events' ? 'events'
+    : parts[0] === 'memories' ? 'memories'
+    : parts[0] === 'privacy' ? 'privacy'
+    : 'home';
+
+  const time = getUaeTimeContext();
+  const hour = Number(String(time.time || '00:00').split(':')[0] || 0);
+  const mealPeriod = hour >= 5 && hour < 11 ? 'morning'
+    : hour >= 11 && hour < 16 ? 'lunch'
+    : hour >= 16 && hour < 23 ? 'evening'
+    : 'late_night';
+
+  const cartItems = (Array.isArray(cart) ? cart : [])
+    .slice(0, 8)
+    .map(item => ({
+      id: clean(item?.id || item?.productId, 60),
+      nameAr: clean(item?.nameAr, 120),
+      quantity: Math.min(20, Math.max(1, Number(item?.quantity || item?.qty) || 1))
+    }))
+    .filter(item => item.id || item.nameAr);
+
+  const upcoming = customerContext?.nextReservation;
+  const upcomingReservation = upcoming ? {
+    date: clean(upcoming.date, 20),
+    time: clean(upcoming.time, 20),
+    guests: Math.min(50, Math.max(1, Number(upcoming.guests) || 1)),
+    status: clean(upcoming.status, 40)
+  } : null;
+
+  const pending = pendingActionIsUsable(memory?.pendingAction) ? {
+    type: clean(memory.pendingAction.type, 40),
+    step: clean(memory?.journey?.step, 60)
+  } : null;
+
+  return {
+    now: time,
+    mealPeriod,
+    currentPage: {
+      path: pathname,
+      area,
+      category: clean(category?.nameAr || category?.nameEn || '', 120),
+      product: clean(product?.nameAr || product?.nameEn || '', 120)
+    },
+    cart: {
+      hasItems: cartItems.length > 0,
+      itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+      items: cartItems
+    },
+    upcomingReservation,
+    workflow: pending,
+    journey: buildJourneyContext(customerContext, memory),
+    signals: {
+      lastIntent: clean(memory?.lastIntent, 60),
+      confirmedChoiceCount: Array.isArray(memory?.chosenProducts) ? memory.chosenProducts.length : 0,
+      rememberedProductCount: Array.isArray(memory?.recentProducts) ? memory.recentProducts.length : 0,
+      rejectedProductCount: Array.isArray(memory?.avoidProducts) ? memory.avoidProducts.length : 0
+    }
+  };
+}
+
+
 function buildLocalReply(intent, data) {
   if (intent === 'recommend') {
     const products = data.recommendations || [];
@@ -941,6 +1033,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       'العميل الحالي: ' + JSON.stringify(context.customer ? { id: context.customer.id, name: context.customer.name || '' } : null),
       'سياق العميل الآمن: ' + JSON.stringify(context.customerContext || null),
       'سياق رحلة شمس الموحّد: ' + JSON.stringify(context.journey || {}),
+      'السياق الحي الحالي: ' + JSON.stringify(context.live || {}),
       'ذاكرة شمس الآمنة: ' + JSON.stringify(modelSafeMemory(context.memory)),
       'آخر المحادثات: ' + JSON.stringify(context.history),
       'الصفحة الحالية: ' + clean(context.page, 100),
@@ -1005,7 +1098,14 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       memory,
       journey: buildJourneyContext(customerContext, memory),
       dialect: detectDialect(message),
-      normalizedMessage: normalizeDialectText(message)
+      normalizedMessage: normalizeDialectText(message),
+      live: buildLiveContext({
+        page: input.page,
+        cart: input.cart,
+        customerContext,
+        memory,
+        catalog: products()
+      })
     };
 
     const rememberWorkflow = async (reply, intent, journey, extraProducts = []) => {
@@ -1318,3 +1418,14 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
 
   return { handle, stages: STAGES };
 }
+
+
+export const __test = Object.freeze({
+  sanitizeConversationHistory,
+  buildLiveContext,
+  detectDialect,
+  normalizeArabic,
+  normalizeDialectText,
+  isPendingWorkflowUpdate,
+  isPendingSideQuestion
+});
