@@ -892,11 +892,12 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     const semanticPlan = await modelPlan(context);
     const semanticIntent = normalizeIntent(semanticPlan?.intent);
     const normalizedMessage = normalizeDialectText(message);
-    const reservationRequested = !isNegatedAction(message, 'reservation') && (
+    const navigationOnlyRequested = /(?:افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)\s+(?:الرئيسيه|الرئيسية|الصفحه الرئيسيه|الصفحة الرئيسية|المنيو|المنيو|القائمه|القائمة|الحجز|حجز|حجز طاوله|حجز طاولة|الطاولة|طاولة|السله|السلة|العربه|العربة|متابعه الطلب|متابعة الطلب|حاله الطلب|حالة الطلب|طلبي|تتبع الطلب|الفعاليات|فعاليات|التجارب|تجارب|الذكريات|ذكريات|الخصوصيه|الخصوصية|سياسة الخصوصية|home|menu|reservation|cart|track order|events|memories|privacy)\b/i.test(normalizedMessage);
+    const reservationRequested = !navigationOnlyRequested && !isNegatedAction(message, 'reservation') && (
       semanticIntent === 'reservation' ||
       /(احجز|حجز|حجزي|طاولة|حاجز|موعد|بدي حجز|بدّي احجز|عايز احجز|عايز حجز)/i.test(normalizedMessage)
     );
-    const orderRequested = !isNegatedAction(message, 'order') && (
+    const orderRequested = !navigationOnlyRequested && !isNegatedAction(message, 'order') && (
       semanticIntent === 'order' ||
       /(اطلب|طلبلي|اطلبلي|بدّي طلب|بدي طلب|عايز طلب|عاوز طلب|اعمل طلب|سوّي طلب|سوي طلب|اوردر|checkout)/i.test(normalizedMessage)
     );
