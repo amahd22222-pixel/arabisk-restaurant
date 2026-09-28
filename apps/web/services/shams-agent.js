@@ -739,6 +739,11 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
   async function modelPlan(context) {
     if (typeof requestModel !== 'function') return null;
 
+    const categoryCatalog = categories().slice(0, 48).map(item => ({
+      id: String(item.id),
+      nameAr: clean(item.nameAr, 100),
+      nameEn: clean(item.nameEn, 100)
+    }));
     const catalog = products().slice(0, 48).map(item => ({
       id: String(item.id),
       nameAr: clean(item.nameAr, 100),
@@ -775,6 +780,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       'آخر المحادثات: ' + JSON.stringify(context.history),
       'الصفحة الحالية: ' + clean(context.page, 100),
       'السلة الحالية: ' + JSON.stringify(Array.isArray(context.cart) ? context.cart.slice(0, 20) : []),
+      'الأقسام المتاحة: ' + JSON.stringify(categoryCatalog),
       'كتالوج مختصر: ' + JSON.stringify(catalog),
       'رسالة العميل: ' + clean(context.message, 1200)
     ].join('\n');
@@ -966,7 +972,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       cart: context.cart,
       page: context.page
     }) || detectLocalPlan({ message, memory, products: products() });
-    const model = semanticPlan || localPlan;
+    const model = navigationOnlyRequested ? localPlan : (semanticPlan || localPlan);
     const plan = model || localPlan;
     const intent = normalizeIntent(plan.intent);
 
