@@ -326,6 +326,22 @@ function recommendationArgs(preferences) {
   return Object.fromEntries(Object.entries(preferences).filter(([, value]) => value !== undefined && value !== null && value !== ''));
 }
 
+function resolveStaticPage(raw) {
+  const query = normalizeDialect(raw)
+    .replace(/^(افتح|إفتح|روح|روّح|وديني|ودّيني|دخلني|ادخلني|انتقل|روحلي|روح لي|وريني|ورجيني|show|open|go to|navigate)\s+/i, '')
+    .trim();
+
+  if (/^(الرئيسيه|الرئيسية|الصفحة الرئيسية|الصفحه الرئيسيه|home)$/i.test(query)) return '/';
+  if (/^(منيو|المنيو|القائمه|القائمة|menu)$/i.test(query)) return '/menu';
+  if (/^(حجز|الحجز|حجز طاوله|حجز طاولة|الطاولة|طاولة|reservation)$/i.test(query)) return '/reservation';
+  if (/^(السله|السلة|العربه|العربة|cart)$/i.test(query)) return '/cart';
+  if (/^(متابعه الطلب|متابعة الطلب|حاله الطلب|حالة الطلب|طلبي|تتبع الطلب|track order)$/i.test(query)) return '/track-order';
+  if (/^(الفعاليات|فعاليات|التجارب|تجارب|events)$/i.test(query)) return '/events';
+  if (/^(الذكريات|ذكريات|memories)$/i.test(query)) return '/memories';
+  if (/^(الخصوصيه|الخصوصية|سياسة الخصوصية|privacy)$/i.test(query)) return '/privacy';
+  return '';
+}
+
 export function buildSmartLocalPlan({ message, memory = {}, products = [], categories = [], cart = [], page = '/' } = {}) {
   const text = clean(message);
   const raw = normalizeDialect(text);
@@ -432,6 +448,16 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
         }
       }],
       reply: 'أكيد، أفتح لك ' + (matchedProduct.nameAr || matchedProduct.nameEn) + ' الآن.'
+    };
+  }
+
+  const staticPage = pageNavigationRequested ? resolveStaticPage(raw) : '';
+  if (staticPage) {
+    return {
+      intent: 'navigate',
+      confidence: 0.97,
+      toolCalls: [{ name: 'navigate', args: { path: staticPage } }],
+      reply: 'أكيد، أفتح لك الصفحة المطلوبة الآن.'
     };
   }
 
