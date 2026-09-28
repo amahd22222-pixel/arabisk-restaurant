@@ -11,6 +11,7 @@ export function registerShamsRoutes(app, { service, profileRateLimit }) {
       sessionId: String(req.body?.sessionId || '').trim(),
       page: String(req.body?.page || '/').trim(),
       cart: Array.isArray(req.body?.cart) ? req.body.cart : [],
+      dialect: String(req.body?.dialect || '').trim().slice(0, 20),
       client: req.body?.client && typeof req.body.client === 'object' ? {
         surface: String(req.body.client.surface || '').trim().slice(0, 30),
         serviceWorkerControlled: Boolean(req.body.client.serviceWorkerControlled)
