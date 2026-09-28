@@ -130,8 +130,11 @@
   function pickArabicVoice() {
     if (!('speechSynthesis' in window)) return null;
     const voices = window.speechSynthesis.getVoices();
-    return voices.find(v => /^ar(-|_)/i.test(v.lang)) ||
-      voices.find(v => /arabic|العربي/i.test(v.name)) ||
+    const preferredLang = RECOGNITION_LANGUAGES[state.dialect] || 'ar-AE';
+    return voices.find(v => String(v.lang || '').toLowerCase() === preferredLang.toLowerCase()) ||
+      voices.find(v => String(v.lang || '').toLowerCase().startsWith(preferredLang.slice(0, 2).toLowerCase() + '-')) ||
+      voices.find(v => /^ar(-|_)/i.test(v.lang)) ||
+      voices.find(v => /arabic|العربي|عربي/i.test(v.name)) ||
       null;
   }
 
@@ -157,7 +160,7 @@
       };
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = 'ar-AE';
+      utterance.lang = RECOGNITION_LANGUAGES[state.dialect] || 'ar-AE';
       utterance.rate = 0.96;
       utterance.pitch = 1.02;
       utterance.volume = 1;
@@ -360,7 +363,10 @@
       const observed = (finalText || interimText).trim();
       if (observed) {
         const detected = detectDialectFromText(observed);
-        if (detected !== 'gulf') state.dialect = detected;
+        if (detected !== state.dialect) {
+          state.dialect = detected;
+          if (state.recognition) state.recognition.lang = RECOGNITION_LANGUAGES[detected] || 'ar-AE';
+        }
       }
 
       if (finalText) {
