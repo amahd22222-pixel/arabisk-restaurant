@@ -389,8 +389,8 @@ function detectLocalPlan({ message, memory, products }) {
     return {
       intent: 'greeting',
       reply: memory.name
-        ? 'أهلاً يا ' + memory.name + '. أنا شمس، معك داخل ARABISK.'
-        : 'أهلاً بك. أنا شمس، معك داخل ARABISK.'
+        ? 'أهلاً يا ' + memory.name + '، نورت ARABISK. أنا شمس، معاك علشان أساعدك.'
+        : 'أهلاً بيك في ARABISK. أنا شمس، معاك علشان أساعدك.'
     };
   }
 
