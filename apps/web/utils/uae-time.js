@@ -30,4 +30,26 @@ export function parseUaeLocalDateTime(date, time = '00:00') {
   return Date.parse(rawDate + 'T' + rawTime + ':00' + UAE_OFFSET);
 }
 
+export function getUaeTimeContext(date = new Date()) {
+  const formatted = new Intl.DateTimeFormat('en-CA', {
+    timeZone: UAE_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZoneName: 'short'
+  }).formatToParts(date);
+  const map = Object.fromEntries(formatted.map(part => [part.type, part.value]));
+  return {
+    timeZone: UAE_TIME_ZONE,
+    date: map.year + '-' + map.month + '-' + map.day,
+    time: map.hour + ':' + map.minute,
+    weekday: map.weekday,
+    utcOffset: UAE_OFFSET
+  };
+}
+
 export { UAE_TIME_ZONE };
