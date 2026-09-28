@@ -390,6 +390,16 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
   const preferences = extractPreferences(text);
   const latest = latestCatalogProduct(memory, catalog);
   const pageContext = resolvePageMenuContext(page, categories, catalog);
+  const normalizedStaticText = normalizeDialect(text);
+  if (/^(افتح|إفتح)\s+(الرئيسيه|الرئيسية|الصفحة الرئيسية|الصفحه الرئيسيه)$/i.test(normalizedStaticText)) {
+    return {
+      intent: 'navigate',
+      confidence: 0.99,
+      toolCalls: [{ name: 'navigate', args: { path: '/' } }],
+      reply: 'أكيد، أفتح لك الرئيسية الآن.'
+    };
+  }
+
   const earlyStaticPage = resolveStaticPage(text);
   if (earlyStaticPage) {
     return {

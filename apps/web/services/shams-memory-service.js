@@ -73,7 +73,14 @@ function learnPreferences(currentPreferences, evidence, detected) {
       ? top.value === 'true'
       : top.value;
     if (currentPreferences[field] === null || currentPreferences[field] === undefined || currentPreferences[field] === '') {
-      learned[field] = normalizedTop;
+      if (top.count >= STABLE_PREFERENCE_THRESHOLD) {
+        learned[field] = normalizedTop;
+      } else if (nextEvidence[field].length > 1) {
+        const previous = nextEvidence[field][1];
+        learned[field] = field === 'spicy' || field === 'vegetarian'
+          ? previous.value === 'true'
+          : previous.value;
+      }
     } else if (
       top.count >= STABLE_PREFERENCE_THRESHOLD ||
       String(currentPreferences[field]) === String(normalizedTop)
