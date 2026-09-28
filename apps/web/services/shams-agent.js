@@ -691,10 +691,10 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     }
 
     if (name === 'navigate') {
-      const path = clean(args?.path, 120);
-      return ALLOWED_PATHS.has(path)
+      const path = resolveNavigation(args, catalog);
+      return path
         ? { clientAction: { type: 'navigate', url: path } }
-        : { error: 'المسار غير مسموح.' };
+        : { error: 'لم أجد الصفحة أو القسم المطلوب داخل ARABISK.' };
     }
 
     if (name === 'get_order_status') {
@@ -963,7 +963,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
 
     stage = 'verify';
     const verifiedActions = clientActions.filter(action => {
-      if (action.type === 'navigate') return ALLOWED_PATHS.has(action.url);
+      if (action.type === 'navigate') return Boolean(resolveNavigation({ path: action.url }, products()));
       if (action.type === 'cart.add') {
         return action.product?.id && Number(action.quantity) >= 1 && Number(action.quantity) <= 20;
       }
@@ -979,6 +979,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       order: toolResults.find(item => item.name === 'get_order_status')?.result?.order
     };
 
+    responseData.navigationOpened = verifiedActions.some(action => action.type === 'navigate');
     responseData.menuOpened = verifiedActions.some(action => action.type === 'navigate' && action.url === '/menu');
     responseData.cartOpened = verifiedActions.some(action => action.type === 'navigate' && action.url === '/cart');
     responseData.eventsOpened = verifiedActions.some(action => action.type === 'navigate' && action.url === '/events');
