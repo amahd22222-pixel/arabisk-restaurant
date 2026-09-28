@@ -381,12 +381,20 @@ export function buildSmartLocalPlan({ message, memory = {}, products = [], categ
   const pageContext = resolvePageMenuContext(page, categories, catalog);
 
   if (/^(السلام عليكم|السلام|اهلا|اهلين|يا هلا|هلا|مرحبا|مرحبتين|هاي|hello|hi|ازيك|ازيكم)/i.test(raw)) {
+    const journeyStage = customerContext?.journey?.stage || '';
+    const greeting = journeyStage === 'upcoming_reservation'
+      ? 'أهلاً يا ' + (memory.name || 'صديقي') + '، نورت ARABISK. عندك زيارة قريبة وأنا جاهزة أساعدك.'
+      : journeyStage === 'returning_favorite'
+        ? 'أهلاً يا ' + (memory.name || 'صديقي') + '، نورت تاني. أقدر أرجع لك اختياراتك المفضلة.'
+        : journeyStage === 'reengagement'
+          ? 'نورت تاني يا ' + (memory.name || 'صديقي') + '. خلينا نشوف إيه اللي يناسبك النهارده.'
+          : memory.name
+            ? 'أهلاً يا ' + memory.name + '، نورت ARABISK. أنا شمس، معاك علشان أساعدك.'
+            : 'أهلاً بيك في ARABISK. أنا شمس، معاك علشان أساعدك.';
     return {
       intent: 'greeting',
       confidence: 0.99,
-      reply: memory.name
-        ? 'أهلاً يا ' + memory.name + '، نورت ARABISK. أنا شمس، معاك علشان أساعدك.'
-        : 'أهلاً بيك في ARABISK. أنا شمس، معاك علشان أساعدك.'
+      reply: greeting
     };
   }
 
