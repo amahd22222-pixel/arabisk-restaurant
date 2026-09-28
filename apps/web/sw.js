@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'arabisk-pwa-v44';
+const CACHE_VERSION = 'arabisk-pwa-v45';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -34,6 +34,7 @@ const APP_SHELL = [
   '/pwa-notifications.js',
   '/pwa-network.js',
   '/pwa-media.js',
+  '/pwa-sync.js',
   '/mobile-nav.css',
   '/mobile-nav.js',
   '/studio-runtime.js',

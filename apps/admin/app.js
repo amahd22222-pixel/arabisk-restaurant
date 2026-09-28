@@ -502,3 +502,8 @@ document.addEventListener('click',event=>{
   if(button)void openCustomer360(button.dataset.customer360);
   if(event.target.closest('#customer360-close'))closeCustomer360();
 });
+
+window.ARABISK_ADMIN_RELOAD = async () => {
+  if (document.querySelector('.modal.show')) return;
+  await load();
+};
