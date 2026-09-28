@@ -24,6 +24,22 @@ const STAGES = Object.freeze([
 
 const clean = (value, max = 800) => String(value ?? '').trim().slice(0, max);
 
+function sanitizeConversationHistory(history) {
+  if (!Array.isArray(history)) return [];
+  return history
+    .slice(-10)
+    .map(item => {
+      const role = item?.role === 'assistant' ? 'assistant' : item?.role === 'user' ? 'user' : '';
+      if (!role) return null;
+      const content = clean(item?.content, 600)
+        .replace(/(?:05\d{8}|9715\d{8}|\+\d[\d\s-]{7,16})/g, '[رقم هاتف مخفي]')
+        .replace(/\b\d{13,19}\b/g, '[رقم مالي مخفي]');
+      return content ? { role, content } : null;
+    })
+    .filter(Boolean);
+}
+
+
 const DIALECT_LOCALES = Object.freeze({
   egyptian: 'ar-EG',
   syrian: 'ar-SY',
@@ -955,7 +971,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       sessionId: clean(input.sessionId, 120),
       page: clean(input.page, 120),
       cart: Array.isArray(input.cart) ? input.cart.slice(0, 20) : [],
-      history: Array.isArray(input.history) ? input.history.slice(-10) : [],
+      history: sanitizeConversationHistory(input.history),
       memory,
       journey: buildJourneyContext(customerContext, memory),
       dialect: detectDialect(message),
