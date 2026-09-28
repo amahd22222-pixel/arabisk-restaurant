@@ -775,7 +775,8 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
       'إذا كانت الرسالة حجزًا أو طلبًا ناقصًا، استخرجي كل الحقول الموجودة فقط في workflow ولا تخترعي أي حقل.',
       'اللهجة المكتشفة مبدئيًا: ' + dialectLocale(context.message),
       'النص المطبع: ' + context.normalizedMessage,
-      'العميل الحالي: ' + JSON.stringify(context.customer ? { id: context.customer.id, name: context.customer.name || '', phone: context.customer.phone || '' } : null),
+      'العميل الحالي: ' + JSON.stringify(context.customer ? { id: context.customer.id, name: context.customer.name || '' } : null),
+      'سياق العميل الآمن: ' + JSON.stringify(context.customerContext || null),
       'ذاكرة شمس: ' + JSON.stringify(context.memory),
       'آخر المحادثات: ' + JSON.stringify(context.history),
       'الصفحة الحالية: ' + clean(context.page, 100),
@@ -815,6 +816,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     if (!message) throw new Error('رسالة شمس فارغة.');
 
     const customer = input.customer || null;
+    const customerContext = input.customerContext && typeof input.customerContext === 'object' ? input.customerContext : null;
     const identity = buildIdentity({ customer, sessionId: input.sessionId });
     let stage = 'understand';
 
@@ -824,6 +826,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
     const context = {
       message,
       customer,
+      customerContext,
       sessionId: clean(input.sessionId, 120),
       page: clean(input.page, 120),
       cart: Array.isArray(input.cart) ? input.cart.slice(0, 20) : [],
