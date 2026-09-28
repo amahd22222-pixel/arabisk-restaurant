@@ -390,6 +390,9 @@ function pickSmartLocalRecommendations(products, memory, text, customerContext =
         (Number(product.rating || 0) / 5);
       if (favoriteProducts.has(productName)) score += 8;
       if (favoriteCategories.has(productCategory)) score += 4;
+      if (customerContext?.journey?.stage === 'returning_favorite' && favoriteProducts.has(productName)) score += 4;
+      if (customerContext?.journey?.stage === 'reengagement' && favoriteCategories.has(productCategory)) score += 2;
+      if (customerContext?.journey?.stage === 'new_customer' && !favoriteProducts.size && product.chefChoice) score += 1;
       return { product, score };
     })
     .sort((a, b) => b.score - a.score)
@@ -529,7 +532,15 @@ function buildLocalReply(intent, data) {
     const products = data.recommendations || [];
     if (!products.length) return 'ساعدني بتحديد ميزانيتك أو ذوقك، مثل: أريد شيئًا خفيفًا أو حارًا أو نباتيًا.';
     const lines = products.map(item => (item.nameAr || item.nameEn) + ' بسعر ' + item.price + ' درهم').join('، ');
-    return 'رشحت لك ' + lines + '. وإذا أعجبك أول اختيار أضيفه لك للسلة.';
+    const journey = data.journey || {};
+    const prefix = journey.stage === 'returning_favorite'
+      ? 'وبناءً على اختياراتك السابقة، '
+      : journey.stage === 'reengagement'
+        ? 'وبما إنك راجع لنا، '
+        : journey.stage === 'upcoming_reservation'
+          ? 'وبما إن عندك زيارة قريبة، '
+          : '';
+    return prefix + 'رشحت لك ' + lines + '. وإذا أعجبك أول اختيار أضيفه لك للسلة.';
   }
 
   if (intent === 'menu') return data.menuOpened ? 'أكيد، أفتح لك المنيو الآن.' : 'تعذر فتح المنيو الآن.';
@@ -1065,6 +1076,7 @@ export function createShamsAgent({ repository, memoryService, workflowService, r
 
     const failedTool = toolResults.find(item => item.result?.error);
     const responseData = {
+      journey: context.journey,
       recommendations: toolResults.find(item => item.name === 'recommend_menu')?.result?.recommendations || [],
       matches: toolResults.find(item => item.name === 'search_menu')?.result?.matches || [],
       cartSummary: toolResults.find(item => item.name === 'cart_summary')?.result?.cartSummary || toolResults.find(item => item.name === 'cart_summary')?.result || null,
